@@ -1,4 +1,4 @@
-# Yarte [![Documentation](https://docs.rs/yarte/badge.svg)](https://docs.rs/yarte/) [![Latest version](https://img.shields.io/crates/v/yarte.svg)](https://crates.io/crates/yarte)
+# Yarte [![Documentation](https://docs.rs/yarte/badge.svg)](https://docs.rs/yarte/) [![Latest version](https://img.shields.io/crates/v/yarte.svg)](https://crates.io/crates/yarte) [![Build Status](https://travis-ci.org/botika/yarte.svg?branch=master)](https://travis-ci.org/botika/yarte)
 Yarte stands for **Y**et **A**nother **R**ust **T**emplate **E**ngine, 
 is the fastest template engine. Uses a Handlebars-like syntax, 
 well known and intuitive for most developers. Yarte is an optimized, and easy-to-use 

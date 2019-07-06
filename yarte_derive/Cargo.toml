@@ -9,11 +9,11 @@ edition = "2018"
 keywords = ["markup", "template", "handlebars", "html"]
 license = "MIT/Apache-2.0"
 readme = "../README.md"
-repository = "https://github.com/r-iendo/yarte"
+repository = "https://github.com/botika/yarte"
 workspace = ".."
 
 [badges]
-travis-ci = { repository = "r-iendo/yarte", branch = "master" }
+travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [lib]
