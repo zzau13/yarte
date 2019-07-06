@@ -14,6 +14,16 @@ matrix:
   allow_failures:
     - rust: nightly
 
+before_script:
+  - |
+    if [[ "$TRAVIS_RUST_VERSION" != "nightly" ]]; then
+      rustup component add rustfmt
+    fi
+
 script:
-- cargo check --all --no-default-features
-- cargo test --all-features --all -- --nocapture
+  - |
+    if [[ "$TRAVIS_RUST_VERSION" != "nightly" ]]; then
+      cargo fmt -- --check
+    fi
+  - cargo check --all --no-default-features
+  - cargo test --all-features --all -- --nocapture
