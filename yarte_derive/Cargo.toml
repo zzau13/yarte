@@ -6,10 +6,10 @@ description = "Procedural macro package for yarte"
 categories = ["template-engine"]
 documentation = "https://docs.rs/yarte_derive"
 edition = "2018"
-keywords = ["markup", "template", "handlebars", "html", "yarte_derive"]
+keywords = ["markup", "template", "handlebars", "html"]
 license = "MIT/Apache-2.0"
 readme = "../README.md"
-repository = "https://github .com/r-iendo/yarte"
+repository = "https://github.com/r-iendo/yarte"
 workspace = ".."
 
 [badges]
