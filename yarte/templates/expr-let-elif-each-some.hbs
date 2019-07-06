@@ -1,0 +1,17 @@
+Hello, {{#each conditions }}{{ if let Some(cond) = cond {
+                    if !cond {
+                        let cond =  "bar";
+                        cond
+                    } else {
+                        "foo"
+                    }
+                } else if let Some(cond) = check {
+                    if !cond {
+                        let cond =  "fun";
+                        cond
+                    } else {
+                        "baa"
+                    }
+                } else {
+                    "None"
+                } }}{{/each}}!

@@ -1,0 +1,37 @@
+[package]
+name = "yarte_derive"
+version = "0.3.0"
+authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
+description = "Procedural macro package for yarte"
+categories = ["template-engine"]
+documentation = "https://docs.rs/yarte_derive"
+edition = "2018"
+keywords = ["markup", "template", "handlebars", "html", "yarte_derive"]
+license = "MIT/Apache-2.0"
+readme = "../README.md"
+repository = "https://github .com/r-iendo/yarte"
+workspace = ".."
+
+[badges]
+travis-ci = { repository = "r-iendo/yarte", branch = "master" }
+maintenance = { status = "actively-developed" }
+
+[lib]
+proc-macro = true
+
+[features]
+actix-web = []
+
+[dependencies]
+yarte_config = { version = "0.3", path = "../yarte_config" }
+v_htmlescape = "0.4"
+v_eval = "0.0"
+memchr = "2.1"
+mime_guess = "2.0.0-alpha"
+nom = "4.2"
+proc-macro2 = "0.4"
+quote = "0.6"
+syn = { version="0.15", features = ["full", "visit", "extra-traits"]}
+toolchain_find = "0.1"
+prettyprint = "0.4"
+tempfile = "3.0"

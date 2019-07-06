@@ -1,0 +1,6 @@
+{{#each list~}}
+    {{> partial-self this, scope = this }}
+{{~/each}}
+{{#each list ~}}
+    {{> partial-self scope = this, this = 'h', index = index0 }}
+{{~/each}}

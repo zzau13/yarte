@@ -1,0 +1,13 @@
+{{ let a: &str = &name }}
+{{ let a = a.as_bytes() }}
+{{ let b = if !a.is_empty() {
+            let mut c = 0;
+            for _ in a {
+                c += name.len();
+            }
+
+            c
+        } else {
+            0
+        }
+        }}{{ b }}

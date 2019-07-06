@@ -1,0 +1,8 @@
+{{#if paragraphs.is_empty() ~}}
+    <p class="empty">No content</p>
+{{~ else ~}}
+    {{#each paragraphs ~}}
+        <p>{{this}}</p>
+    {{~/each~}}
+{{/if}}
+

@@ -1,0 +1,14 @@
+entry
+{{title}}
+  {{#with story}}
+   foo
+    {{{intro}}}
+  bar
+    {{{body}}}
+  {{/with}}
+baz
+  {{~# each comments}}
+    foo
+      {{~ subject}}
+      {{{ body}}}
+{{~/each}}

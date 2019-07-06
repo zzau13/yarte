@@ -1,0 +1,24 @@
+[package]
+name = "yarte_helpers"
+version = "0.3.0"
+authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
+description = "Helper collection for yarte"
+categories = ["template-engine"]
+documentation = "https://docs.rs/yarte_helpers"
+edition = "2018"
+keywords = ["markup", "template", "handlebars", "html", "yarte_helpers"]
+license = "MIT/Apache-2.0"
+readme = "../README.md"
+repository = "https://github .com/r-iendo/yarte"
+workspace = ".."
+
+[badges]
+travis-ci = { repository = "r-iendo/yarte", branch = "master" }
+maintenance = { status = "actively-developed" }
+
+[dependencies]
+v_htmlescape = "0.4"
+cfg-if = "0.1"
+
+[build-dependencies]
+version_check = "0.1"

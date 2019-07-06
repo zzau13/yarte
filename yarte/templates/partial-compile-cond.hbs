@@ -1,0 +1,17 @@
+{{#unless (is_bar || false && true) == ((1 + 1) == (num * 2)) ~}}
+    foo
+{{~/unless}}
+
+{{~#if (is_bar || false && true) == ((1 + 1) == (num * 2)) ~}}
+    foo
+{{~ else ~}}
+    bar{{ is_bar }}
+{{~/if}}
+
+{{~#if (is_bar || false && true) == ((1 + 1) == (num * 2)) ~}}
+    foo
+{{~ else if is_bar ~}}
+    bar
+{{~ else if num == 0 ~}}
+    fon
+{{~/if}}

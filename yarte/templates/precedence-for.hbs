@@ -1,0 +1,9 @@
+{{#each strings }}
+    {{ let a = if true && first {
+                "bar"
+            } else {
+                ""
+            }
+    }}
+    {{ index0 }} ~ {{ this }}{{ 2 * index }}{{{ a }}}
+{{~/each}}

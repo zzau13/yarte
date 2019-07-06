@@ -1,0 +1,12 @@
+{{ let cond = !cond }}
+{{ let a = if !cond {
+        let a = if cond { "world" } else { "foo" };
+        a
+    } else if !cond {
+        "foo"
+    } else {
+        "bar"
+    }
+}}
+
+Hello, {{ self.cond }} {{ cond }} {{ a }}!

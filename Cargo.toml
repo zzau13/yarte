@@ -1,0 +1,8 @@
+[workspace]
+members = [
+    "example",
+    "yarte",
+    "yarte_derive",
+    "yarte_config",
+    "yarte_helpers"
+]

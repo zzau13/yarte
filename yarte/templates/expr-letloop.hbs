@@ -1,0 +1,15 @@
+{{ let mut a = name.chars() }}
+
+{{ let b: String = loop {
+        if a.next().is_none() && true {
+            let mut a = name.repeat(1);
+            a.push('!');
+            break a.repeat(2);
+        } else {
+            continue;
+        }
+    }
+}}
+
+
+{{ b }}

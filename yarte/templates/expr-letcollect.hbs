@@ -1,0 +1,7 @@
+{{ let doubled = a.iter().map(|x| x * 2).collect::<Vec<_>>() }}
+
+{{ let doubled: Vec<usize> = a.iter().map(|x| x * 2).collect() }}
+
+{{#each doubled ~}}
+    {{ this + 1 }}
+{{~/each}}

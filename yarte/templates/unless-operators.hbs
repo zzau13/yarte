@@ -1,0 +1,33 @@
+{{#unless a * c > b ~}}
+  mul
+{{~/unless~}}
+{{#unless c / c == a ~}}
+  div
+{{~/unless~}}
+{{#unless a % c == b ~}}
+  mod
+{{~/unless~}}
+{{#unless a + b == c ~}}
+  add
+{{~/unless~}}
+{{#unless a << b == c ~}}
+  rsh
+{{~/unless~}}
+{{#unless c >> b == a ~}}
+  lsh
+{{~/unless~}}
+{{#unless a & b == b ~}}
+  band
+{{~/unless~}}
+{{#unless b ^ c == a + c ~}}
+  bxor
+{{~/unless~}}
+{{#unless (b | c) == a + c ~}}
+  bor
+{{~/unless~}}
+{{#unless a == b && a + b == c ~}}
+  and
+{{~/unless~}}
+{{#unless a == c || a == 1 ~}}
+  or
+{{~/unless~}}

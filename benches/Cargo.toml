@@ -1,0 +1,22 @@
+[package]
+name = "benches"
+version = "0.0.1"
+publish = false
+edition = "2018"
+
+[workspace]
+members = ["."]
+
+[dependencies]
+yarte = { path = "../yarte", version = "*" }
+
+[build-dependencies]
+yarte = { path = "../yarte", version = "*" }
+
+[dev-dependencies]
+criterion = "0.2"
+
+[[bench]]
+name = "yarte"
+harness = false
+path = "src/all.rs"

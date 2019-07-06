@@ -1,0 +1,5 @@
+[book]
+authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
+multilingual = false
+src = "src"
+title = "Yarte 0.3.0"

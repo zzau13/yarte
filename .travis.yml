@@ -1,0 +1,19 @@
+language: rust
+sudo: false
+dist: trusty
+
+cache:
+  cargo: true
+  apt: true
+
+matrix:
+  include:
+    - rust: stable
+    - rust: beta
+    - rust: nightly
+  allow_failures:
+    - rust: nightly
+
+script:
+- cargo check --all --no-default-features
+- cargo test --all-features --all -- --nocapture

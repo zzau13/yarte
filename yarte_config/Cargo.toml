@@ -1,0 +1,22 @@
+[package]
+name = "yarte_config"
+version = "0.3.0"
+authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
+description = "Config file parser of yarte"
+categories = ["template-engine"]
+documentation = "https://docs.rs/yarte_config"
+edition = "2018"
+keywords = ["markup", "template", "handlebars", "html", "handlebars_config"]
+license = "MIT/Apache-2.0"
+readme = "../README.md"
+repository = "https://github .com/r-iendo/yarte"
+workspace = ".."
+
+[badges]
+travis-ci = { repository = "r-iendo/yarte", branch = "master" }
+maintenance = { status = "actively-developed" }
+
+[dependencies]
+serde = "1.0"
+serde_derive = "1.0"
+toml = "0.4"
