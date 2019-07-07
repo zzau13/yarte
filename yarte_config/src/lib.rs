@@ -76,6 +76,7 @@ pub struct Dir(PathBuf);
 impl Dir {
     pub fn get_template(&self, path: &str) -> PathBuf {
         let template = self.0.join(path);
+
         if template.exists() {
             template
         } else {
@@ -166,15 +167,12 @@ impl<'a> Config<'a> {
         };
 
         if is_alias {
-            self.dir
-                .get_template(buf.to_str().unwrap())
-                .canonicalize()
-                .expect("valid path to partial")
+            self.dir.get_template(buf.to_str().unwrap())
         } else {
             let mut parent = parent.to_owned();
             parent.pop();
             parent.push(buf);
-            parent.canonicalize().expect("valid path to partial")
+            parent
         }
     }
 }
