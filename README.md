@@ -96,7 +96,7 @@ We are not looking for anything other than render HTML5 and text as fast as poss
 You can open a pull request in another case.
 
 ## Acknowledgment
-Yarte is based on all previous templates engines, syntax as well as its documentation 
+Yarte is based on a fork of the [Askama](https://github.com/djc/askama) templating framework for Rust. It aspires to learn from all previous templates engines: syntax as well as its documentation 
 is highly influenced by [Handlebars][handlebars]. Implemented mainly with `nom`, 
 `memchr` and `syn`, among others crates . As many ideas as possible used in 
 Yarte are from other repositories. Comments in the code clarify which ideas are used, 
