@@ -4,7 +4,7 @@ use syn::{
     PathSegment,
 };
 
-use std::{fmt::Write, str};
+use std::{fmt::Write, mem, str};
 
 use super::{identifier::is_tuple_index, EWrite, Generator, On};
 
@@ -138,7 +138,9 @@ impl<'a> Visit<'a> for Generator<'a> {
     }
 
     fn visit_expr_block(&mut self, i: &'a syn::ExprBlock) {
+        let last = mem::replace(&mut self.will_wrap, false);
         visit::visit_expr_block(self, i);
+        self.will_wrap = last;
     }
 
     fn visit_expr_box(
@@ -183,7 +185,9 @@ impl<'a> Visit<'a> for Generator<'a> {
         } else {
             write!(self.buf_t, "{}(", ident).unwrap();
         }
+        let last = mem::replace(&mut self.will_wrap, false);
         visit_punctuated!(self, args, visit_expr);
+        self.will_wrap = last;
         self.buf_t.push(')');
     }
 
@@ -197,7 +201,9 @@ impl<'a> Visit<'a> for Generator<'a> {
         }: &'a syn::ExprCast,
     ) {
         visit_attrs!(self, attrs);
+        let last = mem::replace(&mut self.will_wrap, false);
         self.visit_expr(expr);
+        self.will_wrap = last;
         write!(self.buf_t, " {} ", quote!(#as_token #ty)).unwrap();
     }
 
@@ -286,7 +292,9 @@ impl<'a> Visit<'a> for Generator<'a> {
         self.buf_t.write(&" if ");
         self.scp.push_scope(vec![]);
 
+        let last = mem::replace(&mut self.will_wrap, false);
         self.visit_expr(cond);
+        self.will_wrap = last;
 
         self.visit_block(then_branch);
         self.scp.pop();
@@ -319,6 +327,7 @@ impl<'a> Visit<'a> for Generator<'a> {
         }: &'a syn::ExprLet,
     ) {
         visit_attrs!(self, attrs);
+        let last_w = mem::replace(&mut self.will_wrap, false);
 
         self.buf_t.write_str("let ").unwrap();
 
@@ -331,6 +340,8 @@ impl<'a> Visit<'a> for Generator<'a> {
 
         self.visit_expr(expr);
         self.scp.extend(last);
+
+        self.will_wrap = last_w;
     }
 
     fn visit_expr_loop(
@@ -344,7 +355,9 @@ impl<'a> Visit<'a> for Generator<'a> {
     ) {
         visit_attrs!(self, attrs);
         self.buf_t.write(&quote!(#label #loop_token));
+        let last = mem::replace(&mut self.will_wrap, false);
         self.visit_block(body);
+        self.will_wrap = last;
     }
 
     fn visit_expr_match(
@@ -381,7 +394,9 @@ impl<'a> Visit<'a> for Generator<'a> {
         visit_attrs!(self, attrs);
         self.visit_expr(receiver);
         write!(self.buf_t, ".{}(", quote!(#method#turbofish)).unwrap();
+        let last = mem::replace(&mut self.will_wrap, false);
         visit_punctuated!(self, args, visit_expr);
+        self.will_wrap = last;
         self.buf_t.push(')');
     }
 
@@ -399,8 +414,11 @@ impl<'a> Visit<'a> for Generator<'a> {
             panic!("Not available QSelf in a template expression");
         }
 
-        macro_rules! writes {
+        macro_rules! wrap_and_write {
             ($($t:tt)+) => {{
+                if self.will_wrap {
+                    self.wrapped = true;
+                }
                 return write!(self.buf_t, $($t)+).unwrap();
             }};
         }
@@ -425,13 +443,13 @@ impl<'a> Visit<'a> for Generator<'a> {
                 debug_assert!(self.scp.get($j).is_some(), "{} {:?}", $j, self.scp);
                 debug_assert!(!self.scp[$j].is_empty());
                 match $ident {
-                    "index0" => writes!("{}", self.scp[$j][1]),
-                    "index" => writes!("({} + 1)", self.scp[$j][1]),
-                    "first" => writes!("({} == 0)", self.scp[$j][1]),
+                    "index0" => wrap_and_write!("{}", self.scp[$j][1]),
+                    "index" => wrap_and_write!("({} + 1)", self.scp[$j][1]),
+                    "first" => wrap_and_write!("({} == 0)", self.scp[$j][1]),
                     "this" => return self.buf_t.write(&self.scp[$j][0]),
                     ident => {
                         index_var!(ident, $j);
-                        writes!("{}.{}", self.scp[$j][0], ident);
+                        return write!(self.buf_t, "{}.{}", self.scp[$j][0], ident).unwrap();
                     }
                 }
             }};
@@ -442,12 +460,17 @@ impl<'a> Visit<'a> for Generator<'a> {
                 debug_assert!(self.scp.get($j).is_some());
                 debug_assert!(!self.scp[$j].is_empty());
                 index_var!($ident, $j);
-                writes!("{}.{}", self.scp[$j][0], $ident);
+                return write!(self.buf_t, "{}.{}", self.scp[$j][0], $ident).unwrap();
             }};
         }
 
         macro_rules! self_var {
             ($ident:ident) => {{
+                if self.partial.is_none() && self.will_wrap {
+                    if self.s.self_ident_is_wrapped($ident) {
+                        self.wrapped = true;
+                    }
+                }
                 index_var!($ident, 0);
                 write!(self.buf_t, "{}.{}", self.scp.root(), $ident).unwrap();
             }};
@@ -561,7 +584,9 @@ impl<'a> Visit<'a> for Generator<'a> {
         visit_attrs!(self, attrs);
 
         self.buf_t.push('(');
+        let last = mem::replace(&mut self.will_wrap, false);
         visit_punctuated!(self, elems, visit_expr);
+        self.will_wrap = last;
         self.buf_t.push(')');
     }
 
@@ -586,9 +611,11 @@ impl<'a> Visit<'a> for Generator<'a> {
         }: &'a syn::ExprWhile,
     ) {
         visit_attrs!(self, attrs);
+        let last = mem::replace(&mut self.will_wrap, false);
         write!(self.buf_t, " {} ", quote!(#label #while_token)).unwrap();
         self.visit_expr(cond);
         self.visit_block(body);
+        self.will_wrap = last;
     }
 
     fn visit_expr_yield(&mut self, _i: &'a syn::ExprYield) {
@@ -610,6 +637,15 @@ impl<'a> Visit<'a> for Generator<'a> {
     }
 
     fn visit_lit(&mut self, i: &'a syn::Lit) {
+        use syn::Lit::*;
+        match i {
+            Int(_) | Float(_) | Bool(_) => {
+                if self.will_wrap {
+                    self.wrapped = true;
+                }
+            }
+            _ => (),
+        }
         self.buf_t.write(&quote!(#i));
     }
 
@@ -625,6 +661,7 @@ impl<'a> Visit<'a> for Generator<'a> {
     ) {
         visit_attrs!(self, attrs);
 
+        let last = mem::replace(&mut self.will_wrap, false);
         self.scp.push_scope(vec![]);
 
         self.buf_t.write(&"let ");
@@ -646,6 +683,7 @@ impl<'a> Visit<'a> for Generator<'a> {
         }
         self.buf_t.push(';');
 
+        self.will_wrap = last;
         self.scp.extend(scope);
     }
 
@@ -774,6 +812,7 @@ impl<'a> Visit<'a> for Generator<'a> {
 
     fn visit_stmt(&mut self, i: &'a syn::Stmt) {
         use syn::Stmt::*;
+        let last = mem::replace(&mut self.will_wrap, false);
         match i {
             Local(i) => {
                 self.visit_local(i);
@@ -789,6 +828,7 @@ impl<'a> Visit<'a> for Generator<'a> {
                 self.buf_t.write(&quote!(#semi));
             }
         }
+        self.will_wrap = last;
     }
 
     fn visit_un_op(&mut self, i: &'a syn::UnOp) {
