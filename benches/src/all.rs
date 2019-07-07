@@ -6,17 +6,14 @@ use criterion::Criterion;
 use yarte::Template;
 
 mod fmt;
-mod std_write;
 
 criterion_main!(benches);
 criterion_group!(benches, functions);
 
 fn functions(c: &mut Criterion) {
     c.bench_function("Teams", teams);
-    c.bench_function("Write Teams", std_write::teams);
     c.bench_function("Formatter Teams", fmt::teams);
     c.bench_function("Big table", |b| big_table(b, &100));
-    c.bench_function("Write Big table", |b| std_write::big_table(b, &100));
     c.bench_function("Formatter Big table", |b| fmt::big_table(b, &100));
 }
 
@@ -45,7 +42,6 @@ fn teams(b: &mut criterion::Bencher) {
         teams: vec![
             Team {
                 name: "Jiangsu".into(),
-
                 score: 43,
             },
             Team {

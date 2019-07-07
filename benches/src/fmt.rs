@@ -28,9 +28,9 @@ impl Display for BigTable {
         f.write_str("<table>")?;
         for i in (&self.table).into_iter() {
             f.write_str("<tr>")?;
-            for j in i {
+            for j in (&i).into_iter() {
                 f.write_str("<td>")?;
-                j.fmt(f)?;
+                (&j).fmt(f)?;
                 f.write_str("</td>")?;
             }
             f.write_str("</tr>")?;
@@ -89,12 +89,13 @@ impl Display for Teams {
                 f.write_str("champion")?;
             }
             f.write_str("\"><b>")?;
-            v.name.fmt(f)?;
+            (&v.name).fmt(f)?;
             f.write_str("</b>: ")?;
-            v.score.fmt(f)?;
+            (&v.score).fmt(f)?;
             f.write_str("</li>")?;
         }
         f.write_str("</ul></body></html>")?;
+
         Ok(())
     }
 }
