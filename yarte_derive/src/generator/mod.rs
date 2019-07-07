@@ -65,6 +65,10 @@ pub(self) struct Generator<'a> {
     pub(self) c: &'a Config<'a>,
     // ast of DeriveInput
     pub(self) s: &'a Struct<'a>,
+    // wrapped expression flag
+    pub(self) wrapped: bool,
+    // will wrap expression Flag
+    pub(self) will_wrap: bool,
     // buffer for tokens
     pub(self) buf_t: String,
     // Scope stack
@@ -98,6 +102,8 @@ impl<'a> Generator<'a> {
             partial: None,
             scp: Scope::new("self".to_owned(), 0),
             skip_ws: false,
+            will_wrap: true,
+            wrapped: true,
         }
     }
 
@@ -165,6 +171,7 @@ impl<'a> Generator<'a> {
         debug_assert!(self.buf_t.is_empty());
         debug_assert!(self.buf_w.is_empty());
         debug_assert_eq!(self.on_path, self.s.path);
+        debug_assert!(self.will_wrap);
         debug_assert_eq!(self.next_ws, None);
 
         buf.writeln(&quote!(Ok(())));
@@ -260,6 +267,7 @@ impl<'a> Generator<'a> {
                 Node::Expr(ws, expr) => {
                     validator::expression(expr);
 
+                    self.wrapped = false;
                     self.visit_expr(expr);
                     self.handle_ws(ws);
                     if let Some(..) = self.partial {
@@ -313,7 +321,7 @@ impl<'a> Generator<'a> {
 
                     self.buf_w.push(Writable::Expr(
                         mem::replace(&mut self.buf_t, String::new()),
-                        false,
+                        self.wrapped,
                     ))
                 }
                 Node::Lit(l, lit, r) => self.visit_lit(l, lit, r),

@@ -1,10 +1,12 @@
 use syn::visit::Visit;
 
 use std::path::PathBuf;
+use std::usize;
 
 use yarte_config::Config;
 
 use super::EWrite;
+use std::collections::HashMap;
 
 pub(crate) fn visit_derive<'a>(i: &'a syn::DeriveInput, config: &'a Config) -> Struct<'a> {
     StructBuilder::default().build(i, config)
@@ -16,6 +18,7 @@ pub(crate) struct Struct<'a> {
     pub path: PathBuf,
     pub print: Print,
     pub wrapped: bool,
+    fields: HashMap<String, bool>,
     ident: &'a syn::Ident,
     generics: &'a syn::Generics,
 }
@@ -34,6 +37,13 @@ impl<'a> Struct<'a> {
         )
         .unwrap()
     }
+
+    pub fn self_ident_is_wrapped(&self, ident: &str) -> bool {
+        match self.fields.get(ident) {
+            Some(ident) => *ident,
+            _ => false,
+        }
+    }
 }
 
 struct StructBuilder {
@@ -42,6 +52,7 @@ struct StructBuilder {
     path: Option<String>,
     print: Option<String>,
     src: Option<String>,
+    fields: Vec<(String, bool)>,
 }
 
 impl Default for StructBuilder {
@@ -52,6 +63,7 @@ impl Default for StructBuilder {
             path: None,
             print: None,
             src: None,
+            fields: vec![],
         }
     }
 }
@@ -94,6 +106,13 @@ impl StructBuilder {
             true
         });
 
+        let mut fields = HashMap::new();
+        for (k, v) in self.fields {
+            if fields.insert(k, v).is_some() {
+                panic!("repeat field ident")
+            }
+        }
+
         Struct {
             src,
             path,
@@ -101,6 +120,7 @@ impl StructBuilder {
             wrapped,
             generics,
             ident,
+            fields,
         }
     }
 }
@@ -113,9 +133,39 @@ impl<'a> Visit<'a> for StructBuilder {
     fn visit_data(&mut self, i: &'a syn::Data) {
         use syn::Data::*;
         match i {
-            Struct(_) => (),
+            Struct(ref i) => {
+                self.visit_data_struct(i);
+            }
             Enum(_) | Union(_) => panic!("Not valid need a `struc`"),
         }
+    }
+
+    fn visit_field(&mut self, syn::Field { ident, ty, .. }: &'a syn::Field) {
+        let ident = if let Some(ident) = ident {
+            quote!(#ident).to_string()
+        } else {
+            if let Some((last, _)) = self.fields.last() {
+                if let Ok(last) = usize::from_str_radix(&last, 10) {
+                    (last + 1).to_string()
+                } else {
+                    panic!("");
+                }
+            } else {
+                "0".to_string()
+            }
+        };
+
+        use syn::Type::*;
+        let ty = match ty {
+            Path(syn::TypePath { path, .. }) => match quote!(#path).to_string().as_ref() {
+                "bool" | "usize" | "isize" | "u8" | "u16" | "u32" | "u64" | "u128" | "i8"
+                | "i16" | "i32" | "i64" | "i128" => true,
+                _ => false,
+            },
+            _ => false,
+        };
+
+        self.fields.push((ident, ty));
     }
 
     fn visit_meta_list(&mut self, syn::MetaList { ident, nested, .. }: &'a syn::MetaList) {
