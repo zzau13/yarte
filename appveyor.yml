@@ -18,5 +18,5 @@ clone_depth: 1
 build: false
 
 test_script:
-  - cargo test
-  - cd testing && cargo test --features full
+  - cargo check --all --no-default-features
+  - cargo test --all-features --all -- --nocapture
