@@ -35,8 +35,10 @@
 //!     - `Sublime Snazzy`,
 //!     - `TwoDark`,
 //!     - `zenburn`
-//!
-//! In future versions, more features will be added to the configuration file.
+//!   - **`grid`** (default:  `false`): Boolean
+//!   - **`header`** (default:  `false`): Boolean
+//!   - **`paging`** (default:  `false`): Boolean
+//!   - **`short`** (default:  `true`): Boolean, if set to `false` to verbose
 //!
 //! ### Example of a config file
 //! ```toml
