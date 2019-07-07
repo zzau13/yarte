@@ -4,12 +4,10 @@ use std::fmt::{self, Display};
 use v_htmlescape::escape;
 
 pub trait Render {
-    #[inline(always)]
     fn render(&self, f: &mut fmt::Formatter) -> fmt::Result;
 }
 
 impl<'a, T: Render + ?Sized> Render for &'a T {
-    #[inline(always)]
     fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
         (*self).render(f)
     }
@@ -25,14 +23,12 @@ impl<T: Render> Render for Option<T> {
 }
 
 impl Render for str {
-    #[inline(always)]
     fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
         escape(self).fmt(f)
     }
 }
 
 impl Render for String {
-    #[inline(always)]
     fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.as_str().render(f)
     }
@@ -42,7 +38,6 @@ macro_rules! raw_display {
     ($($ty:ty)*) => {
         $(
             impl Render for $ty {
-                #[inline(always)]
                 fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
                     self.fmt(f)
                 }
