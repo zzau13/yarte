@@ -148,10 +148,10 @@ impl<'a> Visit<'a> for StructBuilder {
                 if let Ok(last) = usize::from_str_radix(&last, 10) {
                     (last + 1).to_string()
                 } else {
-                    panic!("");
+                    unreachable!();
                 }
             } else {
-                "0".to_string()
+                "0".to_owned()
             }
         };
 
@@ -292,9 +292,54 @@ mod test {
         let i = parse_str::<syn::DeriveInput>(src).unwrap();
         let config = Config::new("");
         let s = visit_derive(&i, &config);
+
         assert_eq!(s.src, "");
         assert_eq!(s.path, PathBuf::from("Test.txt"));
         assert_eq!(s.print, Print::Code);
         assert_eq!(s.wrapped, true);
+    }
+
+    #[test]
+    fn test_wrapped() {
+        let src = r#"
+            #[derive(Template)]
+            #[template(src = "")]
+            struct Test<'a> {
+                foo: bool,
+                bar: usize,
+                fon: Bar,
+                fnn: &'a [usize],
+                fno: Vec<usize>,
+            }
+        "#;
+        let i = parse_str::<syn::DeriveInput>(src).unwrap();
+        let config = Config::new("");
+        let s = visit_derive(&i, &config);
+
+        assert_eq!(s.src, "");
+        assert!(s.self_ident_is_wrapped("foo"));
+        assert!(s.self_ident_is_wrapped("bar"));
+        assert!(!s.self_ident_is_wrapped("fon"));
+        assert!(!s.self_ident_is_wrapped("fnn"));
+        assert!(!s.self_ident_is_wrapped("fno"));
+    }
+
+    #[test]
+    fn test_wrapped_noname() {
+        let src = r#"
+            #[derive(Template)]
+            #[template(src = "")]
+            struct Test<'a>(bool, usize, Bar, &'a [usize], Vec<usize>,);
+        "#;
+        let i = parse_str::<syn::DeriveInput>(src).unwrap();
+        let config = Config::new("");
+        let s = visit_derive(&i, &config);
+
+        assert_eq!(s.src, "");
+        assert!(s.self_ident_is_wrapped("0"));
+        assert!(s.self_ident_is_wrapped("1"));
+        assert!(!s.self_ident_is_wrapped("2"));
+        assert!(!s.self_ident_is_wrapped("3"));
+        assert!(!s.self_ident_is_wrapped("4"));
     }
 }
