@@ -1,16 +1,26 @@
 # CHANGES
 
+## [0.3.1] (2019-08-05)
+
+### Fixed 
+
+- `Mime types` update mime_guess to *2.0* and append `; charset=utf-8`
+
+### Improve
+
+- Performance of render trait for html escape
+
 ## [0.3.0] (2019-07-07)
 
 ### Added
 
-- Render interface for typed escaped
+- Render trait for typed escaped
 
 ## [0.2.0] (2019-04-01)
 
 ### Fixed
 
-- 
+- Some issues
 
 ## [0.1.2] (2019-03-19)
 
