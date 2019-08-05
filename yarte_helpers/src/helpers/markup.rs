@@ -11,6 +11,7 @@ macro_rules! str_display {
     ($($ty:ty)*) => {
         $(
             impl Render for &$ty {
+                #[inline(always)]
                 fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
                     escape(self).fmt(f)
                 }
@@ -26,6 +27,7 @@ macro_rules! string_display {
     ($($ty:ty)*) => {
         $(
             impl Render for $ty {
+                #[inline(always)]
                 fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
                     escape(self.as_str()).fmt(f)
                 }
@@ -41,6 +43,7 @@ macro_rules! raw_display {
     ($($ty:ty)*) => {
         $(
             impl Render for $ty {
+                #[inline(always)]
                 fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
                     self.fmt(f)
                 }
