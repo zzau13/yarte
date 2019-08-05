@@ -1,9 +1,3 @@
-use mime_guess::get_mime_type_str;
-use syn::parse_str;
-use syn::visit::Visit;
-use v_eval::{ctx_as_ref, eval};
-use v_htmlescape::escape;
-
 use std::{
     collections::{BTreeMap, HashMap},
     fmt::{self, Write},
@@ -11,6 +5,11 @@ use std::{
     path::PathBuf,
 };
 
+use mime_guess::from_ext;
+use syn::parse_str;
+use syn::visit::Visit;
+use v_eval::{ctx_as_ref, eval};
+use v_htmlescape::escape;
 use yarte_config::Config;
 
 use crate::parser::{Helper, Node, Ws};
@@ -123,7 +122,7 @@ impl<'a> Generator<'a> {
     }
 
     #[inline]
-    fn get_mime(&mut self) -> &str {
+    fn get_mime(&mut self) -> String {
         let ext = if self.s.wrapped {
             match self.s.path.extension() {
                 Some(s) => s.to_str().unwrap(),
@@ -133,7 +132,7 @@ impl<'a> Generator<'a> {
             "html"
         };
 
-        get_mime_type_str(ext).expect("valid mime ext")
+        from_ext(ext).first_or_text_plain().to_string()
     }
 
     fn template(&mut self, size_hint: usize, buf: &mut String) {
@@ -141,7 +140,11 @@ impl<'a> Generator<'a> {
         self.s.implement_head("::yarte::Template", buf);
 
         buf.writeln(&"fn mime() -> &'static str {");
-        writeln!(buf, "{:?}", self.get_mime()).unwrap();
+
+        let mut mime = self.get_mime();
+        mime.push_str("; charset=utf-8");
+        writeln!(buf, "{:?}", mime).unwrap();
+
         buf.writeln(&"}");
         buf.writeln(&"fn size_hint() -> usize {");
         if cfg!(debug_assertions) {
