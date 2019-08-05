@@ -1,6 +1,6 @@
 [package]
 name = "yarte_derive"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "Procedural macro package for yarte"
 categories = ["template-engine"]
@@ -27,7 +27,7 @@ yarte_config = { version = "0.3", path = "../yarte_config" }
 v_htmlescape = "0.4"
 v_eval = "0.0"
 memchr = "2.1"
-mime_guess = "2.0.0-alpha"
+mime_guess = "2.0.0"
 nom = "4.2"
 proc-macro2 = "0.4"
 quote = "0.6"
