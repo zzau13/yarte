@@ -27,7 +27,7 @@ fn test_actix_web() {
     assert!(resp.status().is_success());
     assert_eq!(
         resp.headers().get(http::header::CONTENT_TYPE).unwrap(),
-        "text/html"
+        "text/html; charset=utf-8"
     );
 
     let bytes = test::read_body(resp);

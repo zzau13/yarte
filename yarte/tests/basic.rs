@@ -58,7 +58,7 @@ fn test_variables() {
          Iñtërnâtiônàlizætiøn is important\n\
          in vars too: Iñtërnâtiônàlizætiøn"
     );
-    assert_eq!(VariablesTemplate::mime(), "text/html");
+    assert_eq!(VariablesTemplate::mime(), "text/html; charset=utf-8");
 }
 
 #[derive(Template)]
