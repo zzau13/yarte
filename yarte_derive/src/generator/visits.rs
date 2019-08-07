@@ -331,7 +331,6 @@ impl<'a> Visit<'a> for Generator<'a> {
 
         self.visit_expr(expr);
         self.scp.extend(last);
-
     }
 
     fn visit_expr_loop(
