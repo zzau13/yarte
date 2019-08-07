@@ -3,7 +3,7 @@ use std::fmt::{self, Display};
 
 use v_htmlescape::escape;
 
-pub trait Render: Display {
+pub trait Render {
     fn render(&self, f: &mut fmt::Formatter) -> fmt::Result;
 }
 
