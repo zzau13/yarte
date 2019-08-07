@@ -1,12 +1,10 @@
-use syn::visit::Visit;
-
 use std::path::PathBuf;
-use std::usize;
+
+use syn::visit::Visit;
 
 use yarte_config::Config;
 
 use super::EWrite;
-use std::collections::HashMap;
 
 pub(crate) fn visit_derive<'a>(i: &'a syn::DeriveInput, config: &'a Config) -> Struct<'a> {
     StructBuilder::default().build(i, config)
@@ -18,7 +16,6 @@ pub(crate) struct Struct<'a> {
     pub path: PathBuf,
     pub print: Print,
     pub wrapped: bool,
-    fields: HashMap<String, bool>,
     ident: &'a syn::Ident,
     generics: &'a syn::Generics,
 }
@@ -37,13 +34,6 @@ impl<'a> Struct<'a> {
         )
         .unwrap()
     }
-
-    pub fn self_ident_is_wrapped(&self, ident: &str) -> bool {
-        match self.fields.get(ident) {
-            Some(ident) => *ident,
-            _ => false,
-        }
-    }
 }
 
 struct StructBuilder {
@@ -52,7 +42,6 @@ struct StructBuilder {
     path: Option<String>,
     print: Option<String>,
     src: Option<String>,
-    fields: Vec<(String, bool)>,
 }
 
 impl Default for StructBuilder {
@@ -63,7 +52,6 @@ impl Default for StructBuilder {
             path: None,
             print: None,
             src: None,
-            fields: vec![],
         }
     }
 }
@@ -106,13 +94,6 @@ impl StructBuilder {
             true
         });
 
-        let mut fields = HashMap::new();
-        for (k, v) in self.fields {
-            if fields.insert(k, v).is_some() {
-                panic!("repeat field ident")
-            }
-        }
-
         Struct {
             src,
             path,
@@ -120,7 +101,6 @@ impl StructBuilder {
             wrapped,
             generics,
             ident,
-            fields,
         }
     }
 }
@@ -138,34 +118,6 @@ impl<'a> Visit<'a> for StructBuilder {
             }
             Enum(_) | Union(_) => panic!("Not valid need a `struc`"),
         }
-    }
-
-    fn visit_field(&mut self, syn::Field { ident, ty, .. }: &'a syn::Field) {
-        let ident = if let Some(ident) = ident {
-            quote!(#ident).to_string()
-        } else {
-            if let Some((last, _)) = self.fields.last() {
-                if let Ok(last) = usize::from_str_radix(&last, 10) {
-                    (last + 1).to_string()
-                } else {
-                    unreachable!();
-                }
-            } else {
-                "0".to_owned()
-            }
-        };
-
-        use syn::Type::*;
-        let ty = match ty {
-            Path(syn::TypePath { path, .. }) => match quote!(#path).to_string().as_ref() {
-                "bool" | "usize" | "isize" | "u8" | "u16" | "u32" | "u64" | "u128" | "i8"
-                | "i16" | "i32" | "i64" | "i128" => true,
-                _ => false,
-            },
-            _ => false,
-        };
-
-        self.fields.push((ident, ty));
     }
 
     fn visit_meta_list(&mut self, syn::MetaList { ident, nested, .. }: &'a syn::MetaList) {
@@ -297,49 +249,5 @@ mod test {
         assert_eq!(s.path, PathBuf::from("Test.txt"));
         assert_eq!(s.print, Print::Code);
         assert_eq!(s.wrapped, true);
-    }
-
-    #[test]
-    fn test_wrapped() {
-        let src = r#"
-            #[derive(Template)]
-            #[template(src = "")]
-            struct Test<'a> {
-                foo: bool,
-                bar: usize,
-                fon: Bar,
-                fnn: &'a [usize],
-                fno: Vec<usize>,
-            }
-        "#;
-        let i = parse_str::<syn::DeriveInput>(src).unwrap();
-        let config = Config::new("");
-        let s = visit_derive(&i, &config);
-
-        assert_eq!(s.src, "");
-        assert!(s.self_ident_is_wrapped("foo"));
-        assert!(s.self_ident_is_wrapped("bar"));
-        assert!(!s.self_ident_is_wrapped("fon"));
-        assert!(!s.self_ident_is_wrapped("fnn"));
-        assert!(!s.self_ident_is_wrapped("fno"));
-    }
-
-    #[test]
-    fn test_wrapped_noname() {
-        let src = r#"
-            #[derive(Template)]
-            #[template(src = "")]
-            struct Test<'a>(bool, usize, Bar, &'a [usize], Vec<usize>,);
-        "#;
-        let i = parse_str::<syn::DeriveInput>(src).unwrap();
-        let config = Config::new("");
-        let s = visit_derive(&i, &config);
-
-        assert_eq!(s.src, "");
-        assert!(s.self_ident_is_wrapped("0"));
-        assert!(s.self_ident_is_wrapped("1"));
-        assert!(!s.self_ident_is_wrapped("2"));
-        assert!(!s.self_ident_is_wrapped("3"));
-        assert!(!s.self_ident_is_wrapped("4"));
     }
 }
