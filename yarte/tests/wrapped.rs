@@ -99,20 +99,3 @@ fn test_debug() {
     };
     assert_eq!("[0]", t.call().unwrap());
 }
-
-#[derive(Template)]
-#[template(
-    src = "{{ cond }}{{ 1 + num }}{{ num }}{{ cond || true }}{{ 1.0 }}{{ [true][0..1][0] }}",
-    ext = "hbs",
-    print = "code"
-)]
-struct WrappedDebug {
-    cond: bool,
-    num: usize,
-}
-
-#[test]
-fn test_wrapped_debug() {
-    let t = WrappedDebug { cond: true, num: 0 };
-    assert_eq!("true10true1true", t.call().unwrap());
-}
