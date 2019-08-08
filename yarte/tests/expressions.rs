@@ -1,3 +1,5 @@
+#![allow(clippy::redundant_pattern_matching, clippy::into_iter_on_ref)]
+
 use std::fmt::Error;
 use yarte::{Result, Template};
 

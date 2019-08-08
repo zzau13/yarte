@@ -53,7 +53,7 @@ impl<'a> PartialBuilder<'a> {
             _ => panic!("Not available in partial argument:\n{}", quote!(#(#e ,)*)),
         }
 
-        for i in (&e[1..]).into_iter() {
+        for i in (&e[1..]).iter() {
             match i {
                 Assign(assign) => self.visit_expr_assign(&assign),
                 Path(..) => panic!("place scope argument `{}` at first position", quote!(#i)),

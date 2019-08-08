@@ -218,40 +218,37 @@ impl<'a> Generator<'a> {
                     validator::expression(expr);
 
                     self.visit_expr(expr);
-                    self.handle_ws(ws);
+                    self.handle_ws(*ws);
 
                     if let Some(..) = self.partial {
-                        match expr {
-                            syn::Expr::Path(..) => {
-                                if let Ok(lit) = syn::parse_str::<syn::Lit>(&self.buf_t) {
-                                    self.buf_t = String::new();
-                                    use syn::Lit::*;
-                                    match lit {
-                                        Byte(b) => self.buf_w.push(Writable::LitP(
-                                            String::from_utf8(vec![b.value()]).unwrap(),
-                                        )),
-                                        ByteStr(b) => self.buf_w.push(Writable::LitP(
-                                            String::from_utf8(b.value()).unwrap(),
-                                        )),
-                                        Str(b) => self.buf_w.push(Writable::LitP(b.value())),
-                                        Char(b) => {
-                                            self.buf_w.push(Writable::LitP(b.value().to_string()))
-                                        }
-                                        Bool(b) => {
-                                            self.buf_w.push(Writable::LitP(b.value.to_string()))
-                                        }
-                                        Float(b) => {
-                                            self.buf_w.push(Writable::LitP(b.value().to_string()))
-                                        }
-                                        Int(b) => {
-                                            self.buf_w.push(Writable::LitP(b.value().to_string()))
-                                        }
-                                        _ => panic!("Not allowed verbatim expression in a template expression"),
-                                    };
-                                    continue;
-                                }
+                        if let syn::Expr::Path(..) = expr {
+                            if let Ok(lit) = syn::parse_str::<syn::Lit>(&self.buf_t) {
+                                self.buf_t = String::new();
+                                use syn::Lit::*;
+                                match lit {
+                                    Byte(b) => self.buf_w.push(Writable::LitP(
+                                        String::from_utf8(vec![b.value()]).unwrap(),
+                                    )),
+                                    ByteStr(b) => self.buf_w.push(Writable::LitP(
+                                        String::from_utf8(b.value()).unwrap(),
+                                    )),
+                                    Str(b) => self.buf_w.push(Writable::LitP(b.value())),
+                                    Char(b) => {
+                                        self.buf_w.push(Writable::LitP(b.value().to_string()))
+                                    }
+                                    Bool(b) => self.buf_w.push(Writable::LitP(b.value.to_string())),
+                                    Float(b) => {
+                                        self.buf_w.push(Writable::LitP(b.value().to_string()))
+                                    }
+                                    Int(b) => {
+                                        self.buf_w.push(Writable::LitP(b.value().to_string()))
+                                    }
+                                    _ => panic!(
+                                        "Not allowed verbatim expression in a template expression"
+                                    ),
+                                };
+                                continue;
                             }
-                            _ => (),
                         }
                     }
 
@@ -264,53 +261,47 @@ impl<'a> Generator<'a> {
                     validator::expression(expr);
 
                     self.visit_expr(expr);
-                    self.handle_ws(ws);
+                    self.handle_ws(*ws);
                     if let Some(..) = self.partial {
-                        match expr {
-                            syn::Expr::Path(..) => {
-                                if let Ok(lit) = syn::parse_str::<syn::Lit>(&self.buf_t) {
-                                    self.buf_t = String::new();
-                                    use syn::Lit::*;
-                                    match lit {
-                                        Byte(b) => {
-                                            self.buf_w.push(Writable::LitP(
-                                                escape(
-                                                    &String::from_utf8(vec![b.value()]).unwrap(),
-                                                )
-                                                    .to_string(),
-                                            ));
-                                        }
-                                        ByteStr(b) => {
-                                            self.buf_w.push(Writable::LitP(
-                                                escape(&String::from_utf8(b.value()).unwrap())
-                                                    .to_string(),
-                                            ));
-                                        }
-                                        Char(b) => {
-                                            self.buf_w.push(Writable::LitP(
-                                                escape(&b.value().to_string()).to_string(),
-                                            ));
-                                        }
-                                        Str(b) => {
-                                            self.buf_w.push(Writable::LitP(
-                                                escape(&b.value()).to_string(),
-                                            ));
-                                        }
-                                        Bool(b) => {
-                                            self.buf_w.push(Writable::LitP(b.value.to_string()))
-                                        }
-                                        Float(b) => {
-                                            self.buf_w.push(Writable::LitP(b.value().to_string()))
-                                        }
-                                        Int(b) => {
-                                            self.buf_w.push(Writable::LitP(b.value().to_string()))
-                                        }
-                                        _ => panic!("Not allowed verbatim expression in a template expression"),
+                        if let syn::Expr::Path(..) = expr {
+                            if let Ok(lit) = syn::parse_str::<syn::Lit>(&self.buf_t) {
+                                self.buf_t = String::new();
+                                use syn::Lit::*;
+                                match lit {
+                                    Byte(b) => {
+                                        self.buf_w.push(Writable::LitP(
+                                            escape(&String::from_utf8(vec![b.value()]).unwrap())
+                                                .to_string(),
+                                        ));
                                     }
-                                    continue;
+                                    ByteStr(b) => {
+                                        self.buf_w.push(Writable::LitP(
+                                            escape(&String::from_utf8(b.value()).unwrap())
+                                                .to_string(),
+                                        ));
+                                    }
+                                    Char(b) => {
+                                        self.buf_w.push(Writable::LitP(
+                                            escape(&b.value().to_string()).to_string(),
+                                        ));
+                                    }
+                                    Str(b) => {
+                                        self.buf_w
+                                            .push(Writable::LitP(escape(&b.value()).to_string()));
+                                    }
+                                    Bool(b) => self.buf_w.push(Writable::LitP(b.value.to_string())),
+                                    Float(b) => {
+                                        self.buf_w.push(Writable::LitP(b.value().to_string()))
+                                    }
+                                    Int(b) => {
+                                        self.buf_w.push(Writable::LitP(b.value().to_string()))
+                                    }
+                                    _ => panic!(
+                                        "Not allowed verbatim expression in a template expression"
+                                    ),
                                 }
+                                continue;
                             }
-                            _ => (),
                         }
                     }
 
@@ -321,7 +312,7 @@ impl<'a> Generator<'a> {
                 }
                 Node::Lit(l, lit, r) => self.visit_lit(l, lit, r),
                 Node::Helper(h) => self.visit_helper(buf, h),
-                Node::Partial(ws, path, expr) => self.visit_partial(buf, ws, path, expr),
+                Node::Partial(ws, path, expr) => self.visit_partial(buf, *ws, path, expr),
                 Node::Comment(c) => {
                     self.skip_ws();
                     if cfg!(debug_assertions) {
@@ -333,9 +324,9 @@ impl<'a> Generator<'a> {
                     }
                 }
                 Node::Raw(ws, l, v, r) => {
-                    self.handle_ws(&ws.0);
+                    self.handle_ws(ws.0);
                     self.visit_lit(l, v, r);
-                    self.handle_ws(&ws.1);
+                    self.handle_ws(ws.1);
                 }
             }
         }
@@ -366,10 +357,10 @@ impl<'a> Generator<'a> {
     fn visit_helper(&mut self, buf: &mut String, h: &'a Helper<'a>) {
         use crate::parser::Helper::*;
         match h {
-            Each(ws, e, b) => self.visit_each(buf, ws, e, b),
+            Each(ws, e, b) => self.visit_each(buf, *ws, e, b),
             If(ifs, elsif, els) => self.visit_if(buf, ifs, elsif, els),
-            With(ws, e, b) => self.visit_with(buf, ws, e, b),
-            Unless(ws, e, b) => self.visit_unless(buf, ws, e, b),
+            With(ws, e, b) => self.visit_with(buf, *ws, e, b),
+            Unless(ws, e, b) => self.visit_unless(buf, *ws, e, b),
             Defined(..) => unimplemented!(),
         }
     }
@@ -377,19 +368,19 @@ impl<'a> Generator<'a> {
     fn visit_unless(
         &mut self,
         buf: &mut String,
-        ws: &'a (Ws, Ws),
+        ws: (Ws, Ws),
         cond: &'a syn::Expr,
         nodes: &'a [Node<'a>],
     ) {
         validator::unless(cond);
 
-        self.handle_ws(&ws.0);
+        self.handle_ws(ws.0);
         if let Some(val) = self.eval_bool(cond) {
             if !val {
                 self.scp.push_scope(vec![]);
                 self.handle(nodes, buf);
                 self.scp.pop();
-                self.handle_ws(&ws.1);
+                self.handle_ws(ws.1);
             }
         } else {
             self.write_buf_writable(buf);
@@ -406,7 +397,7 @@ impl<'a> Generator<'a> {
             self.handle(nodes, buf);
             self.scp.pop();
 
-            self.handle_ws(&ws.1);
+            self.handle_ws(ws.1);
             self.write_buf_writable(buf);
 
             buf.writeln(&"}");
@@ -416,13 +407,13 @@ impl<'a> Generator<'a> {
     fn visit_with(
         &mut self,
         buf: &mut String,
-        ws: &'a (Ws, Ws),
+        ws: (Ws, Ws),
         args: &'a syn::Expr,
         nodes: &'a [Node<'a>],
     ) {
         validator::scope(args);
 
-        self.handle_ws(&ws.0);
+        self.handle_ws(ws.0);
         self.visit_expr(args);
         self.on.push(On::With(self.scp.len()));
         self.scp
@@ -432,19 +423,19 @@ impl<'a> Generator<'a> {
 
         self.on.pop();
         self.scp.pop();
-        self.handle_ws(&ws.1);
+        self.handle_ws(ws.1);
     }
 
     fn visit_each(
         &mut self,
         buf: &mut String,
-        ws: &'a (Ws, Ws),
+        ws: (Ws, Ws),
         args: &'a syn::Expr,
         nodes: &'a [Node<'a>],
     ) {
         validator::each(args);
 
-        self.handle_ws(&ws.0);
+        self.handle_ws(ws.0);
         self.write_buf_writable(buf);
 
         let loop_var = find_loop_var(self.c, self.ctx, self.on_path.clone(), nodes);
@@ -497,7 +488,7 @@ impl<'a> Generator<'a> {
         self.scp.push_scope(ctx);
 
         self.handle(nodes, buf);
-        self.handle_ws(&ws.1);
+        self.handle_ws(ws.1);
         self.write_buf_writable(buf);
 
         self.on.pop();
@@ -517,7 +508,7 @@ impl<'a> Generator<'a> {
         let mut need_else = false;
         let mut last = false;
 
-        self.handle_ws(&pws.0);
+        self.handle_ws(pws.0);
         if let Some(val) = self.eval_bool(cond) {
             if val {
                 self.scp.push_scope(vec![]);
@@ -547,7 +538,7 @@ impl<'a> Generator<'a> {
                 break;
             }
 
-            self.handle_ws(&ws);
+            self.handle_ws(*ws);
             last = if let Some(val) = self.eval_bool(cond) {
                 if need_else {
                     buf.writeln(&'}');
@@ -587,7 +578,7 @@ impl<'a> Generator<'a> {
         }
 
         if let Some((ws, els)) = els {
-            self.handle_ws(ws);
+            self.handle_ws(*ws);
             if need_else {
                 self.write_buf_writable(buf);
                 buf.writeln(&"} else {");
@@ -600,14 +591,14 @@ impl<'a> Generator<'a> {
             }
         }
 
-        self.handle_ws(&pws.1);
+        self.handle_ws(pws.1);
         if need_else {
             self.write_buf_writable(buf);
             buf.writeln(&"}");
         }
     }
 
-    fn visit_partial(&mut self, buf: &mut String, ws: &Ws, path: &str, exprs: &'a [syn::Expr]) {
+    fn visit_partial(&mut self, buf: &mut String, ws: Ws, path: &str, exprs: &'a [syn::Expr]) {
         let p = self.c.resolve_partial(&self.on_path, path);
         let nodes = self.ctx.get(&p).unwrap();
 
@@ -735,7 +726,7 @@ impl<'a> Generator<'a> {
     // Based on https://github.com/djc/askama
     // Combines `flush_ws()` and `prepare_ws()` to handle both trailing whitespace from the
     // preceding literal and leading whitespace from the succeeding literal.
-    fn handle_ws(&mut self, ws: &Ws) {
+    fn handle_ws(&mut self, ws: Ws) {
         self.flush_ws(ws);
         self.prepare_ws(ws);
     }
@@ -743,7 +734,7 @@ impl<'a> Generator<'a> {
     // If the previous literal left some trailing whitespace in `next_ws` and the
     // prefix whitespace suppressor from the given argument, flush that whitespace.
     // In either case, `next_ws` is reset to `None` (no trailing whitespace).
-    fn flush_ws(&mut self, ws: &Ws) {
+    fn flush_ws(&mut self, ws: Ws) {
         if self.next_ws.is_some() && !ws.0 {
             let val = self.next_ws.unwrap();
             if !val.is_empty() {
@@ -756,7 +747,7 @@ impl<'a> Generator<'a> {
     // Sets `skip_ws` to match the suffix whitespace suppressor from the given
     // argument, to determine whether to suppress leading whitespace from the
     // next literal.
-    fn prepare_ws(&mut self, ws: &Ws) {
+    fn prepare_ws(&mut self, ws: Ws) {
         self.skip_ws = ws.1;
     }
 }

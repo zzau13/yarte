@@ -14,21 +14,17 @@ pub fn when_changed() {
     let config = Config::new(&file);
 
     let mut stack = vec![config.get_dir().clone()];
-    loop {
-        if let Some(dir) = stack.pop() {
-            // rerun when dir change
-            println!("cargo:rerun-if-changed={}", dir.to_str().unwrap());
-            for entry in fs::read_dir(dir).expect("valid directory") {
-                let path = entry.expect("valid directory entry").path();
-                if path.is_dir() {
-                    stack.push(path);
-                } else {
-                    // rerun when file change
-                    println!("cargo:rerun-if-changed={}", path.to_str().unwrap());
-                }
+    while let Some(dir) = stack.pop() {
+        // rerun when dir change
+        println!("cargo:rerun-if-changed={}", dir.to_str().unwrap());
+        for entry in fs::read_dir(dir).expect("valid directory") {
+            let path = entry.expect("valid directory entry").path();
+            if path.is_dir() {
+                stack.push(path);
+            } else {
+                // rerun when file change
+                println!("cargo:rerun-if-changed={}", path.to_str().unwrap());
             }
-        } else {
-            break;
         }
     }
 }

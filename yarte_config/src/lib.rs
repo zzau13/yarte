@@ -122,14 +122,14 @@ pub struct Config<'a> {
 impl<'a> Config<'a> {
     pub fn new(s: &str) -> Config {
         let raw: RawConfig =
-            toml::from_str(&s).expect(&format!("invalid TOML in {}", CONFIG_FILE_NAME));
+            toml::from_str(&s).unwrap_or_else(|_| panic!("invalid TOML in {}", CONFIG_FILE_NAME));
         let (dir, print) = raw.main.map(|x| (x.dir, x.debug)).unwrap_or((None, None));
 
         Config {
             dir: Dir::from(dir),
             print_override: PrintConfig::from(print),
             debug: raw.debug.unwrap_or_default(),
-            alias: raw.partials.unwrap_or(BTreeMap::new()),
+            alias: raw.partials.unwrap_or_default(),
         }
     }
 
@@ -223,7 +223,7 @@ pub fn read_config_file() -> String {
     let filename = config_file_path();
     if filename.exists() {
         fs::read_to_string(&filename)
-            .expect(&format!("unable to read {}", filename.to_str().unwrap()))
+            .unwrap_or_else(|_| panic!("unable to read {}", filename.to_str().unwrap()))
     } else {
         String::new()
     }
@@ -236,7 +236,6 @@ pub fn config_file_path() -> PathBuf {
 
 fn get_source(path: &Path) -> String {
     match fs::read_to_string(path) {
-        Err(_) => panic!("unable to open template file '{:?}'", path),
         Ok(mut source) => match source
             .as_bytes()
             .iter()
@@ -248,6 +247,7 @@ fn get_source(path: &Path) -> String {
             }
             None => source,
         },
+        _ => panic!("unable to open template file '{:?}'", path),
     }
 }
 

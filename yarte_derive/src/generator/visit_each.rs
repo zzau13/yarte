@@ -37,59 +37,62 @@ impl<'a> FindEach<'a> {
             match n {
                 Node::Local(expr) => self.visit_stmt(expr),
                 Node::Expr(_, expr) | Node::Safe(_, expr) => self.visit_expr(expr),
-                Node::Helper(h) => match h {
-                    Helper::If((_, first, block), else_if, els) => {
-                        self.visit_expr(first);
-                        if self.loop_var {
-                            break;
-                        }
-                        self.find(block);
-                        for (_, e, b) in else_if {
+                Node::Helper(h) => {
+                    let h: &Helper = &*h;
+                    match h {
+                        Helper::If((_, first, block), else_if, els) => {
+                            self.visit_expr(first);
                             if self.loop_var {
                                 break;
                             }
+                            self.find(block);
+                            for (_, e, b) in else_if {
+                                if self.loop_var {
+                                    break;
+                                }
 
+                                self.visit_expr(e);
+                                if self.loop_var {
+                                    break;
+                                }
+
+                                self.find(b);
+                            }
+                            if self.loop_var {
+                                break;
+                            }
+                            if let Some((_, els)) = els {
+                                self.find(els);
+                            }
+                        }
+                        Helper::With(_, e, b) => {
                             self.visit_expr(e);
                             if self.loop_var {
                                 break;
                             }
-
+                            self.on_ += 1;
                             self.find(b);
+                            self.on_ -= 1;
                         }
-                        if self.loop_var {
-                            break;
+                        Helper::Unless(_, expr, block) => {
+                            self.visit_expr(expr);
+                            if self.loop_var {
+                                break;
+                            }
+                            self.find(block);
                         }
-                        if let Some((_, els)) = els {
-                            self.find(els);
+                        Helper::Each(_, expr, block) => {
+                            self.visit_expr(expr);
+                            if self.loop_var {
+                                break;
+                            }
+                            self.on_ += 1;
+                            self.find(block);
+                            self.on_ -= 1;
                         }
+                        Helper::Defined(..) => unimplemented!(),
                     }
-                    Helper::With(_, e, b) => {
-                        self.visit_expr(e);
-                        if self.loop_var {
-                            break;
-                        }
-                        self.on_ += 1;
-                        self.find(b);
-                        self.on_ -= 1;
-                    }
-                    Helper::Unless(_, expr, block) => {
-                        self.visit_expr(expr);
-                        if self.loop_var {
-                            break;
-                        }
-                        self.find(block);
-                    }
-                    Helper::Each(_, expr, block) => {
-                        self.visit_expr(expr);
-                        if self.loop_var {
-                            break;
-                        }
-                        self.on_ += 1;
-                        self.find(block);
-                        self.on_ -= 1;
-                    }
-                    Helper::Defined(..) => unimplemented!(),
-                },
+                }
                 Node::Partial(_, path, expr) => {
                     let p = self.c.resolve_partial(&self.on_path, path);
                     let nodes = self.ctx.get(&p).unwrap();
