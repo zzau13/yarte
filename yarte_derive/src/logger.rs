@@ -1,7 +1,5 @@
 // Based on https://github.com/dtolnay/cargo-expand
 
-use prettyprint::{PagingMode, PrettyPrinter};
-
 use std::{
     env,
     ffi::OsString,
@@ -47,35 +45,7 @@ fn logger(s: &str, path: String, option: &PrintOption) {
         };
     }
 
-    let mut builder = PrettyPrinter::default();
-    builder.language("rust");
-    builder.header(option.header.unwrap_or(true));
-    builder.grid(option.grid.unwrap_or(false));
-    builder.line_numbers(option.number_line.unwrap_or(false));
-    builder.paging_mode(option.paging.map_or(PagingMode::Never, |s| {
-        if s {
-            PagingMode::Always
-        } else {
-            PagingMode::Never
-        }
-    }));
-
-    let printer = if let Some(theme) = option.theme {
-        builder.theme(theme);
-        let printer = builder.build().unwrap();
-        let themes = printer.get_themes();
-        if themes.get(theme).is_none() {
-            let msg: Vec<String> = themes.keys().map(|x| format!("{:?}", x)).collect();
-            eprintln!("Themes: {}", msg.join(",\n        "));
-        }
-        printer
-    } else {
-        builder.theme(DEFAULT_THEME);
-        builder.build().unwrap()
-    };
-
-    // Ignore any errors.
-    let _ = printer.string_with_header(s, path);
+    println!("{}\n{}", path, s);
 }
 
 fn cargo_binary() -> OsString {
@@ -111,5 +81,3 @@ fn which_rustfmt() -> Option<PathBuf> {
         None => toolchain_find::find_installed_component("rustfmt"),
     }
 }
-
-static DEFAULT_THEME: &str = "zenburn";
