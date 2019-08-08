@@ -33,5 +33,4 @@ proc-macro2 = "0.4"
 quote = "0.6"
 syn = { version="0.15", features = ["full", "visit", "extra-traits"]}
 toolchain_find = "0.1"
-prettyprint = "0.7"
 tempfile = "3.0"
