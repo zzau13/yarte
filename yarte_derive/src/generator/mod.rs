@@ -693,7 +693,7 @@ impl<'a> Generator<'a> {
                     _ => unreachable!(),
                 }
             }
-            writeln!(buf, "_fmt.write_str({:#?})?;", &buf_lit).unwrap();
+            writeln!(buf, "let _ = _fmt.write_str({:#?});", &buf_lit).unwrap();
             return;
         }
 
@@ -705,7 +705,7 @@ impl<'a> Generator<'a> {
                     if !buf_lit.is_empty() {
                         writeln!(
                             buf,
-                            "_fmt.write_str({:#?})?;",
+                            "let _ = _fmt.write_str({:#?});",
                             &mem::replace(&mut buf_lit, String::new())
                         )
                         .unwrap();
@@ -722,7 +722,7 @@ impl<'a> Generator<'a> {
         }
 
         if !buf_lit.is_empty() {
-            writeln!(buf, "_fmt.write_str({:#?})?;", buf_lit).unwrap();
+            writeln!(buf, "let _ = _fmt.write_str({:#?});", buf_lit).unwrap();
         }
     }
 
