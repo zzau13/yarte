@@ -22,9 +22,9 @@ struct NestedForTemplate<'a> {
 
 #[test]
 fn test_nested_for() {
-    let alpha: &[&str] = &vec!["foo", "bar", "baz"];
-    let numbers: &[&str] = &vec!["bar", "baz"];
-    let seqs: &[&[&str]] = &vec![alpha, numbers];
+    let alpha: &[&str] = &["foo", "bar", "baz"];
+    let numbers: &[&str] = &["bar", "baz"];
+    let seqs: &[&[&str]] = &[alpha, numbers];
     let s = NestedForTemplate { seqs };
     assert_eq!(s.call().unwrap(), "1\n  0foo1bar2baz2\n  0bar1baz");
 }
@@ -37,7 +37,7 @@ struct PrecedenceTemplate<'a> {
 
 #[test]
 fn test_precedence_for() {
-    let strings: &[&str] = &vec!["foo", "bar", "baz"];
+    let strings: &[&str] = &["foo", "bar", "baz"];
     let s = PrecedenceTemplate { strings };
     assert_eq!(s.call().unwrap(), "0 ~ foo2bar1 ~ bar42 ~ baz6")
 }

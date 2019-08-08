@@ -1,3 +1,8 @@
+#![allow(
+    clippy::many_single_char_names,
+    clippy::cognitive_complexity
+)]
+
 use memchr::memchr;
 use syn::{parse_str, Expr, Stmt};
 
@@ -13,9 +18,9 @@ pub(crate) type Ws = (bool, bool);
 pub(crate) enum Node<'a> {
     Comment(&'a str),
     Expr(Ws, Expr),
-    Helper(Helper<'a>),
+    Helper(Box<Helper<'a>>),
     Lit(&'a str, &'a str, &'a str),
-    Local(Stmt),
+    Local(Box<Stmt>),
     Partial(Ws, &'a str, Vec<Expr>),
     Raw((Ws, Ws), &'a str, &'a str, &'a str),
     Safe(Ws, Expr),
@@ -235,7 +240,7 @@ macro_rules! try_eat_local {
     ($c:ident, $s:ident) => {
         if $s.0.starts_with(LET) {
             if let Ok(e) = eat_local($s) {
-                return Ok(($c, Node::Local(e)));
+                return Ok(($c, Node::Local(Box::new(e))));
             }
         }
     };
@@ -304,14 +309,14 @@ fn helper(i: Input, a_lws: bool) -> Result<(Input, Node), nom::Err<Input>> {
     if ident.eq(c_ident) {
         Ok((
             c,
-            Node::Helper({
+            Node::Helper(Box::new({
                 match ident {
                     "each" => Helper::Each((above_ws, below_ws), args, block),
                     "with" => Helper::With((above_ws, below_ws), args, block),
                     "unless" => Helper::Unless((above_ws, below_ws), args, block),
                     defined => Helper::Defined((above_ws, below_ws), defined, args, block),
                 }
-            }),
+            })),
         ))
     } else {
         Err(nom::Err::Failure(error_position!(i, ERR_HELPER)))
@@ -376,7 +381,11 @@ fn if_else(abode_ws: Ws, i: Input, args: Expr) -> Result<(Input, Node), nom::Err
             )?;
             break Ok((
                 c,
-                Node::Helper(Helper::If(((abode_ws, below_ws), args, first), nodes, tail)),
+                Node::Helper(Box::new(Helper::If(
+                    ((abode_ws, below_ws), args, first),
+                    nodes,
+                    tail,
+                ))),
             ));
         } else {
             break Err(nom::Err::Failure(error_position!(i, ERR_IF)));
@@ -394,7 +403,7 @@ fn raw(i: Input, a_lws: bool) -> Result<(Input, Node), nom::Err<Input>> {
     let (c, (i, b_ws)) = loop {
         if let Some(j) = memchr(b'{', &i[at..]) {
             let n = &i[at + j + 1..];
-            at = if 0 < n.len() && n[0] == b'{' {
+            at = if !n.is_empty() && n[0] == b'{' {
                 if let Ok((c, ws)) = do_parse!(
                     Input(&n[1..]),
                     lws: opt!(tag!("~"))
@@ -530,14 +539,12 @@ fn expr(i: Input, lws: bool) -> Result<(Input, Node), nom::Err<Input>> {
     let (c, rws, s) = loop {
         if let Some(j) = memchr(b'}', &i[at..]) {
             let n = &i[at + j + 1..];
-            if n.starts_with(b"}") {
-                if 0 < at + j {
-                    break if i[at + j - 1] == b'~' {
-                        (Input(&i[at + j + 2..]), true, Input(&i[..at + j - 1]))
-                    } else {
-                        (Input(&i[at + j + 2..]), false, Input(&i[..at + j]))
-                    };
-                }
+            if n.starts_with(b"}") && 0 < at + j {
+                break if i[at + j - 1] == b'~' {
+                    (Input(&i[at + j + 2..]), true, Input(&i[..at + j - 1]))
+                } else {
+                    (Input(&i[at + j + 2..]), false, Input(&i[..at + j]))
+                };
             }
 
             at += j + 1;
@@ -572,7 +579,7 @@ fn identifier(i: Input) -> Result<(Input, &str), nom::Err<Input>> {
 
     for (j, c) in i[1..].iter().enumerate() {
         if !nom::is_alphanumeric(*c) && *c != b'_' {
-            return Ok((Input(&i[j + 1..]), safe_utf8(&i[..j + 1])));
+            return Ok((Input(&i[j + 1..]), safe_utf8(&i[..=j])));
         }
     }
 
@@ -598,7 +605,7 @@ fn trim(i: Input) -> (Input, Input, Input) {
 
     if let Some(ln) = i.iter().position(|x| !ws(*x)) {
         let rn = i.iter().rposition(|x| !ws(*x)).unwrap();
-        (Input(&i[..ln]), Input(&i[ln..rn + 1]), Input(&i[rn + 1..]))
+        (Input(&i[..ln]), Input(&i[ln..=rn]), Input(&i[rn + 1..]))
     } else {
         (i, Input(&[]), Input(&[]))
     }
@@ -783,7 +790,9 @@ mod tests {
             eat_if(src).unwrap(),
             (
                 Input(b"else if cond}}{{else}}"),
-                vec![Node::Local(parse_str::<Stmt>("let a = foo;").unwrap())]
+                vec![Node::Local(Box::new(
+                    parse_str::<Stmt>("let a = foo;").unwrap()
+                ))]
             )
         );
     }
@@ -795,7 +804,7 @@ mod tests {
             helper(src, false).unwrap(),
             (
                 Input(&[]),
-                Node::Helper(Helper::Each(
+                Node::Helper(Box::new(Helper::Each(
                     (WS, WS),
                     parse_str::<Expr>("name").unwrap(),
                     vec![
@@ -803,7 +812,7 @@ mod tests {
                         Node::Lit(" ", "", ""),
                         Node::Expr(WS, parse_str::<Expr>("last").unwrap()),
                     ],
-                ))
+                )))
             )
         );
     }
@@ -817,7 +826,7 @@ mod tests {
             if_else(WS, src, arg).unwrap(),
             (
                 Input(b""),
-                Node::Helper(Helper::If(
+                Node::Helper(Box::new(Helper::If(
                     (
                         (WS, WS),
                         parse_str::<Expr>("bar").unwrap(),
@@ -825,7 +834,7 @@ mod tests {
                     ),
                     vec![],
                     None,
-                ))
+                )))
             )
         );
 
@@ -836,7 +845,7 @@ mod tests {
             if_else(WS, src, arg).unwrap(),
             (
                 Input(b""),
-                Node::Helper(Helper::If(
+                Node::Helper(Box::new(Helper::If(
                     (
                         (WS, WS),
                         parse_str::<Expr>("bar").unwrap(),
@@ -844,7 +853,7 @@ mod tests {
                     ),
                     vec![],
                     Some((WS, vec![Node::Lit("", "bar", "")])),
-                ))
+                )))
             )
         );
     }
@@ -858,7 +867,7 @@ mod tests {
             if_else(WS, src, arg).unwrap(),
             (
                 Input(b""),
-                Node::Helper(Helper::If(
+                Node::Helper(Box::new(Helper::If(
                     (
                         (WS, WS),
                         parse_str::<Expr>("bar").unwrap(),
@@ -870,7 +879,7 @@ mod tests {
                         vec![Node::Lit("", "bar", "")],
                     )],
                     Some((WS, vec![Node::Lit("", "foO", "")])),
-                ))
+                )))
             )
         );
     }
@@ -881,12 +890,12 @@ mod tests {
 
         assert_eq!(
             parse(src),
-            vec![Node::Helper(Helper::Defined(
+            vec![Node::Helper(Box::new(Helper::Defined(
                 (WS, WS),
                 "foo",
                 parse_str::<Expr>("bar").unwrap(),
                 vec![Node::Lit("", "hello", "")],
-            ))]
+            )))]
         );
     }
 
@@ -929,11 +938,11 @@ mod tests {
         let src = "{{~#each bar~}}{{~/each~}}";
         assert_eq!(
             parse(src),
-            vec![Node::Helper(Helper::Each(
+            vec![Node::Helper(Box::new(Helper::Each(
                 ((true, true), (true, true)),
                 parse_str::<Expr>("bar").unwrap(),
                 vec![],
-            ))]
+            )))]
         );
     }
 
@@ -942,7 +951,7 @@ mod tests {
         let src = "{{~#if bar~}}{{~/if~}}";
         assert_eq!(
             parse(src),
-            vec![Node::Helper(Helper::If(
+            vec![Node::Helper(Box::new(Helper::If(
                 (
                     ((true, true), (true, true)),
                     parse_str::<Expr>("bar").unwrap(),
@@ -950,7 +959,7 @@ mod tests {
                 ),
                 vec![],
                 None,
-            ))]
+            )))]
         );
     }
 
@@ -959,7 +968,7 @@ mod tests {
         let src = "{{~#if bar~}}{{~else~}}{{~/if~}}";
         assert_eq!(
             parse(src),
-            vec![Node::Helper(Helper::If(
+            vec![Node::Helper(Box::new(Helper::If(
                 (
                     ((true, true), (true, true)),
                     parse_str::<Expr>("bar").unwrap(),
@@ -967,7 +976,7 @@ mod tests {
                 ),
                 vec![],
                 Some(((true, true), vec![])),
-            ))]
+            )))]
         );
     }
 
@@ -976,7 +985,7 @@ mod tests {
         let src = "{{~#if bar~}}{{~else if bar~}}{{~else~}}{{~/if~}}";
         assert_eq!(
             parse(src),
-            vec![Node::Helper(Helper::If(
+            vec![Node::Helper(Box::new(Helper::If(
                 (
                     ((true, true), (true, true)),
                     parse_str::<Expr>("bar").unwrap(),
@@ -984,7 +993,7 @@ mod tests {
                 ),
                 vec![((true, true), parse_str::<Expr>("bar").unwrap(), vec![],)],
                 Some(((true, true), vec![])),
-            ))]
+            )))]
         );
     }
 

@@ -32,7 +32,7 @@ struct SliceTemplate<'a> {
 
 #[test]
 fn test_slice() {
-    let arr: &[&str] = &vec!["&"];
+    let arr: &[&str] = &["&"];
     let t = SliceTemplate { arr };
     assert_eq!("&amp;", t.call().unwrap());
 }

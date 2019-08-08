@@ -21,7 +21,7 @@ pub(crate) struct Struct<'a> {
 }
 
 impl<'a> Struct<'a> {
-    pub fn implement_head(&self, t: &str, buf: &mut EWrite) {
+    pub fn implement_head(&self, t: &str, buf: &mut dyn EWrite) {
         let (impl_generics, orig_ty_generics, where_clause) = self.generics.split_for_impl();
 
         writeln!(
@@ -77,7 +77,7 @@ impl StructBuilder {
         let (path, src) = match (self.src, self.ext) {
             (Some(src), ext) => (
                 PathBuf::from(quote!(#ident).to_string())
-                    .with_extension(ext.unwrap_or(DEFAULT_EXTENSION.to_owned())),
+                    .with_extension(ext.unwrap_or_else(|| DEFAULT_EXTENSION.to_owned())),
                 src,
             ),
             (None, None) => config.get_template(&self.path.expect("some valid path")),
@@ -159,7 +159,7 @@ impl<'a> Visit<'a> for StructBuilder {
             }
             "print" => {
                 if let syn::Lit::Str(ref s) = lit {
-                    self.print = Some(s.value().into());
+                    self.print = Some(s.value());
                 } else {
                     panic!("attribute print must be string literal");
                 }

@@ -1,6 +1,8 @@
-use yarte::Template;
+#![allow(clippy::blacklisted_name)]
 
 use std::collections::HashMap;
+
+use yarte::Template;
 
 #[derive(Template)]
 #[template(path = "hello.hbs")]

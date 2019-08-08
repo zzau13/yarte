@@ -1,10 +1,11 @@
+#![allow(clippy::cognitive_complexity)]
+use std::{fmt::Write, str};
+
 use syn::{
     punctuated::Punctuated,
     visit::{self, Visit},
     PathSegment,
 };
-
-use std::{fmt::Write, str};
 
 use super::{identifier::is_tuple_index, EWrite, Generator, On};
 
@@ -53,10 +54,10 @@ impl<'a> Visit<'a> for Generator<'a> {
         }: &'a syn::Arm,
     ) {
         visit_attrs!(self, attrs);
-        if let Some(_) = leading_vert {
+        if leading_vert.is_some() {
             panic!("Not available")
         }
-        if let Some(_) = guard {
+        if guard.is_some() {
             panic!("Not available")
         }
 
@@ -488,25 +489,23 @@ impl<'a> Visit<'a> for Generator<'a> {
                     Some(On::With(j)) => with_var!(ident, *j),
                 };
             };
-        } else {
-            if let Some((j, ref ident)) = is_super(&path.segments) {
-                if self.on.is_empty() {
-                    panic!("use super at top");
-                } else if self.on.len() == j {
-                    partial_var!(ident, j);
-                    self_var!(ident);
-                } else if j < self.on.len() {
-                    partial_var!(ident, j);
-                    match self.on[self.on.len() - j - 1] {
-                        On::Each(j) => each_var!(ident.as_str(), j),
-                        On::With(j) => with_var!(ident, j),
-                    }
-                } else {
-                    panic!("use super without parent")
+        } else if let Some((j, ref ident)) = is_super(&path.segments) {
+            if self.on.is_empty() {
+                panic!("use super at top");
+            } else if self.on.len() == j {
+                partial_var!(ident, j);
+                self_var!(ident);
+            } else if j < self.on.len() {
+                partial_var!(ident, j);
+                match self.on[self.on.len() - j - 1] {
+                    On::Each(j) => each_var!(ident.as_str(), j),
+                    On::With(j) => with_var!(ident, j),
                 }
             } else {
-                self.buf_t.write(&quote!(#path));
+                panic!("use super without parent")
             }
+        } else {
+            self.buf_t.write(&quote!(#path));
         }
     }
 
@@ -665,7 +664,7 @@ impl<'a> Visit<'a> for Generator<'a> {
             subpat,
         }: &'a syn::PatIdent,
     ) {
-        if let Some(_) = subpat {
+        if subpat.is_some() {
             panic!("Subpat is not allowed");
         }
         let name = self.scp.push(&ident.to_string());

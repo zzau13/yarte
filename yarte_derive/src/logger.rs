@@ -1,10 +1,8 @@
 // Based on https://github.com/dtolnay/cargo-expand
-
 use std::{
     env,
     ffi::OsString,
     fs,
-    io::{self, Write},
     path::PathBuf,
     process::{Command, Stdio},
 };
@@ -15,7 +13,7 @@ pub fn log(s: &str, path: String, option: &PrintOption) {
     if definitely_not_nightly() {
         logger(s, path, option);
     } else {
-        writeln!(io::stdout(), "{}", s).unwrap();
+        println!("{}", s);
     }
 }
 
