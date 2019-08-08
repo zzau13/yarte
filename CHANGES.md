@@ -1,4 +1,20 @@
-# CHANGES
+# Changes
+
+## [0.3.3] (2019-xx-xx)
+
+### Added
+
+- cargo clippy and fix his issues
+
+## [0.3.2] (2019-08-08)
+
+### Fixed
+
+- Remove prettyprint library for rust-onig@0.4.2 dependency compile problems
+
+### Changed
+
+- Ignore errors at write_str
 
 ## [0.3.1] (2019-08-05)
 
@@ -6,7 +22,7 @@
 
 - `Mime types` update mime_guess to *2.0* and append `; charset=utf-8`
 
-### Improve
+### Changed 
 
 - Performance of render trait for html escape
 
