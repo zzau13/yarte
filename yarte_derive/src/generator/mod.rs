@@ -215,6 +215,7 @@ impl<'a> Generator<'a> {
                     buf.writeln(&mem::replace(&mut self.buf_t, String::new()));
                 }
                 Node::Safe(ws, expr) => {
+                    let expr: &syn::Expr = &*expr;
                     validator::expression(expr);
 
                     self.visit_expr(expr);
@@ -238,10 +239,10 @@ impl<'a> Generator<'a> {
                                     }
                                     Bool(b) => self.buf_w.push(Writable::LitP(b.value.to_string())),
                                     Float(b) => {
-                                        self.buf_w.push(Writable::LitP(b.value().to_string()))
+                                        self.buf_w.push(Writable::LitP(b.base10_digits().into()))
                                     }
                                     Int(b) => {
-                                        self.buf_w.push(Writable::LitP(b.value().to_string()))
+                                        self.buf_w.push(Writable::LitP(b.base10_digits().into()))
                                     }
                                     _ => panic!(
                                         "Not allowed verbatim expression in a template expression"
@@ -258,6 +259,7 @@ impl<'a> Generator<'a> {
                     ));
                 }
                 Node::Expr(ws, expr) => {
+                    let expr: &syn::Expr = &*expr;
                     validator::expression(expr);
 
                     self.visit_expr(expr);
@@ -291,10 +293,10 @@ impl<'a> Generator<'a> {
                                     }
                                     Bool(b) => self.buf_w.push(Writable::LitP(b.value.to_string())),
                                     Float(b) => {
-                                        self.buf_w.push(Writable::LitP(b.value().to_string()))
+                                        self.buf_w.push(Writable::LitP(b.base10_digits().into()))
                                     }
                                     Int(b) => {
-                                        self.buf_w.push(Writable::LitP(b.value().to_string()))
+                                        self.buf_w.push(Writable::LitP(b.base10_digits().into()))
                                     }
                                     _ => panic!(
                                         "Not allowed verbatim expression in a template expression"

@@ -1,4 +1,5 @@
 #![allow(clippy::cognitive_complexity)]
+
 use std::{fmt::Write, str};
 
 use syn::{
@@ -29,24 +30,11 @@ macro_rules! visit_punctuated {
 }
 
 impl<'a> Visit<'a> for Generator<'a> {
-    fn visit_arg_captured(
-        &mut self,
-        syn::ArgCaptured {
-            pat,
-            colon_token,
-            ty,
-        }: &'a syn::ArgCaptured,
-    ) {
-        self.visit_pat(pat);
-        self.buf_t.write(&quote!(#colon_token#ty));
-    }
-
     fn visit_arm(
         &mut self,
         syn::Arm {
             attrs,
-            leading_vert,
-            pats,
+            pat,
             guard,
             fat_arrow_token,
             body,
@@ -54,15 +42,14 @@ impl<'a> Visit<'a> for Generator<'a> {
         }: &'a syn::Arm,
     ) {
         visit_attrs!(self, attrs);
-        if leading_vert.is_some() {
-            panic!("Not available")
-        }
+
+        // TODO: available guard in arm
         if guard.is_some() {
             panic!("Not available")
         }
 
         self.scp.push_scope(vec![]);
-        visit_punctuated!(self, pats, visit_pat);
+        self.visit_pat(pat);
         self.buf_t.write(&quote!(#fat_arrow_token));
         self.visit_expr(body);
         self.buf_t.writeln(&quote!(#comma));
@@ -222,7 +209,7 @@ impl<'a> Visit<'a> for Generator<'a> {
 
         write!(self.buf_t, "{} |", quote!(#asyncness #movability #capture)).unwrap();
         self.scp.push_scope(vec![]);
-        visit_punctuated!(self, inputs, visit_fn_arg);
+        visit_punctuated!(self, inputs, visit_pat);
         self.buf_t.write(&"| ");
         self.buf_t.write(&quote!(#output));
         self.visit_expr(body);
@@ -298,10 +285,6 @@ impl<'a> Visit<'a> for Generator<'a> {
         };
     }
 
-    fn visit_expr_in_place(&mut self, _i: &'a syn::ExprInPlace) {
-        panic!("Not available in place in a template expression");
-    }
-
     fn visit_expr_index(
         &mut self,
         syn::ExprIndex {
@@ -316,15 +299,15 @@ impl<'a> Visit<'a> for Generator<'a> {
     fn visit_expr_let(
         &mut self,
         syn::ExprLet {
-            attrs, expr, pats, ..
+            attrs, expr, pat, ..
         }: &'a syn::ExprLet,
     ) {
         visit_attrs!(self, attrs);
 
-        self.buf_t.write_str("let ").unwrap();
+        self.buf_t.write(&"let ");
 
         self.scp.push_scope(vec![]);
-        visit_punctuated!(self, pats, visit_pat);
+        self.visit_pat(pat);
         let last = self.scp.pops();
 
         self.buf_t.push(' ');
@@ -568,10 +551,6 @@ impl<'a> Visit<'a> for Generator<'a> {
         self.visit_block(block);
     }
 
-    fn visit_expr_verbatim(&mut self, _i: &'a syn::ExprVerbatim) {
-        panic!("Not allowed verbatim expression in a template expression");
-    }
-
     fn visit_expr_while(
         &mut self,
         syn::ExprWhile {
@@ -613,11 +592,7 @@ impl<'a> Visit<'a> for Generator<'a> {
     fn visit_local(
         &mut self,
         syn::Local {
-            attrs,
-            pats,
-            init,
-            ty,
-            ..
+            attrs, pat, init, ..
         }: &'a syn::Local,
     ) {
         visit_attrs!(self, attrs);
@@ -626,19 +601,11 @@ impl<'a> Visit<'a> for Generator<'a> {
 
         self.buf_t.write(&"let ");
 
-        for el in Punctuated::pairs(pats) {
-            let it = el.value();
-            self.visit_pat(it)
-        }
+        self.visit_pat(pat);
         let scope = self.scp.pops();
 
-        if let Some((_, ty)) = ty {
-            self.buf_t.write(&quote!(: #ty));
-        }
-
-        self.buf_t.push('=');
-
         if let Some((_, expr)) = init {
+            self.buf_t.push('=');
             self.visit_expr(expr);
         }
         self.buf_t.push(';');
@@ -658,15 +625,19 @@ impl<'a> Visit<'a> for Generator<'a> {
     fn visit_pat_ident(
         &mut self,
         syn::PatIdent {
+            attrs,
             by_ref,
             mutability,
             ident,
             subpat,
         }: &'a syn::PatIdent,
     ) {
+        visit_attrs!(self, attrs);
+
         if subpat.is_some() {
             panic!("Subpat is not allowed");
         }
+
         let name = self.scp.push(&ident.to_string());
         let ident = syn::Ident::new(&name, ident.span());
 
@@ -674,49 +645,30 @@ impl<'a> Visit<'a> for Generator<'a> {
     }
 
     fn visit_pat_lit(&mut self, _i: &'a syn::PatLit) {
-        panic!("Not allowed");
+        panic!("Not allowed pat lit");
     }
 
     fn visit_pat_macro(&mut self, _i: &'a syn::PatMacro) {
-        panic!("Not allowed");
+        panic!("Not allowed pat macro");
     }
 
     fn visit_pat_path(&mut self, _i: &'a syn::PatPath) {
-        panic!("Not allowed");
+        panic!("Not allowed pat path");
     }
 
     fn visit_pat_range(&mut self, _i: &'a syn::PatRange) {
-        panic!("Not allowed");
+        panic!("Not allowed pat range");
     }
 
-    fn visit_pat_ref(
-        &mut self,
-        syn::PatRef {
-            mutability, pat, ..
-        }: &'a syn::PatRef,
-    ) {
-        write!(self.buf_t, "&{} ", quote!(#mutability)).unwrap();
-        self.visit_pat(pat);
+    fn visit_pat_rest(&mut self, syn::PatRest { attrs, dot2_token }: &'a syn::PatRest) {
+        visit_attrs!(self, attrs);
+        self.buf_t.write(&quote!(#dot2_token));
     }
 
-    fn visit_pat_slice(
-        &mut self,
-        syn::PatSlice {
-            front,
-            middle,
-            dot2_token,
-            comma_token,
-            back,
-            ..
-        }: &'a syn::PatSlice,
-    ) {
+    fn visit_pat_slice(&mut self, syn::PatSlice { attrs, elems, .. }: &'a syn::PatSlice) {
+        visit_attrs!(self, attrs);
         self.buf_t.push('[');
-        visit_punctuated!(self, front, visit_pat);
-        if let Some(middle) = middle {
-            self.visit_pat(middle);
-        }
-        self.buf_t.write(&quote!( #dot2_token #comma_token));
-        visit_punctuated!(self, back, visit_pat);
+        visit_punctuated!(self, elems, visit_pat);
         self.buf_t.push(']');
     }
 
@@ -724,33 +676,33 @@ impl<'a> Visit<'a> for Generator<'a> {
         panic!("Not available let struct decompose, use `with` helper instead");
     }
 
-    fn visit_pat_tuple(
-        &mut self,
-        syn::PatTuple {
-            front,
-            dot2_token,
-            comma_token,
-            back,
-            ..
-        }: &'a syn::PatTuple,
-    ) {
+    fn visit_pat_tuple(&mut self, syn::PatTuple { attrs, elems, .. }: &'a syn::PatTuple) {
+        visit_attrs!(self, attrs);
         self.buf_t.push('(');
-        visit_punctuated!(self, front, visit_pat);
-        self.buf_t.write(&quote!( #dot2_token #comma_token));
-        visit_punctuated!(self, back, visit_pat);
+        visit_punctuated!(self, elems, visit_pat);
         self.buf_t.push(')');
     }
 
     fn visit_pat_tuple_struct(
         &mut self,
-        syn::PatTupleStruct { path, pat }: &'a syn::PatTupleStruct,
+        syn::PatTupleStruct { path, pat, .. }: &'a syn::PatTupleStruct,
     ) {
         self.buf_t.write(&quote!(#path));
         self.visit_pat_tuple(pat)
     }
 
-    fn visit_pat_verbatim(&mut self, _i: &'a syn::PatVerbatim) {
-        panic!("Not allowed");
+    fn visit_pat_type(
+        &mut self,
+        syn::PatType {
+            attrs,
+            pat,
+            colon_token,
+            ty,
+        }: &'a syn::PatType,
+    ) {
+        visit_attrs!(self, attrs);
+        self.visit_pat(pat);
+        self.buf_t.write(&quote!(#colon_token #ty));
     }
 
     fn visit_pat_wild(&mut self, i: &'a syn::PatWild) {

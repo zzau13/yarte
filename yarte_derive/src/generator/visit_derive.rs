@@ -120,8 +120,9 @@ impl<'a> Visit<'a> for StructBuilder {
         }
     }
 
-    fn visit_meta_list(&mut self, syn::MetaList { ident, nested, .. }: &'a syn::MetaList) {
-        if ATTRIBUTES.contains(&ident.to_string().as_ref()) {
+    fn visit_meta_list(&mut self, syn::MetaList { path, nested, .. }: &'a syn::MetaList) {
+        let ident: &str = &path.get_ident().expect("ident").to_string();
+        if ATTRIBUTES.contains(&ident) {
             use syn::punctuated::Punctuated;
             for el in Punctuated::pairs(nested) {
                 let it = el.value();
@@ -134,9 +135,9 @@ impl<'a> Visit<'a> for StructBuilder {
 
     fn visit_meta_name_value(
         &mut self,
-        syn::MetaNameValue { ident, lit, .. }: &'a syn::MetaNameValue,
+        syn::MetaNameValue { path, lit, .. }: &'a syn::MetaNameValue,
     ) {
-        match ident.to_string().as_ref() {
+        match path.get_ident().expect("ident").to_string().as_ref() {
             "path" => {
                 if let syn::Lit::Str(ref s) = lit {
                     if self.src.is_some() {

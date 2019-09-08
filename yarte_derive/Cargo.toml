@@ -25,13 +25,13 @@ actix-web = []
 [dependencies]
 yarte_config = { version = "0.3", path = "../yarte_config" }
 v_htmlescape = "0.4"
-v_eval = "0.0"
+v_eval = "0.1"
 memchr = "2.1"
 mime_guess = "2.0.0"
 nom = "4"
 prettyprint = "0.7"
-proc-macro2 = "0.4"
-quote = "0.6"
-syn = { version="0.15", features = ["full", "visit", "extra-traits"]}
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version="1.0", features = ["full", "visit", "extra-traits"]}
 toolchain_find = "0.1"
 tempfile = "3.0"
