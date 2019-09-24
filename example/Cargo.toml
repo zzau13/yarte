@@ -8,7 +8,7 @@ edition = "2018"
 workspace = ".."
 
 [dependencies]
-env_logger = "0.6"
+env_logger = "0.7"
 
 yarte = { path = "../yarte", version = "0.3", features=["with-actix-web"]  }
 
