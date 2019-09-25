@@ -686,7 +686,7 @@ impl<'a> Generator<'a> {
                     _ => unreachable!(),
                 }
             }
-            writeln!(buf, "let _ = _fmt.write_str({:#?});", &buf_lit).unwrap();
+            writeln!(buf, "_fmt.write_str({:#?})?;", &buf_lit).unwrap();
             return;
         }
 
@@ -698,14 +698,14 @@ impl<'a> Generator<'a> {
                     if !buf_lit.is_empty() {
                         writeln!(
                             buf,
-                            "let _ = _fmt.write_str({:#?});",
+                            "_fmt.write_str({:#?})?;",
                             &mem::replace(&mut buf_lit, String::new())
                         )
                         .unwrap();
                     }
 
                     if wrapped || self.s.wrapped {
-                        writeln!(buf, "(&({})).fmt(_fmt)?;", s).unwrap();
+                        writeln!(buf, "({}).fmt(_fmt)?;", s).unwrap();
                     } else {
                         // wrap
                         writeln!(buf, "::yarte::Render::render(&({}), _fmt)?;", s).unwrap();
@@ -715,7 +715,7 @@ impl<'a> Generator<'a> {
         }
 
         if !buf_lit.is_empty() {
-            writeln!(buf, "let _ = _fmt.write_str({:#?});", buf_lit).unwrap();
+            writeln!(buf, "_fmt.write_str({:#?})?;", buf_lit).unwrap();
         }
     }
 

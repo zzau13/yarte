@@ -276,3 +276,17 @@ fn test_option() {
     let t = OptionTemplate { var: Some(1) };
     assert_eq!(t.call().unwrap(), "some: 1");
 }
+
+#[derive(Template)]
+#[template(src = "{{{ string }}}")]
+struct Unwrapped {
+    string: String,
+}
+
+#[test]
+fn test_unwrapped() {
+    let t = Unwrapped {
+        string: String::from("&"),
+    };
+    assert_eq!("&", t.call().unwrap());
+}

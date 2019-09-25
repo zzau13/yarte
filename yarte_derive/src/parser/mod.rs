@@ -667,13 +667,19 @@ mod tests {
         let src = r#"{{ fun() }}"#;
         assert_eq!(
             parse(src),
-            vec![Node::Expr(WS, Box::new(parse_str::<Expr>("fun()").unwrap()))]
+            vec![Node::Expr(
+                WS,
+                Box::new(parse_str::<Expr>("fun()").unwrap())
+            )]
         );
 
         let src = r#"{{ fun(|a| a) }}"#;
         assert_eq!(
             parse(src),
-            vec![Node::Expr(WS, Box::new(parse_str::<Expr>("fun(|a| a)").unwrap()))]
+            vec![Node::Expr(
+                WS,
+                Box::new(parse_str::<Expr>("fun(|a| a)").unwrap())
+            )]
         );
 
         let src = r#"{{
@@ -683,7 +689,10 @@ mod tests {
         }}"#;
         assert_eq!(
             parse(src),
-            vec![Node::Expr(WS, Box::new(parse_str::<Expr>("fun(|a| {{a}})").unwrap()))]
+            vec![Node::Expr(
+                WS,
+                Box::new(parse_str::<Expr>("fun(|a| {{a}})").unwrap())
+            )]
         );
     }
 
@@ -712,13 +721,19 @@ mod tests {
         let src = r#"{{{ fun() }}}"#;
         assert_eq!(
             parse(src),
-            vec![Node::Safe(WS, Box::new(parse_str::<Expr>("fun()").unwrap()))]
+            vec![Node::Safe(
+                WS,
+                Box::new(parse_str::<Expr>("fun()").unwrap())
+            )]
         );
 
         let src = r#"{{{ fun(|a| a) }}}"#;
         assert_eq!(
             parse(src),
-            vec![Node::Safe(WS, Box::new(parse_str::<Expr>("fun(|a| a)").unwrap()))]
+            vec![Node::Safe(
+                WS,
+                Box::new(parse_str::<Expr>("fun(|a| a)").unwrap())
+            )]
         );
 
         let src = r#"{{{
@@ -904,32 +919,50 @@ mod tests {
         let src = "{{~foo~}}";
         assert_eq!(
             parse(src),
-            vec![Node::Expr((true, true), Box::new(parse_str::<Expr>("foo").unwrap()))]
+            vec![Node::Expr(
+                (true, true),
+                Box::new(parse_str::<Expr>("foo").unwrap())
+            )]
         );
         let src = "{{~ foo~}}";
         assert_eq!(
             parse(src),
-            vec![Node::Expr((true, true), Box::new(parse_str::<Expr>("foo").unwrap()))]
+            vec![Node::Expr(
+                (true, true),
+                Box::new(parse_str::<Expr>("foo").unwrap())
+            )]
         );
         let src = "{{~ foo}}";
         assert_eq!(
             parse(src),
-            vec![Node::Expr((true, false), Box::new(parse_str::<Expr>("foo").unwrap()))]
+            vec![Node::Expr(
+                (true, false),
+                Box::new(parse_str::<Expr>("foo").unwrap())
+            )]
         );
         let src = "{{foo    ~}}";
         assert_eq!(
             parse(src),
-            vec![Node::Expr((false, true), Box::new(parse_str::<Expr>("foo").unwrap()))]
+            vec![Node::Expr(
+                (false, true),
+                Box::new(parse_str::<Expr>("foo").unwrap())
+            )]
         );
         let src = "{{~{foo }~}}";
         assert_eq!(
             parse(src),
-            vec![Node::Safe((true, true), Box::new(parse_str::<Expr>("foo").unwrap()))]
+            vec![Node::Safe(
+                (true, true),
+                Box::new(parse_str::<Expr>("foo").unwrap())
+            )]
         );
         let src = "{{{foo }~}}";
         assert_eq!(
             parse(src),
-            vec![Node::Safe((false, true), Box::new(parse_str::<Expr>("foo").unwrap()))]
+            vec![Node::Safe(
+                (false, true),
+                Box::new(parse_str::<Expr>("foo").unwrap())
+            )]
         );
     }
 
