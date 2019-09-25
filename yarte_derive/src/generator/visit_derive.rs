@@ -68,8 +68,8 @@ impl StructBuilder {
         }: &'n syn::DeriveInput,
         config: &'n Config,
     ) -> Struct<'n> {
-        for it in attrs {
-            self.visit_attribute(it)
+        for i in attrs {
+            self.visit_meta(&i.parse_meta().expect("valid meta attributes"));
         }
 
         self.visit_data(data);
@@ -106,10 +106,6 @@ impl StructBuilder {
 }
 
 impl<'a> Visit<'a> for StructBuilder {
-    fn visit_attribute(&mut self, i: &'a syn::Attribute) {
-        self.visit_meta(&i.parse_meta().expect("valid meta attributes"));
-    }
-
     fn visit_data(&mut self, i: &'a syn::Data) {
         use syn::Data::*;
         match i {
@@ -121,15 +117,12 @@ impl<'a> Visit<'a> for StructBuilder {
     }
 
     fn visit_meta_list(&mut self, syn::MetaList { path, nested, .. }: &'a syn::MetaList) {
-        let ident: &str = &path.get_ident().expect("ident").to_string();
-        if ATTRIBUTES.contains(&ident) {
+        if path.is_ident("template") {
             use syn::punctuated::Punctuated;
             for el in Punctuated::pairs(nested) {
                 let it = el.value();
                 self.visit_nested_meta(it)
             }
-        } else {
-            panic!("not valid template attribute: {}", ident);
         }
     }
 
@@ -137,49 +130,44 @@ impl<'a> Visit<'a> for StructBuilder {
         &mut self,
         syn::MetaNameValue { path, lit, .. }: &'a syn::MetaNameValue,
     ) {
-        match path.get_ident().expect("ident").to_string().as_ref() {
-            "path" => {
-                if let syn::Lit::Str(ref s) = lit {
-                    if self.src.is_some() {
-                        panic!("must specify 'src' or 'path', not both");
-                    }
-                    self.path = Some(s.value());
-                } else {
-                    panic!("attribute path must be string literal");
+        if path.is_ident("path") {
+            if let syn::Lit::Str(ref s) = lit {
+                if self.src.is_some() {
+                    panic!("must specify 'src' or 'path', not both");
                 }
+                self.path = Some(s.value());
+            } else {
+                panic!("attribute path must be string literal");
             }
-            "src" => {
-                if let syn::Lit::Str(ref s) = lit {
-                    if self.path.is_some() {
-                        panic!("must specify 'src' or 'path', not both");
-                    }
-                    self.src = Some(s.value());
-                } else {
-                    panic!("attribute src must be string literal");
+        } else if path.is_ident("src") {
+            if let syn::Lit::Str(ref s) = lit {
+                if self.path.is_some() {
+                    panic!("must specify 'src' or 'path', not both");
                 }
+                self.src = Some(s.value());
+            } else {
+                panic!("attribute src must be string literal");
             }
-            "print" => {
-                if let syn::Lit::Str(ref s) = lit {
-                    self.print = Some(s.value());
-                } else {
-                    panic!("attribute print must be string literal");
-                }
+        } else if path.is_ident("print") {
+            if let syn::Lit::Str(ref s) = lit {
+                self.print = Some(s.value());
+            } else {
+                panic!("attribute print must be string literal");
             }
-            "assured" => {
-                if let syn::Lit::Bool(ref s) = lit {
-                    self.assured = Some(s.value);
-                } else {
-                    panic!("attribute assured must be boolean literal");
-                }
+        } else if path.is_ident("assured") {
+            if let syn::Lit::Bool(ref s) = lit {
+                self.assured = Some(s.value);
+            } else {
+                panic!("attribute assured must be boolean literal");
             }
-            "ext" => {
-                if let syn::Lit::Str(ref s) = lit {
-                    self.ext = Some(s.value());
-                } else {
-                    panic!("attribute ext must be string literal");
-                }
+        } else if path.is_ident("ext") {
+            if let syn::Lit::Str(ref s) = lit {
+                self.ext = Some(s.value());
+            } else {
+                panic!("attribute ext must be string literal");
             }
-            attr => panic!("invalid attribute '{}'", attr),
+        } else {
+            panic!("invalid attribute '{:?}'", path.get_ident());
         }
     }
 }
@@ -215,7 +203,6 @@ static HTML_EXTENSIONS: [&str; 6] = [
     "handlebars",
     "mustache",
 ];
-static ATTRIBUTES: [&str; 2] = ["derive", "template"];
 
 #[cfg(test)]
 mod test {
