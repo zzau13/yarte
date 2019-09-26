@@ -1,7 +1,7 @@
 [package]
 name = "example"
 version = "0.0.1"
-authors = ["Rust-iendo <riendocontributions@gmail.com>"]
+authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 publish = false
 edition = "2018"
 
