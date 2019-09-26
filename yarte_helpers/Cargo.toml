@@ -18,4 +18,3 @@ maintenance = { status = "actively-developed" }
 
 [dependencies]
 v_htmlescape = "0.4"
-cfg-if = "0.1"
