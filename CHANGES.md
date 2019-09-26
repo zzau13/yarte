@@ -1,10 +1,22 @@
 # Changes
 
-## [0.3.3] (2019-xx-xx)
+## [0.3.3] (2019-09-26)
 
 ### Added
 
 - cargo clippy and fix his issues
+- Add prettyprint@0.7
+
+### Fix
+
+- Remove reference in fmt method
+- Propagate errors at write_str
+- Minor issues
+
+### Updated
+
+- `syn`, `quote`, `proc-macro2` version to `1.0`
+- `env_logger` version to `0.7`
 
 ## [0.3.2] (2019-08-08)
 
