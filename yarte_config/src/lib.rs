@@ -143,12 +143,6 @@ impl<'a> Config<'a> {
         (path, src)
     }
 
-    pub fn get_partial(&self, parent: &Path, ident: &str) -> (PathBuf, String) {
-        let path = self.resolve_partial(parent, ident);
-        let src = get_source(path.as_path());
-        (path, src)
-    }
-
     pub fn resolve_partial(&self, parent: &Path, ident: &str) -> PathBuf {
         let mut name = None;
         for (k, v) in &self.alias {
@@ -234,7 +228,7 @@ pub fn config_file_path() -> PathBuf {
     PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).join(CONFIG_FILE_NAME)
 }
 
-fn get_source(path: &Path) -> String {
+pub fn get_source(path: &Path) -> String {
     match fs::read_to_string(path) {
         Ok(mut source) => match source
             .as_bytes()

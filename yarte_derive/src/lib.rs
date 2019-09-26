@@ -13,7 +13,7 @@ use proc_macro::TokenStream;
 
 use std::collections::BTreeMap;
 
-use yarte_config::{read_config_file, Config, PrintConfig};
+use yarte_config::{get_source, read_config_file, Config, PrintConfig};
 
 use crate::generator::{visit_derive, Print};
 use crate::logger::log;
@@ -38,7 +38,11 @@ fn build(i: &syn::DeriveInput) -> TokenStream {
         for n in &parse_partials(&src) {
             match n {
                 Node::Partial(_, partial, _) => {
-                    check.push(config.get_partial(&path, partial));
+                    let path = config.resolve_partial(&path, partial);
+                    if !sources.contains_key(&path) {
+                        let src = get_source(path.as_path());
+                        check.push((path, src));
+                    }
                 }
                 _ => unreachable!(),
             }
