@@ -144,15 +144,19 @@ impl<'a> Config<'a> {
     }
 
     pub fn resolve_partial(&self, parent: &Path, ident: &str) -> PathBuf {
-        let mut name = None;
-        for (k, v) in &self.alias {
-            if ident.starts_with(k) {
-                name = Some(PathBuf::from([v, &ident[k.len()..]].join("")));
-                break;
-            }
-        }
-
-        let (mut buf, is_alias) = name.map_or((PathBuf::from(ident), false), |s| (s, true));
+        let (mut buf, is_alias) = self
+            .alias
+            .iter()
+            .find_map(|(k, v)| {
+                if ident.starts_with(k) {
+                    let mut path = v.to_string();
+                    path.push_str(&ident[k.len()..]);
+                    Some(PathBuf::from(path))
+                } else {
+                    None
+                }
+            })
+            .map_or((PathBuf::from(ident), false), |s| (s, true));
 
         if buf.extension().is_none() {
             if let Some(ext) = parent.extension() {
