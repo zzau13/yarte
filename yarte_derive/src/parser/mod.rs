@@ -488,7 +488,7 @@ fn eat_expr_list(mut i: Input) -> Result<Vec<Expr>, nom::Err<Input>> {
                     eat_expr(Input(&i[..at]))
                 )?);
                 i = take_while!(Input(&i[at + 1..]), ws)?.0;
-                ;
+
                 break 'l false;
             }
             at += 1;
