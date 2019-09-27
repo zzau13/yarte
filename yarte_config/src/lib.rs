@@ -165,12 +165,15 @@ impl<'a> Config<'a> {
         };
 
         if is_alias {
-            self.dir.get_template(buf.to_str().unwrap())
+            self.dir
+                .get_template(buf.to_str().unwrap())
+                .canonicalize()
+                .expect("Correct template path")
         } else {
             let mut parent = parent.to_owned();
             parent.pop();
             parent.push(buf);
-            parent
+            parent.canonicalize().expect("Correct template path")
         }
     }
 }
