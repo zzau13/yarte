@@ -165,17 +165,24 @@ impl<'a> Config<'a> {
         };
 
         if is_alias {
-            self.dir
-                .get_template(buf.to_str().unwrap())
-                .canonicalize()
-                .expect("Correct template path")
+            normalize(self.dir.get_template(buf.to_str().unwrap()))
         } else {
             let mut parent = parent.to_owned();
             parent.pop();
             parent.push(buf);
-            parent.canonicalize().expect("Correct template path")
+            normalize(parent)
         }
     }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn normalize(p: PathBuf) -> PathBuf {
+    p.canonicalize().expect("Correct template path")
+}
+
+#[cfg(target_os = "windows")]
+fn normalize(p: PathBuf) -> PathBuf {
+    p
 }
 
 #[derive(Deserialize)]
