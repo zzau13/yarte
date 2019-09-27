@@ -5,15 +5,19 @@ extern crate nom;
 #[macro_use]
 extern crate quote;
 
-mod generator;
-mod logger;
-mod parser;
+use std::{
+    collections::{hash_map::DefaultHasher, BTreeMap, BTreeSet},
+    hash::{Hash, Hasher},
+    path::PathBuf,
+};
 
 use proc_macro::TokenStream;
 
-use std::collections::BTreeMap;
-
 use yarte_config::{get_source, read_config_file, Config, PrintConfig};
+
+mod generator;
+mod logger;
+mod parser;
 
 use crate::generator::{visit_derive, Print};
 use crate::logger::log;
@@ -32,23 +36,7 @@ fn build(i: &syn::DeriveInput) -> TokenStream {
     let s = visit_derive(i, &config);
 
     let mut sources = BTreeMap::new();
-
-    let mut check = vec![(s.path.clone(), s.src.clone())];
-    while let Some((path, src)) = check.pop() {
-        for n in &parse_partials(&src) {
-            match n {
-                Node::Partial(_, partial, _) => {
-                    let path = config.resolve_partial(&path, partial);
-                    if !sources.contains_key(&path) {
-                        let src = get_source(path.as_path());
-                        check.push((path, src));
-                    }
-                }
-                _ => unreachable!(),
-            }
-        }
-        sources.insert(path, src);
-    }
+    read(s.path.clone(), s.src.clone(), config, &mut sources);
 
     let mut parsed = BTreeMap::new();
     for (p, src) in &sources {
@@ -73,4 +61,55 @@ fn build(i: &syn::DeriveInput) -> TokenStream {
     }
 
     code.parse().unwrap()
+}
+
+fn calculate_hash<T: Hash>(t: &T) -> u64 {
+    let mut s = DefaultHasher::new();
+    t.hash(&mut s);
+    s.finish()
+}
+
+fn read(path: PathBuf, src: String, config: &Config, sources: &mut BTreeMap<PathBuf, String>) {
+    #[allow(clippy::map_entry)]
+    fn _read(
+        path: PathBuf,
+        src: String,
+        config: &Config,
+        sources: &mut BTreeMap<PathBuf, String>,
+        stack: &mut Vec<u64>,
+    ) {
+        if !sources.contains_key(&path) {
+            stack.push(calculate_hash(&path));
+
+            let partials = parse_partials(&src)
+                .iter()
+                .map(|n| match n {
+                    Node::Partial(_, partial, _) => config.resolve_partial(&path, partial),
+                    _ => unreachable!(),
+                })
+                .collect::<BTreeSet<_>>();
+
+            for partial in &partials {
+                if stack.contains(&calculate_hash(partial)) {
+                    panic!(
+                        "Partial cyclic dependency {:?} in template {:?}",
+                        partial, path
+                    );
+                }
+            }
+
+            sources.insert(path, src);
+
+            for partial in partials {
+                let src = get_source(partial.as_path());
+                _read(partial, src, config, sources, stack);
+            }
+
+            stack.pop();
+        }
+    }
+
+    let mut stack = Vec::new();
+
+    _read(path, src, config, sources, &mut stack);
 }

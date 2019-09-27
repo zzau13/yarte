@@ -1,5 +1,11 @@
 # Changes
 
+## [0.3.4] (XXXX-XX-XX)
+
+### Added
+
+- Partial cyclic dependency
+
 ## [0.3.3] (2019-09-26)
 
 ### Added
@@ -7,7 +13,7 @@
 - cargo clippy and fix his issues
 - Add prettyprint@0.7
 
-### Fix
+### Fixed
 
 - Remove reference in fmt method
 - Propagate errors at write_str
