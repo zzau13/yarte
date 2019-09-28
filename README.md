@@ -102,7 +102,7 @@ and  from where.
 ##### Is it really the fastest?
  See it for yourself in the [benchmarks][bench]!
 
-[bench]: https://gitlab.com/botika/template-benchmarks-rs
+[bench]: https://github.com/botika/template-bench-rs#results
 [handlebars]: https://handlebarsjs.com/ 
 
 ## Contributing
