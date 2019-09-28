@@ -14,7 +14,7 @@ yarte = { path = "../yarte", version = "*" }
 yarte = { path = "../yarte", version = "*" }
 
 [dev-dependencies]
-criterion = "0.2"
+criterion = "0.3"
 
 [[bench]]
 name = "yarte"
