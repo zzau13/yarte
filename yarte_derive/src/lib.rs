@@ -35,8 +35,7 @@ fn build(i: &syn::DeriveInput) -> TokenStream {
 
     let s = visit_derive(i, &config);
 
-    let mut sources = BTreeMap::new();
-    read(s.path.clone(), s.src.clone(), config, &mut sources);
+    let sources = read(s.path.clone(), s.src.clone(), config);
 
     let mut parsed = BTreeMap::new();
     for (p, src) in &sources {
@@ -69,16 +68,16 @@ fn calculate_hash<T: Hash>(t: &T) -> u64 {
     s.finish()
 }
 
-fn read(path: PathBuf, src: String, config: &Config, sources: &mut BTreeMap<PathBuf, String>) {
+fn read(path: PathBuf, src: String, config: &Config) -> BTreeMap<PathBuf, String> {
     #[allow(clippy::map_entry)]
     fn _read(
         path: PathBuf,
         src: String,
         config: &Config,
-        sources: &mut BTreeMap<PathBuf, String>,
+        visited: &mut BTreeMap<PathBuf, String>,
         stack: &mut Vec<u64>,
     ) {
-        if !sources.contains_key(&path) {
+        if !visited.contains_key(&path) {
             stack.push(calculate_hash(&path));
 
             let partials = parse_partials(&src)
@@ -98,18 +97,21 @@ fn read(path: PathBuf, src: String, config: &Config, sources: &mut BTreeMap<Path
                 }
             }
 
-            sources.insert(path, src);
+            visited.insert(path, src);
 
             for partial in partials {
                 let src = get_source(partial.as_path());
-                _read(partial, src, config, sources, stack);
+                _read(partial, src, config, visited, stack);
             }
 
             stack.pop();
         }
     }
 
+    let mut visited = BTreeMap::new();
     let mut stack = Vec::new();
 
-    _read(path, src, config, sources, &mut stack);
+    _read(path, src, config, &mut visited, &mut stack);
+
+    visited
 }
