@@ -369,6 +369,24 @@ fn test_match() {
 }
 
 #[derive(Template)]
+#[template(path = "expr-match-guard.hbs")]
+struct MatchGuardTemplate {
+    a: yarte::Result<usize>,
+}
+
+#[test]
+fn test_match_guard() {
+    let t = MatchGuardTemplate { a: Err(Error) };
+    assert_eq!("3", t.call().unwrap());
+
+    let t = MatchGuardTemplate { a: Ok(1) };
+    assert_eq!("0", t.call().unwrap());
+
+    let t = MatchGuardTemplate { a: Ok(2) };
+    assert_eq!("2", t.call().unwrap());
+}
+
+#[derive(Template)]
 #[template(path = "self-method.hbs")]
 struct SelfMethodTemplate<'a> {
     s: &'a str,
