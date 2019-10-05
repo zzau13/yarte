@@ -1,10 +1,11 @@
 # Changes
 
-## [0.3.4] (XXXX-XX-XX)
+## [0.3.4] (2019-10-05)
 
 ### Added
 
-- Partial cyclic dependency
+- Partial cyclic dependency detection
+- match arm guard in expression
 
 ## [0.3.3] (2019-09-26)
 
