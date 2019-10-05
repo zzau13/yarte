@@ -43,13 +43,12 @@ impl<'a> Visit<'a> for Generator<'a> {
     ) {
         visit_attrs!(self, attrs);
 
-        // TODO: available guard in arm
-        if guard.is_some() {
-            panic!("Not available")
-        }
-
         self.scp.push_scope(vec![]);
         self.visit_pat(pat);
+        if let Some((_, expr)) = guard {
+            self.buf_t.write(&"if ");
+            self.visit_expr(expr);
+        }
         self.buf_t.write(&quote!(#fat_arrow_token));
         self.visit_expr(body);
         self.buf_t.writeln(&quote!(#comma));
