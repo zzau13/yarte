@@ -61,14 +61,13 @@
 //! With this configuration, the user can call `alias` in a partial instance with
 //! `{{> alias context}}` or `{{> alias}}` if the current context is well defined.
 //!
-#[macro_use]
-extern crate serde_derive;
-
 use std::{
     collections::BTreeMap,
     env, fs,
     path::{Path, PathBuf},
 };
+
+use serde_derive::Deserialize;
 
 #[derive(Debug)]
 pub struct Dir(PathBuf);

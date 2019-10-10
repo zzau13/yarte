@@ -2,6 +2,7 @@
 
 use std::{fmt::Write, str};
 
+use quote::quote;
 use syn::{
     punctuated::Punctuated,
     visit::{self, Visit},

@@ -1,9 +1,6 @@
-#[macro_use]
-extern crate actix_web;
-
 use std::collections::HashMap;
 
-use actix_web::{middleware::Logger, web, App, HttpServer, Responder};
+use actix_web::{get, middleware::Logger, web, App, HttpServer, Responder};
 use yarte::Template;
 
 #[derive(Template)]

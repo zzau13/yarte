@@ -1,9 +1,8 @@
 extern crate proc_macro;
 
+// TODO: remove
 #[macro_use]
 extern crate nom;
-#[macro_use]
-extern crate quote;
 
 use std::{
     collections::{hash_map::DefaultHasher, BTreeMap, BTreeSet},
