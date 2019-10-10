@@ -1,8 +1,6 @@
 #![cfg(feature = "with-actix-web")]
-#[macro_use]
-extern crate actix_web;
 
-use actix_web::{http, test, App, Responder};
+use actix_web::{get, http, test, App, Responder};
 use bytes::Bytes;
 use yarte::Template;
 

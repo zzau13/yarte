@@ -1,14 +1,10 @@
-extern crate yarte;
-#[macro_use]
-extern crate criterion;
-
-use criterion::Criterion;
+use criterion::{criterion_group, criterion_main, Criterion};
 use yarte::Template;
 
 mod fmt;
 
-criterion_main!(benches);
 criterion_group!(benches, functions);
+criterion_main!(benches);
 
 fn functions(c: &mut Criterion) {
     c.bench_function("Teams", teams);

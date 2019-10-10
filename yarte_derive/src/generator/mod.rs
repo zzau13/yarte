@@ -6,6 +6,7 @@ use std::{
 };
 
 use mime_guess::from_ext;
+use quote::quote;
 use syn::parse_str;
 use syn::visit::Visit;
 use v_eval::{ctx_as_ref, eval};

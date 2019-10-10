@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use quote::quote;
 use syn::visit::Visit;
 
 use yarte_config::Config;

@@ -1,6 +1,7 @@
-use syn::visit::Visit;
-
 use std::{collections::BTreeMap, mem};
+
+use quote::quote;
+use syn::visit::Visit;
 
 use super::{identifier::is_tuple_index, validator};
 
