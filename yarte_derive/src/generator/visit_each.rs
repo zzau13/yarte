@@ -35,7 +35,7 @@ impl<'a> FindEach<'a> {
     pub fn find(&mut self, nodes: &'a [Node]) -> bool {
         for n in nodes {
             match n {
-                Node::Local(expr) => self.visit_stmt(expr),
+                Node::Local(expr) => self.visit_local(expr),
                 Node::Expr(_, expr) | Node::Safe(_, expr) => self.visit_expr(expr),
                 Node::Helper(h) => {
                     let h: &Helper = &*h;

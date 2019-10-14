@@ -208,11 +208,10 @@ impl<'a> Generator<'a> {
         for n in nodes {
             match n {
                 Node::Local(expr) => {
-                    validator::statement(expr);
-
                     self.skip_ws();
                     self.write_buf_writable(buf);
-                    self.visit_stmt(expr);
+                    let expr: &syn::Local = &*expr;
+                    self.visit_local(expr);
                     buf.writeln(&mem::replace(&mut self.buf_t, String::new()));
                 }
                 Node::Safe(ws, expr) => {
