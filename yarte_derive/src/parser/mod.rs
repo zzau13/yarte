@@ -4,13 +4,15 @@
 )]
 
 use memchr::memchr;
-use syn::{parse_str, Expr, Stmt};
+use syn::{parse_str, Expr, Local};
 
 use std::str::{self, from_utf8};
 
 mod pre_partials;
+mod stmt_local;
 
 pub(crate) use self::pre_partials::parse_partials;
+use crate::parser::stmt_local::StmtLocal;
 
 pub(crate) type Ws = (bool, bool);
 
@@ -20,7 +22,7 @@ pub(crate) enum Node<'a> {
     Expr(Ws, Box<Expr>),
     Helper(Box<Helper<'a>>),
     Lit(&'a str, &'a str, &'a str),
-    Local(Box<Stmt>),
+    Local(Box<Local>),
     Partial(Ws, &'a str, Vec<Expr>),
     Raw((Ws, Ws), &'a str, &'a str, &'a str),
     Safe(Ws, Box<Expr>),
@@ -564,11 +566,11 @@ fn eat_expr(i: Input) -> Result<Expr, nom::Err<Input>> {
 }
 
 #[inline]
-fn eat_local(i: Input) -> Result<Stmt, nom::Err<Input>> {
+fn eat_local(i: Input) -> Result<Local, nom::Err<Input>> {
     map_failure!(
         i,
         ERR_LOCAL,
-        parse_str::<Stmt>(&[from_utf8(i.0).unwrap(), ";"].join(""))
+        parse_str::<StmtLocal>(safe_utf8(i.0)).map(Into::into)
     )
 }
 
@@ -619,7 +621,7 @@ fn safe_utf8(s: &[u8]) -> &str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use syn::parse_str;
+    use syn::{parse_str, Stmt};
 
     const WS: Ws = (false, false);
 
@@ -801,13 +803,16 @@ mod tests {
             )
         );
         let src = Input(br#"{{ let a = foo }}{{else if cond}}{{else}}"#);
+        let local = if let Stmt::Local(local) = parse_str::<Stmt>("let a = foo;").unwrap() {
+            local
+        } else {
+            unreachable!();
+        };
         assert_eq!(
             eat_if(src).unwrap(),
             (
                 Input(b"else if cond}}{{else}}"),
-                vec![Node::Local(Box::new(
-                    parse_str::<Stmt>("let a = foo;").unwrap()
-                ))]
+                vec![Node::Local(Box::new(local))]
             )
         );
     }

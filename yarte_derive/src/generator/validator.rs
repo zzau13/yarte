@@ -13,17 +13,6 @@ pub(super) fn expression(e: &syn::Expr) {
     }
 }
 
-pub(super) fn statement(e: &syn::Stmt) {
-    use syn::Stmt::*;
-    match e {
-        Local(..) => (),
-        _ => panic!(
-            "Not available Rust statement in a template local:\n{}",
-            quote!(#e)
-        ),
-    }
-}
-
 pub(super) fn ifs(e: &syn::Expr) {
     use syn::Expr::*;
     match e {
