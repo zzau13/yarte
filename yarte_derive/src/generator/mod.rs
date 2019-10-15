@@ -184,15 +184,12 @@ impl<'a> Generator<'a> {
         buf.writeln(&quote!(
             type Error = ::yarte::aw::Error;
             type Future = ::yarte::aw::FutureResult<::yarte::aw::HttpResponse, ::yarte::aw::Error>;
-        ));
 
-        buf.writeln(&quote!(
             #[inline]
-            fn respond_to(self, _req: &::yarte::aw::HttpRequest) -> Self::Future
-            {
+            fn respond_to(self, _req: &::yarte::aw::HttpRequest) -> Self::Future {
                 match self.call() {
-                    Ok(val) => {
-                        ::yarte::aw::ok(::yarte::aw::HttpResponse::Ok().content_type(Self::mime()).body(val))
+                    Ok(body) => {
+                        ::yarte::aw::ok(::yarte::aw::HttpResponse::Ok().content_type(Self::mime()).body(body))
                     }
                     Err(_) => {
                         ::yarte::aw::err(::yarte::aw::ErrorInternalServerError("Template parsing error"))
