@@ -1,4 +1,9 @@
 # Changes
+## [0.3.5] (2019-10-15)
+
+### Fixed
+
+- Fix some issues in parser
 
 ## [0.3.4] (2019-10-05)
 
