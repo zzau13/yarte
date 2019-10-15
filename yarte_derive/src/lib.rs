@@ -32,12 +32,12 @@ fn build(i: &syn::DeriveInput) -> TokenStream {
     let config_toml: &str = &read_config_file();
     let config = &Config::new(config_toml);
 
-    let s = visit_derive(i, &config);
+    let s = &visit_derive(i, config);
 
-    let sources = read(s.path.clone(), s.src.clone(), config);
+    let sources = &read(s.path.clone(), s.src.clone(), config);
 
     let mut parsed = BTreeMap::new();
-    for (p, src) in &sources {
+    for (p, src) in sources {
         parsed.insert(p, parse(src));
     }
 
@@ -49,7 +49,7 @@ fn build(i: &syn::DeriveInput) -> TokenStream {
         eprintln!("{:?}\n", parsed);
     }
 
-    let code = generator::generate(&config, &s, &parsed);
+    let code = generator::generate(config, s, &parsed);
     if cfg!(debug_assertions) && config.print_override == PrintConfig::Code
         || config.print_override == PrintConfig::All
         || s.print == Print::Code
