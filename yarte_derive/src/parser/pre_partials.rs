@@ -2,9 +2,9 @@ use memchr::memchr;
 
 use std::str::from_utf8;
 
-use super::{comment, partial, raw, Input, Node};
+use super::{comment, partial, raw, Input, Partial};
 
-pub(crate) fn parse_partials(src: &str) -> Vec<Node> {
+pub(crate) fn parse_partials(src: &str) -> Vec<Partial> {
     match eat_partials(Input(src.as_bytes())) {
         Ok((l, res)) => {
             if l.0.is_empty() {
@@ -23,7 +23,7 @@ pub(crate) fn parse_partials(src: &str) -> Vec<Node> {
     }
 }
 
-fn eat_partials(mut i: Input) -> Result<(Input, Vec<Node>), nom::Err<Input>> {
+fn eat_partials(mut i: Input) -> Result<(Input, Vec<Partial>), nom::Err<Input>> {
     let mut nodes = vec![];
 
     loop {
