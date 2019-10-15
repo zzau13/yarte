@@ -3,8 +3,7 @@ Yarte stands for **Y**et **A**nother **R**ust **T**emplate **E**ngine,
 is the fastest template engine. Uses a Handlebars-like syntax, 
 well known and intuitive for most developers. Yarte is an optimized, and easy-to-use 
 rust crate, with which developers can create logic around their 
-HTML templates using using conditionals, loops, rust code 
-and using templates composition. 
+HTML templates using conditionals, loops, rust code and template composition. 
 
 ## Features
 - Ignores unnecessary conditionals (`if` and `unless`) from users code.
@@ -39,7 +38,6 @@ Create a simple Yarte template called `hello.html` in your template directory.
 </div>
 ```
 
-
 In order to use a struct in a Yarte template  you will have to call 
 the procedural macro `Template`. For example, in the following 
 code we are going to use struct `CardTemplate`, to then 
@@ -55,6 +53,7 @@ struct CardTemplate<'a> {
     body: &'a str,
 }
 ```
+
 Yarte will read `hello.html` and build a parser for the template at compile time,
 that can be later applied to any `CardTemplate` object.
 
@@ -98,7 +97,6 @@ is highly influenced by [Handlebars][handlebars]. Implemented mainly with `nom`,
 Yarte are from other repositories. Comments in the code clarify which ideas are used, 
 and  from where.
 
-
 ##### Is it really the fastest?
  See it for yourself in the [benchmarks][bench]!
 
@@ -109,7 +107,6 @@ and  from where.
 
 Please, contribute to Yarte! The more the better! Feel free to to open an issue and/or contacting directly with the 
 owner for any request or suggestion.
-
 
 ## Code of conduct
 This Code of Conduct is adapted from the [Contributor Covenant][homepage], version 1.4, available at [http://contributor-covenant.org/version/1/4][version]
