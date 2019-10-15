@@ -7,7 +7,7 @@ use yarte_config::Config;
 
 use super::EWrite;
 
-pub(crate) fn visit_derive<'a>(i: &'a syn::DeriveInput, config: &'a Config) -> Struct<'a> {
+pub(crate) fn visit_derive<'a>(i: &'a syn::DeriveInput, config: &Config) -> Struct<'a> {
     StructBuilder::default().build(i, config)
 }
 
@@ -67,7 +67,7 @@ impl StructBuilder {
             data,
             ..
         }: &'n syn::DeriveInput,
-        config: &'n Config,
+        config: &Config,
     ) -> Struct<'n> {
         for i in attrs {
             self.visit_meta(&i.parse_meta().expect("valid meta attributes"));
