@@ -2,7 +2,7 @@ use memchr::memchr;
 
 use std::str::from_utf8;
 
-use super::{partial, raw, Input, Node};
+use super::{comment, partial, raw, Input, Node};
 
 pub(crate) fn parse_partials(src: &str) -> Vec<Node> {
     match eat_partials(Input(src.as_bytes())) {
@@ -51,6 +51,14 @@ fn eat_partials(mut i: Input) -> Result<(Input, Vec<Node>), nom::Err<Input>> {
                                 Err(_) => i,
                             }
                         }
+                        b'!' => {
+                            let i = Input(&i[j + 3 + $t..]);
+                            match comment(i) {
+                                Ok((i, _)) => i,
+                                Err(nom::Err::Failure(err)) => break Err(nom::Err::Failure(err)),
+                                Err(_) => i,
+                            }
+                        }
                         _ => Input(&n[1 + $t..]),
                     }
                 };
@@ -89,6 +97,10 @@ mod tests {
         let src = r#"{{>"#;
         assert_eq!(parse_partials(src), vec![]);
         let src = r#"{{>}}"#;
+        assert_eq!(parse_partials(src), vec![]);
+        let src = r#"{{! {{> foo }} !}}"#;
+        assert_eq!(parse_partials(src), vec![]);
+        let src = r#"{{R}} {{> foo }} {{/R}}"#;
         assert_eq!(parse_partials(src), vec![]);
     }
 }
