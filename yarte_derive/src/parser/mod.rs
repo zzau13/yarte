@@ -8,11 +8,12 @@ use syn::{parse_str, Expr, Local};
 
 use std::str::{self, from_utf8};
 
+mod expr_list;
 mod pre_partials;
 mod stmt_local;
 
 pub(crate) use self::pre_partials::parse_partials;
-use crate::parser::stmt_local::StmtLocal;
+use self::{expr_list::ExprList, stmt_local::StmtLocal};
 
 pub(crate) type Ws = (bool, bool);
 
@@ -475,35 +476,12 @@ macro_rules! make_argument {
 
 make_argument!(arguments, eat_expr, Result<(Input, Expr), nom::Err<Input>>);
 
-fn eat_expr_list(mut i: Input) -> Result<Vec<Expr>, nom::Err<Input>> {
-    let mut exprs = vec![];
-    loop {
-        let mut at = 0;
-        let end = 'l: loop {
-            if i.0.len() < at + 1 {
-                break 'l true;
-            }
-            if i[at] == b',' {
-                exprs.push(map_failure!(
-                    Input(&i[..at]),
-                    ERR_EXPR_LIST,
-                    eat_expr(Input(&i[..at]))
-                )?);
-                i = take_while!(Input(&i[at + 1..]), ws)?.0;
-
-                break 'l false;
-            }
-            at += 1;
-        };
-        if end {
-            exprs.push(map_failure!(i, ERR_EXPR_LIST, eat_expr(Input(&i[..at])))?);
-            break;
-        } else if i.0.is_empty() {
-            break;
-        }
-    }
-
-    Ok(exprs)
+fn eat_expr_list(i: Input) -> Result<Vec<Expr>, nom::Err<Input>> {
+    map_failure!(
+        i,
+        ERR_EXPR_LIST,
+        parse_str::<ExprList>(safe_utf8(&i.0)).map(Into::into)
+    )
 }
 
 make_argument!(

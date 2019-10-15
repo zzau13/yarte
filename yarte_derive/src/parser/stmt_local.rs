@@ -6,7 +6,7 @@ use syn::{
 };
 
 #[derive(Debug, PartialEq)]
-pub(crate) struct StmtLocal {
+pub(super) struct StmtLocal {
     pub let_token: Token![let],
     pub pat: Pat,
     pub init: Option<(Token![=], Box<Expr>)>,
