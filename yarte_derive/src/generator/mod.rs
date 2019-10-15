@@ -207,7 +207,6 @@ impl<'a> Generator<'a> {
                 Node::Local(expr) => {
                     self.skip_ws();
                     self.write_buf_writable(buf);
-                    let expr: &syn::Local = &*expr;
                     self.visit_local(expr);
                     buf.writeln(&mem::replace(&mut self.buf_t, String::new()));
                 }
