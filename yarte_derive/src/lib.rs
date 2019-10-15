@@ -18,9 +18,11 @@ mod generator;
 mod logger;
 mod parser;
 
-use crate::generator::{visit_derive, Print};
-use crate::logger::log;
-use crate::parser::{parse, parse_partials, Node};
+use self::{
+    generator::{visit_derive, Print},
+    logger::log,
+    parser::{parse, parse_partials, Partial},
+};
 
 #[proc_macro_derive(Template, attributes(template))]
 pub fn derive(input: TokenStream) -> TokenStream {
@@ -79,10 +81,7 @@ fn read(path: PathBuf, src: String, config: &Config) -> BTreeMap<PathBuf, String
 
         let partials = parse_partials(&src)
             .iter()
-            .map(|n| match n {
-                Node::Partial(_, partial, _) => config.resolve_partial(&path, partial),
-                _ => unreachable!(),
-            })
+            .map(|Partial(_, partial, _)| config.resolve_partial(&path, partial))
             .collect::<BTreeSet<_>>();
 
         visited.insert(path.clone(), src);

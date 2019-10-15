@@ -4,7 +4,7 @@ use std::{mem, path::PathBuf};
 
 use yarte_config::Config;
 
-use crate::parser::{Helper, Node};
+use crate::parser::{Helper, Node, Partial};
 
 use super::{visits::is_super, Context};
 
@@ -93,7 +93,7 @@ impl<'a> FindEach<'a> {
                         Helper::Defined(..) => unimplemented!(),
                     }
                 }
-                Node::Partial(_, path, expr) => {
+                Node::Partial(Partial(_, path, expr)) => {
                     let p = self.c.resolve_partial(&self.on_path, path);
                     let nodes = self.ctx.get(&p).unwrap();
                     if !expr.is_empty() {

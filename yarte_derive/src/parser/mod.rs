@@ -18,13 +18,16 @@ use self::{expr_list::ExprList, stmt_local::StmtLocal};
 pub(crate) type Ws = (bool, bool);
 
 #[derive(Debug, PartialEq)]
+pub(crate) struct Partial<'a>(pub Ws, pub &'a str, pub Vec<Expr>);
+
+#[derive(Debug, PartialEq)]
 pub(crate) enum Node<'a> {
     Comment(&'a str),
     Expr(Ws, Box<Expr>),
     Helper(Box<Helper<'a>>),
     Lit(&'a str, &'a str, &'a str),
     Local(Box<Local>),
-    Partial(Ws, &'a str, Vec<Expr>),
+    Partial(Partial<'a>),
     Raw((Ws, Ws), &'a str, &'a str, &'a str),
     Safe(Ws, Box<Expr>),
 }
@@ -162,6 +165,7 @@ macro_rules! make_eater {
                                     at,
                                     j,
                                     partial(Input(&i[at + j + 3 + $t..]), $ws)
+                                        .map(|(i, p)| (i, Node::Partial(p)))
                                 ),
                                 b'R' => try_eat!(
                                     nodes,
@@ -256,7 +260,7 @@ macro_rules! map_failure {
     };
 }
 
-fn partial(i: Input, lws: bool) -> Result<(Input, Node), nom::Err<Input>> {
+fn partial(i: Input, lws: bool) -> Result<(Input, Partial), nom::Err<Input>> {
     let (i, ident) = do_parse!(
         i,
         take_while!(ws) >> ident: path >> take_while!(ws) >> (ident)
@@ -274,7 +278,7 @@ fn partial(i: Input, lws: bool) -> Result<(Input, Node), nom::Err<Input>> {
         alt!(i, tag!("}}") | terminated!(take!(1), tag!("}}")))
     )?;
 
-    Ok((i, Node::Partial((lws, rws), ident, scope)))
+    Ok((i, Partial((lws, rws), ident, scope)))
 }
 
 fn helper(i: Input, a_lws: bool) -> Result<(Input, Node), nom::Err<Input>> {
@@ -1044,31 +1048,34 @@ mod tests {
         let src = "{{~> partial ~}}";
         assert_eq!(
             parse(src),
-            vec![Node::Partial((true, true), "partial", vec![])]
+            vec![Node::Partial(Partial((true, true), "partial", vec![]))]
         );
         let src = "{{> partial scope ~}}";
         assert_eq!(
             parse(src),
-            vec![Node::Partial(
+            vec![Node::Partial(Partial(
                 (false, true),
                 "partial",
                 vec![parse_str::<Expr>("scope").unwrap()],
-            )]
+            ))]
         );
     }
 
     #[test]
     fn test_partial() {
         let src = "{{> partial }}";
-        assert_eq!(parse(src), vec![Node::Partial(WS, "partial", vec![])]);
+        assert_eq!(
+            parse(src),
+            vec![Node::Partial(Partial(WS, "partial", vec![]))]
+        );
         let src = "{{> partial scope }}";
         assert_eq!(
             parse(src),
-            vec![Node::Partial(
+            vec![Node::Partial(Partial(
                 WS,
                 "partial",
                 vec![parse_str::<Expr>("scope").unwrap()],
-            )]
+            ))]
         );
     }
 

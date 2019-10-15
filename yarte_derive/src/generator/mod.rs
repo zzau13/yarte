@@ -13,7 +13,7 @@ use v_eval::{ctx_as_ref, eval};
 use v_htmlescape::escape;
 use yarte_config::Config;
 
-use crate::parser::{Helper, Node, Ws};
+use crate::parser::{Helper, Node, Partial, Ws};
 
 mod identifier;
 mod scope;
@@ -314,7 +314,7 @@ impl<'a> Generator<'a> {
                 }
                 Node::Lit(l, lit, r) => self.visit_lit(l, lit, r),
                 Node::Helper(h) => self.visit_helper(buf, h),
-                Node::Partial(ws, path, expr) => self.visit_partial(buf, *ws, path, expr),
+                Node::Partial(Partial(ws, path, expr)) => self.visit_partial(buf, *ws, path, expr),
                 Node::Comment(c) => {
                     self.skip_ws();
                     if cfg!(debug_assertions) {
