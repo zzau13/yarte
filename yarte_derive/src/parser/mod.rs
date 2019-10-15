@@ -230,6 +230,7 @@ macro_rules! is_else {
 make_eater!(eat_if, is_else);
 
 // TODO: terminated with memchr
+// TODO: remove end with "!}}" in favor of "}}"
 named!(comment<Input, Node>, map!(
     alt!(
         delimited!(tag!("--"), take_until!("--!}}"), tag!("--!}}")) |
@@ -476,14 +477,6 @@ macro_rules! make_argument {
 
 make_argument!(arguments, eat_expr, Result<(Input, Expr), nom::Err<Input>>);
 
-fn eat_expr_list(i: Input) -> Result<Vec<Expr>, nom::Err<Input>> {
-    map_failure!(
-        i,
-        ERR_EXPR_LIST,
-        parse_str::<ExprList>(safe_utf8(&i.0)).map(Into::into)
-    )
-}
-
 make_argument!(
     args_list,
     eat_expr_list,
@@ -540,7 +533,7 @@ fn expr(i: Input, lws: bool) -> Result<(Input, Node), nom::Err<Input>> {
 
 #[inline]
 fn eat_expr(i: Input) -> Result<Expr, nom::Err<Input>> {
-    map_failure!(i, ERR_EXPR, parse_str::<Expr>(from_utf8(i.0).unwrap()))
+    map_failure!(i, ERR_EXPR, parse_str::<Expr>(safe_utf8(i.0)))
 }
 
 #[inline]
@@ -549,6 +542,15 @@ fn eat_local(i: Input) -> Result<Local, nom::Err<Input>> {
         i,
         ERR_LOCAL,
         parse_str::<StmtLocal>(safe_utf8(i.0)).map(Into::into)
+    )
+}
+
+#[inline]
+fn eat_expr_list(i: Input) -> Result<Vec<Expr>, nom::Err<Input>> {
+    map_failure!(
+        i,
+        ERR_EXPR_LIST,
+        parse_str::<ExprList>(safe_utf8(&i.0)).map(Into::into)
     )
 }
 
