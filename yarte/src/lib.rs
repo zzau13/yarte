@@ -29,9 +29,7 @@ pub mod recompile;
 ///     name: &'a str,
 /// }
 ///
-///# fn main() {
 /// println!("{}", HelloTemplate { name: "world" })
-///# }
 /// ```
 ///
 pub trait Template: fmt::Display {

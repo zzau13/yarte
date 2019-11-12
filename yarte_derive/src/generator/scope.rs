@@ -125,33 +125,31 @@ mod test {
     #[test]
     fn test_push() {
         let mut s = Scope::new("self".to_owned(), 0);
-        let scope = vec!["foo".to_string()];
+        let mut scope = vec!["foo".to_string()];
         let id = s.len();
         s.push_scope(scope.clone());
         let ident = "bar";
         let var = s.push(ident).clone();
-        let mut new_scope = scope.clone();
-        new_scope.push(var.clone());
+        scope.push(var.clone());
 
         assert_eq!(s.root(), "self");
-        assert_eq!(s.get(id).unwrap(), new_scope.as_slice());
-        assert_eq!(&s[id], new_scope.as_slice());
+        assert_eq!(s.get(id).unwrap(), scope.as_slice());
+        assert_eq!(&s[id], scope.as_slice());
         assert_eq!(s.get_by(ident).unwrap(), &var);
     }
 
     #[test]
     fn test_extend() {
         let mut s = Scope::new("self".to_owned(), 0);
-        let scope = vec!["foo".to_string()];
+        let mut scope = vec!["foo".to_string()];
         let id = s.len();
         s.push_scope(scope.clone());
         let extend = vec!["bar".to_string()];
         s.extend(extend.clone());
-        let mut new_scope = scope.clone();
-        new_scope.extend(extend);
+        scope.extend(extend);
 
         assert_eq!(s.root(), "self");
-        assert_eq!(s.get(id).unwrap(), new_scope.as_slice());
-        assert_eq!(&s[id], new_scope.as_slice());
+        assert_eq!(s.get(id).unwrap(), scope.as_slice());
+        assert_eq!(&s[id], scope.as_slice());
     }
 }
