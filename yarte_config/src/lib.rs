@@ -148,7 +148,7 @@ impl<'a> Config<'a> {
             .iter()
             .find_map(|(k, v)| {
                 if ident.starts_with(k) {
-                    let mut path = v.to_string();
+                    let mut path = (*v).to_string();
                     path.push_str(&ident[k.len()..]);
                     Some(PathBuf::from(path))
                 } else {
