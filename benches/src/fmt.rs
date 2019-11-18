@@ -12,8 +12,7 @@ pub fn big_table(b: &mut criterion::Bencher, size: &usize) {
     }
 
     let table = BigTable { table };
-    // count with wc -c
-    let mut buf = String::with_capacity(109915);
+    let mut buf = String::with_capacity(table.to_string().len());
     b.iter(|| {
         write!(buf, "{}", table).unwrap();
     });
@@ -26,18 +25,16 @@ struct BigTable {
 impl Display for BigTable {
     fn fmt(&self, f: &mut Formatter) -> Result {
         f.write_str("<table>")?;
-        for i in (&self.table).into_iter() {
+        for i in &self.table {
             f.write_str("<tr>")?;
-            for j in (&i).into_iter() {
+            for j in i {
                 f.write_str("<td>")?;
-                (&j).fmt(f)?;
+                j.fmt(f)?;
                 f.write_str("</td>")?;
             }
             f.write_str("</tr>")?;
         }
-        f.write_str("</table>")?;
-
-        Ok(())
+        f.write_str("</table>")
     }
 }
 
@@ -65,7 +62,7 @@ pub fn teams(b: &mut criterion::Bencher) {
     };
 
     // count with wc -c
-    let mut buf = String::with_capacity(239);
+    let mut buf = String::with_capacity(teams.to_string().len());
     b.iter(|| {
         write!(buf, "{}", teams).unwrap();
     });
@@ -83,20 +80,18 @@ impl Display for Teams {
         f.write_str("</title></head><body><h1>CSL ")?;
         self.year.fmt(f)?;
         f.write_str("</h1><ul>")?;
-        for (i, v) in (&self.teams).into_iter().enumerate() {
+        for (i, v) in self.teams.iter().enumerate() {
             f.write_str("<li class=\"")?;
             if i == 0 {
                 f.write_str("champion")?;
             }
             f.write_str("\"><b>")?;
-            (&v.name).fmt(f)?;
+            v.name.fmt(f)?;
             f.write_str("</b>: ")?;
-            (&v.score).fmt(f)?;
+            v.score.fmt(f)?;
             f.write_str("</li>")?;
         }
-        f.write_str("</ul></body></html>")?;
-
-        Ok(())
+        f.write_str("</ul></body></html>")
     }
 }
 
