@@ -4,7 +4,7 @@ use actix_web::{get, middleware::Logger, web, App, HttpServer, Responder};
 use yarte::Template;
 
 #[derive(Template)]
-#[template(path = "index.hbs")]
+#[template(path = "index.hbs", err = "Some error message")]
 struct IndexTemplate {
     query: web::Query<HashMap<String, String>>,
 }
@@ -91,6 +91,10 @@ mod test {
         let resp = atest::call_service(&mut app, req);
 
         assert!(resp.status().is_server_error());
+
+        let bytes = atest::read_body(resp);
+
+        assert_eq!(bytes, Bytes::from_static("Some error message".as_ref()));
 
         let req = atest::TestRequest::with_uri("/?lastname=bar").to_request();
         let resp = atest::call_service(&mut app, req);

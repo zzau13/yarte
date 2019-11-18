@@ -17,6 +17,7 @@ pub(crate) struct Struct<'a> {
     pub path: PathBuf,
     pub print: Print,
     pub wrapped: bool,
+    pub err_msg: String,
     ident: &'a syn::Ident,
     generics: &'a syn::Generics,
 }
@@ -43,6 +44,7 @@ struct StructBuilder {
     path: Option<String>,
     print: Option<String>,
     src: Option<String>,
+    err_msg: Option<String>,
 }
 
 impl Default for StructBuilder {
@@ -53,6 +55,7 @@ impl Default for StructBuilder {
             path: None,
             print: None,
             src: None,
+            err_msg: None,
         }
     }
 }
@@ -102,6 +105,9 @@ impl StructBuilder {
             wrapped,
             generics,
             ident,
+            err_msg: self
+                .err_msg
+                .unwrap_or_else(|| "Template parsing error".into()),
         }
     }
 }
@@ -138,7 +144,7 @@ impl<'a> Visit<'a> for StructBuilder {
                 }
                 self.path = Some(s.value());
             } else {
-                panic!("attribute path must be string literal");
+                panic!("attribute 'path' must be string literal");
             }
         } else if path.is_ident("src") {
             if let syn::Lit::Str(ref s) = lit {
@@ -147,25 +153,31 @@ impl<'a> Visit<'a> for StructBuilder {
                 }
                 self.src = Some(s.value());
             } else {
-                panic!("attribute src must be string literal");
+                panic!("attribute 'src' must be string literal");
             }
         } else if path.is_ident("print") {
             if let syn::Lit::Str(ref s) = lit {
                 self.print = Some(s.value());
             } else {
-                panic!("attribute print must be string literal");
+                panic!("attribute 'print' must be string literal");
             }
         } else if path.is_ident("assured") {
             if let syn::Lit::Bool(ref s) = lit {
                 self.assured = Some(s.value);
             } else {
-                panic!("attribute assured must be boolean literal");
+                panic!("attribute 'assured' must be boolean literal");
             }
         } else if path.is_ident("ext") {
             if let syn::Lit::Str(ref s) = lit {
                 self.ext = Some(s.value());
             } else {
-                panic!("attribute ext must be string literal");
+                panic!("attribute 'ext' must be string literal");
+            }
+        } else if cfg!(feature = "actix-web") && path.is_ident("err") {
+            if let syn::Lit::Str(ref s) = lit {
+                self.err_msg = Some(s.value());
+            } else {
+                panic!("attribute 'err' must be string literal");
             }
         } else {
             panic!("invalid attribute '{:?}'", path.get_ident());
