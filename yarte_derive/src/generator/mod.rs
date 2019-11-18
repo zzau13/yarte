@@ -180,6 +180,7 @@ impl<'a> Generator<'a> {
 
     fn responder(&mut self, buf: &mut String) {
         self.s.implement_head("::yarte::aw::Responder", buf);
+        let err_msg = &self.s.err_msg;
 
         buf.writeln(&quote!(
             type Error = ::yarte::aw::Error;
@@ -192,7 +193,7 @@ impl<'a> Generator<'a> {
                         ::yarte::aw::ok(::yarte::aw::HttpResponse::Ok().content_type(Self::mime()).body(body))
                     }
                     Err(_) => {
-                        ::yarte::aw::err(::yarte::aw::ErrorInternalServerError("Template parsing error"))
+                        ::yarte::aw::err(::yarte::aw::ErrorInternalServerError(#err_msg))
                     }
                 }
             }
