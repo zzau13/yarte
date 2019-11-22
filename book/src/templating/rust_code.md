@@ -16,11 +16,10 @@ when using rust code in your template, the scope they act upon, resolve ident of
     make reference to the n-th item.
   
   - Constants and static variables must be upper-cased with underscores, `N_ITER`.
-  - Paths of type `\*\*::\*\*::\*\*` can be use without using reserve word `super`.
+  - Paths of type `\*\*::\*\*::\*\*` can be use without using reserved word `super`.
   - `self` refers to the root scope (first parent). Note that in partials this would be the current partial in use.
   - Substitution will take into account `super`, locals, etc. So keep track of the context created.
-
-
+  
 ```handlebars
 Hello, {{#each conditions}}
     {{~#if let Some(check) = cond }}

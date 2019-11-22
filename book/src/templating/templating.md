@@ -20,7 +20,7 @@ Let's say we want to use the following template `template.html`
 Now we create a struct with the variable `name`
 ```rust
 #[derive(Template)]
-#[template(source = "template.html")]
+#[template(path = "template.html")]
 struct HelloTemplate<'a> {
     name: &'a str,
 }

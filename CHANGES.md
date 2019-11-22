@@ -1,4 +1,13 @@
 # Changes
+## [0.4.0] (2019-XX-XX)
+
+### Added 
+
+- `err` attribute at `with-actix-web` feature for specify body of error response
+
+### Fixed
+- Dev-dependencies remove `bytes
+ 
 ## [0.3.5] (2019-10-15)
 
 ### Fixed
