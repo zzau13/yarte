@@ -27,8 +27,7 @@ fn main() -> std::io::Result<()> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use actix_web::{http, test as atest};
-    use bytes::Bytes;
+    use actix_web::{http, test as atest, web::Bytes};
 
     #[test]
     fn test() {

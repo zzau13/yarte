@@ -31,6 +31,3 @@ futures = { version = "0.1", optional = true }
 
 [build-dependencies]
 yarte_config = { version = "0.3", path = "../yarte_config" }
-
-[dev-dependencies]
-bytes = "0.4"

@@ -1,7 +1,6 @@
 #![cfg(feature = "with-actix-web")]
 
-use actix_web::{get, http, test, App, Responder};
-use bytes::Bytes;
+use actix_web::{get, http, test, web::Bytes, App, Responder};
 use yarte::Template;
 
 #[derive(Template)]
