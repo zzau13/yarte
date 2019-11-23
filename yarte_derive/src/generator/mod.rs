@@ -702,7 +702,7 @@ impl<'a> Generator<'a> {
                     }
 
                     if wrapped || self.s.wrapped {
-                        writeln!(buf, "({}).fmt(_fmt)?;", s).unwrap();
+                        writeln!(buf, "::std::fmt::Display::fmt(&({}), _fmt)?;", s).unwrap();
                     } else {
                         // wrap
                         writeln!(buf, "::yarte::Render::render(&({}), _fmt)?;", s).unwrap();
