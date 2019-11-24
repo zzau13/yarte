@@ -29,3 +29,4 @@ script:
     fi
   - cargo check --all
   - cargo test --all-features --all -- --nocapture
+  - cd benches && cargo bench
