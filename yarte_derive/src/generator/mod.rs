@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::BTreeMap,
     fmt::{self, Write},
     mem,
     path::PathBuf,
@@ -9,7 +9,7 @@ use mime_guess::from_ext;
 use quote::quote;
 use syn::parse_str;
 use syn::visit::Visit;
-use v_eval::{ctx_as_ref, eval};
+use v_eval::eval;
 use v_htmlescape::escape;
 use yarte_config::Config;
 
@@ -72,7 +72,7 @@ pub(self) struct Generator<'a> {
     // On State stack
     pub(self) on: Vec<On>,
     // On partial scope
-    pub(self) partial: Option<(HashMap<String, syn::Expr>, usize)>,
+    pub(self) partial: Option<(BTreeMap<String, syn::Expr>, usize)>,
     // buffer for writable
     buf_w: Vec<Writable<'a>>,
     // path - nodes
@@ -611,7 +611,7 @@ impl<'a> Generator<'a> {
             self.scp.pop();
         } else {
             let (no_visited, scope) = visit_partial(&exprs);
-            let mut cur = HashMap::new();
+            let mut cur = BTreeMap::new();
             for (k, e) in no_visited {
                 self.visit_expr(e);
                 cur.insert(
@@ -653,9 +653,9 @@ impl<'a> Generator<'a> {
 
     fn eval_bool(&self, cond: &'a syn::Expr) -> Option<bool> {
         if let Some(val) = if let Some((p, _)) = &self.partial {
-            eval(&ctx_as_ref(p), cond)
+            eval(p, cond)
         } else {
-            eval(&ctx_as_ref(&HashMap::new()), cond)
+            eval(&BTreeMap::new(), cond)
         } {
             use v_eval::Value::Bool;
             if let Bool(cond) = val {
