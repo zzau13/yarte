@@ -666,6 +666,7 @@ impl<'a> Generator<'a> {
         self.eval_expr(expr).and_then(|val| match val {
             Value::Vec(vector) => Some(vector),
             Value::Range(range) => Some(range.map(Value::Int).collect()),
+            Value::Str(s) => Some(s.chars().map(|x| Value::Str(x.to_string())).collect()),
             _ => None,
         })
     }
