@@ -127,3 +127,16 @@ fn test_const_partial_range() {
         "0\npartial in subdirectory\n11\npartial in subdirectory\n2"
     );
 }
+
+#[derive(Template)]
+#[template(path = "eval-partial-str.hbs", print = "code")]
+struct ConstPartialStrTemplate;
+
+#[test]
+fn test_const_partial_str() {
+    let t = ConstPartialStrTemplate;
+    assert_eq!(
+        t.call().unwrap(),
+        "f\npartial in subdirectory\n1o\npartial in subdirectory\n2o\npartial in subdirectory\n3"
+    );
+}
