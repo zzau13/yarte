@@ -72,7 +72,7 @@ pub(super) fn scope(e: &syn::Expr) {
 pub(super) fn partial_assign(e: &syn::Expr) {
     use syn::Expr::*;
     match e {
-        Path(..) | Field(..) | Index(..) | Lit(..) => (),
+        Path(..) | Field(..) | Index(..) | Lit(..) | Reference(..) | Array(..) | Range(..) => (),
         _ => panic!(
             "Not available Rust expression in partial assign argument:\n{}",
             quote!(#e)
