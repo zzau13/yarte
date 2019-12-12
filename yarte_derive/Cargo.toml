@@ -25,7 +25,7 @@ actix-web = []
 [dependencies]
 yarte_config = { version = "0.3", path = "../yarte_config" }
 v_htmlescape = "0.4"
-v_eval = { git ="https://gitlab.com/r-iendo/v_eval" }
+v_eval = { git ="https://gitlab.com/r-iendo/v_eval", rev = "32c0d65c" }
 memchr = "2.1"
 mime_guess = "2.0.0"
 nom = "4"

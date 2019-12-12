@@ -362,13 +362,23 @@ impl<'a> Generator<'a> {
         args: &'a syn::Expr,
         nodes: &'a [Node<'a>],
     ) {
+        let loop_var = find_loop_var(self.c, self.ctx, self.on_path.clone(), nodes);
+        self.visit_expr(args);
+
+        if let Some(args) = parse_str(&self.buf_t)
+            .ok()
+            .and_then(|expr: syn::Expr| self.eval_iter(&expr))
+        {
+            self.buf_t = String::new();
+            self.const_iter(buf, ws, args, nodes, loop_var);
+            return;
+        }
+
         validator::each(args);
 
         self.handle_ws(ws.0);
         self.write_buf_writable(buf);
 
-        let loop_var = find_loop_var(self.c, self.ctx, self.on_path.clone(), nodes);
-        self.visit_expr(args);
         let id = self.scp.len();
         let ctx = if loop_var {
             let ctx = vec![format!("_key_{}", id), format!("_index_{}", id)];
@@ -604,7 +614,40 @@ impl<'a> Generator<'a> {
             })
     }
 
-    fn eval_expr(&self, expr: &'a syn::Expr) -> Option<Value> {
+    fn const_iter(
+        &mut self,
+        buf: &mut String,
+        ws: (Ws, Ws),
+        args: impl IntoIterator<Item = Value>,
+        nodes: &'a [Node<'a>],
+        loop_var: bool,
+    ) {
+        let id = self.scp.len();
+        self.on.push(On::Each(id));
+        self.flush_ws(ws.0);
+        if loop_var {
+            for (i, v) in args.into_iter().enumerate() {
+                self.prepare_ws(ws.0);
+                self.scp.push_scope(vec![v.to_string(), i.to_string()]);
+                self.handle(nodes, buf);
+                self.scp.pop();
+                self.flush_ws(ws.1);
+            }
+        } else {
+            for v in args.into_iter() {
+                self.prepare_ws(ws.0);
+                self.scp.push_scope(vec![v.to_string()]);
+                self.handle(nodes, buf);
+                self.scp.pop();
+                self.flush_ws(ws.1);
+            }
+        }
+
+        self.prepare_ws(ws.1);
+        self.on.pop();
+    }
+
+    fn eval_expr(&self, expr: &syn::Expr) -> Option<Value> {
         if let Some((p, _)) = &self.partial {
             eval(p, expr)
         } else {
@@ -612,9 +655,17 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn eval_bool(&self, cond: &'a syn::Expr) -> Option<bool> {
+    fn eval_bool(&self, cond: &syn::Expr) -> Option<bool> {
         self.eval_expr(cond).and_then(|val| match val {
             Value::Bool(cond) => Some(cond),
+            _ => None,
+        })
+    }
+
+    fn eval_iter(&self, expr: &syn::Expr) -> Option<impl IntoIterator<Item = Value>> {
+        self.eval_expr(expr).and_then(|val| match val {
+            Value::Vec(vector) => Some(vector),
+            Value::Range(range) => Some(range.map(Value::Int).collect()),
             _ => None,
         })
     }
