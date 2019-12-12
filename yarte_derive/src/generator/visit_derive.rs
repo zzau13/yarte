@@ -82,7 +82,7 @@ impl StructBuilder {
             (Some(src), ext) => (
                 PathBuf::from(quote!(#ident).to_string())
                     .with_extension(ext.unwrap_or_else(|| DEFAULT_EXTENSION.to_owned())),
-                src,
+                src.trim_end().to_owned(),
             ),
             (None, None) => config.get_template(&self.path.expect("some valid path")),
             (None, Some(_)) => panic!("'ext' attribute cannot be used with 'path' attribute"),

@@ -75,9 +75,7 @@ impl<'a> Visit<'a> for Generator<'a> {
     fn visit_expr_array(&mut self, syn::ExprArray { attrs, elems, .. }: &'a syn::ExprArray) {
         visit_attrs!(self, attrs);
         self.buf_t.push('[');
-        for i in elems {
-            self.visit_expr(i);
-        }
+        visit_punctuated!(self, elems, visit_expr);
         self.buf_t.push(']');
     }
 
@@ -492,10 +490,19 @@ impl<'a> Visit<'a> for Generator<'a> {
         }
     }
 
-    fn visit_expr_reference(&mut self, i: &'a syn::ExprReference) {
-        let m = i.mutability;
-        self.buf_t.write(&quote!(& #m));
-        visit::visit_expr_reference(self, i);
+    fn visit_expr_reference(
+        &mut self,
+        syn::ExprReference {
+            attrs,
+            and_token,
+            mutability,
+            expr,
+            ..
+        }: &'a syn::ExprReference,
+    ) {
+        visit_attrs!(self, attrs);
+        self.buf_t.write(&quote!(#and_token #mutability));
+        self.visit_expr(expr);
     }
 
     fn visit_expr_repeat(&mut self, i: &'a syn::ExprRepeat) {
