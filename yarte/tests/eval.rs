@@ -101,3 +101,29 @@ fn test_const_for_nested2() {
     let t = ConstForNested2Template("fol");
     assert_eq!(t.call().unwrap(), "1 fol 21 fol 3 foo2 fol 22 fol 3 bar");
 }
+
+#[derive(Template)]
+#[template(path = "eval-partial.hbs", print = "code")]
+struct ConstPartialTemplate;
+
+#[test]
+fn test_const_partial() {
+    let t = ConstPartialTemplate;
+    assert_eq!(
+        t.call().unwrap(),
+        "foo\npartial in subdirectory\n1bar\npartial in subdirectory\n2"
+    );
+}
+
+#[derive(Template)]
+#[template(path = "eval-partial-range.hbs", print = "code")]
+struct ConstPartialRangeTemplate;
+
+#[test]
+fn test_const_partial_range() {
+    let t = ConstPartialRangeTemplate;
+    assert_eq!(
+        t.call().unwrap(),
+        "0\npartial in subdirectory\n11\npartial in subdirectory\n2"
+    );
+}
