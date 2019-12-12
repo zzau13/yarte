@@ -9,7 +9,7 @@ use mime_guess::from_ext;
 use quote::quote;
 use syn::parse_str;
 use syn::visit::Visit;
-use v_eval::eval;
+use v_eval::{eval, Value};
 use v_htmlescape::escape;
 use yarte_config::Config;
 
@@ -218,42 +218,12 @@ impl<'a> Generator<'a> {
                     self.visit_expr(expr);
                     self.handle_ws(*ws);
 
-                    if let Some(..) = self.partial {
-                        if let syn::Expr::Path(..) = expr {
-                            if let Ok(lit) = syn::parse_str::<syn::Lit>(&self.buf_t) {
-                                self.buf_t = String::new();
-                                use syn::Lit::*;
-                                match lit {
-                                    Byte(b) => self.buf_w.push(Writable::LitP(
-                                        String::from_utf8(vec![b.value()]).unwrap(),
-                                    )),
-                                    ByteStr(b) => self.buf_w.push(Writable::LitP(
-                                        String::from_utf8(b.value()).unwrap(),
-                                    )),
-                                    Str(b) => self.buf_w.push(Writable::LitP(b.value())),
-                                    Char(b) => {
-                                        self.buf_w.push(Writable::LitP(b.value().to_string()))
-                                    }
-                                    Bool(b) => self.buf_w.push(Writable::LitP(b.value.to_string())),
-                                    Float(b) => {
-                                        self.buf_w.push(Writable::LitP(b.base10_digits().into()))
-                                    }
-                                    Int(b) => {
-                                        self.buf_w.push(Writable::LitP(b.base10_digits().into()))
-                                    }
-                                    _ => panic!(
-                                        "Not allowed verbatim expression in a template expression"
-                                    ),
-                                };
-                                continue;
-                            }
-                        }
+                    if self.const_eval(true).is_none() {
+                        self.buf_w.push(Writable::Expr(
+                            mem::replace(&mut self.buf_t, String::new()),
+                            true,
+                        ));
                     }
-
-                    self.buf_w.push(Writable::Expr(
-                        mem::replace(&mut self.buf_t, String::new()),
-                        true,
-                    ));
                 }
                 Node::Expr(ws, expr) => {
                     let expr: &syn::Expr = &*expr;
@@ -261,53 +231,13 @@ impl<'a> Generator<'a> {
 
                     self.visit_expr(expr);
                     self.handle_ws(*ws);
-                    if let Some(..) = self.partial {
-                        if let syn::Expr::Path(..) = expr {
-                            if let Ok(lit) = syn::parse_str::<syn::Lit>(&self.buf_t) {
-                                self.buf_t = String::new();
-                                use syn::Lit::*;
-                                match lit {
-                                    Byte(b) => {
-                                        self.buf_w.push(Writable::LitP(
-                                            escape(&String::from_utf8(vec![b.value()]).unwrap())
-                                                .to_string(),
-                                        ));
-                                    }
-                                    ByteStr(b) => {
-                                        self.buf_w.push(Writable::LitP(
-                                            escape(&String::from_utf8(b.value()).unwrap())
-                                                .to_string(),
-                                        ));
-                                    }
-                                    Char(b) => {
-                                        self.buf_w.push(Writable::LitP(
-                                            escape(&b.value().to_string()).to_string(),
-                                        ));
-                                    }
-                                    Str(b) => {
-                                        self.buf_w
-                                            .push(Writable::LitP(escape(&b.value()).to_string()));
-                                    }
-                                    Bool(b) => self.buf_w.push(Writable::LitP(b.value.to_string())),
-                                    Float(b) => {
-                                        self.buf_w.push(Writable::LitP(b.base10_digits().into()))
-                                    }
-                                    Int(b) => {
-                                        self.buf_w.push(Writable::LitP(b.base10_digits().into()))
-                                    }
-                                    _ => panic!(
-                                        "Not allowed verbatim expression in a template expression"
-                                    ),
-                                }
-                                continue;
-                            }
-                        }
-                    }
 
-                    self.buf_w.push(Writable::Expr(
-                        mem::replace(&mut self.buf_t, String::new()),
-                        false,
-                    ))
+                    if self.const_eval(false).is_none() {
+                        self.buf_w.push(Writable::Expr(
+                            mem::replace(&mut self.buf_t, String::new()),
+                            false,
+                        ));
+                    }
                 }
                 Node::Lit(l, lit, r) => self.visit_lit(l, lit, r),
                 Node::Helper(h) => self.visit_helper(buf, h),
@@ -651,19 +581,42 @@ impl<'a> Generator<'a> {
         self.on_path = p;
     }
 
-    fn eval_bool(&self, cond: &'a syn::Expr) -> Option<bool> {
-        if let Some(val) = if let Some((p, _)) = &self.partial {
-            eval(p, cond)
-        } else {
-            eval(&BTreeMap::new(), cond)
-        } {
-            use v_eval::Value::Bool;
-            if let Bool(cond) = val {
-                return Some(cond);
-            }
+    fn const_eval(&mut self, safe: bool) -> Option<()> {
+        macro_rules! push_some {
+            ($expr:expr) => {{
+                self.buf_w.push(Writable::LitP($expr.to_string()));
+                self.buf_t = String::new();
+                Some(())
+            }};
         }
 
-        None
+        use Value::*;
+        parse_str(&self.buf_t)
+            .ok()
+            .and_then(|expr: syn::Expr| self.eval_expr(&expr))
+            .and_then(|val| match val {
+                Int(a) => push_some!(a),
+                Float(a) => push_some!(a),
+                Bool(a) => push_some!(a),
+                Str(a) if safe || self.s.wrapped => push_some!(a),
+                Str(a) => push_some!(escape(&a)),
+                _ => None,
+            })
+    }
+
+    fn eval_expr(&self, expr: &'a syn::Expr) -> Option<Value> {
+        if let Some((p, _)) = &self.partial {
+            eval(p, expr)
+        } else {
+            eval(&BTreeMap::new(), expr)
+        }
+    }
+
+    fn eval_bool(&self, cond: &'a syn::Expr) -> Option<bool> {
+        self.eval_expr(cond).and_then(|val| match val {
+            Value::Bool(cond) => Some(cond),
+            _ => None,
+        })
     }
 
     fn write_buf_writable(&mut self, buf: &mut String) {
