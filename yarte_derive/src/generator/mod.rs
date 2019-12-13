@@ -304,7 +304,8 @@ impl<'a> Generator<'a> {
         validator::unless(cond);
 
         self.handle_ws(ws.0);
-        if let Some(val) = self.eval_bool(cond) {
+        self.visit_expr(cond);
+        if let Some(val) = self.eval_bool() {
             if !val {
                 self.scp.push_scope(vec![]);
                 self.handle(nodes, buf);
@@ -313,8 +314,6 @@ impl<'a> Generator<'a> {
             }
         } else {
             self.write_buf_writable(buf);
-
-            self.visit_expr(cond);
             writeln!(
                 buf,
                 "if !({}) {{",
@@ -448,17 +447,15 @@ impl<'a> Generator<'a> {
         let mut last = false;
 
         self.handle_ws(pws.0);
-        if let Some(val) = self.eval_bool(cond) {
+        self.scp.push_scope(vec![]);
+        self.visit_expr(cond);
+        if let Some(val) = self.eval_bool() {
             if val {
-                self.scp.push_scope(vec![]);
                 self.handle(block, buf);
-                self.scp.pop();
             }
             last = val
         } else {
             self.write_buf_writable(buf);
-            self.scp.push_scope(vec![]);
-            self.visit_expr(cond);
             writeln!(
                 buf,
                 "if {} {{",
@@ -467,34 +464,34 @@ impl<'a> Generator<'a> {
             .unwrap();
 
             self.handle(block, buf);
-            self.scp.pop();
             need_else = true;
         };
+        self.scp.pop();
 
         for (ws, cond, block) in ifs {
-            validator::ifs(cond);
             if last {
                 break;
             }
 
+            validator::ifs(cond);
+
+            self.scp.push_scope(vec![]);
             self.handle_ws(*ws);
-            last = if let Some(val) = self.eval_bool(cond) {
+            self.visit_expr(cond);
+
+            last = if let Some(val) = self.eval_bool() {
                 if need_else {
                     buf.writeln(&'}');
                 }
 
                 if val {
-                    self.scp.push_scope(vec![]);
                     self.handle(block, buf);
-                    self.scp.pop();
                     need_else = false;
                 }
                 val
             } else {
                 self.write_buf_writable(buf);
 
-                self.scp.push_scope(vec![]);
-                self.visit_expr(cond);
                 if need_else {
                     writeln!(
                         buf,
@@ -511,9 +508,9 @@ impl<'a> Generator<'a> {
                     .unwrap();
                 }
                 self.handle(block, buf);
-                self.scp.pop();
                 false
             };
+            self.scp.pop();
         }
 
         if let Some((ws, els)) = els {
@@ -655,11 +652,17 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn eval_bool(&self, cond: &syn::Expr) -> Option<bool> {
-        self.eval_expr(cond).and_then(|val| match val {
-            Value::Bool(cond) => Some(cond),
-            _ => None,
-        })
+    fn eval_bool(&mut self) -> Option<bool> {
+        parse_str(&self.buf_t)
+            .ok()
+            .and_then(|expr: syn::Expr| self.eval_expr(&expr))
+            .and_then(|val| match val {
+                Value::Bool(cond) => {
+                    self.buf_t = String::new();
+                    Some(cond)
+                }
+                _ => None,
+            })
     }
 
     fn eval_iter(&self, expr: &syn::Expr) -> Option<impl IntoIterator<Item = Value>> {
