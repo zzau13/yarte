@@ -645,11 +645,7 @@ impl<'a> Generator<'a> {
     }
 
     fn eval_expr(&self, expr: &syn::Expr) -> Option<Value> {
-        if let Some((p, _)) = &self.partial {
-            eval(p, expr)
-        } else {
-            eval(&BTreeMap::new(), expr)
-        }
+        eval(&BTreeMap::new(), expr)
     }
 
     fn eval_bool(&mut self) -> Option<bool> {
