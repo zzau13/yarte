@@ -80,8 +80,10 @@ impl StructBuilder {
 
         let (path, src) = match (self.src, self.ext) {
             (Some(src), ext) => (
-                PathBuf::from(quote!(#ident).to_string())
-                    .with_extension(ext.unwrap_or_else(|| DEFAULT_EXTENSION.to_owned())),
+                config.get_dir().join(
+                    PathBuf::from(quote!(#ident).to_string())
+                        .with_extension(ext.unwrap_or_else(|| DEFAULT_EXTENSION.to_owned())),
+                ),
                 src.trim_end().to_owned(),
             ),
             (None, None) => config.get_template(&self.path.expect("some valid path")),
@@ -207,12 +209,12 @@ impl From<Option<String>> for Print {
     }
 }
 
-static DEFAULT_EXTENSION: &str = "html";
+static DEFAULT_EXTENSION: &str = "hbs";
 static HTML_EXTENSIONS: [&str; 6] = [
     DEFAULT_EXTENSION,
     "htm",
     "xml",
-    "hbs",
+    "html",
     "handlebars",
     "mustache",
 ];
@@ -247,7 +249,7 @@ mod test {
         let s = visit_derive(&i, &config);
 
         assert_eq!(s.src, "");
-        assert_eq!(s.path, PathBuf::from("Test.txt"));
+        assert_eq!(s.path, config.get_dir().join(PathBuf::from("Test.txt")));
         assert_eq!(s.print, Print::Code);
         assert_eq!(s.wrapped, true);
     }

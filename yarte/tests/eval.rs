@@ -140,3 +140,15 @@ fn test_const_partial_str() {
         "f\npartial in subdirectory\n1o\npartial in subdirectory\n2o\npartial in subdirectory\n3"
     );
 }
+
+#[derive(Template)]
+#[template(src = "{{> with-partial strs = &[\"foo\", s]}}", print = "code")]
+struct ConstPartial2Template<'a> {
+    s: &'a str,
+}
+
+#[test]
+fn test_const_partial2() {
+    let t = ConstPartial2Template { s: "bar" };
+    assert_eq!(t.call().unwrap(), "foo\nIn partial\n1bar\nIn partial\n2");
+}
