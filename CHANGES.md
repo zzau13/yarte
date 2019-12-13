@@ -1,9 +1,10 @@
 # Changes
-## [0.4.0] (2019-XX-XX)
+## [0.4.0] (2019-12-13)
 
 ### Added 
 
 - `err` attribute at `with-actix-web` feature for specify body of error response
+- compile time evaluator for all expressions and helpers
 
 ### Fixed
 - Dev-dependencies remove `bytes

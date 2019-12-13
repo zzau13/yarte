@@ -1,6 +1,6 @@
 [package]
 name = "yarte_derive"
-version = "0.3.5"
+version = "0.4.0"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "Procedural macro package for yarte"
 categories = ["template-engine"]
@@ -23,7 +23,7 @@ proc-macro = true
 actix-web = []
 
 [dependencies]
-yarte_config = { version = "0.3", path = "../yarte_config" }
+yarte_config = { version = "0.4", path = "../yarte_config" }
 v_htmlescape = "0.4"
 v_eval = "0.2"
 memchr = "2.1"

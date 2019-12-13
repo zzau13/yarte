@@ -24,7 +24,7 @@ Add Yarte dependency to your Cargo.toml file:
 
 ```toml
 [dependencies]
-yarte = "0.3"
+yarte = "0.4"
 ```
 Yarte templates look like regular text, with embedded yarte expressions. 
 Create a simple Yarte template called `hello.html` in your template directory.
