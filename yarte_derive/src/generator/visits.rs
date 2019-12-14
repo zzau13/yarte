@@ -592,6 +592,10 @@ impl<'a> Visit<'a> for Generator<'a> {
         self.visit_expr(expr)
     }
 
+    fn visit_label(&mut self, i: &'a syn::Label) {
+        self.buf_t.write(&quote!(#i));
+    }
+
     fn visit_lit(&mut self, i: &'a syn::Lit) {
         self.buf_t.write(&quote!(#i));
     }
@@ -734,8 +738,8 @@ impl<'a> Visit<'a> for Generator<'a> {
             Local(i) => {
                 self.visit_local(i);
             }
-            Item(i) => {
-                self.visit_item(i);
+            Item(_i) => {
+                unimplemented!();
             }
             Expr(i) => {
                 self.visit_expr(i);

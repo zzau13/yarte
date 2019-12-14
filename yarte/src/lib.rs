@@ -8,7 +8,7 @@
 //! Also Yarte incorporates feature `with-actix-web`, an implementation of `actix-web`'s
 //! trait Responder for those using this framework.
 //!
-//! Yarte book at https://yarte.netlify.com/
+//! [Yarte book](https://yarte.netlify.com)
 //!
 
 use std::fmt::{self, Write};

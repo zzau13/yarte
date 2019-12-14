@@ -213,12 +213,12 @@ impl<'a> Generator<'a> {
                 }
                 Node::Safe(ws, expr) => {
                     let expr: &syn::Expr = &*expr;
-                    validator::expression(expr);
 
-                    self.visit_expr(expr);
                     self.handle_ws(*ws);
+                    self.visit_expr(expr);
 
                     if self.const_eval(true).is_none() {
+                        validator::expression(expr);
                         self.buf_w.push(Writable::Expr(
                             mem::replace(&mut self.buf_t, String::new()),
                             true,
@@ -227,12 +227,12 @@ impl<'a> Generator<'a> {
                 }
                 Node::Expr(ws, expr) => {
                     let expr: &syn::Expr = &*expr;
-                    validator::expression(expr);
 
-                    self.visit_expr(expr);
                     self.handle_ws(*ws);
+                    self.visit_expr(expr);
 
                     if self.const_eval(false).is_none() {
+                        validator::expression(expr);
                         self.buf_w.push(Writable::Expr(
                             mem::replace(&mut self.buf_t, String::new()),
                             false,
@@ -301,10 +301,9 @@ impl<'a> Generator<'a> {
         cond: &'a syn::Expr,
         nodes: &'a [Node<'a>],
     ) {
-        validator::unless(cond);
-
         self.handle_ws(ws.0);
         self.visit_expr(cond);
+
         if let Some(val) = self.eval_bool() {
             if !val {
                 self.scp.push_scope(vec![]);
@@ -313,6 +312,8 @@ impl<'a> Generator<'a> {
                 self.handle_ws(ws.1);
             }
         } else {
+            validator::unless(cond);
+
             self.write_buf_writable(buf);
             writeln!(
                 buf,
@@ -441,20 +442,17 @@ impl<'a> Generator<'a> {
         ifs: &'a [(Ws, syn::Expr, Vec<Node<'a>>)],
         els: &'a Option<(Ws, Vec<Node<'a>>)>,
     ) {
-        validator::ifs(cond);
-
-        let mut need_else = false;
-        let mut last = false;
-
         self.handle_ws(pws.0);
         self.scp.push_scope(vec![]);
         self.visit_expr(cond);
-        if let Some(val) = self.eval_bool() {
+        let (mut last, mut need_else) = if let Some(val) = self.eval_bool() {
             if val {
                 self.handle(block, buf);
             }
-            last = val
+            (val, false)
         } else {
+            validator::ifs(cond);
+
             self.write_buf_writable(buf);
             writeln!(
                 buf,
@@ -464,7 +462,7 @@ impl<'a> Generator<'a> {
             .unwrap();
 
             self.handle(block, buf);
-            need_else = true;
+            (false, true)
         };
         self.scp.pop();
 
@@ -472,8 +470,6 @@ impl<'a> Generator<'a> {
             if last {
                 break;
             }
-
-            validator::ifs(cond);
 
             self.scp.push_scope(vec![]);
             self.handle_ws(*ws);
@@ -490,6 +486,8 @@ impl<'a> Generator<'a> {
                 }
                 val
             } else {
+                validator::ifs(cond);
+
                 self.write_buf_writable(buf);
 
                 if need_else {
@@ -619,24 +617,26 @@ impl<'a> Generator<'a> {
         nodes: &'a [Node<'a>],
         loop_var: bool,
     ) {
+        macro_rules! handle {
+            ($ctx:expr) => {
+                self.prepare_ws(ws.0);
+                self.scp.push_scope($ctx);
+                self.handle(nodes, buf);
+                self.scp.pop();
+                self.flush_ws(ws.1);
+            };
+        }
+
         let id = self.scp.len();
         self.on.push(On::Each(id));
         self.flush_ws(ws.0);
         if loop_var {
             for (i, v) in args.into_iter().enumerate() {
-                self.prepare_ws(ws.0);
-                self.scp.push_scope(vec![v.to_string(), i.to_string()]);
-                self.handle(nodes, buf);
-                self.scp.pop();
-                self.flush_ws(ws.1);
+                handle!(vec![v.to_string(), i.to_string()]);
             }
         } else {
             for v in args.into_iter() {
-                self.prepare_ws(ws.0);
-                self.scp.push_scope(vec![v.to_string()]);
-                self.handle(nodes, buf);
-                self.scp.pop();
-                self.flush_ws(ws.1);
+                handle!(vec![v.to_string()]);
             }
         }
 
@@ -676,21 +676,6 @@ impl<'a> Generator<'a> {
         }
 
         let mut buf_lit = String::new();
-        if self.buf_w.iter().all(|w| match w {
-            Writable::Lit(..) | Writable::LitP(..) => true,
-            _ => false,
-        }) {
-            for s in mem::replace(&mut self.buf_w, vec![]) {
-                match s {
-                    Writable::Lit(ref s) => buf_lit.write(s),
-                    Writable::LitP(ref s) => buf_lit.write(s),
-                    _ => unreachable!(),
-                }
-            }
-            writeln!(buf, "_fmt.write_str({:#?})?;", &buf_lit).unwrap();
-            return;
-        }
-
         for s in mem::replace(&mut self.buf_w, vec![]) {
             match s {
                 Writable::Lit(ref s) => buf_lit.write(s),
