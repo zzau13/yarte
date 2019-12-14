@@ -10,18 +10,20 @@ struct IndexTemplate {
 }
 
 #[get("/")]
-pub fn index(query: web::Query<HashMap<String, String>>) -> impl Responder {
+async fn index(query: web::Query<HashMap<String, String>>) -> impl Responder {
     IndexTemplate { query }
 }
 
-fn main() -> std::io::Result<()> {
+#[actix_rt::main]
+async fn main() -> std::io::Result<()> {
     std::env::set_var("RUST_LOG", "actix_web=info");
     env_logger::init();
 
     // start http server
     HttpServer::new(move || App::new().wrap(Logger::default()).service(index))
         .bind("127.0.0.1:8080")?
-        .run()
+        .start()
+        .await
 }
 
 #[cfg(test)]
@@ -29,12 +31,12 @@ mod test {
     use super::*;
     use actix_web::{http, test as atest, web::Bytes};
 
-    #[test]
-    fn test() {
-        let mut app = atest::init_service(App::new().service(index));
+    #[actix_rt::test]
+    async fn test() {
+        let mut app = atest::init_service(App::new().service(index)).await;
 
         let req = atest::TestRequest::with_uri("/").to_request();
-        let resp = atest::call_service(&mut app, req);
+        let resp = atest::call_service(&mut app, req).await;
 
         assert!(resp.status().is_success());
 
@@ -43,7 +45,7 @@ mod test {
             "text/html; charset=utf-8"
         );
 
-        let bytes = atest::read_body(resp);
+        let bytes = atest::read_body(resp).await;
         assert_eq!(
             bytes,
             Bytes::from_static(
@@ -63,7 +65,7 @@ mod test {
         );
 
         let req = atest::TestRequest::with_uri("/?name=foo&lastname=bar").to_request();
-        let resp = atest::call_service(&mut app, req);
+        let resp = atest::call_service(&mut app, req).await;
 
         assert!(resp.status().is_success());
 
@@ -72,7 +74,7 @@ mod test {
             "text/html; charset=utf-8"
         );
 
-        let bytes = atest::read_body(resp);
+        let bytes = atest::read_body(resp).await;
         assert_eq!(
             bytes,
             Bytes::from_static(
@@ -87,16 +89,16 @@ mod test {
         );
 
         let req = atest::TestRequest::with_uri("/?name=foo").to_request();
-        let resp = atest::call_service(&mut app, req);
+        let resp = atest::call_service(&mut app, req).await;
 
         assert!(resp.status().is_server_error());
 
-        let bytes = atest::read_body(resp);
+        let bytes = atest::read_body(resp).await;
 
         assert_eq!(bytes, Bytes::from_static("Some error message".as_ref()));
 
         let req = atest::TestRequest::with_uri("/?lastname=bar").to_request();
-        let resp = atest::call_service(&mut app, req);
+        let resp = atest::call_service(&mut app, req).await;
 
         assert!(resp.status().is_success());
 
@@ -105,7 +107,7 @@ mod test {
             "text/html; charset=utf-8"
         );
 
-        let bytes = atest::read_body(resp);
+        let bytes = atest::read_body(resp).await;
         assert_eq!(
             bytes,
             Bytes::from_static(

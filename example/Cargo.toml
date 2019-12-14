@@ -12,7 +12,8 @@ env_logger = "0.7"
 
 yarte = { path = "../yarte", version = "*", features = ["with-actix-web"]  }
 
-actix-web = "1.0"
+actix-rt = "1.0"
+actix-web = "2.0.0-alpha"
 
 [build-dependencies]
 yarte = { path = "../yarte", version = "*", features = ["with-actix-web"]  }
