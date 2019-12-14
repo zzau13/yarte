@@ -102,9 +102,8 @@ fn read(path: PathBuf, src: String, config: &Config) -> BTreeMap<PathBuf, String
     }
 
     let mut visited = BTreeMap::new();
-    let mut stack = Vec::new();
 
-    _read(path, src, config, &mut visited, &mut stack);
+    _read(path, src, config, &mut visited, &mut Vec::new());
 
     visited
 }

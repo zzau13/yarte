@@ -184,7 +184,7 @@ impl<'a> Generator<'a> {
 
         buf.writeln(&quote!(
             type Error = ::yarte::aw::Error;
-            type Future = ::yarte::aw::FutureResult<::yarte::aw::HttpResponse, ::yarte::aw::Error>;
+            type Future = ::yarte::aw::Ready<::std::result::Result<::yarte::aw::HttpResponse, Self::Error>>;
 
             #[inline]
             fn respond_to(self, _req: &::yarte::aw::HttpRequest) -> Self::Future {

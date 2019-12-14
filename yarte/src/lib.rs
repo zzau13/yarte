@@ -54,5 +54,5 @@ pub mod aw {
     pub use actix_web::{
         error::ErrorInternalServerError, Error, HttpRequest, HttpResponse, Responder,
     };
-    pub use futures::future::{err, ok, FutureResult};
+    pub use futures::future::{err, ok, Ready};
 }
