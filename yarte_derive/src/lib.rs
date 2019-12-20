@@ -14,15 +14,18 @@ use proc_macro::TokenStream;
 
 use yarte_config::{get_source, read_config_file, Config, PrintConfig};
 
+mod codegen;
 mod generator;
 mod logger;
 mod parser;
 
 use self::{
+    codegen::{html::HTMLCodeGen, text::TextCodeGen, CodeGen},
     generator::{visit_derive, Print},
     logger::log,
     parser::{parse, parse_partials, Partial},
 };
+use crate::codegen::FmtCodeGen;
 
 #[proc_macro_derive(Template, attributes(template))]
 pub fn derive(input: TokenStream) -> TokenStream {
@@ -51,16 +54,28 @@ fn build(i: &syn::DeriveInput) -> TokenStream {
         eprintln!("{:?}\n", parsed);
     }
 
-    let code = generator::generate(config, s, &parsed);
+    let tokens = {
+        let hir = &generator::generate(config, s, &parsed);
+        if s.wrapped {
+            FmtCodeGen::new(TextCodeGen, s).gen(hir)
+        } else {
+            FmtCodeGen::new(HTMLCodeGen, s).gen(hir)
+        }
+    };
+
     if cfg!(debug_assertions) && config.print_override == PrintConfig::Code
         || config.print_override == PrintConfig::All
         || s.print == Print::Code
         || s.print == Print::All
     {
-        log(&code, s.path.to_str().unwrap().to_owned(), &config.debug);
+        log(
+            &tokens.to_string(),
+            s.path.to_str().unwrap().to_owned(),
+            &config.debug,
+        );
     }
 
-    code.parse().unwrap()
+    tokens.into()
 }
 
 fn calculate_hash<T: Hash>(t: &T) -> u64 {

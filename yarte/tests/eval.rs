@@ -152,3 +152,81 @@ fn test_const_partial2() {
     let t = ConstPartial2Template { s: "bar" };
     assert_eq!(t.call().unwrap(), "foo\nIn partial\n1bar\nIn partial\n2");
 }
+
+#[derive(Template)]
+#[template(
+    src = "  {{# if false ~}} n\n{{ else if false }}\tn\t {{else if true ~}}     n  {{ else }}{{/if}}",
+    print = "code"
+)]
+struct ConstIfWSTemplate;
+
+#[test]
+fn test_const_if_ws() {
+    let t = ConstIfWSTemplate;
+    assert_eq!(t.call().unwrap(), "  n  ");
+}
+
+#[derive(Template)]
+#[template(
+    src = "  {{# if false ~}} n\n{{~ else if false ~}}\tn\t {{~ else if true }}     n  {{ else }}{{/if}}",
+    print = "code"
+)]
+struct ConstIfWS2Template;
+
+#[test]
+fn test_const_if_ws_2() {
+    let t = ConstIfWS2Template;
+    assert_eq!(t.call().unwrap(), "       n  ");
+}
+
+#[derive(Template)]
+#[template(
+    src = "  {{# if false ~}} n\n{{~ else if true}}\tn\t {{~ else if true }}     n  {{ else }}{{/if}}",
+    print = "code"
+)]
+struct ConstIfWS3Template;
+
+#[test]
+fn test_const_if_ws_3() {
+    let t = ConstIfWS3Template;
+    assert_eq!(t.call().unwrap(), "  \tn");
+}
+
+#[derive(Template)]
+#[template(
+    src = "  {{# if false ~}} n\n{{~ else if true}}\tn\t {{ else if true }}     n  {{~ else ~}}{{~/if}}",
+    print = "code"
+)]
+struct ConstIfWS4Template;
+
+#[test]
+fn test_const_if_ws_4() {
+    let t = ConstIfWS4Template;
+    assert_eq!(t.call().unwrap(), "  \tn\t ");
+}
+
+#[derive(Template)]
+#[template(
+    src = "  {{# if false ~}} n\n{{~ else if true}}\tn\t {{ else if true }}     n  {{~ else ~}}{{~/if~}}  n",
+    print = "code"
+)]
+struct ConstIfWS5Template;
+
+#[test]
+fn test_const_if_ws_5() {
+    let t = ConstIfWS5Template;
+    assert_eq!(t.call().unwrap(), "  \tn\t n");
+}
+
+#[derive(Template)]
+#[template(
+    src = "  {{# if false ~}} n\n{{~ else if false ~}}\tn\t {{~ else if true }}     n  {{~ else }}{{/if}}\tfoo",
+    print = "code"
+)]
+struct ConstIfWS6Template;
+
+#[test]
+fn test_const_if_ws_6() {
+    let t = ConstIfWS6Template;
+    assert_eq!(t.call().unwrap(), "       n\tfoo");
+}

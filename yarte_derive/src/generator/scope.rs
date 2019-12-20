@@ -1,8 +1,11 @@
 use std::ops::Index;
 
+use quote::quote;
+use syn::export::Span;
+
 #[derive(Debug)]
 pub(super) struct Scope {
-    scope: Vec<String>,
+    scope: Vec<syn::Expr>,
     level: Vec<usize>,
     pub(super) count: usize,
 }
@@ -15,7 +18,7 @@ macro_rules! pop {
 }
 
 impl Scope {
-    pub(super) fn new(root: String, count: usize) -> Scope {
+    pub(super) fn new(root: syn::Expr, count: usize) -> Scope {
         Scope {
             scope: vec![root],
             level: vec![],
@@ -37,27 +40,29 @@ impl Scope {
         pop!(self);
     }
 
-    pub(super) fn pops(&mut self) -> Vec<String> {
+    pub(super) fn pops(&mut self) -> Vec<syn::Expr> {
         pop!(self).collect()
     }
 
-    pub(super) fn push(&mut self, ident: &str) -> &String {
-        self.scope.push(format!("{}__{}", ident, self.count));
+    pub(super) fn push_ident(&mut self, ident: &str) -> syn::Ident {
+        let ident = syn::Ident::new(&format!("{}__{}", ident, self.count), Span::call_site());
+        self.scope
+            .push(syn::parse2(quote!(#ident)).expect("Correct expression"));
         self.count += 1;
-        &self.scope[self.scope.len() - 1]
+        ident
     }
 
-    pub(super) fn push_scope(&mut self, t: Vec<String>) {
+    pub(super) fn push_scope(&mut self, t: Vec<syn::Expr>) {
         self.level.push(self.scope.len());
         self.extend(t);
     }
 
     #[inline]
-    pub(super) fn extend(&mut self, t: Vec<String>) {
+    pub(super) fn extend(&mut self, t: Vec<syn::Expr>) {
         self.scope.extend(t);
     }
 
-    pub(super) fn get(&self, n: usize) -> Option<&[String]> {
+    pub(super) fn get(&self, n: usize) -> Option<&[syn::Expr]> {
         if n == 0 {
             Some(
                 self.level
@@ -74,13 +79,14 @@ impl Scope {
     }
 
     #[inline]
-    pub(super) fn root(&self) -> &String {
+    pub(super) fn root(&self) -> &syn::Expr {
         debug_assert!(!self.scope.is_empty());
         &self.scope[0]
     }
 
-    pub(super) fn get_by(&self, ident: &str) -> Option<&String> {
+    pub(super) fn get_by(&self, ident: &str) -> Option<&syn::Expr> {
         self.scope.iter().rev().find(|e| {
+            let e = quote!(#e).to_string();
             let e = e.as_bytes();
             let ident = ident.as_bytes();
             e.eq(ident)
@@ -93,7 +99,7 @@ impl Scope {
 }
 
 impl Index<usize> for Scope {
-    type Output = [String];
+    type Output = [syn::Expr];
 
     fn index(&self, i: usize) -> &Self::Output {
         self.get(i).expect("Scope not found.")
@@ -103,36 +109,41 @@ impl Index<usize> for Scope {
 #[cfg(test)]
 mod test {
     use super::*;
+    use syn::parse_str;
 
     #[test]
     fn test_root() {
-        let s = Scope::new("self".to_owned(), 0);
-        assert_eq!(s.root(), "self");
+        let root: syn::Expr = parse_str("self").unwrap();
+        let s = Scope::new(root.clone(), 0);
+        assert_eq!(s.root(), &root);
     }
 
     #[test]
     fn test_get() {
-        let mut s = Scope::new("self".to_owned(), 0);
-        let scope = vec!["foo".to_string()];
+        let root: syn::Expr = parse_str("self").unwrap();
+        let mut s = Scope::new(root.clone(), 0);
+        let scope = vec![parse_str("foo").unwrap()];
         let id = s.len();
         s.push_scope(scope.clone());
 
-        assert_eq!(s.root(), "self");
+        assert_eq!(s.root(), &root);
         assert_eq!(s.get(id).unwrap(), scope.as_slice());
         assert_eq!(&s[id], scope.as_slice());
     }
 
     #[test]
     fn test_push() {
-        let mut s = Scope::new("self".to_owned(), 0);
-        let mut scope = vec!["foo".to_string()];
+        let root: syn::Expr = parse_str("self").unwrap();
+        let mut s = Scope::new(root.clone(), 0);
+        let mut scope = vec![parse_str("foo").unwrap()];
         let id = s.len();
         s.push_scope(scope.clone());
         let ident = "bar";
-        let var = s.push(ident).clone();
+        let var = s.push_ident(ident);
+        let var: syn::Expr = syn::parse2(quote!(#var)).unwrap();
         scope.push(var.clone());
 
-        assert_eq!(s.root(), "self");
+        assert_eq!(s.root(), &root);
         assert_eq!(s.get(id).unwrap(), scope.as_slice());
         assert_eq!(&s[id], scope.as_slice());
         assert_eq!(s.get_by(ident).unwrap(), &var);
@@ -140,15 +151,16 @@ mod test {
 
     #[test]
     fn test_extend() {
-        let mut s = Scope::new("self".to_owned(), 0);
-        let mut scope = vec!["foo".to_string()];
+        let root: syn::Expr = parse_str("self").unwrap();
+        let mut s = Scope::new(root.clone(), 0);
+        let mut scope = vec![parse_str("foo").unwrap()];
         let id = s.len();
         s.push_scope(scope.clone());
-        let extend = vec!["bar".to_string()];
+        let extend = vec![parse_str("bar").unwrap()];
         s.extend(extend.clone());
         scope.extend(extend);
 
-        assert_eq!(s.root(), "self");
+        assert_eq!(s.root(), &root);
         assert_eq!(s.get(id).unwrap(), scope.as_slice());
         assert_eq!(&s[id], scope.as_slice());
     }

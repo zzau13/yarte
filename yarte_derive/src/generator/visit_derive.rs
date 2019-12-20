@@ -5,7 +5,7 @@ use syn::visit::Visit;
 
 use yarte_config::Config;
 
-use super::EWrite;
+use proc_macro2::TokenStream;
 
 pub(crate) fn visit_derive<'a>(i: &'a syn::DeriveInput, config: &Config) -> Struct<'a> {
     StructBuilder::default().build(i, config)
@@ -23,18 +23,13 @@ pub(crate) struct Struct<'a> {
 }
 
 impl<'a> Struct<'a> {
-    pub fn implement_head(&self, t: &str, buf: &mut dyn EWrite) {
-        let (impl_generics, orig_ty_generics, where_clause) = self.generics.split_for_impl();
+    pub fn implement_head(&self, t: TokenStream, body: TokenStream) -> TokenStream {
+        let Struct {
+            ident, generics, ..
+        } = *self;
+        let (impl_generics, orig_ty_generics, where_clause) = generics.split_for_impl();
 
-        writeln!(
-            buf,
-            "{} {} for {}{} {{",
-            quote!(impl#impl_generics),
-            t,
-            self.ident,
-            quote!(#orig_ty_generics #where_clause)
-        )
-        .unwrap()
+        quote!(impl#impl_generics #t for #ident #orig_ty_generics #where_clause { #body })
     }
 }
 

@@ -6,7 +6,7 @@ use yarte_config::Config;
 
 use crate::parser::{Helper, Node, Partial};
 
-use super::{visits::is_super, Context};
+use super::{is_super, Context};
 
 pub(super) fn find_loop_var(c: &Config, ctx: Context, path: PathBuf, nodes: &[Node]) -> bool {
     FindEach::new(c, ctx, path).find(nodes)

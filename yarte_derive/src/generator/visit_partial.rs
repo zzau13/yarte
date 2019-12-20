@@ -3,7 +3,7 @@ use std::{collections::BTreeMap, mem};
 use quote::quote;
 use syn::visit::Visit;
 
-use super::{identifier::is_tuple_index, validator};
+use super::{is_tuple_index, validator};
 
 pub fn visit_partial(e: &[syn::Expr]) -> (BTreeMap<String, &syn::Expr>, Option<&syn::Expr>) {
     PartialBuilder::default().build(e)
