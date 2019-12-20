@@ -1,6 +1,6 @@
-use memchr::memchr;
-
 use std::str::from_utf8;
+
+use memchr::memchr;
 
 use super::{comment, partial, raw, Input, Partial};
 

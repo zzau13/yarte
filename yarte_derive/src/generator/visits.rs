@@ -1,5 +1,3 @@
-#![allow(clippy::cognitive_complexity)]
-
 use quote::quote;
 use syn::{
     punctuated::Punctuated,

@@ -1,7 +1,4 @@
 // Based on https://github.com/dtolnay/cargo-expand
-
-use prettyprint::{PagingMode, PrettyPrinter};
-
 use std::{
     env,
     ffi::OsString,
@@ -9,6 +6,8 @@ use std::{
     path::PathBuf,
     process::{Command, Stdio},
 };
+
+use prettyprint::{PagingMode, PrettyPrinter};
 
 use yarte_config::PrintOption;
 

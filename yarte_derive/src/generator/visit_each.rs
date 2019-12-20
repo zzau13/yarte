@@ -1,6 +1,6 @@
-use syn::visit::Visit;
-
 use std::{mem, path::PathBuf};
+
+use syn::visit::Visit;
 
 use yarte_config::Config;
 
