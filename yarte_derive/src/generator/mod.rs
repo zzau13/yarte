@@ -1,21 +1,16 @@
-use std::{
-    collections::BTreeMap,
-    fmt::{self, Write},
-    mem,
-    path::PathBuf,
-};
+use std::{collections::BTreeMap, mem, path::PathBuf, str};
 
-use mime_guess::from_ext;
 use quote::quote;
-use syn::parse_str;
-use syn::visit::Visit;
+use syn::{
+    export::Span, parse_str, punctuated::Punctuated, visit_mut::VisitMut, PathSegment, Token,
+};
 use v_eval::{eval, Value};
 use v_htmlescape::escape;
 use yarte_config::Config;
 
+use crate::codegen::{Each, IfElse, HIR};
 use crate::parser::{Helper, Node, Partial, Ws};
 
-mod identifier;
 mod scope;
 mod validator;
 mod visit_derive;
@@ -24,27 +19,15 @@ mod visit_partial;
 mod visits;
 
 use self::scope::Scope;
-use self::visit_derive::Struct;
+pub(crate) use self::visit_derive::Struct;
 use self::visit_each::find_loop_var;
 use self::visit_partial::visit_partial;
 
 pub(crate) use self::visit_derive::{visit_derive, Print};
 
-pub(crate) fn generate(c: &Config, s: &Struct, ctx: Context) -> String {
+pub(crate) fn generate(c: &Config, s: &Struct, ctx: Context) -> Vec<HIR> {
     Generator::new(c, s, ctx).build()
 }
-
-pub(crate) trait EWrite: fmt::Write {
-    fn write(&mut self, s: &dyn fmt::Display) {
-        write!(self, "{}", s).unwrap()
-    }
-
-    fn writeln(&mut self, s: &dyn fmt::Display) {
-        writeln!(self, "{}", s).unwrap()
-    }
-}
-
-impl EWrite for String {}
 
 pub(self) type Context<'a> = &'a BTreeMap<&'a PathBuf, Vec<Node<'a>>>;
 
@@ -58,15 +41,13 @@ pub(self) enum On {
 enum Writable<'a> {
     Lit(&'a str),
     LitP(String),
-    Expr(String, bool),
+    Expr(Box<syn::Expr>, bool),
 }
 
 pub(self) struct Generator<'a> {
     pub(self) c: &'a Config<'a>,
     // ast of DeriveInput
     pub(self) s: &'a Struct<'a>,
-    // buffer for tokens
-    pub(self) buf_t: String,
     // Scope stack
     pub(self) scp: Scope,
     // On State stack
@@ -90,168 +71,70 @@ impl<'a> Generator<'a> {
             c,
             s,
             ctx,
-            buf_t: String::new(),
             buf_w: vec![],
             next_ws: None,
             on: vec![],
             on_path: s.path.clone(),
             partial: None,
-            scp: Scope::new("self".to_owned(), 0),
+            scp: Scope::new(parse_str("self").unwrap(), 0),
             skip_ws: false,
         }
     }
 
-    fn build(&mut self) -> String {
-        let mut buf = String::new();
+    fn build(&mut self) -> Vec<HIR> {
+        let mut buf = vec![];
 
         let nodes: &[Node] = self.ctx.get(&self.on_path).unwrap();
-        let size_hint = self.display(nodes, &mut buf);
 
-        self.template(size_hint, &mut buf);
-
-        if cfg!(feature = "actix-web") {
-            self.responder(&mut buf);
-        }
-
-        buf
-    }
-
-    #[inline]
-    fn get_mime(&mut self) -> String {
-        let ext = if self.s.wrapped {
-            match self.s.path.extension() {
-                Some(s) => s.to_str().unwrap(),
-                None => "txt",
-            }
-        } else {
-            "html"
-        };
-
-        from_ext(ext).first_or_text_plain().to_string()
-    }
-
-    fn template(&mut self, size_hint: usize, buf: &mut String) {
-        debug_assert_ne!(size_hint, 0);
-        self.s.implement_head("::yarte::Template", buf);
-
-        buf.writeln(&"fn mime() -> &'static str {");
-
-        let mut mime = self.get_mime();
-        mime.push_str("; charset=utf-8");
-        writeln!(buf, "{:?}", mime).unwrap();
-
-        buf.writeln(&"}");
-        buf.writeln(&"fn size_hint() -> usize {");
-        if cfg!(debug_assertions) {
-            buf.writeln(&"// In release, the stream will be optimized");
-            buf.writeln(&"// size_hint can been changed");
-        }
-        buf.writeln(&size_hint);
-        buf.writeln(&"}");
-        buf.writeln(&"}");
-    }
-
-    fn display(&mut self, nodes: &'a [Node], buf: &mut String) -> usize {
-        self.s.implement_head("::std::fmt::Display", buf);
-
-        buf.writeln(&"fn fmt(&self, _fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {");
-
-        let last = buf.len();
-
-        self.handle(nodes, buf);
-        self.write_buf_writable(buf);
-        // heuristic based on https://github.com/lfairy/maud
-        let size_hint = 1 + buf.len() - last;
-
+        self.handle(nodes, &mut buf);
+        self.write_buf_writable(&mut buf);
         debug_assert_eq!(self.scp.len(), 1);
-        debug_assert_eq!(self.scp.root(), "self");
+        debug_assert_eq!(self.scp.root(), &parse_str::<syn::Expr>("self").unwrap());
         debug_assert!(self.on.is_empty());
-        debug_assert!(self.buf_t.is_empty());
         debug_assert!(self.buf_w.is_empty());
         debug_assert_eq!(self.on_path, self.s.path);
         debug_assert_eq!(self.next_ws, None);
 
-        buf.writeln(&quote!(Ok(())));
-
-        buf.writeln(&"}");
-        buf.writeln(&"}");
-        size_hint
+        buf
     }
 
-    fn responder(&mut self, buf: &mut String) {
-        self.s.implement_head("::yarte::aw::Responder", buf);
-        let err_msg = &self.s.err_msg;
-
-        buf.writeln(&quote!(
-            type Error = ::yarte::aw::Error;
-            type Future = ::yarte::aw::Ready<::std::result::Result<::yarte::aw::HttpResponse, Self::Error>>;
-
-            #[inline]
-            fn respond_to(self, _req: &::yarte::aw::HttpRequest) -> Self::Future {
-                match self.call() {
-                    Ok(body) => {
-                        ::yarte::aw::ok(::yarte::aw::HttpResponse::Ok().content_type(Self::mime()).body(body))
-                    }
-                    Err(_) => {
-                        ::yarte::aw::err(::yarte::aw::ErrorInternalServerError(#err_msg))
-                    }
-                }
-            }
-        ));
-
-        buf.writeln(&"}");
-    }
-
-    fn handle(&mut self, nodes: &'a [Node], buf: &mut String) {
+    fn handle(&mut self, nodes: &'a [Node], buf: &mut Vec<HIR>) {
         for n in nodes {
             match n {
                 Node::Local(expr) => {
                     self.skip_ws();
                     self.write_buf_writable(buf);
-                    self.visit_local(expr);
-                    buf.writeln(&mem::replace(&mut self.buf_t, String::new()));
+                    let mut expr = *expr.clone();
+                    self.visit_local_mut(&mut expr);
+                    buf.push(HIR::Local(Box::new(expr)));
                 }
                 Node::Safe(ws, expr) => {
-                    let expr: &syn::Expr = &*expr;
+                    let mut expr = *expr.clone();
 
                     self.handle_ws(*ws);
-                    self.visit_expr(expr);
+                    self.visit_expr_mut(&mut expr);
 
-                    if self.const_eval(true).is_none() {
-                        validator::expression(expr);
-                        self.buf_w.push(Writable::Expr(
-                            mem::replace(&mut self.buf_t, String::new()),
-                            true,
-                        ));
+                    if self.const_eval(&expr, true).is_none() {
+                        validator::expression(&expr);
+                        self.buf_w.push(Writable::Expr(Box::new(expr), true));
                     }
                 }
                 Node::Expr(ws, expr) => {
-                    let expr: &syn::Expr = &*expr;
+                    let mut expr = *expr.clone();
 
                     self.handle_ws(*ws);
-                    self.visit_expr(expr);
+                    self.visit_expr_mut(&mut expr);
 
-                    if self.const_eval(false).is_none() {
-                        validator::expression(expr);
-                        self.buf_w.push(Writable::Expr(
-                            mem::replace(&mut self.buf_t, String::new()),
-                            false,
-                        ));
+                    if self.const_eval(&expr, false).is_none() {
+                        validator::expression(&expr);
+                        self.buf_w.push(Writable::Expr(Box::new(expr), false));
                     }
                 }
                 Node::Lit(l, lit, r) => self.visit_lit(l, lit, r),
                 Node::Helper(h) => self.visit_helper(buf, h),
                 Node::Partial(Partial(ws, path, expr)) => self.visit_partial(buf, *ws, path, expr),
-                Node::Comment(c) => {
-                    self.skip_ws();
-                    if cfg!(debug_assertions) {
-                        self.write_buf_writable(buf);
-                        for line in c.lines() {
-                            buf.write(&"//");
-                            buf.writeln(&line.trim_end());
-                        }
-                    }
-                }
+                // TODO
+                Node::Comment(_) => self.skip_ws(),
                 Node::Raw(ws, l, v, r) => {
                     self.handle_ws(ws.0);
                     self.visit_lit(l, v, r);
@@ -283,7 +166,7 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn visit_helper(&mut self, buf: &mut String, h: &'a Helper<'a>) {
+    fn visit_helper(&mut self, buf: &mut Vec<HIR>, h: &'a Helper<'a>) {
         use crate::parser::Helper::*;
         match h {
             Each(ws, e, b) => self.visit_each(buf, *ws, e, b),
@@ -296,15 +179,16 @@ impl<'a> Generator<'a> {
 
     fn visit_unless(
         &mut self,
-        buf: &mut String,
+        buf: &mut Vec<HIR>,
         ws: (Ws, Ws),
         cond: &'a syn::Expr,
         nodes: &'a [Node<'a>],
     ) {
+        let mut cond = cond.clone();
         self.handle_ws(ws.0);
-        self.visit_expr(cond);
+        self.visit_expr_mut(&mut cond);
 
-        if let Some(val) = self.eval_bool() {
+        if let Some(val) = self.eval_bool(&cond) {
             if !val {
                 self.scp.push_scope(vec![]);
                 self.handle(nodes, buf);
@@ -312,30 +196,36 @@ impl<'a> Generator<'a> {
                 self.handle_ws(ws.1);
             }
         } else {
-            validator::unless(cond);
+            validator::unless(&cond);
 
             self.write_buf_writable(buf);
-            writeln!(
-                buf,
-                "if !({}) {{",
-                mem::replace(&mut self.buf_t, String::new())
-            )
-            .unwrap();
-
             self.scp.push_scope(vec![]);
-            self.handle(nodes, buf);
+            let mut buf_t = vec![];
+            self.handle(nodes, &mut buf_t);
             self.scp.pop();
 
             self.handle_ws(ws.1);
-            self.write_buf_writable(buf);
-
-            buf.writeln(&"}");
+            self.write_buf_writable(&mut buf_t);
+            let cond = syn::Expr::Unary(syn::ExprUnary {
+                expr: Box::new(syn::Expr::Paren(syn::ExprParen {
+                    attrs: vec![],
+                    paren_token: syn::token::Paren(Span::call_site()),
+                    expr: Box::new(cond),
+                })),
+                attrs: vec![],
+                op: syn::UnOp::Not(Token![!](Span::call_site())),
+            });
+            buf.push(HIR::IfElse(Box::new(IfElse {
+                ifs: (cond, buf_t),
+                if_else: vec![],
+                els: None,
+            })));
         }
     }
 
     fn visit_with(
         &mut self,
-        buf: &mut String,
+        buf: &mut Vec<HIR>,
         ws: (Ws, Ws),
         args: &'a syn::Expr,
         nodes: &'a [Node<'a>],
@@ -343,10 +233,10 @@ impl<'a> Generator<'a> {
         validator::scope(args);
 
         self.handle_ws(ws.0);
-        self.visit_expr(args);
+        let mut args = args.clone();
+        self.visit_expr_mut(&mut args);
         self.on.push(On::With(self.scp.len()));
-        self.scp
-            .push_scope(vec![mem::replace(&mut self.buf_t, String::new())]);
+        self.scp.push_scope(vec![args]);
 
         self.handle(nodes, buf);
 
@@ -357,182 +247,171 @@ impl<'a> Generator<'a> {
 
     fn visit_each(
         &mut self,
-        buf: &mut String,
+        buf: &mut Vec<HIR>,
         ws: (Ws, Ws),
         args: &'a syn::Expr,
         nodes: &'a [Node<'a>],
     ) {
         let loop_var = find_loop_var(self.c, self.ctx, self.on_path.clone(), nodes);
-        self.visit_expr(args);
+        let mut args = args.clone();
+        self.visit_expr_mut(&mut args);
 
-        if let Some(args) = parse_str(&self.buf_t)
-            .ok()
-            .and_then(|expr: syn::Expr| self.eval_iter(&expr))
-        {
-            self.buf_t = String::new();
+        if let Some(args) = self.eval_iter(&args) {
             self.const_iter(buf, ws, args, nodes, loop_var);
             return;
         }
 
-        validator::each(args);
+        validator::each(&args);
 
         self.handle_ws(ws.0);
         self.write_buf_writable(buf);
 
         let id = self.scp.len();
-        let ctx = if loop_var {
-            let ctx = vec![format!("_key_{}", id), format!("_index_{}", id)];
-            if let syn::Expr::Range(..) = args {
-                writeln!(
-                    buf,
-                    "for ({}, {}) in ({}).enumerate() {{",
-                    ctx[1],
-                    ctx[0],
-                    &mem::replace(&mut self.buf_t, String::new())
-                )
-                .unwrap();
+        let v = parse_str(&format!("_key_{}", id)).unwrap();
+        let (args, expr, ctx) = if loop_var {
+            let i = parse_str(&format!("_index_{}", id)).unwrap();
+            let args = if let syn::Expr::Range(..) = args {
+                syn::parse2::<syn::Expr>(quote!(((#args).enumerate()))).unwrap()
             } else {
-                writeln!(
-                    buf,
-                    "for ({}, {}) in (&{}).into_iter().enumerate() {{",
-                    ctx[1],
-                    ctx[0],
-                    &mem::replace(&mut self.buf_t, String::new())
-                )
-                .unwrap();
-            }
-            ctx
+                syn::parse2::<syn::Expr>(quote!(((&(#args)).into_iter().enumerate()))).unwrap()
+            };
+            (
+                args,
+                syn::parse2::<syn::Expr>(quote!((#i, #v))).unwrap(),
+                vec![v, i],
+            )
         } else {
-            let ctx = vec![format!("_key_{}", id)];
-            if let syn::Expr::Range(..) = args {
-                writeln!(
-                    buf,
-                    "for {} in {} {{",
-                    ctx[0],
-                    &mem::replace(&mut self.buf_t, String::new())
-                )
-                .unwrap();
+            let args = if let syn::Expr::Range(..) = args {
+                args
             } else {
-                writeln!(
-                    buf,
-                    "for {} in (&{}).into_iter() {{",
-                    ctx[0],
-                    &mem::replace(&mut self.buf_t, String::new())
-                )
-                .unwrap();
-            }
-            ctx
+                syn::parse2::<syn::Expr>(quote!(((&(#args)).into_iter()))).unwrap()
+            };
+            (args, syn::parse2::<syn::Expr>(quote!(#v)).unwrap(), vec![v])
         };
         self.on.push(On::Each(id));
         self.scp.push_scope(ctx);
 
-        self.handle(nodes, buf);
+        let mut body = Vec::new();
+        self.handle(nodes, &mut body);
         self.handle_ws(ws.1);
-        self.write_buf_writable(buf);
+        self.write_buf_writable(&mut body);
 
         self.on.pop();
         self.scp.pop();
-        buf.writeln(&"}");
+
+        buf.push(HIR::Each(Box::new(Each { args, body, expr })))
     }
 
     fn visit_if(
         &mut self,
-        buf: &mut String,
+        buf: &mut Vec<HIR>,
         (pws, cond, block): &'a ((Ws, Ws), syn::Expr, Vec<Node>),
         ifs: &'a [(Ws, syn::Expr, Vec<Node<'a>>)],
         els: &'a Option<(Ws, Vec<Node<'a>>)>,
     ) {
-        self.handle_ws(pws.0);
         self.scp.push_scope(vec![]);
-        self.visit_expr(cond);
-        let (mut last, mut need_else) = if let Some(val) = self.eval_bool() {
+        let mut cond = cond.clone();
+        self.visit_expr_mut(&mut cond);
+        self.handle_ws(pws.0);
+        let (mut last, mut o_ifs) = if let Some(val) = self.eval_bool(&cond) {
             if val {
                 self.handle(block, buf);
             }
-            (val, false)
+            (val, None)
         } else {
-            validator::ifs(cond);
-
+            validator::ifs(&cond);
             self.write_buf_writable(buf);
-            writeln!(
-                buf,
-                "if {} {{",
-                mem::replace(&mut self.buf_t, String::new())
-            )
-            .unwrap();
-
-            self.handle(block, buf);
-            (false, true)
+            let mut body = Vec::new();
+            self.handle(block, &mut body);
+            (false, Some((cond, body)))
         };
         self.scp.pop();
 
-        for (ws, cond, block) in ifs {
+        let mut if_else = Vec::new();
+        let mut o_els = None;
+        for (i, (ws, cond, block)) in ifs.iter().enumerate() {
+            self.handle_ws(*ws);
+            if let Some(body) = o_els.as_mut() {
+                self.write_buf_writable(body);
+            } else if let Some((_, body)) = if_else.last_mut() {
+                self.write_buf_writable(body);
+            } else if let Some((_, body)) = o_ifs.as_mut() {
+                self.write_buf_writable(body);
+            }
             if last {
                 break;
             }
 
             self.scp.push_scope(vec![]);
-            self.handle_ws(*ws);
-            self.visit_expr(cond);
+            let mut cond = cond.clone();
+            self.visit_expr_mut(&mut cond);
 
-            last = if let Some(val) = self.eval_bool() {
-                if need_else {
-                    buf.writeln(&'}');
-                }
-
+            if let Some(val) = self.eval_bool(&cond) {
                 if val {
-                    self.handle(block, buf);
-                    need_else = false;
+                    if o_ifs.is_some() {
+                        let mut body = Vec::new();
+                        self.handle(block, &mut body);
+                        o_els = Some(body);
+                    } else {
+                        self.handle(block, buf);
+                    }
+                    last = i + 1 != ifs.len();
                 }
-                val
             } else {
-                validator::ifs(cond);
+                validator::ifs(&cond);
 
-                self.write_buf_writable(buf);
-
-                if need_else {
-                    writeln!(
-                        buf,
-                        "}} else if {} {{",
-                        mem::replace(&mut self.buf_t, String::new())
-                    )
-                    .unwrap();
+                let mut body = Vec::new();
+                self.handle(block, &mut body);
+                if o_ifs.is_some() {
+                    if_else.push((cond, body));
                 } else {
-                    writeln!(
-                        buf,
-                        "if {} {{",
-                        mem::replace(&mut self.buf_t, String::new())
-                    )
-                    .unwrap();
+                    o_ifs = Some((cond, body));
                 }
-                self.handle(block, buf);
-                false
             };
             self.scp.pop();
         }
 
-        if let Some((ws, els)) = els {
-            self.handle_ws(*ws);
-            if need_else {
-                self.write_buf_writable(buf);
-                buf.writeln(&"} else {");
+        let mut els = els.as_ref().and_then(|(ws, els)| {
+            if last {
+                return None;
             }
-
-            if !last {
+            self.handle_ws(*ws);
+            if let Some(body) = o_els.as_mut() {
+                self.write_buf_writable(body);
+                return o_els;
+            } else if let Some((_, body)) = if_else.last_mut() {
+                self.write_buf_writable(body);
+            } else if let Some((_, body)) = o_ifs.as_mut() {
+                self.write_buf_writable(body);
+            }
+            if o_ifs.is_some() {
+                self.scp.push_scope(vec![]);
+                let mut body = Vec::new();
+                self.handle(els, &mut body);
+                self.scp.pop();
+                Some(body)
+            } else {
                 self.scp.push_scope(vec![]);
                 self.handle(els, buf);
                 self.scp.pop();
+                None
             }
-        }
+        });
 
         self.handle_ws(pws.1);
-        if need_else {
-            self.write_buf_writable(buf);
-            buf.writeln(&"}");
+        if let Some(mut ifs) = o_ifs {
+            if let Some(body) = els.as_mut() {
+                self.write_buf_writable(body);
+            } else if let Some((_, body)) = if_else.last_mut() {
+                self.write_buf_writable(body);
+            } else {
+                self.write_buf_writable(&mut ifs.1);
+            }
+            buf.push(HIR::IfElse(Box::new(IfElse { ifs, if_else, els })))
         }
     }
 
-    fn visit_partial(&mut self, buf: &mut String, ws: Ws, path: &str, exprs: &'a [syn::Expr]) {
+    fn visit_partial(&mut self, buf: &mut Vec<HIR>, ws: Ws, path: &str, exprs: &'a [syn::Expr]) {
         let p = self.c.resolve_partial(&self.on_path, path);
         let nodes = self.ctx.get(&p).unwrap();
 
@@ -547,21 +426,17 @@ impl<'a> Generator<'a> {
         } else {
             let (no_visited, scope) = visit_partial(&exprs);
             let mut cur = BTreeMap::new();
-            for (k, e) in no_visited {
-                self.visit_expr(e);
-                cur.insert(
-                    k,
-                    parse_str::<syn::Expr>(&mem::replace(&mut self.buf_t, String::new())).unwrap(),
-                );
+            for (k, expr) in no_visited {
+                let mut expr = expr.clone();
+                self.visit_expr_mut(&mut expr);
+                cur.insert(k, expr);
             }
 
             if let Some(scope) = scope {
-                self.visit_expr(scope);
+                let mut scope = scope.clone();
+                self.visit_expr_mut(&mut scope);
                 let count = self.scp.count;
-                let mut parent = mem::replace(
-                    &mut self.scp,
-                    Scope::new(mem::replace(&mut self.buf_t, String::new()), count),
-                );
+                let mut parent = mem::replace(&mut self.scp, Scope::new(scope, count));
                 let last = mem::replace(&mut self.partial, Some((cur, 0)));
                 let on = mem::replace(&mut self.on, vec![]);
 
@@ -586,32 +461,28 @@ impl<'a> Generator<'a> {
         self.on_path = p;
     }
 
-    fn const_eval(&mut self, safe: bool) -> Option<()> {
+    fn const_eval(&mut self, expr: &syn::Expr, safe: bool) -> Option<()> {
         macro_rules! push_some {
             ($expr:expr) => {{
                 self.buf_w.push(Writable::LitP($expr.to_string()));
-                self.buf_t = String::new();
                 Some(())
             }};
         }
 
         use Value::*;
-        parse_str(&self.buf_t)
-            .ok()
-            .and_then(|expr: syn::Expr| self.eval_expr(&expr))
-            .and_then(|val| match val {
-                Int(a) => push_some!(a),
-                Float(a) => push_some!(a),
-                Bool(a) => push_some!(a),
-                Str(a) if safe || self.s.wrapped => push_some!(a),
-                Str(a) => push_some!(escape(&a)),
-                _ => None,
-            })
+        self.eval_expr(expr).and_then(|val| match val {
+            Int(a) => push_some!(a),
+            Float(a) => push_some!(a),
+            Bool(a) => push_some!(a),
+            Str(a) if safe || self.s.wrapped => push_some!(a),
+            Str(a) => push_some!(escape(&a)),
+            _ => None,
+        })
     }
 
     fn const_iter(
         &mut self,
-        buf: &mut String,
+        buf: &mut Vec<HIR>,
         ws: (Ws, Ws),
         args: impl IntoIterator<Item = Value>,
         nodes: &'a [Node<'a>],
@@ -632,11 +503,14 @@ impl<'a> Generator<'a> {
         self.flush_ws(ws.0);
         if loop_var {
             for (i, v) in args.into_iter().enumerate() {
-                handle!(vec![v.to_string(), i.to_string()]);
+                handle!(vec![
+                    parse_str(&v.to_string()).unwrap(),
+                    parse_str(&i.to_string()).unwrap()
+                ]);
             }
         } else {
             for v in args.into_iter() {
-                handle!(vec![v.to_string()]);
+                handle!(vec![parse_str(&v.to_string()).unwrap()]);
             }
         }
 
@@ -648,17 +522,11 @@ impl<'a> Generator<'a> {
         eval(&BTreeMap::new(), expr)
     }
 
-    fn eval_bool(&mut self) -> Option<bool> {
-        parse_str(&self.buf_t)
-            .ok()
-            .and_then(|expr: syn::Expr| self.eval_expr(&expr))
-            .and_then(|val| match val {
-                Value::Bool(cond) => {
-                    self.buf_t = String::new();
-                    Some(cond)
-                }
-                _ => None,
-            })
+    fn eval_bool(&mut self, expr: &syn::Expr) -> Option<bool> {
+        self.eval_expr(expr).and_then(|val| match val {
+            Value::Bool(cond) => Some(cond),
+            _ => None,
+        })
     }
 
     fn eval_iter(&self, expr: &syn::Expr) -> Option<impl IntoIterator<Item = Value>> {
@@ -670,7 +538,140 @@ impl<'a> Generator<'a> {
         })
     }
 
-    fn write_buf_writable(&mut self, buf: &mut String) {
+    fn resolve_path(
+        &self,
+        syn::ExprPath { attrs, qself, path }: &syn::ExprPath,
+    ) -> Result<syn::Expr, ()> {
+        if qself.is_some() || !attrs.is_empty() {
+            //        panic!("Not available QSelf in a template expression");
+            return Err(());
+        }
+
+        macro_rules! writes {
+        ($($t:tt)*) => {
+            return syn::parse2(quote!($($t)*)).map_err(|_| ());
+        };
+    }
+
+        macro_rules! index_var {
+            ($ident:expr, $j:expr) => {{
+                let ident = $ident.as_bytes();
+                if is_tuple_index(ident) {
+                    let field = syn::Index{ index: u32::from_str_radix(str::from_utf8(&ident[1..]).unwrap(), 10).unwrap(), span: Span::call_site() };
+                    let ident = &self.scp[$j][0];
+                    writes!(#ident.#field)
+                }
+            }};
+        }
+
+        macro_rules! each_var {
+            ($ident:expr, $j:expr) => {{
+                debug_assert!(self.scp.get($j).is_some(), "{} {:?}", $j, self.scp);
+                debug_assert!(!self.scp[$j].is_empty());
+                match $ident {
+                    "index0" => return Ok(self.scp[$j][1].clone()),
+                    "index" => {
+                        let ident = &self.scp[$j][1];
+                        writes!((#ident + 1))
+                    },
+                    "first" => {
+                        let ident = &self.scp[$j][1];
+                        writes!((#ident == 0))
+                    },
+                    "this" => return Ok(self.scp[$j][0].clone()),
+                    ident => {
+                        index_var!(ident, $j);
+                        let field = syn::Ident::new(ident, Span::call_site());
+                        let ident = &self.scp[$j][0];
+                        writes!(#ident.#field)
+                    },
+                }
+            }};
+        }
+
+        macro_rules! with_var {
+            ($ident:expr, $j:expr) => {{
+                debug_assert!(self.scp.get($j).is_some());
+                debug_assert!(!self.scp[$j].is_empty());
+                index_var!($ident, $j);
+                let ident = &self.scp[$j][0];
+                let field = syn::Ident::new($ident, Span::call_site());
+                writes!(#ident.#field)
+            }};
+        }
+
+        macro_rules! self_var {
+            ($ident:ident) => {{
+                index_var!($ident, 0);
+                let ident = self.scp.root();
+                let field = syn::Ident::new($ident, Span::call_site());
+                writes!(#ident.#field)
+            }};
+        }
+
+        macro_rules! partial_var {
+            ($ident:ident, $on:expr) => {{
+                if let Some((partial, level)) = &self.partial {
+                    if *level == $on {
+                        if let Some(expr) = partial.get($ident) {
+                            return Ok(expr.clone());
+                        }
+                    }
+                }
+            }};
+        }
+
+        if path.segments.len() == 1 {
+            let ident: &str = &path.segments[0].ident.to_string();
+
+            // static or constant
+            if ident.chars().all(|x| x.is_ascii_uppercase() || x.eq(&'_')) {
+                let ident = &path.segments[0].ident;
+                writes!(#ident)
+            }
+
+            partial_var!(ident, self.on.len());
+
+            if let Some(ident) = &self.scp.get_by(ident) {
+                // in scope
+                Ok((*ident).clone())
+            } else {
+                // out scope
+                if ident.eq("self") {
+                    return Ok(self.scp.root().clone());
+                }
+
+                match self.on.last() {
+                    None => self_var!(ident),
+                    Some(On::Each(j)) => each_var!(ident, *j),
+                    Some(On::With(j)) => with_var!(ident, *j),
+                };
+            }
+        } else if let Some((j, ref ident)) = is_super(&path.segments) {
+            if self.on.is_empty() {
+                panic!("use super at top");
+            } else if self.on.len() == j {
+                partial_var!(ident, j);
+                self_var!(ident);
+            } else if j < self.on.len() {
+                partial_var!(ident, j);
+                match self.on[self.on.len() - j - 1] {
+                    On::Each(j) => each_var!(ident.as_str(), j),
+                    On::With(j) => with_var!(ident, j),
+                }
+            } else {
+                panic!("use super without parent")
+            }
+        } else {
+            Ok(syn::Expr::Path(syn::ExprPath {
+                attrs: vec![],
+                qself: None,
+                path: path.clone(),
+            }))
+        }
+    }
+
+    fn write_buf_writable(&mut self, buf: &mut Vec<HIR>) {
         if self.buf_w.is_empty() {
             return;
         }
@@ -678,30 +679,19 @@ impl<'a> Generator<'a> {
         let mut buf_lit = String::new();
         for s in mem::replace(&mut self.buf_w, vec![]) {
             match s {
-                Writable::Lit(ref s) => buf_lit.write(s),
-                Writable::LitP(ref s) => buf_lit.write(s),
-                Writable::Expr(ref s, wrapped) => {
+                Writable::Lit(ref s) => buf_lit.push_str(s),
+                Writable::LitP(ref s) => buf_lit.push_str(s),
+                Writable::Expr(s, wrapped) => {
                     if !buf_lit.is_empty() {
-                        writeln!(
-                            buf,
-                            "_fmt.write_str({:#?})?;",
-                            &mem::replace(&mut buf_lit, String::new())
-                        )
-                        .unwrap();
+                        buf.push(HIR::Lit(mem::replace(&mut buf_lit, String::new())));
                     }
-
-                    if wrapped || self.s.wrapped {
-                        writeln!(buf, "::std::fmt::Display::fmt(&({}), _fmt)?;", s).unwrap();
-                    } else {
-                        // wrap
-                        writeln!(buf, "::yarte::Render::render(&({}), _fmt)?;", s).unwrap();
-                    }
+                    buf.push(if wrapped { HIR::Safe(s) } else { HIR::Expr(s) })
                 }
             }
         }
 
         if !buf_lit.is_empty() {
-            writeln!(buf, "_fmt.write_str({:#?})?;", buf_lit).unwrap();
+            buf.push(HIR::Lit(buf_lit));
         }
     }
 
@@ -738,4 +728,24 @@ impl<'a> Generator<'a> {
     fn prepare_ws(&mut self, ws: Ws) {
         self.skip_ws = ws.1;
     }
+}
+
+pub fn is_super<S>(i: &Punctuated<PathSegment, S>) -> Option<(usize, String)> {
+    let idents: Vec<String> = Punctuated::pairs(i)
+        .map(|x| x.value().ident.to_string())
+        .collect();
+    let len = idents.len();
+    let ident = idents[len - 1].clone();
+    let idents: &[String] = &idents[0..len - 1];
+
+    if idents.iter().all(|x| x.eq("super")) {
+        Some((idents.len(), ident))
+    } else {
+        None
+    }
+}
+
+#[inline]
+pub fn is_tuple_index(ident: &[u8]) -> bool {
+    1 < ident.len() && ident[0] == b'_' && ident[1..].iter().all(|x| x.is_ascii_digit())
 }

@@ -30,7 +30,7 @@ pub(super) fn each(e: &syn::Expr) {
     use syn::Expr::*;
     match e {
         Call(..) | MethodCall(..) | Index(..) | Field(..) | Path(..) | Paren(..) | Macro(..)
-        | Try(..) | Unsafe(..) | If(..) | Loop(..) | Match(..) | Range(..) => (),
+        | Try(..) | Unsafe(..) | If(..) | Loop(..) | Match(..) | Range(..) | Reference(..) => (),
         _ => panic!(
             "Not available Rust expression in a template `each helper` argument:\n{}",
             quote!(#e)
