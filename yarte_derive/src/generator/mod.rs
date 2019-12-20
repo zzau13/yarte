@@ -438,7 +438,7 @@ impl<'a> Generator<'a> {
                 let count = self.scp.count;
                 let mut parent = mem::replace(&mut self.scp, Scope::new(scope, count));
                 let last = mem::replace(&mut self.partial, Some((cur, 0)));
-                let on = mem::replace(&mut self.on, vec![]);
+                let on = mem::take(&mut self.on);
 
                 self.handle(nodes, buf);
 
@@ -677,13 +677,13 @@ impl<'a> Generator<'a> {
         }
 
         let mut buf_lit = String::new();
-        for s in mem::replace(&mut self.buf_w, vec![]) {
+        for s in mem::take(&mut self.buf_w) {
             match s {
                 Writable::Lit(ref s) => buf_lit.push_str(s),
                 Writable::LitP(ref s) => buf_lit.push_str(s),
                 Writable::Expr(s, wrapped) => {
                     if !buf_lit.is_empty() {
-                        buf.push(HIR::Lit(mem::replace(&mut buf_lit, String::new())));
+                        buf.push(HIR::Lit(mem::take(&mut buf_lit)));
                     }
                     buf.push(if wrapped { HIR::Safe(s) } else { HIR::Expr(s) })
                 }

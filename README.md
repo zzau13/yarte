@@ -12,9 +12,10 @@ HTML templates using conditionals, loops, rust code and template composition.
 
 ## Documentation
 In order to  fully understand Yarte's capabilities take a look at the following documentation:
- - [Tests](./yarte/tests)
- - [Our book](https://yarte.netlify.com/)
- - [Crate documentation](https://docs.rs/yarte/).
+- [Tests](./yarte/tests)
+- [Our book](https://yarte.netlify.com/)
+- [Crate documentation](https://docs.rs/yarte/)
+- Minimum supported Rust version: 1.40 or later
 
 ## Getting started
 Follow with the help of code in `example` directory.
