@@ -1,69 +1,65 @@
-use std::str::from_utf8;
+use super::{
+    comment, partial, raw,
+    strnom::{Cursor, LexError, PResult},
+    Partial,
+};
 
-use memchr::memchr;
-
-use super::{comment, partial, raw, Input, Partial};
-
-pub(crate) fn parse_partials(src: &str) -> Vec<Partial> {
-    match eat_partials(Input(src.as_bytes())) {
+pub(crate) fn parse_partials(rest: &str) -> Vec<Partial> {
+    match eat_partials(Cursor { rest, off: 0 }) {
         Ok((l, res)) => {
-            if l.0.is_empty() {
+            if l.is_empty() {
                 return res;
             }
             panic!(
                 "problems pre parsing partials at template source: {:?}",
-                from_utf8(l.0).unwrap()
+                l.rest
             );
         }
-        Err(nom::Err::Error(err)) | Err(nom::Err::Failure(err)) => panic!(
-            "problems pre parsing partials at template source: {:?}",
-            err
-        ),
-        Err(nom::Err::Incomplete(_)) => panic!("pre partials parsing incomplete"),
+        Err(LexError::Fail) | Err(LexError::Next) => {
+            panic!("problems pre parsing partials at template source")
+        }
     }
 }
 
-fn eat_partials(mut i: Input) -> Result<(Input, Vec<Partial>), nom::Err<Input>> {
+fn eat_partials(mut i: Cursor) -> PResult<Vec<Partial>> {
     let mut nodes = vec![];
 
     loop {
-        if let Some(j) = memchr(b'{', i.0) {
-            let n = &i[j + 1..];
+        if let Some(j) = i.find('{') {
             macro_rules! _switch {
                 ($n:expr, $t:expr, $ws:expr) => {
                     match $n {
                         b'>' => {
-                            let i = Input(&i[j + 3 + $t..]);
+                            let i = i.adv(j + 3 + $t);
                             match partial(i, $ws) {
                                 Ok((i, n)) => {
                                     nodes.push(n);
                                     i
                                 }
-                                Err(nom::Err::Failure(err)) => break Err(nom::Err::Failure(err)),
-                                Err(_) => i,
+                                Err(LexError::Fail) => break Err(LexError::Fail),
+                                Err(LexError::Next) => i,
                             }
                         }
                         b'R' => {
-                            let i = Input(&i[j + 3 + $t..]);
+                            let i = i.adv(j + 3 + $t);
                             match raw(i, $ws) {
                                 Ok((i, _)) => i,
-                                Err(nom::Err::Failure(err)) => break Err(nom::Err::Failure(err)),
-                                Err(_) => i,
+                                Err(LexError::Fail) => break Err(LexError::Fail),
+                                Err(LexError::Next) => i,
                             }
                         }
                         b'!' => {
-                            let i = Input(&i[j + 3 + $t..]);
+                            let i = i.adv(j + 3);
                             match comment(i) {
                                 Ok((i, _)) => i,
-                                Err(nom::Err::Failure(err)) => break Err(nom::Err::Failure(err)),
                                 Err(_) => i,
                             }
                         }
-                        _ => Input(&n[1 + $t..]),
+                        _ => i.adv(j + 2 + $t),
                     }
                 };
             }
-
+            let n = i.rest[j + 1..].as_bytes();
             i = if 2 < n.len() && n[0] == b'{' {
                 if n[1] == b'~' {
                     _switch!(n[2], 1, true)
@@ -72,10 +68,10 @@ fn eat_partials(mut i: Input) -> Result<(Input, Vec<Partial>), nom::Err<Input>> 
                 }
             } else {
                 // next
-                Input(n)
-            }
+                i.adv(j + 1)
+            };
         } else {
-            break Ok((Input(&[]), nodes));
+            break Ok((i.adv(i.len()), nodes));
         }
     }
 }

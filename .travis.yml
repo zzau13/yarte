@@ -4,12 +4,12 @@ dist: trusty
 
 cache:
   cargo: true
-  apt: true
 
 matrix:
   include:
     - rust: stable
     - rust: beta
+    - rust: 1.40.0
     - rust: nightly
   allow_failures:
     - rust: nightly

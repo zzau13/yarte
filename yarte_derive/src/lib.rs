@@ -1,9 +1,5 @@
 extern crate proc_macro;
 
-// TODO: remove
-#[macro_use]
-extern crate nom;
-
 use std::{
     collections::{hash_map::DefaultHasher, BTreeMap, BTreeSet},
     hash::{Hash, Hasher},
@@ -20,12 +16,11 @@ mod logger;
 mod parser;
 
 use self::{
-    codegen::{html::HTMLCodeGen, text::TextCodeGen, CodeGen},
+    codegen::{html::HTMLCodeGen, text::TextCodeGen, CodeGen, FmtCodeGen},
     generator::{visit_derive, Print},
     logger::log,
     parser::{parse, parse_partials, Partial},
 };
-use crate::codegen::FmtCodeGen;
 
 #[proc_macro_derive(Template, attributes(template))]
 pub fn derive(input: TokenStream) -> TokenStream {
@@ -43,7 +38,8 @@ fn build(i: &syn::DeriveInput) -> TokenStream {
 
     let mut parsed = BTreeMap::new();
     for (p, src) in sources {
-        parsed.insert(p, parse(src));
+        // TODO: add file to source map and pass `off` to parse
+        parsed.insert(p, parse(src, 0));
     }
 
     if cfg!(debug_assertions) && config.print_override == PrintConfig::Ast
