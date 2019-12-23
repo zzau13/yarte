@@ -92,10 +92,9 @@ You can open a pull request in another case.
 
 ## Acknowledgment
 Yarte is based on all previous templates engines, syntax as well as its documentation 
-is highly influenced by [Handlebars][handlebars]. Implemented mainly with `nom`, 
-`memchr` and `syn`, among others crates . As many ideas as possible used in 
-Yarte are from other repositories. Comments in the code clarify which ideas are used, 
-and  from where.
+is highly influenced by [Handlebars][handlebars]. Implemented mainly with `syn` and `quote`, 
+among others crates . As many ideas as possible used in Yarte are from other repositories. 
+Comments in the code clarify which ideas are used, and from where.
 
 ##### Is it really the fastest?
  See it for yourself in the [benchmarks][bench]!

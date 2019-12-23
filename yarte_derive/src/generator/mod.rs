@@ -8,8 +8,10 @@ use v_eval::{eval, Value};
 use v_htmlescape::escape;
 use yarte_config::Config;
 
-use crate::codegen::{Each, IfElse, HIR};
-use crate::parser::{Helper, Node, Partial, Ws};
+use crate::{
+    codegen::{Each, IfElse, HIR},
+    parser::{Helper, Node, Partial, Ws},
+};
 
 mod scope;
 mod validator;
@@ -18,10 +20,8 @@ mod visit_each;
 mod visit_partial;
 mod visits;
 
-use self::scope::Scope;
 pub(crate) use self::visit_derive::Struct;
-use self::visit_each::find_loop_var;
-use self::visit_partial::visit_partial;
+use self::{scope::Scope, visit_each::find_loop_var, visit_partial::visit_partial};
 
 pub(crate) use self::visit_derive::{visit_derive, Print};
 
