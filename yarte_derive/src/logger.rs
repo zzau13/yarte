@@ -1,4 +1,4 @@
-// Based on https://github.com/dtolnay/cargo-expand
+/// Adapted from [`cargo-expand`](https://github.com/dtolnay/cargo-expand)
 use std::{
     env,
     ffi::OsString,
@@ -42,10 +42,11 @@ fn logger(s: &str, path: String, option: &PrintOption) {
     if option.short.unwrap_or(true) {
         let lines: Vec<&str> = s.lines().collect();
         s = if cfg!(feature = "actix-web") {
-            lines[0..lines.len() - 22].join("\n")
+            lines[0..lines.len() - 25].join("\n")
         } else {
             lines[0..lines.len() - 10].join("\n")
         };
+        s.push('\n');
     }
 
     let mut builder = PrettyPrinter::default();

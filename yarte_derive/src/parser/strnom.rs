@@ -1,4 +1,4 @@
-//! Based from [`proc-macro2`](https://github.com/alexcrichton/proc-macro2).
+//! Adapted from [`proc-macro2`](https://github.com/alexcrichton/proc-macro2).
 
 use std::str::Chars;
 
@@ -132,12 +132,14 @@ macro_rules! map_fail {
     ($($t:tt)*) => { ($($t)*).map_err(|_| LexError::Fail) };
 }
 
-#[inline]
-pub fn ws(i: Cursor) -> PResult<&str> {
-    take_while!(i, is_ws)
+pub fn ws(input: Cursor) -> PResult<()> {
+    if input.is_empty() {
+        return Err(LexError::Next);
+    }
+
+    take_while!(input, is_ws).map(|(c, _)| (c, ()))
 }
 
-#[inline]
 pub fn skip_ws(input: Cursor) -> Cursor {
     match ws(input) {
         Ok((rest, _)) => rest,
@@ -147,6 +149,5 @@ pub fn skip_ws(input: Cursor) -> Cursor {
 
 #[inline]
 pub fn is_ws(ch: char) -> bool {
-    // Rust treats left-to-right mark and right-to-left mark as whitespace
-    ch.is_whitespace() || ch == '\u{200e}' || ch == '\u{200f}'
+    ch.is_whitespace()
 }

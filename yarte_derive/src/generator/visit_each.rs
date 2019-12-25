@@ -4,11 +4,11 @@ use syn::visit::Visit;
 
 use yarte_config::Config;
 
-use crate::parser::{Helper, Node, Partial};
+use crate::parser::{Helper, Node, Partial, SNode};
 
 use super::{is_super, Context};
 
-pub(super) fn find_loop_var(c: &Config, ctx: Context, path: PathBuf, nodes: &[Node]) -> bool {
+pub(super) fn find_loop_var(c: &Config, ctx: Context, path: PathBuf, nodes: &[SNode]) -> bool {
     FindEach::new(c, ctx, path).find(nodes)
 }
 
@@ -32,16 +32,16 @@ impl<'a> FindEach<'a> {
         }
     }
 
-    pub fn find(&mut self, nodes: &'a [Node]) -> bool {
+    pub fn find(&mut self, nodes: &'a [SNode]) -> bool {
         for n in nodes {
-            match n {
-                Node::Local(expr) => self.visit_local(expr),
-                Node::Expr(_, expr) | Node::Safe(_, expr) => self.visit_expr(expr),
+            match n.t() {
+                Node::Local(expr) => self.visit_local(expr.t()),
+                Node::Expr(_, expr) | Node::Safe(_, expr) => self.visit_expr(expr.t()),
                 Node::Helper(h) => {
                     let h: &Helper = &*h;
                     match h {
                         Helper::If((_, first, block), else_if, els) => {
-                            self.visit_expr(first);
+                            self.visit_expr(first.t());
                             if self.loop_var {
                                 break;
                             }
@@ -51,7 +51,7 @@ impl<'a> FindEach<'a> {
                                     break;
                                 }
 
-                                self.visit_expr(e);
+                                self.visit_expr(e.t());
                                 if self.loop_var {
                                     break;
                                 }
@@ -66,7 +66,7 @@ impl<'a> FindEach<'a> {
                             }
                         }
                         Helper::With(_, e, b) => {
-                            self.visit_expr(e);
+                            self.visit_expr(e.t());
                             if self.loop_var {
                                 break;
                             }
@@ -75,14 +75,14 @@ impl<'a> FindEach<'a> {
                             self.on_ -= 1;
                         }
                         Helper::Unless(_, expr, block) => {
-                            self.visit_expr(expr);
+                            self.visit_expr(expr.t());
                             if self.loop_var {
                                 break;
                             }
                             self.find(block);
                         }
                         Helper::Each(_, expr, block) => {
-                            self.visit_expr(expr);
+                            self.visit_expr(expr.t());
                             if self.loop_var {
                                 break;
                             }
@@ -94,8 +94,9 @@ impl<'a> FindEach<'a> {
                     }
                 }
                 Node::Partial(Partial(_, path, expr)) => {
-                    let p = self.c.resolve_partial(&self.on_path, path);
+                    let p = self.c.resolve_partial(&self.on_path, path.t());
                     let nodes = self.ctx.get(&p).unwrap();
+                    let expr = expr.t();
                     if !expr.is_empty() {
                         let at = if let syn::Expr::Assign(_) = expr[0] {
                             0

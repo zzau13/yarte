@@ -19,7 +19,7 @@ use self::{
     codegen::{html::HTMLCodeGen, text::TextCodeGen, CodeGen, FmtCodeGen},
     generator::{visit_derive, Print},
     logger::log,
-    parser::{parse, parse_partials, Partial},
+    parser::{parse, parse_partials, source_map, Partial},
 };
 
 #[proc_macro_derive(Template, attributes(template))]
@@ -38,8 +38,7 @@ fn build(i: &syn::DeriveInput) -> TokenStream {
 
     let mut parsed = BTreeMap::new();
     for (p, src) in sources {
-        // TODO: add file to source map and pass `off` to parse
-        parsed.insert(p, parse(src, 0));
+        parsed.insert(p, parse(src, source_map::add_file(p, src)));
     }
 
     if cfg!(debug_assertions) && config.print_override == PrintConfig::Ast
@@ -71,6 +70,8 @@ fn build(i: &syn::DeriveInput) -> TokenStream {
         );
     }
 
+    // when multiple templates
+    source_map::clean();
     tokens.into()
 }
 
@@ -92,7 +93,7 @@ fn read(path: PathBuf, src: String, config: &Config) -> BTreeMap<PathBuf, String
 
         let partials = parse_partials(&src)
             .iter()
-            .map(|Partial(_, partial, _)| config.resolve_partial(&path, partial))
+            .map(|Partial(_, partial, _)| config.resolve_partial(&path, partial.t()))
             .collect::<BTreeSet<_>>();
 
         visited.insert(path.clone(), src);

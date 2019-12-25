@@ -6,9 +6,14 @@ clippy::cognitive_complexity
 use std::str;
 
 use syn::{parse_str, Expr, Local};
+use unicode_xid::UnicodeXID;
+
+#[cfg(test)]
+mod test;
 
 mod expr_list;
 mod pre_partials;
+pub mod source_map;
 mod stmt_local;
 #[macro_use]
 mod strnom;
@@ -16,45 +21,49 @@ mod strnom;
 pub(crate) use self::pre_partials::parse_partials;
 use self::{
     expr_list::ExprList,
+    source_map::{spanned, Span, S},
     stmt_local::StmtLocal,
-    strnom::{is_ws, skip_ws, Cursor, LexError, PResult},
+    strnom::{is_ws, skip_ws, ws, Cursor, LexError, PResult},
 };
-
-use crate::parser::strnom::ws;
-use unicode_xid::UnicodeXID;
 
 pub(crate) type Ws = (bool, bool);
 
-#[derive(Debug, PartialEq)]
-pub(crate) struct Partial<'a>(pub Ws, pub &'a str, pub Vec<Expr>);
+pub(crate) type SExpr = S<Box<Expr>>;
+pub(crate) type SLocal = S<Box<Local>>;
+pub(crate) type SNode<'a> = S<Node<'a>>;
+pub(crate) type SStr<'a> = S<&'a str>;
+pub(crate) type SVExpr = S<Vec<Expr>>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
+pub(crate) struct Partial<'a>(pub Ws, pub SStr<'a>, pub SVExpr);
+
+#[derive(Debug, PartialEq, Clone)]
 pub(crate) enum Node<'a> {
     Comment(&'a str),
-    Expr(Ws, Box<Expr>),
+    Expr(Ws, SExpr),
     Helper(Box<Helper<'a>>),
-    Lit(&'a str, &'a str, &'a str),
-    Local(Box<Local>),
+    Lit(&'a str, SStr<'a>, &'a str),
+    Local(SLocal),
     Partial(Partial<'a>),
-    Raw((Ws, Ws), &'a str, &'a str, &'a str),
-    Safe(Ws, Box<Expr>),
+    Raw((Ws, Ws), &'a str, SStr<'a>, &'a str),
+    Safe(Ws, SExpr),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub(crate) enum Helper<'a> {
-    Each((Ws, Ws), Expr, Vec<Node<'a>>),
+    Each((Ws, Ws), SExpr, Vec<SNode<'a>>),
     If(
-        ((Ws, Ws), Expr, Vec<Node<'a>>),
-        Vec<(Ws, Expr, Vec<Node<'a>>)>,
-        Option<(Ws, Vec<Node<'a>>)>,
+        ((Ws, Ws), SExpr, Vec<SNode<'a>>),
+        Vec<(Ws, SExpr, Vec<SNode<'a>>)>,
+        Option<(Ws, Vec<SNode<'a>>)>,
     ),
-    With((Ws, Ws), Expr, Vec<Node<'a>>),
-    Unless((Ws, Ws), Expr, Vec<Node<'a>>),
+    With((Ws, Ws), SExpr, Vec<SNode<'a>>),
+    Unless((Ws, Ws), SExpr, Vec<SNode<'a>>),
     // TODO:
-    Defined((Ws, Ws), &'a str, Expr, Vec<Node<'a>>),
+    Defined((Ws, Ws), &'a str, SExpr, Vec<SNode<'a>>),
 }
 
-pub(crate) fn parse(rest: &str, off: u32) -> Vec<Node> {
+pub(crate) fn parse(rest: &str, off: u32) -> Vec<SNode> {
     match eat(Cursor { rest, off }) {
         Ok((l, res)) => {
             if l.is_empty() {
@@ -66,12 +75,16 @@ pub(crate) fn parse(rest: &str, off: u32) -> Vec<Node> {
     }
 }
 
+/// Step in eater
+///     - Ok -> eat_lit -> push node -> restart in next cursor and continue
+///     - Err(Next) -> advance 3 chars and continue
+///     - Err(Fail) -> Insuperable error stop
 macro_rules! try_eat {
     ($nodes:ident, $i:ident, $at:ident, $j:ident, $($t:tt)+) => {
         match $($t)+ {
             Ok((c, n)) => {
-                eat_lit!($nodes, &$i.rest[..$at + $j]);
-                $nodes.push(n);
+                eat_lit(&mut $nodes, $i, $at + $j);
+                $nodes.push(S(n, Span::from_cursor($i.adv($at + $j), c)));
                 $i = c;
                 0
             },
@@ -81,27 +94,20 @@ macro_rules! try_eat {
     };
 }
 
-macro_rules! eat_lit {
-    ($nodes:ident, $i:expr) => {
-        let i = &$i;
-        if !i.is_empty() {
-            let (l, lit, r) = trim(i);
-            $nodes.push(Node::Lit(l, lit, r));
-        }
-    };
-}
-
+/// Exit of eater with ok in the current cursor
 macro_rules! kill {
-    ($nodes:ident, $c:expr, $i:expr) => {{
-        eat_lit!($nodes, $i);
+    ($nodes:ident, $c:expr, $i:expr, $len:expr) => {{
+        eat_lit(&mut $nodes, $i, $len);
         break Ok(($c, $nodes));
     }};
 }
 
-/// $callback: special expressions like {{ else if }}
+/// Eater builder
+///
+/// $callback: macro for special expressions like {{ else if }}
 macro_rules! make_eater {
     ($name:ident, $callback:ident) => {
-        fn $name(mut i: Cursor) -> PResult<Vec<Node>> {
+        fn $name(mut i: Cursor) -> PResult<Vec<SNode>> {
             let mut buf = vec![];
             let mut at = 0;
 
@@ -115,7 +121,7 @@ macro_rules! make_eater {
                                 b'#' => try_eat!(buf, i, at, j, hel(i.adv(at + j + 3 + $t), $ws)),
                                 b'>' => try_eat!(buf, i, at, j, par(i.adv(at + j + 3 + $t), $ws)),
                                 b'R' => try_eat!(buf, i, at, j, raw(i.adv(at + j + 3 + $t), $ws)),
-                                b'/' => kill!(buf, i.adv(at + j + 2), &i.rest[..at + j]),
+                                b'/' => kill!(buf, i.adv(at + j + 2), i, at + j),
                                 _ => {
                                     $callback!(buf, i, at, j, $t);
                                     try_eat!(buf, i, at, j, expr(i.adv(at + j + 2 + $t), $ws))
@@ -137,35 +143,57 @@ macro_rules! make_eater {
                             at + j + 2
                         }
                     } else {
-                        kill!(buf, i.adv(i.len()), &i.rest);
+                        kill!(buf, i.adv(i.len()), i, i.len());
                     };
                 } else {
-                    kill!(buf, i.adv(i.len()), &i.rest);
+                    kill!(buf, i.adv(i.len()), i, i.len());
                 }
             }
         }
     };
 }
 
+// Empty macro for use when build eater
 macro_rules! non {
     ($($t:tt)*) => {};
 }
 
+// Main eater
 make_eater!(eat, non);
 
 const IF: &str = "if";
 const ELSE: &str = "else";
 
+// Test special expression `{{ else ..` and kill eater at next brackets
 macro_rules! is_else {
     ($n:ident, $i:ident, $at:ident, $j:ident, $t:expr) => {
         if skip_ws($i.adv($at + $j + 2 + $t)).starts_with(ELSE) {
-            kill!($n, $i.adv($at + $j + 2), &$i.rest[..$at + $j]);
+            kill!($n, $i.adv($at + $j + 2), $i, $at + $j);
         }
     };
 }
 
+// If else branch eater
 make_eater!(eat_if, is_else);
 
+/// Push literal at cursor with length
+fn eat_lit<'a>(nodes: &mut Vec<SNode<'a>>, i: Cursor<'a>, len: usize) {
+    let lit = &i.rest[..len];
+    if !lit.is_empty() {
+        let (l, lit, r) = trim(lit);
+        let ins = Span {
+            lo: i.off + (l.len() as u32),
+            hi: i.off + ((len - r.len()) as u32),
+        };
+        let out = Span {
+            lo: i.off,
+            hi: i.off + (len as u32),
+        };
+        nodes.push(S(Node::Lit(l, S(lit, ins), r), out));
+    }
+}
+
+/// Eat comment
 fn comment(c: Cursor) -> PResult<Node> {
     let (c, expected) = if c.starts_with("--") {
         (c.adv(2), "--!}}")
@@ -192,45 +220,34 @@ fn comment(c: Cursor) -> PResult<Node> {
     }
 }
 
-const LET: &str = "let ";
-macro_rules! try_eat_local {
-    ($c:ident, $s:ident) => {
-        if $s.starts_with(LET) {
-            if let Ok(e) = eat_local($s) {
-                return Ok(($c, Node::Local(Box::new(e))));
-            }
-        }
-    };
-}
-
+/// Wrap Partial into the Node
 #[inline]
 fn par(i: Cursor, lws: bool) -> PResult<Node> {
-    partial(i, lws).map(|(i, p)| (i, Node::Partial(p)))
+    partial(i, lws).map(|(c, p)| (c, Node::Partial(p)))
 }
 
+/// Eat partial expression
 fn partial(i: Cursor, lws: bool) -> PResult<Partial> {
-    let (i, ident) = do_parse!(i, ws >> p: path >> ws >> (p))?;
-
-    let (i, scope) = if let Ok((i, scope)) = args_list(i) {
-        (i, scope)
-    } else {
-        (i, vec![])
-    };
-    let (i, rws) = end_expr(i)?;
-
-    Ok((i, Partial((lws, rws), ident, scope)))
+    do_parse!(
+        i,
+        ws >> ident: call!(spanned, path)
+            >> args: args_list
+            >> rws: end_expr
+            >> (Partial((lws, rws), ident, args))
+    )
 }
 
+/// Eat helper Node
 fn hel(i: Cursor, a_lws: bool) -> PResult<Node> {
     let (i, (above_ws, ident, args)) = do_parse!(
         i,
-        ws >> ident: identifier
+        ws >> ident: call!(spanned, identifier)
             >> args: arguments
             >> rws: end_expr
             >> (((a_lws, rws), ident, args))
     )?;
 
-    if ident.eq("if") {
+    if ident.0.eq("if") {
         return if_else(above_ws, i, args);
     }
 
@@ -240,16 +257,16 @@ fn hel(i: Cursor, a_lws: bool) -> PResult<Node> {
             >> lws: opt!(tag!("~"))
             >> tag!("/")
             >> ws
-            >> c_ident: identifier
+            >> c_ident: call!(spanned, identifier)
             >> rws: end_expr
             >> (((lws.is_some(), rws), block, c_ident))
     )?;
 
-    if ident.eq(c_ident) {
+    if ident.0.eq(c_ident.0) {
         Ok((
             c,
             Node::Helper(Box::new({
-                match ident {
+                match ident.0 {
                     "each" => Helper::Each((above_ws, below_ws), args, block),
                     "with" => Helper::With((above_ws, below_ws), args, block),
                     "unless" => Helper::Unless((above_ws, below_ws), args, block),
@@ -262,8 +279,9 @@ fn hel(i: Cursor, a_lws: bool) -> PResult<Node> {
     }
 }
 
+/// Eat if else Node
 #[inline]
-fn if_else(abode_ws: Ws, i: Cursor, args: Expr) -> PResult<Node> {
+fn if_else(abode_ws: Ws, i: Cursor, args: SExpr) -> PResult<Node> {
     let mut nodes = vec![];
     let mut tail = None;
 
@@ -312,34 +330,18 @@ fn if_else(abode_ws: Ws, i: Cursor, args: Expr) -> PResult<Node> {
     }
 }
 
-#[inline]
-fn end_expr(i: Cursor) -> PResult<bool> {
-    let i = skip_ws(i);
-    if i.starts_with("~}}") {
-        Ok((i.adv(3), true))
-    } else if i.starts_with("}}") {
-        Ok((i.adv(2), false))
-    } else {
-        Err(LexError::Fail)
-    }
-}
-
+/// Eat raw Node
 fn raw(i: Cursor, a_lws: bool) -> PResult<Node> {
     let (i, a_rws) = end_expr(i)?;
     let mut at = 0;
 
-    let (c, (i, b_ws)) = loop {
+    let (c, (j, b_ws)) = loop {
         if let Some(j) = i.adv_find(at, '{') {
             let n = i.adv(at + j + 1);
             if n.chars().next().map(|x| '{' == x).unwrap_or(false) {
                 if let Ok((c, ws)) = do_parse!(
                     n.adv(1),
-                    lws: opt!(tag!("~"))
-                        >> tag!("/R")
-                        >> ws
-                        >> rws: opt!(tag!("~"))
-                        >> tag!("}}")
-                        >> ((lws.is_some(), rws.is_some()))
+                    lws: opt!(tag!("~")) >> tag!("/R") >> rws: end_expr >> ((lws.is_some(), rws))
                 ) {
                     break (c, (&i.rest[..at + j], ws));
                 } else {
@@ -353,10 +355,16 @@ fn raw(i: Cursor, a_lws: bool) -> PResult<Node> {
         }
     };
 
-    let (l, v, r) = trim(i);
-    Ok((c, Node::Raw(((a_lws, a_rws), b_ws), l, v, r)))
+    let (l, v, r) = trim(j);
+    let lo = i.off + (l.len() as u32);
+    let hi = lo + (v.len() as u32);
+    Ok((
+        c,
+        Node::Raw(((a_lws, a_rws), b_ws), l, S(v, Span { lo, hi }), r),
+    ))
 }
 
+/// Arguments builder
 macro_rules! make_argument {
     ($name:ident, $fun:ident, $ret:ty) => {
         fn $name(i: Cursor) -> $ret {
@@ -364,9 +372,14 @@ macro_rules! make_argument {
             loop {
                 if let Some(j) = i.adv_find(at, '}') {
                     if 0 < j && i.adv_starts_with(at + j - 1, "~}}") {
-                        break $fun(&i.rest[..j - 1]).map(|e| (i.adv(at + j - 1), e));
+                        let (_, s, _) = trim(&i.rest[..j - 1]);
+                        break $fun(s).map(|e| {
+                            (i.adv(at + j - 1), S(e, Span::from_len(skip_ws(i), s.len())))
+                        });
                     } else if i.adv_starts_with(j + 1, "}") {
-                        break $fun(&i.rest[..j]).map(|e| (i.adv(at + j), e));
+                        let (_, s, _) = trim(&i.rest[..j]);
+                        break $fun(s)
+                            .map(|e| (i.adv(at + j), S(e, Span::from_len(skip_ws(i), s.len()))));
                     }
 
                     at += j + 1;
@@ -378,10 +391,13 @@ macro_rules! make_argument {
     };
 }
 
-make_argument!(arguments, eat_expr, PResult<Expr>);
+// Eat arguments at helpers
+make_argument!(arguments, eat_expr, PResult<SExpr>);
 
-make_argument!(args_list, eat_expr_list, PResult<Vec<Expr>>);
+// Eat arguments at partials
+make_argument!(args_list, eat_expr_list, PResult<SVExpr>);
 
+/// Eat safe Node
 fn safe(i: Cursor, lws: bool) -> PResult<Node> {
     let mut at = 0;
     let (c, rws, s) = loop {
@@ -400,12 +416,18 @@ fn safe(i: Cursor, lws: bool) -> PResult<Node> {
     };
 
     let (_, s, _) = trim(s);
-    eat_expr(s).map(|e| (c, Node::Safe((lws, rws), Box::new(e))))
+    eat_expr(s).map(|e| {
+        (
+            c,
+            Node::Safe((lws, rws), S(e, Span::from_len(skip_ws(i), s.len()))),
+        )
+    })
 }
 
+/// Eat expression Node
 fn expr(i: Cursor, lws: bool) -> PResult<Node> {
     let mut at = 0;
-    let (i, rws, s) = loop {
+    let (c, rws, s) = loop {
         if let Some(j) = i.adv_find(at, '}') {
             if 0 < at + j && i.adv_starts_with(at + j - 1, "~}}") {
                 break (i.adv(at + j + 2), true, &i.rest[..at + j - 1]);
@@ -420,20 +442,46 @@ fn expr(i: Cursor, lws: bool) -> PResult<Node> {
     };
 
     let (_, s, _) = trim(s);
-    try_eat_local!(i, s);
-    eat_expr(s).map(|e| (i, Node::Expr((lws, rws), Box::new(e))))
+    if s.starts_with("let ") {
+        eat_local(s).map(|e| (c, Node::Local(S(e, Span::from_len(skip_ws(i), s.len())))))
+    } else {
+        Err(LexError::Next)
+    }
+    .or_else(|_| {
+        eat_expr(s).map(|e| {
+            (
+                c,
+                Node::Expr((lws, rws), S(e, Span::from_len(skip_ws(i), s.len()))),
+            )
+        })
+    })
 }
 
-fn eat_expr(i: &str) -> Result<Expr, LexError> {
-    map_fail!(parse_str::<Expr>(i))
+/// Parse syn expression
+fn eat_expr(i: &str) -> Result<Box<Expr>, LexError> {
+    map_fail!(parse_str::<Expr>(i).map(Box::new))
 }
 
-fn eat_local(i: &str) -> Result<Local, LexError> {
-    map_fail!(parse_str::<StmtLocal>(i).map(Into::into))
+/// Parse syn local
+fn eat_local(i: &str) -> Result<Box<Local>, LexError> {
+    map_fail!(parse_str::<StmtLocal>(i).map(Into::into).map(Box::new))
 }
 
+/// Parse syn expression comma separated list
 fn eat_expr_list(i: &str) -> Result<Vec<Expr>, LexError> {
     map_fail!(parse_str::<ExprList>(i).map(Into::into))
+}
+
+/// Eat whitespace flag in end of expressions `.. }}` or `.. ~}}`
+fn end_expr(i: Cursor) -> PResult<bool> {
+    let i = skip_ws(i);
+    if i.starts_with("~}}") {
+        Ok((i.adv(3), true))
+    } else if i.starts_with("}}") {
+        Ok((i.adv(2), false))
+    } else {
+        Err(LexError::Fail)
+    }
 }
 
 fn is_ident_start(c: char) -> bool {
@@ -451,6 +499,7 @@ fn is_ident_continue(c: char) -> bool {
         || (c > '\x7f' && UnicodeXID::is_xid_continue(c))
 }
 
+/// Eat identifier
 fn identifier(i: Cursor) -> PResult<&str> {
     let mut chars = i.chars();
     if chars.next().map(is_ident_start).unwrap_or(false) {
@@ -468,12 +517,11 @@ fn identifier(i: Cursor) -> PResult<&str> {
     }
 }
 
+/// TODO
+/// Eat path at partial
 /// Next white space close path
-fn path(c: Cursor) -> PResult<&str> {
-    c.chars()
-        .position(is_ws)
-        .map(|j| (c.adv(j), &c.rest[..j]))
-        .ok_or(LexError::Next)
+fn path(i: Cursor) -> PResult<&str> {
+    take_while!(i, |i| !is_ws(i))
 }
 
 fn trim(i: &str) -> (&str, &str, &str) {
@@ -495,526 +543,8 @@ fn trim(i: &str) -> (&str, &str, &str) {
     }
 }
 
-/// Use when previous checks
+/// Convert from bytes to str
+/// Use when previous check bytes it's valid utf8
 fn safe_utf8(s: &[u8]) -> &str {
     unsafe { ::std::str::from_utf8_unchecked(s) }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use syn::{parse_str, Stmt};
-
-    const WS: Ws = (false, false);
-
-    #[test]
-    fn test_empty() {
-        let src = r#""#;
-        assert_eq!(parse(src, 0), vec![]);
-    }
-
-    #[test]
-    fn test_fallback() {
-        let src = r#"{{"#;
-        assert_eq!(parse(src, 0), vec![Node::Lit("", "{{", "")]);
-        let src = r#"{{{"#;
-        assert_eq!(parse(src, 0), vec![Node::Lit("", "{{{", "")]);
-        let src = r#"{{#"#;
-        assert_eq!(parse(src, 0), vec![Node::Lit("", "{{#", "")]);
-        let src = r#"{{>"#;
-        assert_eq!(parse(src, 0), vec![Node::Lit("", "{{>", "")]);
-        let src = r#"{"#;
-        assert_eq!(parse(src, 0), vec![Node::Lit("", "{", "")]);
-    }
-
-    #[test]
-    fn test_eat_comment() {
-        let src = r#"{{! Commentary !}}"#;
-        assert_eq!(parse(src, 0), vec![Node::Comment(" Commentary ")]);
-        let src = r#"{{!-- Commentary --!}}"#;
-        assert_eq!(parse(src, 0), vec![Node::Comment(" Commentary ")]);
-        let src = r#"foo {{!-- Commentary --!}}"#;
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Lit("", "foo", " "), Node::Comment(" Commentary ")]
-        );
-    }
-
-    #[test]
-    fn test_eat_expr() {
-        let src = r#"{{ var }}"#;
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Expr(WS, Box::new(parse_str::<Expr>("var").unwrap()))]
-        );
-
-        let src = r#"{{ fun() }}"#;
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Expr(
-                WS,
-                Box::new(parse_str::<Expr>("fun()").unwrap()),
-            )]
-        );
-
-        let src = r#"{{ fun(|a| a) }}"#;
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Expr(
-                WS,
-                Box::new(parse_str::<Expr>("fun(|a| a)").unwrap()),
-            )]
-        );
-
-        let src = r#"{{
-            fun(|a| {
-                { a }
-            })
-        }}"#;
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Expr(
-                WS,
-                Box::new(parse_str::<Expr>("fun(|a| {{a}})").unwrap()),
-            )]
-        );
-    }
-
-    #[should_panic]
-    #[test]
-    fn test_eat_expr_panic_a() {
-        let src = r#"{{ fn(|a| {{a}}) }}"#;
-        parse(src, 0);
-    }
-
-    #[should_panic]
-    #[test]
-    fn test_eat_expr_panic_b() {
-        let src = r#"{{ let a = mut a  }}"#;
-        parse(src, 0);
-    }
-
-    #[test]
-    fn test_eat_safe() {
-        let src = r#"{{{ var }}}"#;
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Safe(WS, Box::new(parse_str::<Expr>("var").unwrap()))]
-        );
-
-        let src = r#"{{{ fun() }}}"#;
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Safe(
-                WS,
-                Box::new(parse_str::<Expr>("fun()").unwrap()),
-            )]
-        );
-
-        let src = r#"{{{ fun(|a| a) }}}"#;
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Safe(
-                WS,
-                Box::new(parse_str::<Expr>("fun(|a| a)").unwrap()),
-            )]
-        );
-
-        let src = r#"{{{
-            fun(|a| {
-                {{ a }}
-            })
-        }}}"#;
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Safe(
-                WS,
-                Box::new(parse_str::<Expr>("fun(|a| {{{a}}})").unwrap()),
-            )]
-        );
-    }
-
-    #[should_panic]
-    #[test]
-    fn test_eat_safe_panic() {
-        let src = r#"{{ fn(|a| {{{a}}}) }}"#;
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Safe(
-                WS,
-                Box::new(parse_str::<Expr>("fn(|a| {{{a}}})").unwrap()),
-            )]
-        );
-    }
-
-    #[test]
-    fn test_trim() {
-        assert_eq!(trim(" a "), (" ", "a", " "));
-        assert_eq!(trim(" a"), (" ", "a", ""));
-        assert_eq!(trim("a"), ("", "a", ""));
-        assert_eq!(trim(""), ("", "", ""));
-        assert_eq!(trim("a "), ("", "a", " "));
-        assert_eq!(trim("a a"), ("", "a a", ""));
-        assert_eq!(trim("a a "), ("", "a a", " "));
-        assert_eq!(trim(" \n\t\ra a "), (" \n\t\r", "a a", " "));
-        assert_eq!(trim(" \n\t\r "), (" \n\t\r ", "", ""));
-    }
-
-    #[test]
-    fn test_eat_if() {
-        let rest = r#"foo{{ else }}"#;
-        let result = " else }}";
-        assert_eq!(
-            eat_if(Cursor { rest, off: 0 }).unwrap(),
-            (
-                Cursor {
-                    rest: result,
-                    off: (rest.len() - result.len()) as u32,
-                },
-                vec![Node::Lit("", "foo", "")]
-            )
-        );
-        let rest = r#"{{foo}}{{else}}"#;
-        let result = "else}}";
-        assert_eq!(
-            eat_if(Cursor { rest, off: 0 }).unwrap(),
-            (
-                Cursor {
-                    rest: result,
-                    off: (rest.len() - result.len()) as u32,
-                },
-                vec![Node::Expr(WS, Box::new(parse_str::<Expr>("foo").unwrap()))]
-            )
-        );
-        let rest = r#"{{ let a = foo }}{{else if cond}}{{else}}"#;
-        let local = if let Stmt::Local(local) = parse_str::<Stmt>("let a = foo;").unwrap() {
-            local
-        } else {
-            unreachable!();
-        };
-        let result = "else if cond}}{{else}}";
-        assert_eq!(
-            eat_if(Cursor { rest, off: 0 }).unwrap(),
-            (
-                Cursor {
-                    rest: result,
-                    off: (rest.len() - result.len()) as u32,
-                },
-                vec![Node::Local(Box::new(local))]
-            )
-        );
-    }
-
-    #[test]
-    fn test_helpers() {
-        let rest = "each name }}{{first}} {{last}}{{/each}}";
-        assert_eq!(
-            hel(Cursor { rest, off: 0 }, false).unwrap(),
-            (
-                Cursor {
-                    rest: "",
-                    off: rest.len() as u32,
-                },
-                Node::Helper(Box::new(Helper::Each(
-                    (WS, WS),
-                    parse_str::<Expr>("name").unwrap(),
-                    vec![
-                        Node::Expr(WS, Box::new(parse_str::<Expr>("first").unwrap())),
-                        Node::Lit(" ", "", ""),
-                        Node::Expr(WS, Box::new(parse_str::<Expr>("last").unwrap())),
-                    ],
-                )))
-            )
-        );
-    }
-
-    #[test]
-    fn test_if_else() {
-        let rest = "foo{{/if}}";
-        let arg = parse_str::<Expr>("bar").unwrap();
-
-        assert_eq!(
-            if_else(WS, Cursor { rest, off: 0 }, arg).unwrap(),
-            (
-                Cursor {
-                    rest: "",
-                    off: rest.len() as u32,
-                },
-                Node::Helper(Box::new(Helper::If(
-                    (
-                        (WS, WS),
-                        parse_str::<Expr>("bar").unwrap(),
-                        vec![Node::Lit("", "foo", "")]
-                    ),
-                    vec![],
-                    None,
-                )))
-            )
-        );
-
-        let rest = "foo{{else}}bar{{/if}}";
-        let arg = parse_str::<Expr>("bar").unwrap();
-
-        assert_eq!(
-            if_else(WS, Cursor { rest, off: 0 }, arg).unwrap(),
-            (
-                Cursor {
-                    rest: "",
-                    off: rest.len() as u32,
-                },
-                Node::Helper(Box::new(Helper::If(
-                    (
-                        (WS, WS),
-                        parse_str::<Expr>("bar").unwrap(),
-                        vec![Node::Lit("", "foo", "")]
-                    ),
-                    vec![],
-                    Some((WS, vec![Node::Lit("", "bar", "")])),
-                )))
-            )
-        );
-    }
-
-    #[test]
-    fn test_else_if() {
-        let rest = "foo{{else if cond }}bar{{else}}foO{{/if}}";
-        let arg = parse_str::<Expr>("bar").unwrap();
-
-        assert_eq!(
-            if_else(WS, Cursor { rest, off: 0 }, arg).unwrap(),
-            (
-                Cursor {
-                    rest: "",
-                    off: rest.len() as u32,
-                },
-                Node::Helper(Box::new(Helper::If(
-                    (
-                        (WS, WS),
-                        parse_str::<Expr>("bar").unwrap(),
-                        vec![Node::Lit("", "foo", "")]
-                    ),
-                    vec![(
-                        WS,
-                        parse_str::<Expr>("cond").unwrap(),
-                        vec![Node::Lit("", "bar", "")],
-                    )],
-                    Some((WS, vec![Node::Lit("", "foO", "")])),
-                )))
-            )
-        );
-    }
-
-    #[test]
-    fn test_defined() {
-        let src = "{{#foo bar}}hello{{/foo}}";
-
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Helper(Box::new(Helper::Defined(
-                (WS, WS),
-                "foo",
-                parse_str::<Expr>("bar").unwrap(),
-                vec![Node::Lit("", "hello", "")],
-            )))]
-        );
-    }
-
-    #[test]
-    fn test_ws_expr() {
-        let src = "{{~foo~}}";
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Expr(
-                (true, true),
-                Box::new(parse_str::<Expr>("foo").unwrap()),
-            )]
-        );
-        let src = "{{~ foo~}}";
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Expr(
-                (true, true),
-                Box::new(parse_str::<Expr>("foo").unwrap()),
-            )]
-        );
-        let src = "{{~ foo}}";
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Expr(
-                (true, false),
-                Box::new(parse_str::<Expr>("foo").unwrap()),
-            )]
-        );
-        let src = "{{foo    ~}}";
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Expr(
-                (false, true),
-                Box::new(parse_str::<Expr>("foo").unwrap()),
-            )]
-        );
-        let src = "{{~{foo }~}}";
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Safe(
-                (true, true),
-                Box::new(parse_str::<Expr>("foo").unwrap()),
-            )]
-        );
-        let src = "{{{foo }~}}";
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Safe(
-                (false, true),
-                Box::new(parse_str::<Expr>("foo").unwrap()),
-            )]
-        );
-    }
-
-    #[test]
-    fn test_ws_each() {
-        let src = "{{~#each bar~}}{{~/each~}}";
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Helper(Box::new(Helper::Each(
-                ((true, true), (true, true)),
-                parse_str::<Expr>("bar").unwrap(),
-                vec![],
-            )))]
-        );
-    }
-
-    #[test]
-    fn test_ws_if() {
-        let src = "{{~#if bar~}}{{~/if~}}";
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Helper(Box::new(Helper::If(
-                (
-                    ((true, true), (true, true)),
-                    parse_str::<Expr>("bar").unwrap(),
-                    vec![],
-                ),
-                vec![],
-                None,
-            )))]
-        );
-    }
-
-    #[test]
-    fn test_ws_if_else() {
-        let src = "{{~#if bar~}}{{~else~}}{{~/if~}}";
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Helper(Box::new(Helper::If(
-                (
-                    ((true, true), (true, true)),
-                    parse_str::<Expr>("bar").unwrap(),
-                    vec![],
-                ),
-                vec![],
-                Some(((true, true), vec![])),
-            )))]
-        );
-    }
-
-    #[test]
-    fn test_ws_if_else_if() {
-        let src = "{{~#if bar~}}{{~else if bar~}}{{~else~}}{{~/if~}}";
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Helper(Box::new(Helper::If(
-                (
-                    ((true, true), (true, true)),
-                    parse_str::<Expr>("bar").unwrap(),
-                    vec![],
-                ),
-                vec![((true, true), parse_str::<Expr>("bar").unwrap(), vec![],)],
-                Some(((true, true), vec![])),
-            )))]
-        );
-    }
-
-    #[test]
-    fn test_ws_raw() {
-        let src = "{{~R~}}{{#some }}{{/some}}{{~/R ~}}";
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Raw(
-                ((true, true), (true, true)),
-                "",
-                "{{#some }}{{/some}}",
-                "",
-            )]
-        );
-        let src = "{{R  ~}}{{#some }}{{/some}}{{/R ~}}";
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Raw(
-                ((false, true), (false, true)),
-                "",
-                "{{#some }}{{/some}}",
-                "",
-            )]
-        );
-    }
-
-    #[test]
-    fn test_partial_ws() {
-        let src = "{{~> partial ~}}";
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Partial(Partial((true, true), "partial", vec![]))]
-        );
-        let src = "{{> partial scope ~}}";
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Partial(Partial(
-                (false, true),
-                "partial",
-                vec![parse_str::<Expr>("scope").unwrap()],
-            ))]
-        );
-    }
-
-    #[test]
-    fn test_partial() {
-        let src = "{{> partial }}";
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Partial(Partial(WS, "partial", vec![]))]
-        );
-        let src = "{{> partial scope }}";
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Partial(Partial(
-                WS,
-                "partial",
-                vec![parse_str::<Expr>("scope").unwrap()],
-            ))]
-        );
-    }
-
-    #[test]
-    fn test_raw() {
-        let src = "{{R}}{{#some }}{{/some}}{{/R}}";
-        assert_eq!(
-            parse(src, 0),
-            vec![Node::Raw((WS, WS), "", "{{#some }}{{/some}}", "")]
-        );
-    }
-
-    #[test]
-    fn test_expr_list() {
-        let src = "bar, foo = \"bar\"\n, fuu = 1  , goo = true,    ";
-        assert_eq!(
-            eat_expr_list(src).unwrap(),
-            vec![
-                parse_str::<Expr>("bar").unwrap(),
-                parse_str::<Expr>("foo=\"bar\"").unwrap(),
-                parse_str::<Expr>("fuu=1").unwrap(),
-                parse_str::<Expr>("goo=true").unwrap(),
-            ]
-        );
-    }
 }
