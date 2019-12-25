@@ -10,7 +10,7 @@ use yarte_config::Config;
 
 use crate::{
     codegen::{Each, IfElse, HIR},
-    parser::{Helper, Node, Partial, Ws},
+    parser::{Helper, Node, Partial, SExpr, SNode, SVExpr, Ws},
 };
 
 mod scope;
@@ -29,7 +29,7 @@ pub(crate) fn generate(c: &Config, s: &Struct, ctx: Context) -> Vec<HIR> {
     Generator::new(c, s, ctx).build()
 }
 
-pub(self) type Context<'a> = &'a BTreeMap<&'a PathBuf, Vec<Node<'a>>>;
+pub(self) type Context<'a> = &'a BTreeMap<&'a PathBuf, Vec<SNode<'a>>>;
 
 #[derive(Debug, PartialEq)]
 pub(self) enum On {
@@ -44,24 +44,27 @@ enum Writable<'a> {
     Expr(Box<syn::Expr>, bool),
 }
 
+/// Middle lowering from `Node` to `HIR`
+/// TODO: Document
 pub(self) struct Generator<'a> {
     pub(self) c: &'a Config<'a>,
-    // ast of DeriveInput
+    /// ast of DeriveInput
     pub(self) s: &'a Struct<'a>,
-    // Scope stack
+    /// Scope stack
     pub(self) scp: Scope,
-    // On State stack
+    /// On State stack
     pub(self) on: Vec<On>,
-    // On partial scope
+    /// On partial scope
     pub(self) partial: Option<(BTreeMap<String, syn::Expr>, usize)>,
-    // buffer for writable
+    /// buffer for writable
     buf_w: Vec<Writable<'a>>,
-    // path - nodes
+    /// path - nodes
     ctx: Context<'a>,
-    // current file path
+    /// current file path
     on_path: PathBuf,
-    // whitespace flag and buffer based on https://github.com/djc/askama
+    /// whitespace buffer adapted from [`askama`](https://github.com/djc/askama)
     next_ws: Option<&'a str>,
+    /// whitespace flag adapted from [`askama`](https://github.com/djc/askama)
     skip_ws: bool,
 }
 
@@ -84,7 +87,7 @@ impl<'a> Generator<'a> {
     fn build(&mut self) -> Vec<HIR> {
         let mut buf = vec![];
 
-        let nodes: &[Node] = self.ctx.get(&self.on_path).unwrap();
+        let nodes: &[SNode] = self.ctx.get(&self.on_path).unwrap();
 
         self.handle(nodes, &mut buf);
         self.write_buf_writable(&mut buf);
@@ -98,18 +101,18 @@ impl<'a> Generator<'a> {
         buf
     }
 
-    fn handle(&mut self, nodes: &'a [Node], buf: &mut Vec<HIR>) {
+    fn handle(&mut self, nodes: &'a [SNode], buf: &mut Vec<HIR>) {
         for n in nodes {
-            match n {
+            match n.t() {
                 Node::Local(expr) => {
                     self.skip_ws();
                     self.write_buf_writable(buf);
-                    let mut expr = *expr.clone();
+                    let mut expr = *expr.t().clone();
                     self.visit_local_mut(&mut expr);
                     buf.push(HIR::Local(Box::new(expr)));
                 }
                 Node::Safe(ws, expr) => {
-                    let mut expr = *expr.clone();
+                    let mut expr = *expr.t().clone();
 
                     self.handle_ws(*ws);
                     self.visit_expr_mut(&mut expr);
@@ -120,7 +123,7 @@ impl<'a> Generator<'a> {
                     }
                 }
                 Node::Expr(ws, expr) => {
-                    let mut expr = *expr.clone();
+                    let mut expr = *expr.t().clone();
 
                     self.handle_ws(*ws);
                     self.visit_expr_mut(&mut expr);
@@ -130,14 +133,16 @@ impl<'a> Generator<'a> {
                         self.buf_w.push(Writable::Expr(Box::new(expr), false));
                     }
                 }
-                Node::Lit(l, lit, r) => self.visit_lit(l, lit, r),
-                Node::Helper(h) => self.visit_helper(buf, h),
-                Node::Partial(Partial(ws, path, expr)) => self.visit_partial(buf, *ws, path, expr),
+                Node::Lit(l, lit, r) => self.visit_lit(l, lit.t(), r),
+                Node::Helper(h) => self.visit_helper(buf, &h),
+                Node::Partial(Partial(ws, path, expr)) => {
+                    self.visit_partial(buf, *ws, path.t(), expr)
+                }
                 // TODO
                 Node::Comment(_) => self.skip_ws(),
                 Node::Raw(ws, l, v, r) => {
                     self.handle_ws(ws.0);
-                    self.visit_lit(l, v, r);
+                    self.visit_lit(l, v.t(), r);
                     self.handle_ws(ws.1);
                 }
             }
@@ -177,14 +182,8 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn visit_unless(
-        &mut self,
-        buf: &mut Vec<HIR>,
-        ws: (Ws, Ws),
-        cond: &'a syn::Expr,
-        nodes: &'a [Node<'a>],
-    ) {
-        let mut cond = cond.clone();
+    fn visit_unless(&mut self, buf: &mut Vec<HIR>, ws: (Ws, Ws), cond: &SExpr, nodes: &'a [SNode]) {
+        let mut cond = *cond.t().clone();
         self.handle_ws(ws.0);
         self.visit_expr_mut(&mut cond);
 
@@ -223,17 +222,11 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn visit_with(
-        &mut self,
-        buf: &mut Vec<HIR>,
-        ws: (Ws, Ws),
-        args: &'a syn::Expr,
-        nodes: &'a [Node<'a>],
-    ) {
-        validator::scope(args);
+    fn visit_with(&mut self, buf: &mut Vec<HIR>, ws: (Ws, Ws), args: &SExpr, nodes: &'a [SNode]) {
+        validator::scope(&args.t());
 
         self.handle_ws(ws.0);
-        let mut args = args.clone();
+        let mut args = *args.t().clone();
         self.visit_expr_mut(&mut args);
         self.on.push(On::With(self.scp.len()));
         self.scp.push_scope(vec![args]);
@@ -249,11 +242,11 @@ impl<'a> Generator<'a> {
         &mut self,
         buf: &mut Vec<HIR>,
         ws: (Ws, Ws),
-        args: &'a syn::Expr,
-        nodes: &'a [Node<'a>],
+        args: &'a SExpr,
+        nodes: &'a [SNode<'a>],
     ) {
         let loop_var = find_loop_var(self.c, self.ctx, self.on_path.clone(), nodes);
-        let mut args = args.clone();
+        let mut args = *args.t().clone();
         self.visit_expr_mut(&mut args);
 
         if let Some(args) = self.eval_iter(&args) {
@@ -305,12 +298,12 @@ impl<'a> Generator<'a> {
     fn visit_if(
         &mut self,
         buf: &mut Vec<HIR>,
-        (pws, cond, block): &'a ((Ws, Ws), syn::Expr, Vec<Node>),
-        ifs: &'a [(Ws, syn::Expr, Vec<Node<'a>>)],
-        els: &'a Option<(Ws, Vec<Node<'a>>)>,
+        (pws, cond, block): &'a ((Ws, Ws), SExpr, Vec<SNode>),
+        ifs: &'a [(Ws, SExpr, Vec<SNode>)],
+        els: &'a Option<(Ws, Vec<SNode>)>,
     ) {
         self.scp.push_scope(vec![]);
-        let mut cond = cond.clone();
+        let mut cond = *cond.t().clone();
         self.visit_expr_mut(&mut cond);
         self.handle_ws(pws.0);
         let (mut last, mut o_ifs) = if let Some(val) = self.eval_bool(&cond) {
@@ -343,7 +336,7 @@ impl<'a> Generator<'a> {
             }
 
             self.scp.push_scope(vec![]);
-            let mut cond = cond.clone();
+            let mut cond = *cond.t().clone();
             self.visit_expr_mut(&mut cond);
 
             if let Some(val) = self.eval_bool(&cond) {
@@ -411,7 +404,7 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn visit_partial(&mut self, buf: &mut Vec<HIR>, ws: Ws, path: &str, exprs: &'a [syn::Expr]) {
+    fn visit_partial(&mut self, buf: &mut Vec<HIR>, ws: Ws, path: &str, exprs: &'a SVExpr) {
         let p = self.c.resolve_partial(&self.on_path, path);
         let nodes = self.ctx.get(&p).unwrap();
 
@@ -419,6 +412,7 @@ impl<'a> Generator<'a> {
 
         self.flush_ws(ws);
 
+        let exprs = exprs.t();
         if exprs.is_empty() {
             self.scp.push_scope(vec![]);
             self.handle(nodes, buf);
@@ -485,7 +479,7 @@ impl<'a> Generator<'a> {
         buf: &mut Vec<HIR>,
         ws: (Ws, Ws),
         args: impl IntoIterator<Item = Value>,
-        nodes: &'a [Node<'a>],
+        nodes: &'a [SNode<'a>],
         loop_var: bool,
     ) {
         macro_rules! handle {
