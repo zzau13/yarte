@@ -1,4 +1,13 @@
 # Changes
+## [0.5.0] (2019-XX-XX)
+### Added
+- Annotate snippets error message
+
+### Updated
+- Remove `nom` and `memchr` from dependencies
+- Refactor parser for support `Span`
+- `actix-web` version to `2.0.0`
+
 ## [0.4.0] (2019-12-13)
 
 ### Added 
@@ -7,7 +16,7 @@
 - compile time evaluator for all expressions and helpers
 
 ### Fixed
-- Dev-dependencies remove `bytes
+- Dev-dependencies remove `bytes`
  
 ## [0.3.5] (2019-10-15)
 

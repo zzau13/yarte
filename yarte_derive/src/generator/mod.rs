@@ -10,6 +10,7 @@ use yarte_config::Config;
 
 use crate::{
     codegen::{Each, IfElse, HIR},
+    error::ErrorMessage,
     parser::{Helper, Node, Partial, SExpr, SNode, SVExpr, Ws},
 };
 
@@ -25,7 +26,11 @@ use self::{scope::Scope, visit_each::find_loop_var, visit_partial::visit_partial
 
 pub(crate) use self::visit_derive::{visit_derive, Print};
 
-pub(crate) fn generate(c: &Config, s: &Struct, ctx: Context) -> Vec<HIR> {
+pub(crate) fn generate(
+    c: &Config,
+    s: &Struct,
+    ctx: Context,
+) -> Result<Vec<HIR>, Vec<ErrorMessage>> {
     Generator::new(c, s, ctx).build()
 }
 
@@ -44,7 +49,7 @@ enum Writable<'a> {
     Expr(Box<syn::Expr>, bool),
 }
 
-/// Middle lowering from `Node` to `HIR`
+/// lowering from `SNode` to `HIR`
 /// TODO: Document
 pub(self) struct Generator<'a> {
     pub(self) c: &'a Config<'a>,
@@ -58,6 +63,8 @@ pub(self) struct Generator<'a> {
     pub(self) partial: Option<(BTreeMap<String, syn::Expr>, usize)>,
     /// buffer for writable
     buf_w: Vec<Writable<'a>>,
+    /// Errors buffer
+    errors: Vec<ErrorMessage>,
     /// path - nodes
     ctx: Context<'a>,
     /// current file path
@@ -81,10 +88,11 @@ impl<'a> Generator<'a> {
             partial: None,
             scp: Scope::new(parse_str("self").unwrap(), 0),
             skip_ws: false,
+            errors: vec![],
         }
     }
 
-    fn build(&mut self) -> Vec<HIR> {
+    fn build(mut self) -> Result<Vec<HIR>, Vec<ErrorMessage>> {
         let mut buf = vec![];
 
         let nodes: &[SNode] = self.ctx.get(&self.on_path).unwrap();
@@ -98,7 +106,11 @@ impl<'a> Generator<'a> {
         debug_assert_eq!(self.on_path, self.s.path);
         debug_assert_eq!(self.next_ws, None);
 
-        buf
+        if self.errors.is_empty() {
+            Ok(buf)
+        } else {
+            Err(self.errors)
+        }
     }
 
     fn handle(&mut self, nodes: &'a [SNode], buf: &mut Vec<HIR>) {
@@ -111,25 +123,25 @@ impl<'a> Generator<'a> {
                     self.visit_local_mut(&mut expr);
                     buf.push(HIR::Local(Box::new(expr)));
                 }
-                Node::Safe(ws, expr) => {
-                    let mut expr = *expr.t().clone();
+                Node::Safe(ws, sexpr) => {
+                    let mut expr = *sexpr.t().clone();
 
                     self.handle_ws(*ws);
                     self.visit_expr_mut(&mut expr);
 
                     if self.const_eval(&expr, true).is_none() {
-                        validator::expression(&expr);
+                        validator::expression(sexpr, &mut self.errors);
                         self.buf_w.push(Writable::Expr(Box::new(expr), true));
                     }
                 }
-                Node::Expr(ws, expr) => {
-                    let mut expr = *expr.t().clone();
+                Node::Expr(ws, sexpr) => {
+                    let mut expr = *sexpr.t().clone();
 
                     self.handle_ws(*ws);
                     self.visit_expr_mut(&mut expr);
 
                     if self.const_eval(&expr, false).is_none() {
-                        validator::expression(&expr);
+                        validator::expression(sexpr, &mut self.errors);
                         self.buf_w.push(Writable::Expr(Box::new(expr), false));
                     }
                 }
@@ -182,8 +194,14 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn visit_unless(&mut self, buf: &mut Vec<HIR>, ws: (Ws, Ws), cond: &SExpr, nodes: &'a [SNode]) {
-        let mut cond = *cond.t().clone();
+    fn visit_unless(
+        &mut self,
+        buf: &mut Vec<HIR>,
+        ws: (Ws, Ws),
+        scond: &SExpr,
+        nodes: &'a [SNode],
+    ) {
+        let mut cond = *scond.t().clone();
         self.handle_ws(ws.0);
         self.visit_expr_mut(&mut cond);
 
@@ -195,7 +213,7 @@ impl<'a> Generator<'a> {
                 self.handle_ws(ws.1);
             }
         } else {
-            validator::unless(&cond);
+            validator::unless(scond, &mut self.errors);
 
             self.write_buf_writable(buf);
             self.scp.push_scope(vec![]);
@@ -223,7 +241,7 @@ impl<'a> Generator<'a> {
     }
 
     fn visit_with(&mut self, buf: &mut Vec<HIR>, ws: (Ws, Ws), args: &SExpr, nodes: &'a [SNode]) {
-        validator::scope(&args.t());
+        validator::scope(args, &mut self.errors);
 
         self.handle_ws(ws.0);
         let mut args = *args.t().clone();
@@ -242,11 +260,11 @@ impl<'a> Generator<'a> {
         &mut self,
         buf: &mut Vec<HIR>,
         ws: (Ws, Ws),
-        args: &'a SExpr,
+        sargs: &'a SExpr,
         nodes: &'a [SNode<'a>],
     ) {
         let loop_var = find_loop_var(self.c, self.ctx, self.on_path.clone(), nodes);
-        let mut args = *args.t().clone();
+        let mut args = *sargs.t().clone();
         self.visit_expr_mut(&mut args);
 
         if let Some(args) = self.eval_iter(&args) {
@@ -254,7 +272,7 @@ impl<'a> Generator<'a> {
             return;
         }
 
-        validator::each(&args);
+        validator::each(sargs, &mut self.errors);
 
         self.handle_ws(ws.0);
         self.write_buf_writable(buf);
@@ -298,12 +316,12 @@ impl<'a> Generator<'a> {
     fn visit_if(
         &mut self,
         buf: &mut Vec<HIR>,
-        (pws, cond, block): &'a ((Ws, Ws), SExpr, Vec<SNode>),
+        (pws, scond, block): &'a ((Ws, Ws), SExpr, Vec<SNode>),
         ifs: &'a [(Ws, SExpr, Vec<SNode>)],
         els: &'a Option<(Ws, Vec<SNode>)>,
     ) {
         self.scp.push_scope(vec![]);
-        let mut cond = *cond.t().clone();
+        let mut cond = *scond.t().clone();
         self.visit_expr_mut(&mut cond);
         self.handle_ws(pws.0);
         let (mut last, mut o_ifs) = if let Some(val) = self.eval_bool(&cond) {
@@ -312,7 +330,7 @@ impl<'a> Generator<'a> {
             }
             (val, None)
         } else {
-            validator::ifs(&cond);
+            validator::ifs(scond, &mut self.errors);
             self.write_buf_writable(buf);
             let mut body = Vec::new();
             self.handle(block, &mut body);
@@ -322,7 +340,7 @@ impl<'a> Generator<'a> {
 
         let mut if_else = Vec::new();
         let mut o_els = None;
-        for (i, (ws, cond, block)) in ifs.iter().enumerate() {
+        for (i, (ws, scond, block)) in ifs.iter().enumerate() {
             self.handle_ws(*ws);
             if let Some(body) = o_els.as_mut() {
                 self.write_buf_writable(body);
@@ -336,7 +354,7 @@ impl<'a> Generator<'a> {
             }
 
             self.scp.push_scope(vec![]);
-            let mut cond = *cond.t().clone();
+            let mut cond = *scond.t().clone();
             self.visit_expr_mut(&mut cond);
 
             if let Some(val) = self.eval_bool(&cond) {
@@ -351,7 +369,7 @@ impl<'a> Generator<'a> {
                     last = i + 1 != ifs.len();
                 }
             } else {
-                validator::ifs(&cond);
+                validator::ifs(scond, &mut self.errors);
 
                 let mut body = Vec::new();
                 self.handle(block, &mut body);

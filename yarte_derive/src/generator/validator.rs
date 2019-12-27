@@ -1,74 +1,81 @@
 use quote::quote;
 
-pub(super) fn expression(e: &syn::Expr) {
+use crate::{error::ErrorMessage, parser::SExpr};
+
+pub(super) fn expression(e: &SExpr, out: &mut Vec<ErrorMessage>) {
     use syn::Expr::*;
-    match e {
+    match **e.t() {
         Binary(..) | Call(..) | MethodCall(..) | Index(..) | Field(..) | Path(..) | Paren(..)
         | Macro(..) | Lit(..) | Try(..) | Unary(..) | Unsafe(..) | If(..) | Loop(..)
         | Match(..) => (),
-        _ => panic!(
-            "Not available Rust expression in a template expression:\n{}",
-            quote!(#e)
-        ),
+        _ => out.push(ErrorMessage {
+            message: "Not available Rust expression in a template expression".to_string(),
+            span: *e.span(),
+        }),
     }
 }
 
-pub(super) fn ifs(e: &syn::Expr) {
+pub(super) fn ifs(e: &SExpr, out: &mut Vec<ErrorMessage>) {
     use syn::Expr::*;
-    match e {
+    match **e.t() {
         Binary(..) | Call(..) | MethodCall(..) | Index(..) | Field(..) | Path(..) | Paren(..)
         | Macro(..) | Lit(..) | Try(..) | Unary(..) | Unsafe(..) | If(..) | Loop(..)
         | Match(..) | Let(..) => (),
-        _ => panic!(
-            "Not available Rust expression in a template `if helper` arguments:\n{}",
-            quote!(#e)
-        ),
+        _ => out.push(ErrorMessage {
+            message: "Not available Rust expression in a template `if helper` arguments"
+                .to_string(),
+            span: *e.span(),
+        }),
     }
 }
 
-pub(super) fn each(e: &syn::Expr) {
+pub(super) fn each(e: &SExpr, out: &mut Vec<ErrorMessage>) {
     use syn::Expr::*;
-    match e {
+    match **e.t() {
         Call(..) | MethodCall(..) | Index(..) | Field(..) | Path(..) | Paren(..) | Macro(..)
         | Try(..) | Unsafe(..) | If(..) | Loop(..) | Match(..) | Range(..) | Reference(..) => (),
-        _ => panic!(
-            "Not available Rust expression in a template `each helper` argument:\n{}",
-            quote!(#e)
-        ),
+        _ => out.push(ErrorMessage {
+            message: "Not available Rust expression in a template `each helper` argument"
+                .to_string(),
+            span: *e.span(),
+        }),
     }
 }
 
-pub(super) fn unless(e: &syn::Expr) {
+pub(super) fn unless(e: &SExpr, out: &mut Vec<ErrorMessage>) {
     use syn::Expr::*;
-    match e {
+    match **e.t() {
         Binary(..) | Call(..) | MethodCall(..) | Index(..) | Field(..) | Path(..) | Paren(..)
         | Macro(..) | Lit(..) | Try(..) | Match(..) => (),
         Unary(syn::ExprUnary { op, .. }) => {
             if let syn::UnOp::Not(..) = op {
-                panic!(
-                    "Unary negate operator in `unless helper`, use `if helper` instead:\n{}",
-                    quote!(#e)
-                )
+                out.push(ErrorMessage {
+                    message: "Unary negate operator in `unless helper`, use `if helper` instead"
+                        .to_string(),
+                    span: *e.span(),
+                })
             }
         }
-        _ => panic!(
-            "Not available Rust expression in a template `unless helper` expression:\n{}",
-            quote!(#e)
-        ),
+        _ => out.push(ErrorMessage {
+            message: "Not available Rust expression in a template `unless helper` expression"
+                .to_string(),
+            span: *e.span(),
+        }),
     }
 }
 
-pub(super) fn scope(e: &syn::Expr) {
+pub(super) fn scope(e: &SExpr, out: &mut Vec<ErrorMessage>) {
     use syn::Expr::*;
-    match e {
+    match **e.t() {
         Path(..) | Field(..) | Index(..) => (),
-        _ => panic!(
-            "Not available Rust expression in scope argument:\n{}",
-            quote!(#e)
-        ),
+        _ => out.push(ErrorMessage {
+            message: "Not available Rust expression in scope argument".to_string(),
+            span: *e.span(),
+        }),
     }
 }
 
+// TODO:
 pub(super) fn partial_assign(e: &syn::Expr) {
     use syn::Expr::*;
     match e {
