@@ -44,6 +44,7 @@ fn logger(s: &str, path: String, option: &PrintOption) {
         s = if cfg!(feature = "actix-web") {
             lines[0..lines.len() - 25].join("\n")
         } else {
+            // TODO: Count lines
             lines[0..lines.len() - 10].join("\n")
         };
         s.push('\n');

@@ -63,8 +63,8 @@ pub(crate) enum Helper<'a> {
     Defined((Ws, Ws), &'a str, SExpr, Vec<SNode<'a>>),
 }
 
-pub(crate) fn parse(rest: &str, off: u32) -> Vec<SNode> {
-    match eat(Cursor { rest, off }) {
+pub(crate) fn parse(c: Cursor) -> Vec<SNode> {
+    match eat(c) {
         Ok((l, res)) => {
             if l.is_empty() {
                 return res;
@@ -517,11 +517,17 @@ fn identifier(i: Cursor) -> PResult<&str> {
     }
 }
 
-/// TODO
+/// TODO: Define chars in path
 /// Eat path at partial
 /// Next white space close path
 fn path(i: Cursor) -> PResult<&str> {
-    take_while!(i, |i| !is_ws(i))
+    take_while!(i, |i| !is_ws(i)).and_then(|(c, s)| {
+        if s.is_empty() {
+            Err(LexError::Fail)
+        } else {
+            Ok((c, s))
+        }
+    })
 }
 
 fn trim(i: &str) -> (&str, &str, &str) {

@@ -11,12 +11,14 @@ use proc_macro::TokenStream;
 use yarte_config::{get_source, read_config_file, Config, PrintConfig};
 
 mod codegen;
+mod error;
 mod generator;
 mod logger;
 mod parser;
 
 use self::{
     codegen::{html::HTMLCodeGen, text::TextCodeGen, CodeGen, FmtCodeGen},
+    error::emitter,
     generator::{visit_derive, Print},
     logger::log,
     parser::{parse, parse_partials, source_map, Partial},
@@ -26,6 +28,8 @@ use self::{
 pub fn derive(input: TokenStream) -> TokenStream {
     build(&syn::parse(input).unwrap())
 }
+
+type Sources<'a> = &'a BTreeMap<PathBuf, String>;
 
 #[inline]
 fn build(i: &syn::DeriveInput) -> TokenStream {
@@ -38,7 +42,7 @@ fn build(i: &syn::DeriveInput) -> TokenStream {
 
     let mut parsed = BTreeMap::new();
     for (p, src) in sources {
-        parsed.insert(p, parse(src, source_map::add_file(p, src)));
+        parsed.insert(p, parse(source_map::get_cursor(p, src)));
     }
 
     if cfg!(debug_assertions) && config.print_override == PrintConfig::Ast
@@ -50,7 +54,8 @@ fn build(i: &syn::DeriveInput) -> TokenStream {
     }
 
     let tokens = {
-        let hir = &generator::generate(config, s, &parsed);
+        let hir = &generator::generate(config, s, &parsed)
+            .unwrap_or_else(|e| emitter(sources, config, e));
         if s.wrapped {
             FmtCodeGen::new(TextCodeGen, s).gen(hir)
         } else {

@@ -17,8 +17,11 @@ thread_local! {
 /// Add file to source map and return lower bound
 ///
 /// Use in the same thread
-pub(crate) fn add_file(p: &PathBuf, s: &str) -> u32 {
-    SOURCE_MAP.with(|x| x.borrow_mut().add_file(p, s).lo)
+pub(crate) fn get_cursor<'a>(p: &PathBuf, rest: &'a str) -> Cursor<'a> {
+    SOURCE_MAP.with(|x| Cursor {
+        rest,
+        off: x.borrow_mut().add_file(p, rest).lo,
+    })
 }
 
 /// Reinitialize source map instance when run multiple times in the same thread
@@ -57,6 +60,11 @@ impl FileInfo {
                 column: offset - self.lines[idx - 1],
             },
         }
+    }
+
+    fn get_init_line(&self, lc: LineColumn) -> Option<usize> {
+        assert_ne!(lc.line, 0);
+        self.lines.get(lc.line - 1).copied()
     }
 
     fn span_within(&self, span: Span) -> bool {
@@ -138,6 +146,17 @@ impl Span {
             lo: i.off,
             hi: i.off + (len as u32),
         }
+    }
+
+    pub fn range_in_line(self) -> (usize, usize) {
+        SOURCE_MAP.with(|cm| {
+            let cm = cm.borrow();
+            let fi = cm.fileinfo(self);
+            let lc = fi.offset_line_column(self.lo as usize);
+            let init = fi.get_init_line(lc).expect("Spam in source map");
+            let lo = fi.span.lo;
+            (init, (self.hi - lo) as usize)
+        })
     }
 
     pub fn file_path(self) -> PathBuf {

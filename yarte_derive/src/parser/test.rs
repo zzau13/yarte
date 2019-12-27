@@ -1,29 +1,33 @@
-use super::{Helper, Node::*, Partial, *};
+use super::{parse as _parse, Helper, Node::*, Partial, *};
 use syn::{parse_str, Expr, Stmt};
 
 const WS: Ws = (false, false);
 
+fn parse(rest: &str) -> Vec<SNode> {
+    _parse(Cursor { rest, off: 0 })
+}
+
 #[test]
 fn test_empty() {
     let src = r#""#;
-    assert_eq!(parse(src, 0), vec![]);
+    assert_eq!(parse(src), vec![]);
 }
 
 #[test]
 fn test_fallback() {
     let src = r#"{{"#;
     let span = Span { lo: 0, hi: 2 };
-    assert_eq!(parse(src, 0), vec![S(Lit("", S("{{", span), ""), span)]);
+    assert_eq!(parse(src), vec![S(Lit("", S("{{", span), ""), span)]);
     let src = r#"{{{"#;
     let span = Span { lo: 0, hi: 3 };
-    assert_eq!(parse(src, 0), vec![S(Lit("", S("{{{", span), ""), span)]);
+    assert_eq!(parse(src), vec![S(Lit("", S("{{{", span), ""), span)]);
     let src = r#"{{#"#;
-    assert_eq!(parse(src, 0), vec![S(Lit("", S("{{#", span), ""), span)]);
+    assert_eq!(parse(src), vec![S(Lit("", S("{{#", span), ""), span)]);
     let src = r#"{{>"#;
-    assert_eq!(parse(src, 0), vec![S(Lit("", S("{{>", span), ""), span)]);
+    assert_eq!(parse(src), vec![S(Lit("", S("{{>", span), ""), span)]);
     let src = r#"{"#;
     let span = Span { lo: 0, hi: 1 };
-    assert_eq!(parse(src, 0), vec![S(Lit("", S("{", span), ""), span)]);
+    assert_eq!(parse(src), vec![S(Lit("", S("{", span), ""), span)]);
 }
 
 #[test]
@@ -33,20 +37,20 @@ fn test_eat_comment() {
         lo: 0,
         hi: src.len() as u32,
     };
-    assert_eq!(parse(src, 0), vec![S(Comment(" Commentary "), span)]);
+    assert_eq!(parse(src), vec![S(Comment(" Commentary "), span)]);
     let src = r#"{{!-- Commentary --!}}"#;
     let span = Span {
         lo: 0,
         hi: src.len() as u32,
     };
-    assert_eq!(parse(src, 0), vec![S(Comment(" Commentary "), span)]);
+    assert_eq!(parse(src), vec![S(Comment(" Commentary "), span)]);
     let src = r#"foo {{!-- Commentary --!}}"#;
     let span = Span {
         lo: 4,
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![
             S(
                 Lit("", S("foo", Span { lo: 0, hi: 3 }), " "),
@@ -65,7 +69,7 @@ fn test_eat_expr() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Expr(
                 WS,
@@ -84,7 +88,7 @@ fn test_eat_expr() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Expr(
                 WS,
@@ -103,7 +107,7 @@ fn test_eat_expr() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Expr(
                 WS,
@@ -126,7 +130,7 @@ fn test_eat_expr() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Expr(
                 WS,
@@ -144,14 +148,14 @@ fn test_eat_expr() {
 #[test]
 fn test_eat_expr_panic_a() {
     let src = r#"{{ fn(|a| {{a}}) }}"#;
-    parse(src, 0);
+    parse(src);
 }
 
 #[should_panic]
 #[test]
 fn test_eat_expr_panic_b() {
     let src = r#"{{ let a = mut a  }}"#;
-    parse(src, 0);
+    parse(src);
 }
 
 #[test]
@@ -162,7 +166,7 @@ fn test_eat_safe() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Safe(
                 WS,
@@ -181,7 +185,7 @@ fn test_eat_safe() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Safe(
                 WS,
@@ -200,7 +204,7 @@ fn test_eat_safe() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Safe(
                 WS,
@@ -223,7 +227,7 @@ fn test_eat_safe() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Safe(
                 WS,
@@ -241,7 +245,7 @@ fn test_eat_safe() {
 #[test]
 fn test_eat_safe_panic() {
     let src = r#"{{ fn(|a| {{{a}}}) }}"#;
-    parse(src, 0);
+    parse(src);
 }
 
 #[test]
@@ -485,7 +489,7 @@ fn test_defined() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Helper(Box::new(Helper::Defined(
                 (WS, WS),
@@ -512,7 +516,7 @@ fn test_ws_expr() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Expr(
                 (true, true),
@@ -530,7 +534,7 @@ fn test_ws_expr() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Expr(
                 (true, true),
@@ -548,7 +552,7 @@ fn test_ws_expr() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Expr(
                 (true, false),
@@ -566,7 +570,7 @@ fn test_ws_expr() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Expr(
                 (false, true),
@@ -584,7 +588,7 @@ fn test_ws_expr() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Safe(
                 (true, true),
@@ -602,7 +606,7 @@ fn test_ws_expr() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Safe(
                 (false, true),
@@ -624,7 +628,7 @@ fn test_ws_each() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Helper(Box::new(Helper::Each(
                 ((true, true), (true, true)),
@@ -647,7 +651,7 @@ fn test_ws_if() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Helper(Box::new(Helper::If(
                 (
@@ -674,7 +678,7 @@ fn test_ws_if_else() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Helper(Box::new(Helper::If(
                 (
@@ -701,7 +705,7 @@ fn test_ws_if_else_if() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Helper(Box::new(Helper::If(
                 (
@@ -735,7 +739,7 @@ fn test_ws_raw() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Raw(
                 ((true, true), (true, true)),
@@ -752,7 +756,7 @@ fn test_ws_raw() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Raw(
                 ((false, true), (false, true)),
@@ -774,7 +778,7 @@ fn test_partial_ws() {
     };
 
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Node::Partial(Partial(
                 (true, true),
@@ -790,7 +794,7 @@ fn test_partial_ws() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Node::Partial(Partial(
                 WS,
@@ -809,7 +813,7 @@ fn test_partial_ws() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Node::Partial(Partial(
                 (false, true),
@@ -832,7 +836,7 @@ fn test_partial() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Node::Partial(Partial(
                 WS,
@@ -848,7 +852,7 @@ fn test_partial() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Node::Partial(Partial(
                 WS,
@@ -871,7 +875,7 @@ fn test_raw() {
         hi: src.len() as u32,
     };
     assert_eq!(
-        parse(src, 0),
+        parse(src),
         vec![S(
             Raw(
                 (WS, WS),
