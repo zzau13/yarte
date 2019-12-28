@@ -19,7 +19,7 @@ before_script:
     if [[ "$TRAVIS_RUST_VERSION" != "nightly" ]]; then
       rustup component add rustfmt
       rustup component add clippy
-      curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      cargo install wasm-pack --force
       curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.2/install.sh | bash
       nvm install node
     fi
