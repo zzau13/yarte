@@ -1,4 +1,4 @@
-/// Adapted from [`actix`](https://github.com/actix/actix) and [`draco](https://github.com/utkarshkukreti/draco)
+/// Adapted from [`actix`](https://github.com/actix/actix) and [`draco`](https://github.com/utkarshkukreti/draco)
 use std::{
     cell::{Cell, RefCell},
     default::Default,
@@ -222,9 +222,11 @@ impl<M> Message for Box<M> where M: Message {}
 mod test {
     #![allow(dead_code)]
     use super::*;
-    use std::default::Default;
-    use std::rc::Rc;
-    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::{
+        default::Default,
+        rc::Rc,
+        sync::atomic::{AtomicUsize, Ordering},
+    };
 
     use wasm_bindgen_futures::spawn_local;
     use wasm_bindgen_test::*;
