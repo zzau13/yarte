@@ -2,6 +2,7 @@
 members = [
     "example",
     "yarte",
+    "yarte_wasm_app",
     "yarte_derive",
     "yarte_config",
     "yarte_helpers"
