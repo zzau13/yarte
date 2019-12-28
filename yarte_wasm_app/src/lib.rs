@@ -7,12 +7,18 @@ use std::{
     sync::Arc,
 };
 
+/// App are object which encapsulate state and behavior
+///
+///
+/// App communicate exclusively by directional exchanging messages
+/// The sender can't wait the response since it never answer
+// TODO: lifecycle ?
 pub trait App: Default + Sized + Unpin + 'static {
     type BlackBox: Default;
     /// empty for overridden in derive
     #[doc(hidden)]
-    // TODO
-    fn __render(&self, _ctx: &Mailbox<Self>) {}
+    // TODO: derive
+    fn __render(&mut self, _ctx: &Mailbox<Self>) {}
 
     /// Start a new asynchronous app, returning its address.
     fn start(self) -> Addr<Self>
@@ -22,14 +28,14 @@ pub trait App: Default + Sized + Unpin + 'static {
         Addr(Rc::new(Context::new(self)))
     }
 
-    /// Construct and start a new asynchronous actor, returning its
+    /// Construct and start a new asynchronous app, returning its
     /// address.
     ///
-    /// This is constructs a new actor using the `Default` trait, and
+    /// This is constructs a new app using the `Default` trait, and
     /// invokes its `start` method.
     fn start_default() -> Addr<Self>
     where
-        Self: App + Default,
+        Self: App,
     {
         Self::default().start()
     }
@@ -39,7 +45,6 @@ pub trait App: Default + Sized + Unpin + 'static {
 pub struct Addr<A: App>(Rc<Context<A>>);
 
 impl<A: App> Addr<A> {
-    #[inline]
     fn push(&self, env: Envelope<A>) {
         self.0.q.borrow_mut().push(env);
     }
@@ -76,7 +81,12 @@ impl<A: App> Addr<A> {
     /// if app if not ready will render when it's ready
     pub fn render(&self) {
         if self.0.ready.get() {
-            self.0.app.borrow().__render(&self.mailbox());
+            self.0.ready.replace(false);
+            self.0.app.borrow_mut().__render(&self.mailbox());
+            self.0.ready.replace(true);
+            if !self.0.q.borrow().is_empty() {
+                self.update()
+            }
         }
     }
 
