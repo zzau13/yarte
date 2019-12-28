@@ -1,12 +1,14 @@
 /// Adapted from [`actix`](https://github.com/actix/actix) and [`draco](https://github.com/utkarshkukreti/draco)
 use std::{
     cell::{Cell, RefCell},
+    default::Default,
     marker::PhantomData,
     rc::Rc,
     sync::Arc,
 };
 
-pub trait App: Sized + Unpin + 'static {
+pub trait App: Default + Sized + Unpin + 'static {
+    type BlackBox: Default;
     /// empty for overridden in derive
     #[doc(hidden)]
     // TODO
@@ -208,18 +210,24 @@ impl<M> Message for Box<M> where M: Message {}
 
 #[cfg(test)]
 mod test {
+    #![allow(dead_code)]
     use super::*;
-    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::default::Default;
     use std::rc::Rc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use wasm_bindgen_futures::spawn_local;
     use wasm_bindgen_test::*;
 
+    #[derive(Default)]
     struct Test {
         c: Rc<AtomicUsize>,
+        black_box: <Self as App>::BlackBox,
     }
 
-    impl App for Test {}
+    impl App for Test {
+        type BlackBox = ();
+    }
 
     struct Msg(usize);
 
@@ -264,7 +272,10 @@ mod test {
     fn test() {
         let c = Rc::new(AtomicUsize::new(0));
         let c2 = Rc::clone(&c);
-        let app = Test { c };
+        let app = Test {
+            c,
+            ..Default::default()
+        };
         let addr = app.start();
         let addr2 = addr.clone();
         addr.send(Msg(2));
