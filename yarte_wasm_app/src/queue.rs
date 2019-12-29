@@ -28,20 +28,11 @@
 
 //! A mostly lock-free single-producer, single consumer queue.
 //!
-//! This module contains an implementation of a concurrent MPSC queue. This
-//! queue can be used to share data between threads, and is also used as the
-//! building block of channels in rust.
-//!
-//! Note that the current implementation of this queue has a caveat of the `pop`
-//! method, and see the method for more information about it. Due to this
-//! caveat, this queue may not be appropriate for all use-cases.
-
 // http://www.1024cores.net/home/lock-free-algorithms
 //                         /queues/non-intrusive-mpsc-node-based-queue
 
-// NOTE: this implementation is lifted from the standard library and only
-//       slightly modified
-
+// NOTE: this implementation is lifted from the standard library and
+//      modified for single thread
 // Unsafe only use in single thread environment
 use std::{
     cell::{RefCell, UnsafeCell},
@@ -99,8 +90,8 @@ impl<T> Queue<T> {
                 None
             } else {
                 *self.tail.get() = next;
-                assert!((*tail).value.is_none());
-                assert!((*next).value.is_some());
+                debug_assert!((*tail).value.is_none());
+                debug_assert!((*next).value.is_some());
                 let ret = (*next).value.take().unwrap();
                 drop(Box::from_raw(tail));
                 Some(ret)

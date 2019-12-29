@@ -11,7 +11,8 @@ keywords = ["markup", "template", "handlebars", "html"]
 license = "MIT/Apache-2.0"
 readme = "../README.md"
 repository = "https://github.com/botika/yarte"
-workspace = ".."
+[workspace]
+members = ["."]
 
 [badges]
 travis-ci = { repository = "botika/yarte", branch = "master" }

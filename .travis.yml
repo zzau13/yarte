@@ -19,8 +19,9 @@ before_script:
     if [[ "$TRAVIS_RUST_VERSION" != "nightly" ]]; then
       rustup component add rustfmt
       rustup component add clippy
-      cargo install wasm-pack --force
+    else
       curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.2/install.sh | bash
+      cargo install wasm-pack --force
       nvm install node
     fi
 
@@ -34,6 +35,7 @@ script:
   - cargo test --all-features --all -- --nocapture
   - |
     if [[ "$TRAVIS_RUST_VERSION" != "nightly" ]]; then
+      cd benches && cargo bench
+    else
       cd yarte_wasm_app && wasm-pack test --node
-      cd ../benches && cargo bench
     fi
