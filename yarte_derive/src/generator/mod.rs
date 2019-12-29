@@ -6,13 +6,12 @@ use syn::{
 };
 use v_eval::{eval, Value};
 use v_htmlescape::escape;
+
 use yarte_config::Config;
+use yarte_helpers::helpers::ErrorMessage;
 use yarte_parser::{Helper, Node, Partial, SExpr, SNode, SVExpr, Ws};
 
-use crate::{
-    codegen::{Each, IfElse, HIR},
-    error::ErrorMessage,
-};
+use crate::codegen::{Each, IfElse, HIR};
 
 mod scope;
 mod validator;

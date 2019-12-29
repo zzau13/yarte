@@ -1,24 +1,19 @@
 extern crate proc_macro;
 
-use std::{
-    collections::{hash_map::DefaultHasher, BTreeMap, BTreeSet},
-    hash::{Hash, Hasher},
-    path::PathBuf,
-};
+use std::collections::BTreeMap;
 
 use proc_macro::TokenStream;
 
-use yarte_config::{get_source, read_config_file, Config, PrintConfig};
-use yarte_parser::{parse, parse_partials, source_map, Partial};
+use yarte_config::{read_config_file, Config, PrintConfig};
+use yarte_helpers::helpers;
+use yarte_parser::{parse, source_map};
 
 mod codegen;
-mod error;
 mod generator;
 mod logger;
 
 use self::{
     codegen::{html::HTMLCodeGen, text::TextCodeGen, CodeGen, FmtCodeGen},
-    error::emitter,
     generator::{visit_derive, Print},
     logger::log,
 };
@@ -28,8 +23,6 @@ pub fn derive(input: TokenStream) -> TokenStream {
     build(&syn::parse(input).unwrap())
 }
 
-type Sources<'a> = &'a BTreeMap<PathBuf, String>;
-
 #[inline]
 fn build(i: &syn::DeriveInput) -> TokenStream {
     let config_toml: &str = &read_config_file();
@@ -37,7 +30,7 @@ fn build(i: &syn::DeriveInput) -> TokenStream {
 
     let s = &visit_derive(i, config);
 
-    let sources = &read(s.path.clone(), s.src.clone(), config);
+    let sources = &helpers::read(s.path.clone(), s.src.clone(), config);
 
     let mut parsed = BTreeMap::new();
     for (p, src) in sources {
@@ -54,7 +47,7 @@ fn build(i: &syn::DeriveInput) -> TokenStream {
 
     let tokens = {
         let hir = &generator::generate(config, s, &parsed)
-            .unwrap_or_else(|e| emitter(sources, config, e));
+            .unwrap_or_else(|e| helpers::emitter(sources, config, e));
         if s.wrapped {
             FmtCodeGen::new(TextCodeGen, s).gen(hir)
         } else {
@@ -77,49 +70,4 @@ fn build(i: &syn::DeriveInput) -> TokenStream {
     // when multiple templates
     source_map::clean();
     tokens.into()
-}
-
-fn calculate_hash<T: Hash>(t: &T) -> u64 {
-    let mut s = DefaultHasher::new();
-    t.hash(&mut s);
-    s.finish()
-}
-
-fn read(path: PathBuf, src: String, config: &Config) -> BTreeMap<PathBuf, String> {
-    fn _read(
-        path: PathBuf,
-        src: String,
-        config: &Config,
-        visited: &mut BTreeMap<PathBuf, String>,
-        stack: &mut Vec<u64>,
-    ) {
-        stack.push(calculate_hash(&path));
-
-        let partials = parse_partials(&src)
-            .iter()
-            .map(|Partial(_, partial, _)| config.resolve_partial(&path, partial.t()))
-            .collect::<BTreeSet<_>>();
-
-        visited.insert(path.clone(), src);
-
-        for partial in partials {
-            if !visited.contains_key(&partial) {
-                let src = get_source(partial.as_path());
-                _read(partial, src, config, visited, stack);
-            } else if stack.contains(&calculate_hash(&partial)) {
-                panic!(
-                    "Partial cyclic dependency {:?} in template {:?}",
-                    partial, path
-                );
-            }
-        }
-
-        stack.pop();
-    }
-
-    let mut visited = BTreeMap::new();
-
-    _read(path, src, config, &mut visited, &mut Vec::new());
-
-    visited
 }
