@@ -5,8 +5,9 @@ use annotate_snippets::{
 };
 
 use yarte_config::Config;
+use yarte_parser::source_map::Span;
 
-use crate::{parser::source_map::Span, Sources};
+use crate::Sources;
 
 // TODO: Display errors ?
 pub(crate) struct ErrorMessage {

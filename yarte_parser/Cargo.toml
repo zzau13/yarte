@@ -1,8 +1,8 @@
 [package]
-name = "yarte_derive"
+name = "yarte_parser"
 version = "0.4.0"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
-description = "Procedural macro package for yarte"
+description = "Ast, lexer and parser for yarte"
 categories = ["template-engine"]
 documentation = "https://docs.rs/yarte_derive"
 edition = "2018"
@@ -16,23 +16,10 @@ workspace = ".."
 travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
 
-[lib]
-proc-macro = true
-
 [features]
 actix-web = []
 
 [dependencies]
-yarte_config = { version = "0.4", path = "../yarte_config" }
-yarte_parser = { version = "0.4", path = "../yarte_parser" }
-annotate-snippets = { version = "0.6", features = ["ansi_term"] }
-mime_guess = "2.0"
-prettyprint = "0.7"
-proc-macro2 = { version = "1.0", features = ["span-locations"] }
 quote = "1.0"
 syn = { version="1.0", features = ["full", "visit", "visit-mut", "extra-traits"]}
-tempfile = "3.0"
-toolchain_find = "0.1"
 unicode-xid = "0.2"
-v_eval = "0.2"
-v_htmlescape = "0.4"

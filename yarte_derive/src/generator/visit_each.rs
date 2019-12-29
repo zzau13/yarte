@@ -3,8 +3,7 @@ use std::{mem, path::PathBuf};
 use syn::visit::Visit;
 
 use yarte_config::Config;
-
-use crate::parser::{Helper, Node, Partial, SNode};
+use yarte_parser::{Helper, Node, Partial, SNode};
 
 use super::{is_super, Context};
 
