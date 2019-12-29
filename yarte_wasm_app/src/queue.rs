@@ -42,6 +42,7 @@
 // NOTE: this implementation is lifted from the standard library and only
 //       slightly modified
 
+// Unsafe only use in single thread environment
 use std::{
     cell::{RefCell, UnsafeCell},
     ptr,
@@ -53,6 +54,7 @@ struct Node<T> {
     value: Option<T>,
 }
 
+/// This Queue is unsafe because only one thread can use it at a time
 #[derive(Debug)]
 pub struct Queue<T> {
     head: RefCell<*mut Node<T>>,
@@ -88,24 +90,25 @@ impl<T> Queue<T> {
     }
 
     /// Pops some data from this queue.
-    ///
-    /// This function is unsafe because only one thread can call it at a time.
-    pub unsafe fn pop(&self) -> Option<T> {
-        let tail = *self.tail.get();
-        let next = *(*tail).next.borrow();
+    pub fn pop(&self) -> Option<T> {
+        unsafe {
+            let tail = *self.tail.get();
+            let next = *(*tail).next.borrow();
 
-        if next.is_null() {
-            None
-        } else {
-            *self.tail.get() = next;
-            assert!((*tail).value.is_none());
-            assert!((*next).value.is_some());
-            let ret = (*next).value.take().unwrap();
-            drop(Box::from_raw(tail));
-            Some(ret)
+            if next.is_null() {
+                None
+            } else {
+                *self.tail.get() = next;
+                assert!((*tail).value.is_none());
+                assert!((*next).value.is_some());
+                let ret = (*next).value.take().unwrap();
+                drop(Box::from_raw(tail));
+                Some(ret)
+            }
         }
     }
 
+    /// Return queue is empty
     pub fn is_empty(&self) -> bool {
         unsafe {
             let tail = *self.tail.get();

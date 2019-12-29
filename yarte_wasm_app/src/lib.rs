@@ -70,7 +70,7 @@ impl<A: App> Addr<A> {
             self.0.ready.replace(false);
 
             let mailbox = self.mailbox();
-            while let Some(mut env) = unsafe { self.0.q.pop() } {
+            while let Some(mut env) = self.0.q.pop() {
                 env.handle(&mut self.0.app.borrow_mut(), &mailbox)
             }
 
