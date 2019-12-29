@@ -11,7 +11,7 @@ pub trait CodeGen {
     fn gen(&self, v: &[HIR]) -> TokenStream;
 }
 
-pub(crate) struct FmtCodeGen<'a, T: CodeGen> {
+pub struct FmtCodeGen<'a, T: CodeGen> {
     codegen: T,
     s: &'a Struct<'a>,
 }

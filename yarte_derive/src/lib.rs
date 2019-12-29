@@ -4,18 +4,15 @@ use std::collections::BTreeMap;
 
 use proc_macro::TokenStream;
 
+use yarte_codegen::{html::HTMLCodeGen, text::TextCodeGen, CodeGen, FmtCodeGen};
 use yarte_config::{read_config_file, Config, PrintConfig};
 use yarte_helpers::helpers;
 use yarte_hir::{generate, visit_derive, Print};
 use yarte_parser::{parse, source_map};
 
-mod codegen;
 mod logger;
 
-use self::{
-    codegen::{html::HTMLCodeGen, text::TextCodeGen, CodeGen, FmtCodeGen},
-    logger::log,
-};
+use self::logger::log;
 
 #[proc_macro_derive(Template, attributes(template))]
 pub fn derive(input: TokenStream) -> TokenStream {
