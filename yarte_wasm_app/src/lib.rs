@@ -270,6 +270,7 @@ mod test {
 
     impl Handler<MsgFut> for Test {
         fn handle(&mut self, msg: MsgFut, ctx: &Mailbox<Self>) {
+            ctx.send(Reset);
             let ctx = ctx.clone();
             let work = unsafe {
                 async_timer::Timed::platform_new_unchecked(
@@ -303,6 +304,8 @@ mod test {
         assert_eq!(c2.load(Ordering::Relaxed), 3);
         addr2.send(Reset);
         assert_eq!(c2.load(Ordering::Relaxed), 0);
+        addr2.send(Msg(3));
+        assert_eq!(c2.load(Ordering::Relaxed), 3);
         addr2.send(MsgFut(7));
         assert_eq!(c2.load(Ordering::Relaxed), 0);
         let c3 = Rc::clone(&c2);
@@ -314,6 +317,8 @@ mod test {
             assert_eq!(c3.load(Ordering::Relaxed), 7);
             addr2.send(Reset);
             assert_eq!(c3.load(Ordering::Relaxed), 0);
-        })
+        });
+        addr.send(Reset);
+        assert_eq!(c2.load(Ordering::Relaxed), 0);
     }
 }
