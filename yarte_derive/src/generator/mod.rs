@@ -7,11 +7,11 @@ use syn::{
 use v_eval::{eval, Value};
 use v_htmlescape::escape;
 use yarte_config::Config;
+use yarte_parser::{Helper, Node, Partial, SExpr, SNode, SVExpr, Ws};
 
 use crate::{
     codegen::{Each, IfElse, HIR},
     error::ErrorMessage,
-    parser::{Helper, Node, Partial, SExpr, SNode, SVExpr, Ws},
 };
 
 mod scope;
@@ -184,7 +184,7 @@ impl<'a> Generator<'a> {
     }
 
     fn visit_helper(&mut self, buf: &mut Vec<HIR>, h: &'a Helper<'a>) {
-        use crate::parser::Helper::*;
+        use yarte_parser::Helper::*;
         match h {
             Each(ws, e, b) => self.visit_each(buf, *ws, e, b),
             If(ifs, elsif, els) => self.visit_if(buf, ifs, elsif, els),

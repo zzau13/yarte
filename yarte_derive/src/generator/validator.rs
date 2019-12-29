@@ -1,6 +1,8 @@
 use quote::quote;
 
-use crate::{error::ErrorMessage, parser::SExpr};
+use yarte_parser::SExpr;
+
+use crate::error::ErrorMessage;
 
 pub(super) fn expression(e: &SExpr, out: &mut Vec<ErrorMessage>) {
     use syn::Expr::*;

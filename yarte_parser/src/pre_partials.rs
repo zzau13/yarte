@@ -4,7 +4,7 @@ use super::{
     Partial,
 };
 
-pub(crate) fn parse_partials(rest: &str) -> Vec<Partial> {
+pub fn parse_partials(rest: &str) -> Vec<Partial> {
     match eat_partials(Cursor { rest, off: 0 }) {
         Ok((l, res)) => {
             if l.is_empty() {

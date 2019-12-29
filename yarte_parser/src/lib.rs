@@ -1,7 +1,4 @@
-#![allow(
-clippy::many_single_char_names,
-clippy::cognitive_complexity
-)]
+#![allow(clippy::many_single_char_names, clippy::cognitive_complexity)]
 
 use std::str;
 
@@ -18,27 +15,27 @@ mod stmt_local;
 #[macro_use]
 mod strnom;
 
-pub(crate) use self::pre_partials::parse_partials;
-use self::{
+pub use self::pre_partials::parse_partials;
+use crate::{
     expr_list::ExprList,
     source_map::{spanned, Span, S},
     stmt_local::StmtLocal,
     strnom::{is_ws, skip_ws, ws, Cursor, LexError, PResult},
 };
 
-pub(crate) type Ws = (bool, bool);
+pub type Ws = (bool, bool);
 
-pub(crate) type SExpr = S<Box<Expr>>;
-pub(crate) type SLocal = S<Box<Local>>;
-pub(crate) type SNode<'a> = S<Node<'a>>;
-pub(crate) type SStr<'a> = S<&'a str>;
-pub(crate) type SVExpr = S<Vec<Expr>>;
-
-#[derive(Debug, PartialEq, Clone)]
-pub(crate) struct Partial<'a>(pub Ws, pub SStr<'a>, pub SVExpr);
+pub type SExpr = S<Box<Expr>>;
+pub type SLocal = S<Box<Local>>;
+pub type SNode<'a> = S<Node<'a>>;
+pub type SStr<'a> = S<&'a str>;
+pub type SVExpr = S<Vec<Expr>>;
 
 #[derive(Debug, PartialEq, Clone)]
-pub(crate) enum Node<'a> {
+pub struct Partial<'a>(pub Ws, pub SStr<'a>, pub SVExpr);
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Node<'a> {
     Comment(&'a str),
     Expr(Ws, SExpr),
     Helper(Box<Helper<'a>>),
@@ -50,7 +47,7 @@ pub(crate) enum Node<'a> {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub(crate) enum Helper<'a> {
+pub enum Helper<'a> {
     Each((Ws, Ws), SExpr, Vec<SNode<'a>>),
     If(
         ((Ws, Ws), SExpr, Vec<SNode<'a>>),
@@ -63,7 +60,7 @@ pub(crate) enum Helper<'a> {
     Defined((Ws, Ws), &'a str, SExpr, Vec<SNode<'a>>),
 }
 
-pub(crate) fn parse(c: Cursor) -> Vec<SNode> {
+pub fn parse(c: Cursor) -> Vec<SNode> {
     match eat(c) {
         Ok((l, res)) => {
             if l.is_empty() {

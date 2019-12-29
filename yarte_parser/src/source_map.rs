@@ -6,7 +6,7 @@ use std::{cell::RefCell, cmp, fmt, path::PathBuf};
 
 use syn::export::Debug;
 
-use crate::parser::strnom::{skip_ws, Cursor, PResult};
+use crate::strnom::{skip_ws, Cursor, PResult};
 
 thread_local! {
     static SOURCE_MAP: RefCell<SourceMap> = RefCell::new(SourceMap {
@@ -17,7 +17,7 @@ thread_local! {
 /// Add file to source map and return lower bound
 ///
 /// Use in the same thread
-pub(crate) fn get_cursor<'a>(p: &PathBuf, rest: &'a str) -> Cursor<'a> {
+pub fn get_cursor<'a>(p: &PathBuf, rest: &'a str) -> Cursor<'a> {
     SOURCE_MAP.with(|x| Cursor {
         rest,
         off: x.borrow_mut().add_file(p, rest).lo,
@@ -27,12 +27,12 @@ pub(crate) fn get_cursor<'a>(p: &PathBuf, rest: &'a str) -> Cursor<'a> {
 /// Reinitialize source map instance when run multiple times in the same thread
 ///
 /// Use in the same thread
-pub(crate) fn clean() {
+pub fn clean() {
     SOURCE_MAP.with(|x| *x.borrow_mut() = SourceMap { files: vec![] });
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) struct LineColumn {
+pub struct LineColumn {
     pub line: usize,
     pub column: usize,
 }
@@ -122,7 +122,7 @@ impl SourceMap {
 }
 
 #[derive(Clone, Copy, PartialEq)]
-pub(crate) struct Span {
+pub struct Span {
     pub lo: u32,
     pub hi: u32,
 }
@@ -205,7 +205,7 @@ impl fmt::Debug for Span {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct S<T: Debug + PartialEq + Clone>(pub(super) T, pub(super) Span);
+pub struct S<T: Debug + PartialEq + Clone>(pub(super) T, pub(super) Span);
 
 impl<T: Debug + PartialEq + Clone> S<T> {
     pub fn t(&self) -> &T {

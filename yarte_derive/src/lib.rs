@@ -9,19 +9,18 @@ use std::{
 use proc_macro::TokenStream;
 
 use yarte_config::{get_source, read_config_file, Config, PrintConfig};
+use yarte_parser::{parse, parse_partials, source_map, Partial};
 
 mod codegen;
 mod error;
 mod generator;
 mod logger;
-mod parser;
 
 use self::{
     codegen::{html::HTMLCodeGen, text::TextCodeGen, CodeGen, FmtCodeGen},
     error::emitter,
     generator::{visit_derive, Print},
     logger::log,
-    parser::{parse, parse_partials, source_map, Partial},
 };
 
 #[proc_macro_derive(Template, attributes(template))]
