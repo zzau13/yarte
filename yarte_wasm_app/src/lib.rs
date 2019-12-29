@@ -7,6 +7,10 @@ use std::{
     sync::Arc,
 };
 
+mod queue;
+
+use self::queue::Queue;
+
 /// App are object which encapsulate state and behavior
 ///
 ///
@@ -46,7 +50,7 @@ pub struct Addr<A: App>(Rc<Context<A>>);
 
 impl<A: App> Addr<A> {
     fn push(&self, env: Envelope<A>) {
-        self.0.q.borrow_mut().push(env);
+        self.0.q.push(env);
     }
 
     /// Sends a message
@@ -66,8 +70,7 @@ impl<A: App> Addr<A> {
             self.0.ready.replace(false);
 
             let mailbox = self.mailbox();
-            while !self.0.q.borrow().is_empty() {
-                let mut env = self.0.q.borrow_mut().remove(0);
+            while let Some(mut env) = unsafe { self.0.q.pop() } {
                 env.handle(&mut self.0.app.borrow_mut(), &mailbox)
             }
 
@@ -84,7 +87,7 @@ impl<A: App> Addr<A> {
             self.0.ready.replace(false);
             self.0.app.borrow_mut().__render(&self.mailbox());
             self.0.ready.replace(true);
-            if !self.0.q.borrow().is_empty() {
+            if !self.0.q.is_empty() {
                 self.update()
             }
         }
@@ -110,7 +113,7 @@ impl<A: App> Clone for Addr<A> {
 /// Encapsulate inner context of the App
 pub struct Context<A: App> {
     app: RefCell<A>,
-    q: RefCell<Vec<Envelope<A>>>,
+    q: Queue<Envelope<A>>,
     ready: Cell<bool>,
 }
 
@@ -118,7 +121,7 @@ impl<A: App> Context<A> {
     fn new(app: A) -> Self {
         Self {
             app: RefCell::new(app),
-            q: RefCell::new(Vec::new()),
+            q: Queue::new(),
             ready: Cell::new(true),
         }
     }
