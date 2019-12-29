@@ -11,8 +11,6 @@ use yarte_config::Config;
 use yarte_helpers::helpers::ErrorMessage;
 use yarte_parser::{Helper, Node, Partial, SExpr, SNode, SVExpr, Ws};
 
-use crate::codegen::{Each, IfElse, HIR};
-
 mod scope;
 mod validator;
 mod visit_derive;
@@ -20,23 +18,41 @@ mod visit_each;
 mod visit_partial;
 mod visits;
 
-pub(crate) use self::visit_derive::Struct;
+/// High level intermediate representation after lowering Ast
+pub enum HIR {
+    Lit(String),
+    Expr(Box<syn::Expr>),
+    Safe(Box<syn::Expr>),
+    Each(Box<Each>),
+    IfElse(Box<IfElse>),
+    Local(Box<syn::Local>),
+}
+
+pub struct IfElse {
+    pub ifs: (syn::Expr, Vec<HIR>),
+    pub if_else: Vec<(syn::Expr, Vec<HIR>)>,
+    pub els: Option<Vec<HIR>>,
+}
+
+pub struct Each {
+    pub args: syn::Expr,
+    pub body: Vec<HIR>,
+    pub expr: syn::Expr,
+}
+
+pub use self::visit_derive::Struct;
 use self::{scope::Scope, visit_each::find_loop_var, visit_partial::visit_partial};
 
-pub(crate) use self::visit_derive::{visit_derive, Print};
+pub use self::visit_derive::{visit_derive, Print};
 
-pub(crate) fn generate(
-    c: &Config,
-    s: &Struct,
-    ctx: Context,
-) -> Result<Vec<HIR>, Vec<ErrorMessage>> {
+pub fn generate(c: &Config, s: &Struct, ctx: Context) -> Result<Vec<HIR>, Vec<ErrorMessage>> {
     Generator::new(c, s, ctx).build()
 }
 
-pub(self) type Context<'a> = &'a BTreeMap<&'a PathBuf, Vec<SNode<'a>>>;
+pub type Context<'a> = &'a BTreeMap<&'a PathBuf, Vec<SNode<'a>>>;
 
 #[derive(Debug, PartialEq)]
-pub(self) enum On {
+enum On {
     Each(usize),
     With(usize),
 }
@@ -50,7 +66,7 @@ enum Writable<'a> {
 
 /// lowering from `SNode` to `HIR`
 /// TODO: Document
-pub(self) struct Generator<'a> {
+struct Generator<'a> {
     pub(self) c: &'a Config<'a>,
     /// ast of DeriveInput
     pub(self) s: &'a Struct<'a>,
@@ -741,7 +757,7 @@ impl<'a> Generator<'a> {
     }
 }
 
-pub fn is_super<S>(i: &Punctuated<PathSegment, S>) -> Option<(usize, String)> {
+fn is_super<S>(i: &Punctuated<PathSegment, S>) -> Option<(usize, String)> {
     let idents: Vec<String> = Punctuated::pairs(i)
         .map(|x| x.value().ident.to_string())
         .collect();
@@ -757,6 +773,6 @@ pub fn is_super<S>(i: &Punctuated<PathSegment, S>) -> Option<(usize, String)> {
 }
 
 #[inline]
-pub fn is_tuple_index(ident: &[u8]) -> bool {
+fn is_tuple_index(ident: &[u8]) -> bool {
     1 < ident.len() && ident[0] == b'_' && ident[1..].iter().all(|x| x.is_ascii_digit())
 }

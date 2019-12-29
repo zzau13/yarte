@@ -2,31 +2,10 @@ use mime_guess::from_ext;
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use crate::generator::Struct;
+use yarte_hir::{Each, IfElse, Struct, HIR};
 
 pub mod html;
 pub mod text;
-
-pub enum HIR {
-    Lit(String),
-    Expr(Box<syn::Expr>),
-    Safe(Box<syn::Expr>),
-    Each(Box<Each>),
-    IfElse(Box<IfElse>),
-    Local(Box<syn::Local>),
-}
-
-pub struct IfElse {
-    pub ifs: (syn::Expr, Vec<HIR>),
-    pub if_else: Vec<(syn::Expr, Vec<HIR>)>,
-    pub els: Option<Vec<HIR>>,
-}
-
-pub struct Each {
-    pub args: syn::Expr,
-    pub body: Vec<HIR>,
-    pub expr: syn::Expr,
-}
 
 pub trait CodeGen {
     fn gen(&self, v: &[HIR]) -> TokenStream;

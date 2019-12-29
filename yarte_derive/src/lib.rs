@@ -6,15 +6,14 @@ use proc_macro::TokenStream;
 
 use yarte_config::{read_config_file, Config, PrintConfig};
 use yarte_helpers::helpers;
+use yarte_hir::{generate, visit_derive, Print};
 use yarte_parser::{parse, source_map};
 
 mod codegen;
-mod generator;
 mod logger;
 
 use self::{
     codegen::{html::HTMLCodeGen, text::TextCodeGen, CodeGen, FmtCodeGen},
-    generator::{visit_derive, Print},
     logger::log,
 };
 
@@ -46,8 +45,8 @@ fn build(i: &syn::DeriveInput) -> TokenStream {
     }
 
     let tokens = {
-        let hir = &generator::generate(config, s, &parsed)
-            .unwrap_or_else(|e| helpers::emitter(sources, config, e));
+        let hir =
+            &generate(config, s, &parsed).unwrap_or_else(|e| helpers::emitter(sources, config, e));
         if s.wrapped {
             FmtCodeGen::new(TextCodeGen, s).gen(hir)
         } else {
