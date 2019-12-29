@@ -1,8 +1,8 @@
 [package]
-name = "yarte_derive"
+name = "yarte_hir"
 version = "0.4.0"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
-description = "Procedural macro package for yarte"
+description = "Intermediate representation for yarte"
 categories = ["template-engine"]
 documentation = "https://docs.rs/yarte_derive"
 edition = "2018"
@@ -16,22 +16,15 @@ workspace = ".."
 travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
 
-[lib]
-proc-macro = true
-
 [features]
-actix-web = ["yarte_hir/actix-web"]
+actix-web = []
 
 [dependencies]
 yarte_config = { version = "0.4", path = "../yarte_config" }
-yarte_helpers = { version = "0.4", path = "../yarte_helpers" }
-yarte_hir = { version = "0.4", path = "../yarte_hir" }
 yarte_parser = { version = "0.4", path = "../yarte_parser" }
-
-mime_guess = "2.0"
-prettyprint = "0.7"
+yarte_helpers = { version = "0.4", path = "../yarte_helpers" }
 proc-macro2 = { version = "1.0", features = ["span-locations"] }
 quote = "1.0"
-syn = "1.0"
-tempfile = "3.0"
-toolchain_find = "0.1"
+syn = { version="1.0", features = ["full", "visit", "visit-mut", "extra-traits"]}
+v_eval = "0.2"
+v_htmlescape = "0.4"

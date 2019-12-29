@@ -7,12 +7,12 @@ use yarte_config::Config;
 
 use proc_macro2::TokenStream;
 
-pub(crate) fn visit_derive<'a>(i: &'a syn::DeriveInput, config: &Config) -> Struct<'a> {
+pub fn visit_derive<'a>(i: &'a syn::DeriveInput, config: &Config) -> Struct<'a> {
     StructBuilder::default().build(i, config)
 }
 
 #[derive(Debug)]
-pub(crate) struct Struct<'a> {
+pub struct Struct<'a> {
     pub src: String,
     pub path: PathBuf,
     pub print: Print,
@@ -183,7 +183,7 @@ impl<'a> Visit<'a> for StructBuilder {
 }
 
 #[derive(PartialEq, Debug)]
-pub(crate) enum Print {
+pub enum Print {
     All,
     Ast,
     Code,
