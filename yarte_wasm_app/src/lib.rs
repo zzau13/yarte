@@ -216,14 +216,21 @@ where
     }
 }
 
+/// Represent message that can be handled by the app.
 pub trait Message: 'static {}
 
+/// Describes how to handle messages of a specific type.
+///
+/// Implementing `Handler` is a way to handle incoming messages
+///
+/// The type `M` is a message which can be handled by the app.
 pub trait Handler<M>
 where
     Self: App,
     M: Message,
 {
-    fn handle(&mut self, msg: M, ctx: &Mailbox<Self>);
+    /// This method is called for every message type `M` received by this app
+    fn handle(&mut self, msg: M, mb: &Mailbox<Self>);
 }
 
 /// Allow users to use `Arc<M>` as a message without having to re-impl `Message`
