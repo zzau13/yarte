@@ -7,17 +7,17 @@ use annotate_snippets::{
 use yarte_config::Config;
 use yarte_parser::source_map::Span;
 
-use crate::Sources;
+use crate::helpers::Sources;
 
 // TODO: Display errors ?
-pub(crate) struct ErrorMessage {
+pub struct ErrorMessage {
     pub message: String,
     pub span: Span,
 }
 
 // TODO: improve
 // - print all line with len limits
-pub(crate) fn emitter(sources: Sources, config: &Config, mut errors: Vec<ErrorMessage>) -> ! {
+pub fn emitter(sources: Sources, config: &Config, mut errors: Vec<ErrorMessage>) -> ! {
     let mut prefix = config.get_dir().clone();
     prefix.pop();
 
