@@ -42,26 +42,27 @@
 // NOTE: this implementation is lifted from the standard library and only
 //       slightly modified
 
-use std::cell::UnsafeCell;
-use std::ptr;
-use std::sync::atomic::{AtomicPtr, Ordering};
+use std::{
+    cell::{RefCell, UnsafeCell},
+    ptr,
+};
 
 #[derive(Debug)]
 struct Node<T> {
-    next: AtomicPtr<Node<T>>,
+    next: RefCell<*mut Node<T>>,
     value: Option<T>,
 }
 
 #[derive(Debug)]
 pub struct Queue<T> {
-    head: AtomicPtr<Node<T>>,
+    head: RefCell<*mut Node<T>>,
     tail: UnsafeCell<*mut Node<T>>,
 }
 
 impl<T> Node<T> {
     unsafe fn new(v: Option<T>) -> *mut Node<T> {
         Box::into_raw(Box::new(Node {
-            next: AtomicPtr::new(ptr::null_mut()),
+            next: RefCell::new(ptr::null_mut()),
             value: v,
         }))
     }
@@ -72,7 +73,7 @@ impl<T> Queue<T> {
     pub fn new() -> Queue<T> {
         let stub = unsafe { Node::new(None) };
         Queue {
-            head: AtomicPtr::new(stub),
+            head: RefCell::new(stub),
             tail: UnsafeCell::new(stub),
         }
     }
@@ -81,8 +82,8 @@ impl<T> Queue<T> {
     pub fn push(&self, t: T) {
         unsafe {
             let n = Node::new(Some(t));
-            let prev = self.head.swap(n, Ordering::AcqRel);
-            (*prev).next.store(n, Ordering::Release);
+            let prev = self.head.replace(n);
+            *(*prev).next.borrow_mut() = n;
         }
     }
 
@@ -91,7 +92,7 @@ impl<T> Queue<T> {
     /// This function is unsafe because only one thread can call it at a time.
     pub unsafe fn pop(&self) -> Option<T> {
         let tail = *self.tail.get();
-        let next = (*tail).next.load(Ordering::Acquire);
+        let next = *(*tail).next.borrow();
 
         if next.is_null() {
             None
@@ -108,8 +109,7 @@ impl<T> Queue<T> {
     pub fn is_empty(&self) -> bool {
         unsafe {
             let tail = *self.tail.get();
-            let next = (*tail).next.load(Ordering::Acquire);
-            next.is_null()
+            (*tail).next.borrow().is_null()
         }
     }
 }
@@ -119,9 +119,9 @@ impl<T> Drop for Queue<T> {
         unsafe {
             let mut cur = *self.tail.get();
             while !cur.is_null() {
-                let next = (*cur).next.load(Ordering::Relaxed);
+                let next = (*cur).next.borrow();
                 drop(Box::from_raw(cur));
-                cur = next;
+                cur = *next;
             }
         }
     }
