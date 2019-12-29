@@ -1,3 +1,5 @@
+#![feature(get_mut_unchecked)]
+
 /// Adapted from [`actix`](https://github.com/actix/actix) and [`draco`](https://github.com/utkarshkukreti/draco)
 use std::{
     cell::{Cell, RefCell},
@@ -29,7 +31,7 @@ pub trait App: Default + Sized + Unpin + 'static {
     where
         Self: App,
     {
-        Addr(Rc::new(Context::new(self)))
+        Addr(Rc::new(Context::new(self))).ready()
     }
 
     /// Construct and start a new asynchronous app, returning its
@@ -49,6 +51,21 @@ pub trait App: Default + Sized + Unpin + 'static {
 pub struct Addr<A: App>(Rc<Context<A>>);
 
 impl<A: App> Addr<A> {
+    fn ready(mut self) -> Self {
+        assert!(self.0.mb.is_none());
+        assert!(!self.0.ready.get());
+        let cloned = self.clone();
+        unsafe {
+            Rc::get_mut_unchecked(&mut self.0).mb = Some(Mailbox::new(move |env| {
+                cloned.push(env);
+                cloned.update();
+            }));
+        }
+        self.0.ready.replace(true);
+
+        self
+    }
+
     fn push(&self, env: Envelope<A>) {
         self.0.q.push(env);
     }
@@ -68,12 +85,10 @@ impl<A: App> Addr<A> {
     fn update(&self) {
         if self.0.ready.get() {
             self.0.ready.replace(false);
-
-            let mailbox = self.mailbox();
             while let Some(mut env) = self.0.q.pop() {
-                env.handle(&mut self.0.app.borrow_mut(), &mailbox)
+                debug_assert!(self.0.mb.is_some());
+                env.handle(&mut self.0.app.borrow_mut(), &self.0.mb.as_ref().unwrap())
             }
-
             self.0.ready.replace(true);
             self.render();
         }
@@ -85,21 +100,16 @@ impl<A: App> Addr<A> {
     pub fn render(&self) {
         if self.0.ready.get() {
             self.0.ready.replace(false);
-            self.0.app.borrow_mut().__render(&self.mailbox());
+            debug_assert!(self.0.mb.is_some());
+            self.0
+                .app
+                .borrow_mut()
+                .__render(&self.0.mb.as_ref().unwrap());
             self.0.ready.replace(true);
             if !self.0.q.is_empty() {
                 self.update()
             }
         }
-    }
-
-    /// Get new mailbox
-    fn mailbox(&self) -> Mailbox<A> {
-        let cloned = self.clone();
-        Mailbox::new(move |env| {
-            cloned.push(env);
-            cloned.update();
-        })
     }
 }
 
@@ -109,12 +119,12 @@ impl<A: App> Clone for Addr<A> {
     }
 }
 
-// TODO: benchmark queue find other options
 /// Encapsulate inner context of the App
 pub struct Context<A: App> {
     app: RefCell<A>,
     q: Queue<Envelope<A>>,
     ready: Cell<bool>,
+    mb: Option<Mailbox<A>>,
 }
 
 impl<A: App> Context<A> {
@@ -122,12 +132,13 @@ impl<A: App> Context<A> {
         Self {
             app: RefCell::new(app),
             q: Queue::new(),
-            ready: Cell::new(true),
+            ready: Cell::new(false),
+            mb: None,
         }
     }
 }
 
-/// MailBox of messages enveloped with App type
+/// MailBox of messages enveloped with `App` type
 pub struct Mailbox<A: App>(Rc<Box<dyn Fn(Envelope<A>) + 'static>>);
 
 impl<A: App> Mailbox<A> {
@@ -224,6 +235,7 @@ impl<M> Message for Box<M> where M: Message {}
 #[cfg(test)]
 mod test {
     #![allow(dead_code)]
+
     use super::*;
     use std::{
         default::Default,
