@@ -32,5 +32,8 @@ script:
     fi
   - cargo check --all
   - cargo test --all-features --all -- --nocapture
-  - cd yarte_wasm_app && wasm-pack test --node
-  - cd ../benches && cargo bench
+  - |
+    if [[ "$TRAVIS_RUST_VERSION" != "nightly" ]]; then
+      cd yarte_wasm_app && wasm-pack test --node
+      cd ../benches && cargo bench
+    fi
