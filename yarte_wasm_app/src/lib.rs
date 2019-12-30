@@ -24,7 +24,7 @@ pub trait App: Default + Sized + Unpin + 'static {
     /// empty for overridden in derive
     #[doc(hidden)]
     // TODO: derive
-    fn __render(&mut self, _ctx: &Mailbox<Self>) {}
+    fn __render(&mut self, _mb: &Mailbox<Self>) {}
 
     /// Start a new asynchronous app, returning its address.
     fn start(self) -> Addr<Self>
@@ -58,9 +58,7 @@ impl<A: App> Addr<A> {
         // cloned is a second reference and two reference its owned here
         let cloned = self.clone();
         unsafe {
-            Rc::get_mut_unchecked(&mut self.0).mb = Some(Mailbox::new(move |env| {
-                cloned.push(env);
-            }));
+            Rc::get_mut_unchecked(&mut self.0).mb = Some(Mailbox::new(move |env| cloned.push(env)));
         }
         self.0.ready.replace(true);
 
@@ -185,14 +183,14 @@ impl<A: App> Envelope<A> {
 trait EnvelopeProxy {
     type App: App;
 
-    fn handle(&mut self, act: &mut Self::App, ctx: &Mailbox<Self::App>);
+    fn handle(&mut self, act: &mut Self::App, mb: &Mailbox<Self::App>);
 }
 
 impl<A: App> EnvelopeProxy for Envelope<A> {
     type App = A;
 
-    fn handle(&mut self, act: &mut Self::App, ctx: &Mailbox<Self::App>) {
-        self.0.handle(act, ctx)
+    fn handle(&mut self, act: &mut Self::App, mb: &Mailbox<Self::App>) {
+        self.0.handle(act, mb)
     }
 }
 
@@ -211,9 +209,9 @@ where
 {
     type App = A;
 
-    fn handle(&mut self, act: &mut Self::App, ctx: &Mailbox<A>) {
+    fn handle(&mut self, act: &mut Self::App, mb: &Mailbox<A>) {
         if let Some(msg) = self.msg.take() {
-            <Self::App as Handler<M>>::handle(act, msg, ctx);
+            <Self::App as Handler<M>>::handle(act, msg, mb);
         }
     }
 }
@@ -270,7 +268,7 @@ mod test {
     impl Message for Msg {}
 
     impl Handler<Msg> for Test {
-        fn handle(&mut self, msg: Msg, _ctx: &Mailbox<Self>) {
+        fn handle(&mut self, msg: Msg, _mb: &Mailbox<Self>) {
             self.c.store(msg.0, Ordering::Relaxed);
         }
     }
@@ -280,8 +278,8 @@ mod test {
     impl Message for Reset {}
 
     impl Handler<Reset> for Test {
-        fn handle(&mut self, _: Reset, ctx: &Mailbox<Self>) {
-            ctx.send(Msg(0));
+        fn handle(&mut self, _: Reset, mb: &Mailbox<Self>) {
+            mb.send(Msg(0));
         }
     }
 
@@ -290,12 +288,12 @@ mod test {
     impl Message for MsgFut {}
 
     impl Handler<MsgFut> for Test {
-        fn handle(&mut self, msg: MsgFut, ctx: &Mailbox<Self>) {
-            ctx.send(Reset);
-            let ctx = ctx.clone();
+        fn handle(&mut self, msg: MsgFut, mb: &Mailbox<Self>) {
+            mb.send(Reset);
+            let mb = mb.clone();
             let work = unsafe {
                 async_timer::Timed::platform_new_unchecked(
-                    async move { ctx.send(Msg(msg.0)) },
+                    async move { mb.send(Msg(msg.0)) },
                     core::time::Duration::from_secs(1),
                 )
             };
