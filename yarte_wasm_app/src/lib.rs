@@ -54,11 +54,12 @@ impl<A: App> Addr<A> {
     fn ready(mut self) -> Self {
         assert!(self.0.mb.is_none());
         assert!(!self.0.ready.get());
+        // This is safe because it's used after constructor, before moved and run only one time
+        // cloned is a second reference and two reference its owned here
         let cloned = self.clone();
         unsafe {
             Rc::get_mut_unchecked(&mut self.0).mb = Some(Mailbox::new(move |env| {
                 cloned.push(env);
-                cloned.update();
             }));
         }
         self.0.ready.replace(true);
@@ -66,8 +67,10 @@ impl<A: App> Addr<A> {
         self
     }
 
+    /// Enqueue message
     fn push(&self, env: Envelope<A>) {
         self.0.q.push(env);
+        self.update();
     }
 
     /// Sends a message
@@ -79,7 +82,6 @@ impl<A: App> Addr<A> {
         M: Message,
     {
         self.push(Envelope::new(msg));
-        self.update();
     }
 
     fn update(&self) {
