@@ -1,12 +1,16 @@
 # Changes
-## [0.5.0] (2019-XX-XX)
+## [0.5.0] (2019-12-30)
 ### Added
 - Annotate snippets error message
+- Async core for wasm applications
 
 ### Updated
 - Remove `nom` and `memchr` from dependencies
-- Refactor parser for support `Span`
 - `actix-web` version to `2.0.0`
+
+### Refactor
+- Parser for support `Span`
+- Split derive in crates
 
 ## [0.4.0] (2019-12-13)
 

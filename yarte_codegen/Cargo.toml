@@ -1,10 +1,10 @@
 [package]
 name = "yarte_codegen"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "Code generator for yarte"
 categories = ["template-engine"]
-documentation = "https://docs.rs/yarte_derive"
+documentation = "https://docs.rs/yarte_codegen"
 edition = "2018"
 keywords = ["markup", "template", "handlebars", "html"]
 license = "MIT/Apache-2.0"
@@ -20,7 +20,7 @@ maintenance = { status = "actively-developed" }
 actix-web = ["yarte_hir/actix-web"]
 
 [dependencies]
-yarte_hir = { version = "0.4", path = "../yarte_hir" }
+yarte_hir = { version = "0.5", path = "../yarte_hir" }
 
 mime_guess = "2.0"
 proc-macro2 = { version = "1.0", features = ["span-locations"] }

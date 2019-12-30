@@ -1,10 +1,10 @@
 [package]
 name = "yarte_wasm_app"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "Async core for yarte wasm applications"
 categories = ["template-engine"]
-documentation = "https://docs.rs/yarte"
+documentation = "https://docs.rs/yarte_wasm_app"
 edition = "2018"
 include = ["src/**/*", "Cargo.toml"]
 keywords = ["markup", "template", "handlebars", "html"]
@@ -17,9 +17,6 @@ members = ["."]
 [badges]
 travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
-
-[features]
-default = []
 
 [dev-dependencies]
 wasm-bindgen-futures = "0.4"

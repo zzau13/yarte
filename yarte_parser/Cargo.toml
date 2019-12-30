@@ -1,10 +1,10 @@
 [package]
 name = "yarte_parser"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "Ast, lexer and parser for yarte"
 categories = ["template-engine"]
-documentation = "https://docs.rs/yarte_derive"
+documentation = "https://docs.rs/yarte_parser"
 edition = "2018"
 keywords = ["markup", "template", "handlebars", "html"]
 license = "MIT/Apache-2.0"
@@ -15,9 +15,6 @@ workspace = ".."
 [badges]
 travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
-
-[features]
-actix-web = []
 
 [dependencies]
 quote = "1.0"

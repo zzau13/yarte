@@ -1,4 +1,3 @@
-//!
 //! Yarte stands for **Y**et **A**nother **R**ust **T**emplate **E**ngine,
 //! is the fastest template engine. Uses a Handlebars-like syntax,
 //! well known and intuitive for most developers. Yarte is an optimized, and easy-to-use

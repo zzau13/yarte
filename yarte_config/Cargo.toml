@@ -1,6 +1,6 @@
 [package]
 name = "yarte_config"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "Config file parser of yarte"
 categories = ["template-engine"]
