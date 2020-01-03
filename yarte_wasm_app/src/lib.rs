@@ -1,5 +1,3 @@
-#![feature(get_mut_unchecked)]
-
 /// Adapted from [`actix`](https://github.com/actix/actix) and [`draco`](https://github.com/utkarshkukreti/draco)
 use std::{
     cell::{Cell, RefCell},
@@ -51,15 +49,11 @@ pub trait App: Default + Sized + Unpin + 'static {
 pub struct Addr<A: App>(Rc<Context<A>>);
 
 impl<A: App> Addr<A> {
-    fn ready(mut self) -> Self {
-        assert!(self.0.mb.is_none());
+    fn ready(self) -> Self {
+        assert!(self.0.mb.borrow().is_none());
         assert!(!self.0.ready.get());
-        // This is safe because it's used after constructor, before moved and run only one time
-        // cloned is a second reference and two reference its owned here
         let cloned = self.clone();
-        unsafe {
-            Rc::get_mut_unchecked(&mut self.0).mb = Some(Mailbox::new(move |env| cloned.push(env)));
-        }
+        *self.0.mb.borrow_mut() = Some(Mailbox::new(move |env| cloned.push(env)));
         self.0.ready.replace(true);
 
         self
@@ -86,8 +80,11 @@ impl<A: App> Addr<A> {
         if self.0.ready.get() {
             self.0.ready.replace(false);
             while let Some(mut env) = self.0.q.pop() {
-                debug_assert!(self.0.mb.is_some());
-                env.handle(&mut self.0.app.borrow_mut(), &self.0.mb.as_ref().unwrap())
+                debug_assert!(self.0.mb.borrow().is_some());
+                env.handle(
+                    &mut self.0.app.borrow_mut(),
+                    &self.0.mb.borrow().as_ref().unwrap(),
+                )
             }
             self.0.ready.replace(true);
             self.render();
@@ -100,11 +97,11 @@ impl<A: App> Addr<A> {
     pub fn render(&self) {
         if self.0.ready.get() {
             self.0.ready.replace(false);
-            debug_assert!(self.0.mb.is_some());
+            debug_assert!(self.0.mb.borrow().is_some());
             self.0
                 .app
                 .borrow_mut()
-                .__render(&self.0.mb.as_ref().unwrap());
+                .__render(&self.0.mb.borrow().as_ref().unwrap());
             self.0.ready.replace(true);
             if !self.0.q.is_empty() {
                 self.update()
@@ -124,7 +121,7 @@ pub struct Context<A: App> {
     app: RefCell<A>,
     q: Queue<Envelope<A>>,
     ready: Cell<bool>,
-    mb: Option<Mailbox<A>>,
+    mb: RefCell<Option<Mailbox<A>>>,
 }
 
 impl<A: App> Context<A> {
@@ -133,7 +130,7 @@ impl<A: App> Context<A> {
             app: RefCell::new(app),
             q: Queue::new(),
             ready: Cell::new(false),
-            mb: None,
+            mb: RefCell::new(None),
         }
     }
 }
@@ -326,24 +323,26 @@ mod test {
         };
     }
 
-    /// For template
-    /// ```hbs
-    /// <h1>{{ c }} {{ any }}</h1>
-    /// <div>
-    ///     {{ each it }}
-    ///         {{ this + 2 }}
-    ///         <br/>
-    ///     {{/ each }}
-    /// </div>
-    /// ```
-    /// ```
-    /// struct BlackBox {
-    ///     t_root: bool,
-    ///     t_children_0: Vec<bool>,
-    ///     ...
-    /// }
-    /// ```
-    ///
+    // For template
+    // ```
+    // <h1>{{ c }} {{ any }}</h1>
+    // <div>
+    //     {{# each it }}
+    //         {{ this + 2 }}
+    //         <br>
+    //     {{/ each }}
+    // </div>
+    // ```
+    //
+    // get a black box tree
+    // ```
+    // struct BlackBox {
+    //     t_root: bool,
+    //     t_children_0: Vec<bool>,
+    //     ...
+    // }
+    // ```
+    //
     #[macro_export]
     macro_rules! push_it {
         ($app:ident, $value:expr) => {
