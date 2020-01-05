@@ -1,11 +1,24 @@
-use std::io;
+use std::{
+    default::Default,
+    io::{self, Write},
+};
 
 use markup5ever::{
     serialize::{Serialize, Serializer, TraversalScope},
     QualName,
 };
 
+use html5ever::serialize::serialize as html_serialize;
+
 use crate::parser::{ParseAttribute, MARK};
+
+pub fn serialize<Wr, T>(writer: Wr, node: &T) -> io::Result<()>
+where
+    Wr: Write,
+    T: Serialize,
+{
+    html_serialize(writer, node, Default::default())
+}
 
 #[derive(Debug)]
 pub enum TreeElement {
