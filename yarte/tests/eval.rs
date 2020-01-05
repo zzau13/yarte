@@ -155,7 +155,8 @@ fn test_const_partial2() {
 
 #[derive(Template)]
 #[template(
-    src = "  {{# if false ~}} n\n{{ else if false }}\tn\t {{else if true ~}}     n  {{ else }}{{/if}}",
+    src = "  {{# if false ~}} n\n{{ else if false }}\tn\t {{else if true ~}}     n  {{ else \
+           }}{{/if}}",
     print = "code"
 )]
 struct ConstIfWSTemplate;
@@ -168,7 +169,8 @@ fn test_const_if_ws() {
 
 #[derive(Template)]
 #[template(
-    src = "  {{# if false ~}} n\n{{~ else if false ~}}\tn\t {{~ else if true }}     n  {{ else }}{{/if}}",
+    src = "  {{# if false ~}} n\n{{~ else if false ~}}\tn\t {{~ else if true }}     n  {{ else \
+           }}{{/if}}",
     print = "code"
 )]
 struct ConstIfWS2Template;
@@ -181,7 +183,8 @@ fn test_const_if_ws_2() {
 
 #[derive(Template)]
 #[template(
-    src = "  {{# if false ~}} n\n{{~ else if true}}\tn\t {{~ else if true }}     n  {{ else }}{{/if}}",
+    src = "  {{# if false ~}} n\n{{~ else if true}}\tn\t {{~ else if true }}     n  {{ else \
+           }}{{/if}}",
     print = "code"
 )]
 struct ConstIfWS3Template;
@@ -194,7 +197,8 @@ fn test_const_if_ws_3() {
 
 #[derive(Template)]
 #[template(
-    src = "  {{# if false ~}} n\n{{~ else if true}}\tn\t {{ else if true }}     n  {{~ else ~}}{{~/if}}",
+    src = "  {{# if false ~}} n\n{{~ else if true}}\tn\t {{ else if true }}     n  {{~ else \
+           ~}}{{~/if}}",
     print = "code"
 )]
 struct ConstIfWS4Template;
@@ -207,7 +211,8 @@ fn test_const_if_ws_4() {
 
 #[derive(Template)]
 #[template(
-    src = "  {{# if false ~}} n\n{{~ else if true}}\tn\t {{ else if true }}     n  {{~ else ~}}{{~/if~}}  n",
+    src = "  {{# if false ~}} n\n{{~ else if true}}\tn\t {{ else if true }}     n  {{~ else \
+           ~}}{{~/if~}}  n",
     print = "code"
 )]
 struct ConstIfWS5Template;
@@ -220,7 +225,8 @@ fn test_const_if_ws_5() {
 
 #[derive(Template)]
 #[template(
-    src = "  {{# if false ~}} n\n{{~ else if false ~}}\tn\t {{~ else if true }}     n  {{~ else }}{{/if}}\tfoo",
+    src = "  {{# if false ~}} n\n{{~ else if false ~}}\tn\t {{~ else if true }}     n  {{~ else \
+           }}{{/if}}\tfoo",
     print = "code"
 )]
 struct ConstIfWS6Template;

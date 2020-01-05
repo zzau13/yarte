@@ -55,10 +55,8 @@ fn test_variables() {
     };
     assert_eq!(
         s.call().unwrap(),
-        "hello world, foo\n\
-         with number: 42\n\
-         Iñtërnâtiônàlizætiøn is important\n\
-         in vars too: Iñtërnâtiônàlizætiøn"
+        "hello world, foo\nwith number: 42\nIñtërnâtiônàlizætiøn is important\nin vars too: \
+         Iñtërnâtiônàlizætiøn"
     );
     assert_eq!(VariablesTemplate::mime(), "text/html; charset=utf-8");
 }
@@ -93,10 +91,8 @@ fn test_variables_no_escape() {
     };
     assert_eq!(
         s.call().unwrap(),
-        "hello world, foo\n\
-         with number: 42\n\
-         Iñtërnâtiônàlizætiøn is important\n\
-         in vars too: Iñtërnâtiônàlizætiøn"
+        "hello world, foo\nwith number: 42\nIñtërnâtiônàlizætiøn is important\nin vars too: \
+         Iñtërnâtiônàlizætiøn"
     );
 }
 

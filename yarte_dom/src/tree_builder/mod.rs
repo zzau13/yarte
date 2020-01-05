@@ -341,11 +341,11 @@ where
             tokenizer::TagToken(x) => {
                 self.after_mark = false;
                 TagToken(x)
-            },
+            }
             tokenizer::CommentToken(x) => {
                 self.after_mark = true;
                 CommentToken(x)
-            },
+            }
             tokenizer::NullCharacterToken => NullCharacterToken,
             tokenizer::EOFToken => EOFToken,
 

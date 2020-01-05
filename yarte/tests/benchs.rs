@@ -16,7 +16,11 @@ fn big_table() {
 
     let table = BigTable { table };
 
-    assert_eq!(table.call().unwrap(), "<table><tr><td>0</td><td>1</td><td>2</td></tr><tr><td>0</td><td>1</td><td>2</td></tr><tr><td>0</td><td>1</td><td>2</td></tr></table>");
+    assert_eq!(
+        table.call().unwrap(),
+        "<table><tr><td>0</td><td>1</td><td>2</td></tr><tr><td>0</td><td>1</td><td>2</td></\
+         tr><tr><td>0</td><td>1</td><td>2</td></tr></table>"
+    );
 }
 
 #[derive(Template)]
@@ -49,7 +53,13 @@ fn teams() {
             },
         ],
     };
-    assert_eq!(teams.call().unwrap(), "<!DOCTYPE html><html><head><title>2015</title></head><body><h1>CSL 2015</h1><ul><li class=\"champion\"><b>Jiangsu</b>: 43</li><li class=\"\"><b>Beijing</b>: 27</li><li class=\"\"><b>Guangzhou</b>: 22</li><li class=\"\"><b>Shandong</b>: 12</li></ul></body></html>");
+    assert_eq!(
+        teams.call().unwrap(),
+        "<!DOCTYPE html><html><head><title>2015</title></head><body><h1>CSL 2015</h1><ul><li \
+         class=\"champion\"><b>Jiangsu</b>: 43</li><li class=\"\"><b>Beijing</b>: 27</li><li \
+         class=\"\"><b>Guangzhou</b>: 22</li><li class=\"\"><b>Shandong</b>: \
+         12</li></ul></body></html>"
+    );
 }
 
 #[derive(Template)]

@@ -54,23 +54,25 @@ impl From<Vec<HIR>> for DOM {
 // TODO: to try from
 impl From<Vec<HIR>> for DOMFmt {
     fn from(ir: Vec<HIR>) -> Self {
-        DOMFmt(to_domfmt(&ir).expect("correct html"))
+        DOMFmt(to_domfmt(ir).expect("correct html"))
     }
 }
 
 const HASH_LEN: usize = 10;
 const HASH: &str = "0x00000000";
 
-fn to_domfmt(ir: &[HIR]) -> ParseResult<Vec<HIR>> {
-    let html: Vec<String> = ir
-        .iter()
-        .map(|x| match x {
-            HIR::Lit(x) => x.clone(),
-            _ => format!("{}{}{}", HEAD, HASH, TAIL),
-        })
-        .collect();
-
-    let html = html.join("");
+fn to_domfmt(ir: Vec<HIR>) -> ParseResult<Vec<HIR>> {
+    let mut html = String::new();
+    for x in &ir {
+        match x {
+            HIR::Lit(x) => html.push_str(x),
+            _ => {
+                html.push_str(HEAD);
+                html.push_str(HASH);
+                html.push_str(TAIL);
+            }
+        }
+    }
 
     let sink = match parse_document(&html) {
         Ok(a) => a,
@@ -80,7 +82,7 @@ fn to_domfmt(ir: &[HIR]) -> ParseResult<Vec<HIR>> {
     serialize_domfmt(sink, ir)
 }
 
-fn serialize_domfmt(sink: Sink, ir: &[HIR]) -> ParseResult<Vec<HIR>> {
+fn serialize_domfmt(sink: Sink, mut ir: Vec<HIR>) -> ParseResult<Vec<HIR>> {
     let mut writer = Vec::new();
     for i in Into::<Vec<TreeElement>>::into(sink) {
         serialize(&mut writer, &i).expect("some serialize node")
@@ -89,7 +91,6 @@ fn serialize_domfmt(sink: Sink, ir: &[HIR]) -> ParseResult<Vec<HIR>> {
     let html = String::from_utf8(writer).expect("");
     let mut chunks = html.split(HEAD).peekable();
 
-    let mut count = 0;
     if let Some(first) = chunks.peek() {
         if first.is_empty() {
             chunks.next();
@@ -101,37 +102,36 @@ fn serialize_domfmt(sink: Sink, ir: &[HIR]) -> ParseResult<Vec<HIR>> {
         if chunk.is_empty() {
             panic!("chunk empty")
         } else if chunk.starts_with(HASH) {
-            resolve_node(ir.get(count).expect("Node"), &mut buff)?;
-            count += 1;
+            resolve_node(ir.remove(0), &mut buff)?;
             let cut = &chunk[HASH.len() + TAIL.len()..];
             if !cut.is_empty() {
                 buff.push(HIR::Lit(cut.into()));
-                count += 1;
+                ir.remove(0);
             }
         } else {
             buff.push(HIR::Lit(chunk.into()));
-            count += 1;
+            ir.remove(0);
         }
     }
 
     Ok(buff)
 }
 
-fn resolve_node(ir: &HIR, buff: &mut Vec<HIR>) -> ParseResult<()> {
+fn resolve_node(ir: HIR, buff: &mut Vec<HIR>) -> ParseResult<()> {
     match ir {
         HIR::Each(each) => {
-            let HEach { args, body, expr } = &**each;
+            let HEach { args, body, expr } = *each;
             buff.push(HIR::Each(Box::new(HEach {
-                args: args.clone(),
-                expr: expr.clone(),
+                args,
+                expr,
                 body: to_domfmt(body)?,
             })))
         }
         HIR::IfElse(if_else) => {
-            let HIfElse { ifs, if_else, els } = &**if_else;
+            let HIfElse { ifs, if_else, els } = *if_else;
             let mut buf_if_else = vec![];
             for (expr, body) in if_else {
-                buf_if_else.push((expr.clone(), to_domfmt(body)?));
+                buf_if_else.push((expr, to_domfmt(body)?));
             }
             let els = if let Some(els) = els {
                 Some(to_domfmt(els)?)
@@ -139,13 +139,13 @@ fn resolve_node(ir: &HIR, buff: &mut Vec<HIR>) -> ParseResult<()> {
                 None
             };
             buff.push(HIR::IfElse(Box::new(HIfElse {
-                ifs: (ifs.0.clone(), to_domfmt(&ifs.1)?),
+                ifs: (ifs.0, to_domfmt(ifs.1)?),
                 if_else: buf_if_else,
                 els,
             })));
         }
         HIR::Lit(_) => panic!("Need some node"),
-        ir => buff.push(ir.clone()),
+        ir => buff.push(ir),
     }
     Ok(())
 }

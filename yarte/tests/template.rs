@@ -40,7 +40,11 @@ fn test_simple_iterator() {
         ],
     };
 
-    assert_eq!("entry\nfoo\n  \n   foo\n    bar\n  bar\n    baz\n  \nbaz\n    foofoo\n      bar\n    foobaz\n      FOO", t.call().unwrap());
+    assert_eq!(
+        "entry\nfoo\n  \n   foo\n    bar\n  bar\n    baz\n  \nbaz\n    foofoo\n      bar\n    \
+         foobaz\n      FOO",
+        t.call().unwrap()
+    );
 }
 
 #[derive(Template)]

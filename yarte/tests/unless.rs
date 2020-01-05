@@ -15,9 +15,8 @@ fn test_unless() {
 
     let t = UnlessTemplate { license: false };
     assert_eq!(
-        "<div class=\"entry\">\
-         <h3 class=\"warning\">WARNING: This entry does not have a license!</h3>\
-         </div>",
+        "<div class=\"entry\"><h3 class=\"warning\">WARNING: This entry does not have a \
+         license!</h3></div>",
         t.call().unwrap()
     );
 }
@@ -88,5 +87,9 @@ fn author_template() {
             last_name: "Hadamard",
         },
     };
-    assert_eq!(t.call().unwrap(), "<div class=\"entry\"><h1>An Essay on the Psychology of Invention in the Mathematical Field</h1><h2>By Jacques Hadamard</h2></div>");
+    assert_eq!(
+        t.call().unwrap(),
+        "<div class=\"entry\"><h1>An Essay on the Psychology of Invention in the Mathematical \
+         Field</h1><h2>By Jacques Hadamard</h2></div>"
+    );
 }
