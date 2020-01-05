@@ -25,6 +25,7 @@ pub enum InsertionMode {
     AfterAfterBody,
     InHtml,
     Text,
+    RawText,
 }
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]

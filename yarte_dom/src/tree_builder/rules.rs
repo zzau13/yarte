@@ -355,7 +355,7 @@ where
                     Reprocess(InHtml, token)
                 }
             }),
-            //§ parsing-main-incdata
+            //§ parsing-text
             Text => match_token!(token {
             // TODO: remove whitespace or round inline tags replace by ' '
                 CharacterTokens(NotSplit, text) => SplitWhitespace(text),
@@ -367,6 +367,34 @@ where
                 EOFToken => Reprocess(self.orig_mode.take().unwrap(), token),
 
                 tag => Reprocess(InHtml, tag),
+            }),
+             //§ parsing-main-incdata
+            RawText => match_token!(token {
+                CommentToken(text) => self.append_comment(text),
+                CharacterTokens(_, text) => self.append_text(text),
+
+                EOFToken => {
+                    self.unexpected(&token);
+                    if self.current_node_named(local_name!("script")) {
+                        let current = current_node(&self.open_elems);
+                        self.sink.mark_script_already_started(current);
+                    }
+                    self.pop();
+                    Reprocess(self.orig_mode.take().unwrap(), token)
+                }
+
+                tag @ </_> => {
+                    let node = self.pop();
+                    self.mode = self.orig_mode.take().unwrap();
+                    if tag.name == local_name!("script") {
+                        return Script(node);
+                    }
+                    Done
+                }
+
+                // The spec doesn't say what to do here.
+                // Other tokens are impossible?
+                _ => panic!("impossible case in Text mode"),
             }),
             //§ END
         }
