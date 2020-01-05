@@ -19,7 +19,7 @@ mod visit_partial;
 mod visits;
 
 /// High level intermediate representation after lowering Ast
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum HIR {
     Lit(String),
     Expr(Box<syn::Expr>),
@@ -29,14 +29,14 @@ pub enum HIR {
     Local(Box<syn::Local>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct IfElse {
     pub ifs: (syn::Expr, Vec<HIR>),
     pub if_else: Vec<(syn::Expr, Vec<HIR>)>,
     pub els: Option<Vec<HIR>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Each {
     pub args: syn::Expr,
     pub body: Vec<HIR>,
@@ -502,7 +502,10 @@ impl<'a> Generator<'a> {
     fn const_eval(&mut self, expr: &syn::Expr, safe: bool) -> Option<()> {
         macro_rules! push_some {
             ($expr:expr) => {{
-                self.buf_w.push(Writable::LitP($expr.to_string()));
+                let expr = $expr.to_string();
+                if !expr.is_empty() {
+                    self.buf_w.push(Writable::LitP(expr));
+                }
                 Some(())
             }};
         }

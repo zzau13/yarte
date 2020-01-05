@@ -114,6 +114,9 @@ fn serialize_domfmt(sink: Sink, mut ir: Vec<HIR>) -> ParseResult<Vec<HIR>> {
         }
     }
 
+    // Standard or empty case (with only comments,...)
+    assert!(ir.is_empty() || (ir.len() == 1 && ir[0] == HIR::Lit("".into())));
+
     Ok(buff)
 }
 
