@@ -19,6 +19,7 @@ mod visit_partial;
 mod visits;
 
 /// High level intermediate representation after lowering Ast
+#[derive(Debug, Clone)]
 pub enum HIR {
     Lit(String),
     Expr(Box<syn::Expr>),
@@ -28,12 +29,14 @@ pub enum HIR {
     Local(Box<syn::Local>),
 }
 
+#[derive(Debug, Clone)]
 pub struct IfElse {
     pub ifs: (syn::Expr, Vec<HIR>),
     pub if_else: Vec<(syn::Expr, Vec<HIR>)>,
     pub els: Option<Vec<HIR>>,
 }
 
+#[derive(Debug, Clone)]
 pub struct Each {
     pub args: syn::Expr,
     pub body: Vec<HIR>,
@@ -43,7 +46,7 @@ pub struct Each {
 pub use self::visit_derive::Struct;
 use self::{scope::Scope, visit_each::find_loop_var, visit_partial::visit_partial};
 
-pub use self::visit_derive::{visit_derive, Print};
+pub use self::visit_derive::{visit_derive, Mode, Print};
 
 pub fn generate(c: &Config, s: &Struct, ctx: Context) -> Result<Vec<HIR>, Vec<ErrorMessage>> {
     Generator::new(c, s, ctx).build()
@@ -120,6 +123,14 @@ impl<'a> Generator<'a> {
         debug_assert!(self.buf_w.is_empty());
         debug_assert_eq!(self.on_path, self.s.path);
         debug_assert_eq!(self.next_ws, None);
+        // Extreme case
+        if buf.is_empty() {
+            buf.push(HIR::Lit("".into()));
+        }
+        assert!((0..buf.len() - 1).all(|i| match (&buf[i], &buf[i + 1]) {
+            (HIR::Lit(..), HIR::Lit(..)) => false,
+            _ => true,
+        }));
 
         if self.errors.is_empty() {
             Ok(buf)
@@ -501,7 +512,7 @@ impl<'a> Generator<'a> {
             Int(a) => push_some!(a),
             Float(a) => push_some!(a),
             Bool(a) => push_some!(a),
-            Str(a) if safe || self.s.wrapped => push_some!(a),
+            Str(a) if safe || self.s.mode == Mode::Text => push_some!(a),
             Str(a) => push_some!(escape(&a)),
             _ => None,
         })

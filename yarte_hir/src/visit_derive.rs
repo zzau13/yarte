@@ -16,7 +16,7 @@ pub struct Struct<'a> {
     pub src: String,
     pub path: PathBuf,
     pub print: Print,
-    pub wrapped: bool,
+    pub mode: Mode,
     pub err_msg: String,
     ident: &'a syn::Ident,
     generics: &'a syn::Generics,
@@ -34,7 +34,7 @@ impl<'a> Struct<'a> {
 }
 
 struct StructBuilder {
-    assured: Option<bool>,
+    mode: Option<String>,
     ext: Option<String>,
     path: Option<String>,
     print: Option<String>,
@@ -45,7 +45,7 @@ struct StructBuilder {
 impl Default for StructBuilder {
     fn default() -> Self {
         StructBuilder {
-            assured: None,
+            mode: None,
             ext: None,
             path: None,
             print: None,
@@ -85,21 +85,21 @@ impl StructBuilder {
             (None, Some(_)) => panic!("'ext' attribute cannot be used with 'path' attribute"),
         };
 
-        let wrapped = self.assured.unwrap_or_else(|| {
+        let mode = self.mode.map(Into::into).unwrap_or_else(|| {
             if let Some(e) = path.extension() {
                 if HTML_EXTENSIONS.contains(&e.to_str().unwrap()) {
-                    return false;
+                    return Mode::HTML;
                 }
             }
 
-            true
+            Mode::Text
         });
 
         Struct {
             src,
             path,
             print: self.print.into(),
-            wrapped,
+            mode,
             generics,
             ident,
             err_msg: self
@@ -158,11 +158,11 @@ impl<'a> Visit<'a> for StructBuilder {
             } else {
                 panic!("attribute 'print' must be string literal");
             }
-        } else if path.is_ident("assured") {
-            if let syn::Lit::Bool(ref s) = lit {
-                self.assured = Some(s.value);
+        } else if path.is_ident("mode") {
+            if let syn::Lit::Str(ref s) = lit {
+                self.mode = Some(s.value());
             } else {
-                panic!("attribute 'assured' must be boolean literal");
+                panic!("attribute 'mode' must be string literal");
             }
         } else if path.is_ident("ext") {
             if let syn::Lit::Str(ref s) = lit {
@@ -200,6 +200,22 @@ impl From<Option<String>> for Print {
                 v => panic!("invalid value for print attribute: {}", v),
             },
             None => Print::None,
+        }
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub enum Mode {
+    HTML,
+    Text,
+}
+
+impl From<String> for Mode {
+    fn from(s: String) -> Mode {
+        match s.as_ref() {
+            "text" => Mode::Text,
+            "html" => Mode::HTML,
+            v => panic!("invalid value for mode attribute: {}", v),
         }
     }
 }
@@ -246,6 +262,6 @@ mod test {
         assert_eq!(s.src, "");
         assert_eq!(s.path, config.get_dir().join(PathBuf::from("Test.txt")));
         assert_eq!(s.print, Print::Code);
-        assert_eq!(s.wrapped, true);
+        assert_eq!(s.mode, Mode::Text);
     }
 }

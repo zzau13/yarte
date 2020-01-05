@@ -17,5 +17,5 @@ struct RawPartialTemplate;
 #[test]
 fn test_raw_partial() {
     let raw = RawPartialTemplate;
-    assert_eq!("{{> partial }}", raw.call().unwrap());
+    assert_eq!("{{&gt; partial }}", raw.call().unwrap());
 }

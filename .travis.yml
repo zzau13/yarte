@@ -33,4 +33,3 @@ script:
   - cargo check --all
   - cargo test --all-features --all -- --nocapture
   - cd yarte_wasm_app && wasm-pack test --node
-  - cd ../benches && cargo bench
