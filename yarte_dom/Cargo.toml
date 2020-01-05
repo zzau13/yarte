@@ -1,10 +1,10 @@
 [package]
-name = "yarte_codegen"
+name = "yarte_dom"
 version = "0.5.0"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
-description = "Code generator for yarte"
+description = "Dom builder for yarte"
 categories = ["template-engine"]
-documentation = "https://docs.rs/yarte_codegen"
+documentation = "https://docs.rs/yarte_dom"
 edition = "2018"
 keywords = ["markup", "template", "handlebars", "html"]
 license = "MIT/Apache-2.0"
@@ -17,14 +17,19 @@ travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [features]
-actix-web = ["yarte_dom/actix-web", "yarte_hir/actix-web"]
+actix-web = ["yarte_hir/actix-web"]
 
 [dependencies]
-yarte_config = { version = "0.5", path = "../yarte_config" }
-yarte_dom = { version = "0.5", path = "../yarte_dom" }
 yarte_hir = { version = "0.5", path = "../yarte_hir" }
 
-mime_guess = "2.0"
-proc-macro2 = { version = "1.0", features = ["span-locations"] }
-quote = "1.0"
-syn = "1.0"
+mac = "0.1"
+log = "0.4"
+html5ever = "0.25"
+markup5ever = "0.10"
+syn = { version = "1.0", features = ["extra-traits", "full", "parsing"] }
+lazy_static = "1.4"
+
+[build-dependencies]
+quote = "1"
+syn = { version = "1", features = ["extra-traits", "full", "fold"] }
+proc-macro2 = "1"

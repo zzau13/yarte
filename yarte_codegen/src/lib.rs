@@ -2,13 +2,16 @@ use mime_guess::from_ext;
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use yarte_hir::{Each, IfElse, Struct, HIR};
+use yarte_hir::{Each, IfElse, Mode, Struct, HIR};
 
-pub mod html;
-pub mod text;
+mod html;
+mod text;
+mod wasm;
+
+pub use self::{html::HTMLCodeGen, text::TextCodeGen, wasm::WASMCodeGen};
 
 pub trait CodeGen {
-    fn gen(&self, v: &[HIR]) -> TokenStream;
+    fn gen(&self, v: Vec<HIR>) -> TokenStream;
 }
 
 pub struct FmtCodeGen<'a, T: CodeGen> {
@@ -22,13 +25,12 @@ impl<'a, T: CodeGen> FmtCodeGen<'a, T> {
     }
 
     fn get_mime(&self) -> String {
-        let ext = if self.s.wrapped {
-            match self.s.path.extension() {
+        let ext = match self.s.mode {
+            Mode::Text => match self.s.path.extension() {
                 Some(s) => s.to_str().unwrap(),
                 None => "txt",
-            }
-        } else {
-            "html"
+            },
+            Mode::HTML => "html",
         };
 
         from_ext(ext).first_or_text_plain().to_string()
@@ -45,7 +47,7 @@ impl<'a, T: CodeGen> FmtCodeGen<'a, T> {
         tokens.extend(self.s.implement_head(quote!(::yarte::Template), body));
     }
 
-    fn display(&self, nodes: &[HIR], tokens: &mut TokenStream) -> usize {
+    fn display(&self, nodes: Vec<HIR>, tokens: &mut TokenStream) -> usize {
         let nodes = self.codegen.gen(nodes);
         // heuristic based on https://github.com/lfairy/maud
         let size_hint = nodes.to_string().len();
@@ -86,7 +88,7 @@ impl<'a, T: CodeGen> FmtCodeGen<'a, T> {
 }
 
 impl<'a, T: CodeGen> CodeGen for FmtCodeGen<'a, T> {
-    fn gen(&self, v: &[HIR]) -> TokenStream {
+    fn gen(&self, v: Vec<HIR>) -> TokenStream {
         let mut tokens = TokenStream::new();
 
         let size_hint = self.display(v, &mut tokens);
@@ -101,14 +103,14 @@ impl<'a, T: CodeGen> CodeGen for FmtCodeGen<'a, T> {
 }
 
 pub trait EachCodeGen: CodeGen {
-    fn gen_each(&self, Each { args, body, expr }: &Each) -> TokenStream {
+    fn gen_each(&self, Each { args, body, expr }: Each) -> TokenStream {
         let body = self.gen(body);
         quote!(for #expr in #args { #body })
     }
 }
 
 pub trait IfElseCodeGen: CodeGen {
-    fn gen_if_else(&self, IfElse { ifs, if_else, els }: &IfElse) -> TokenStream {
+    fn gen_if_else(&self, IfElse { ifs, if_else, els }: IfElse) -> TokenStream {
         let mut tokens = TokenStream::new();
 
         let (args, body) = ifs;
