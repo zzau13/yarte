@@ -98,9 +98,8 @@ where
                 <center> <col> <colgroup> <dd> <details> <dialog> <dir> <div> <dl>
                 <dt> <fieldset> <figcaption> <figure> <footer> <form> <frame> <frameset>
                 <head> <header> <hgroup> <li> <main> <marquee> <menu> <nav>
-                <object> <ol> <optgroup> <option> <p> <section> <select> <summary>
+                <object> <ol> <p> <section> <select> <summary>
                 <table> <tbody> <td> <tfoot> <th> <thead> <tr> <ul> => {
-                    self.close_p_element_in_button_scope();
                     self.insert_element_for(tag);
                     Done
                 }
@@ -144,7 +143,7 @@ where
                 </center> </col> </colgroup> </details> </dialog> </dir> </div> </dl>
                 </fieldset> </figcaption> </figure> </footer> </form> </frame> </frameset>
                 </head> </header> </hgroup> </main> </marquee> </menu> </nav>
-                </object> </ol> </optgroup> </option> </section> </select> </summary>
+                </object> </ol> </section> </select> </summary>
                 </table> </tbody> </td> </tfoot> </th> </thead> </tr> </ul> => {
                     if !self.in_scope_named(default_scope, tag.name.clone()) {
                         self.unexpected(&tag);
@@ -290,6 +289,49 @@ where
                         self.unexpected(&tag);
                     }
                     self.insert_element_for(tag);
+                    Done
+                }
+
+                tag @ <option> => {
+                    if self.current_node_named(local_name!("option")) {
+                        self.pop();
+                    }
+                    self.insert_element_for(tag);
+                    Done
+                }
+
+                tag @ <optgroup> => {
+                    if self.current_node_named(local_name!("option")) {
+                        self.pop();
+                    }
+                    if self.current_node_named(local_name!("optgroup")) {
+                        self.pop();
+                    }
+                    self.insert_element_for(tag);
+                    Done
+                }
+
+                </optgroup> => {
+                    if self.open_elems.len() >= 2
+                        && self.current_node_named(local_name!("option"))
+                        && self.html_elem_named(&self.open_elems[self.open_elems.len() - 2],
+                            local_name!("optgroup")) {
+                        self.pop();
+                    }
+                    if self.current_node_named(local_name!("optgroup")) {
+                        self.pop();
+                    } else {
+                        self.unexpected(&token);
+                    }
+                    Done
+                }
+
+                </option> => {
+                    if self.current_node_named(local_name!("option")) {
+                        self.pop();
+                    } else {
+                        self.unexpected(&token);
+                    }
                     Done
                 }
 

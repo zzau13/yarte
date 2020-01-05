@@ -127,7 +127,10 @@ impl Sink {
                             Some(())
                         }
                         ParseElement::Mark(_) => Some(()),
-                        _ => None,
+                        _ => {
+                            panic!("Parent {:?} {:?}", node, x);
+                            None
+                        }
                     })
                     .expect("Get parent");
                 node.id
