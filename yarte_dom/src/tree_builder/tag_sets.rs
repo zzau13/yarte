@@ -90,6 +90,9 @@ declare_tag_set!(pub special_tag =
     "object" "ol" "p" "param" "plaintext" "pre" "script" "section" "select" "source" "style"
     "summary" "table" "tbody" "td" "template" "textarea" "tfoot" "th" "thead" "title" "tr" "track"
     "ul" "wbr" "xmp");
+// https://html.spec.whatwg.org/multipage/syntax.html#void-elements
+declare_tag_set!(pub void_tag = "area" "base" "br" "col" "embed" "hr" "img" "input" "link" "meta"
+"param" "source" "track");
 //§ END
 
 pub fn mathml_text_integration_point(p: ExpandedName) -> bool {
