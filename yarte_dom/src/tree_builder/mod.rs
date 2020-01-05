@@ -468,7 +468,7 @@ where
     // `process_token` of a start tag returns!
     fn to_raw_text_mode(&mut self, k: RawKind) -> ProcessResult<Handle> {
         self.orig_mode = Some(self.mode);
-        self.mode = Text;
+        self.mode = RawText;
         ToRawData(k)
     }
 
@@ -967,36 +967,6 @@ where
         if self.in_scope_named(button_scope, local_name!("p")) {
             self.close_p_element();
         }
-    }
-
-    // Check <input> tags for type=hidden
-    fn is_type_hidden(&self, tag: &Tag) -> bool {
-        match tag
-            .attrs
-            .iter()
-            .find(|&at| at.name.expanded() == expanded_name!("", "type"))
-        {
-            None => false,
-            Some(at) => (&*at.value).eq_ignore_ascii_case("hidden"),
-        }
-    }
-
-    fn close_the_cell(&mut self) {
-        self.generate_implied_end(cursory_implied_end);
-        if self.pop_until(td_th) != 1 {
-            self.sink
-                .parse_error(Borrowed("expected to close <td> or <th> with cell"));
-        }
-        self.clear_active_formatting_to_marker();
-    }
-
-    fn append_whitespace(&mut self, text: StrTendril) -> ProcessResult<Handle> {
-        if self.is_fragment() && self.current_node_named(local_name!("html")) || self.after_mark {
-            self.insert_appropriately(AppendText(text), None);
-        } else if self.current_node_named(local_name!("form")) {
-            self.insert_appropriately(AppendText(StrTendril::from(" ")), None);
-        }
-        Done
     }
 
     fn append_text(&mut self, text: StrTendril) -> ProcessResult<Handle> {
