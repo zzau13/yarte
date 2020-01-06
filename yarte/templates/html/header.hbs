@@ -15,7 +15,7 @@
     {{/with}}
     <nav role="navigation">
         <ul>
-            {{# if mode == Mode::Text }}
+            {{# if let Mode::Text = mode }}
                 <li>
                     <a href="#text">Text</a>
                     <ul>
@@ -24,7 +24,7 @@
                         {{/each}}
                     </ul>
                 </li>
-            {{ else if mode == Mode::Embedded }}
+            {{ else if let Mode::Embedded = mode }}
                 <li>
                     <a href="#embedded">Embedded content</a>
                     <ul>
