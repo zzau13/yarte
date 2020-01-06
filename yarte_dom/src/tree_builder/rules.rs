@@ -36,6 +36,7 @@ where
             Initial => match_token!(token {
                 CharacterTokens(NotSplit, text) => SplitWhitespace(text),
                 CharacterTokens(Whitespace, _) => Done,
+                tag @ CharacterTokens(NotWhitespace, _) => self.unexpected(&tag),
                 token => Reprocess(BeforeHtml, token),
             }),
             //§ the-before-html-insertion-mode
@@ -54,6 +55,7 @@ where
             }),
             //§ parsing-main-inbody
             InHtml => match_token!(token {
+                CharacterTokens(NotSplit, text) => SplitWhitespace(text),
                 token @ CharacterTokens(..) => self.step(Text, token),
                 CommentToken(text) => self.append_comment(text),
                 NullCharacterToken => self.unexpected(&token),
