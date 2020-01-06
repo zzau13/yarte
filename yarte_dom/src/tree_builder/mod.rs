@@ -88,10 +88,6 @@ pub struct TreeBuilder<Handle, Sink> {
     /// List of active formatting elements.
     active_formatting: Vec<FormatEntry<Handle>>,
 
-    //§ the-element-pointers
-    /// Head element pointer.
-    head_elem: Option<Handle>,
-
     //§ END
     /// Ignore a following U+000A LINE FEED?
     ignore_lf: bool,
@@ -106,7 +102,10 @@ pub struct TreeBuilder<Handle, Sink> {
     // safety!
     //
     // FIXME: Auto-generate the trace hooks like Servo does.
-    after_mark: bool,
+    // Whitespace control
+    next_ws: Option<StrTendril>,
+    skip_ws: bool,
+
 }
 
 lazy_static! {
@@ -131,9 +130,9 @@ where
             doc_handle,
             open_elems: vec![],
             active_formatting: vec![],
-            head_elem: None,
             ignore_lf: false,
-            after_mark: false,
+            skip_ws: false,
+            next_ws: None,
             context_elem: None,
             current_line: 1,
         }
@@ -157,9 +156,9 @@ where
             doc_handle,
             open_elems: vec![],
             active_formatting: vec![],
-            head_elem: None,
             ignore_lf: false,
-            after_mark: false,
+            skip_ws: false,
+            next_ws: None,
             context_elem: Some(context_elem),
             current_line: 1,
         };
@@ -343,11 +342,10 @@ where
             }
 
             tokenizer::TagToken(x) => {
-                self.after_mark = false;
                 TagToken(x)
             }
             tokenizer::CommentToken(x) => {
-                self.after_mark = true;
+                self.skip_ws = false;
                 CommentToken(x)
             }
             tokenizer::NullCharacterToken => NullCharacterToken,
