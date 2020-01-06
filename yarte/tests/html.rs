@@ -48,3 +48,49 @@ fn test_raw_index() {
 
     assert_eq!(t, expected);
 }
+
+#[allow(dead_code)]
+#[derive(PartialEq)]
+enum Mode {
+    Text,
+    Embedded,
+    Else,
+}
+
+struct Item {
+    href: String,
+    name: String,
+}
+
+struct Header {
+    role: String,
+    title: String,
+    description: String,
+}
+
+#[derive(Template)]
+#[template(path = "html/header.hbs")]
+struct HeaderTemplate {
+    mode: Mode,
+    header: Header,
+    item: Vec<Item>,
+}
+
+#[test]
+fn test_header() {
+    let t = HeaderTemplate {
+        mode: Mode::Text,
+        header: Header {
+            role: "banner".to_string(),
+            title: "foo".to_string(),
+            description: "bar".to_string(),
+        },
+        item: vec![Item {
+            href: "bar".to_string(),
+            name: "Bar".to_string(),
+        }],
+    };
+
+    // TODO: when minimize
+    t.call().unwrap();
+}

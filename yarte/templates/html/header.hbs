@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML5 Test Page</title>
+</head>
+<body>
+<div id="top" class="page" role="document">
+    {{# with header }}
+        <header role="{{ role }}">
+            <h1>{{ title }}</h1>
+            <p>{{ description }}</p>
+        </header>
+    {{/with}}
+    <nav role="navigation">
+        <ul>
+            {{# if mode == Mode::Text }}
+                <li>
+                    <a href="#text">Text</a>
+                    <ul>
+                        {{# each item }}
+                            <li><a href="#{{ href }}">{{ name }}</a></li>
+                        {{/each}}
+                    </ul>
+                </li>
+            {{ else if mode == Mode::Embedded }}
+                <li>
+                    <a href="#embedded">Embedded content</a>
+                    <ul>
+                        {{# each item }}
+                            <li><a href="#{{ href }}">{{ name }} foo</a></li>
+                        {{/each}}
+                    </ul>
+                </li>
+            {{ else }}
+                <li>
+                    <a href="#forms">Form elements</a>
+                    <ul>
+                        <li><a href="#forms__input">Input fields</a></li>
+                    </ul>
+                </li>
+            {{/if}}
+        </ul>
+    </nav>
+</div>
+</body>
+</html>
