@@ -245,9 +245,7 @@ impl<'a> VisitMut for Generator<'a> {
         panic!("Not allowed pat macro");
     }
 
-    fn visit_pat_path_mut(&mut self, _i: &mut syn::PatPath) {
-        panic!("Not allowed pat path");
-    }
+    fn visit_pat_path_mut(&mut self, _i: &mut syn::PatPath) {}
 
     fn visit_pat_range_mut(&mut self, _i: &mut syn::PatRange) {
         panic!("Not allowed pat range");

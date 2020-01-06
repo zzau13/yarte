@@ -50,7 +50,6 @@ fn test_raw_index() {
 }
 
 #[allow(dead_code)]
-#[derive(PartialEq)]
 enum Mode {
     Text,
     Embedded,
