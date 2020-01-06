@@ -105,7 +105,6 @@ where
                 }
 
                 tag @ <h1> <h2> <h3> <h4> <h5> <h6> => {
-                    self.close_p_element_in_button_scope();
                     if self.current_node_in(heading_tag) {
                         self.sink.parse_error(Borrowed("nested heading tags"));
                         self.pop();
@@ -115,14 +114,12 @@ where
                 }
 
                 tag @ <pre> <listing> => {
-                    self.close_p_element_in_button_scope();
                     self.insert_element_for(tag);
                     self.ignore_lf = true;
                     Done
                 }
 
                 tag @ <plaintext> => {
-                    self.close_p_element_in_button_scope();
                     self.insert_element_for(tag);
                     ToPlaintext
                 }
@@ -236,7 +233,6 @@ where
                 }
 
                 tag @ <hr> => {
-                    self.close_p_element_in_button_scope();
                     self.insert_and_pop_element_for(tag);
                     DoneAckSelfClosing
                 }
@@ -255,7 +251,6 @@ where
                 }
 
                 tag @ <xmp> => {
-                    self.close_p_element_in_button_scope();
                     self.reconstruct_formatting();
                     self.parse_raw_data(tag, Rawtext)
                 }

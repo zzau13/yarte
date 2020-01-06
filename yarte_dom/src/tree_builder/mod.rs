@@ -376,10 +376,6 @@ where
     }
 }
 
-pub fn html_elem<Handle>(open_elems: &[Handle]) -> &Handle {
-    &open_elems[0]
-}
-
 pub struct ActiveFormattingIter<'a, Handle: 'a> {
     iter: Rev<Enumerate<slice::Iter<'a, FormatEntry<Handle>>>>,
 }
@@ -436,10 +432,6 @@ where
             self.mode
         ));
         Done
-    }
-
-    fn assert_named(&mut self, node: &Handle, name: LocalName) {
-        assert!(self.html_elem_named(&node, name));
     }
 
     /// Iterate over the active formatting elements (with index in the list) from the end
@@ -517,198 +509,50 @@ where
             }
         }
 
-        // 2. 3. 4.
-        for _ in 0..8 {
-            // 5.
-            let (fmt_elem_index, fmt_elem, fmt_elem_tag) = unwrap_or_return!(
-                // We clone the Handle and Tag so they don't cause an immutable borrow of self.
-                self.active_formatting_end_to_marker()
-                    .filter(|&(_, _, tag)| tag.name == subject)
-                    .next()
-                    .map(|(i, h, t)| (i, h.clone(), t.clone())),
-                {
-                    self.process_end_tag_in_body(Tag {
-                        kind: EndTag,
-                        name: subject,
-                        self_closing: false,
-                        attrs: vec![],
-                    });
-                }
-            );
-
-            let fmt_elem_stack_index = unwrap_or_return!(
-                self.open_elems
-                    .iter()
-                    .rposition(|n| self.sink.same_node(n, &fmt_elem)),
-                {
-                    self.sink
-                        .parse_error(Borrowed("Formatting element not open"));
-                    self.active_formatting.remove(fmt_elem_index);
-                }
-            );
-
-            // 7.
-            if !self.in_scope(default_scope, |n| self.sink.same_node(&n, &fmt_elem)) {
-                self.sink
-                    .parse_error(Borrowed("Formatting element not in scope"));
-                return;
+        // 5.
+        let (fmt_elem_index, fmt_elem, fmt_elem_tag) = unwrap_or_return!(
+            // We clone the Handle and Tag so they don't cause an immutable borrow of self.
+            self.active_formatting_end_to_marker()
+                .filter(|&(_, _, tag)| tag.name == subject)
+                .next()
+                .map(|(i, h, t)| (i, h.clone(), t.clone())),
+            {
+                self.process_end_tag_in_body(Tag {
+                    kind: EndTag,
+                    name: subject,
+                    self_closing: false,
+                    attrs: vec![],
+                });
             }
+        );
 
-            // 8.
-            if !self.sink.same_node(self.current_node(), &fmt_elem) {
-                self.sink
-                    .parse_error(Borrowed("Formatting element not current node"));
-            }
-
-            // 9.
-            let (furthest_block_index, furthest_block) = unwrap_or_return!(
-                self.open_elems
-                    .iter()
-                    .enumerate()
-                    .skip(fmt_elem_stack_index)
-                    .filter(|&(_, open_element)| self.elem_in(open_element, special_tag))
-                    .next()
-                    .map(|(i, h)| (i, h.clone())),
-                // 10.
-                {
-                    self.open_elems.truncate(fmt_elem_stack_index);
-                    self.active_formatting.remove(fmt_elem_index);
-                }
-            );
-
-            // 11.
-            let common_ancestor = self.open_elems[fmt_elem_stack_index - 1].clone();
-
-            // 12.
-            let mut bookmark = Bookmark::Replace(fmt_elem.clone());
-
-            // 13.
-            let mut node;
-            let mut node_index = furthest_block_index;
-            let mut last_node = furthest_block.clone();
-
-            // 13.1.
-            let mut inner_counter = 0;
-            loop {
-                // 13.2.
-                inner_counter += 1;
-
-                // 13.3.
-                node_index -= 1;
-                node = self.open_elems[node_index].clone();
-
-                // 13.4.
-                if self.sink.same_node(&node, &fmt_elem) {
-                    break;
-                }
-
-                // 13.5.
-                if inner_counter > 3 {
-                    self.position_in_active_formatting(&node)
-                        .map(|position| self.active_formatting.remove(position));
-                    self.open_elems.remove(node_index);
-                    continue;
-                }
-
-                let node_formatting_index = unwrap_or_else!(
-                    self.position_in_active_formatting(&node),
-                    // 13.6.
-                    {
-                        self.open_elems.remove(node_index);
-                        continue;
-                    }
-                );
-
-                // 13.7.
-                let tag = match self.active_formatting[node_formatting_index] {
-                    Element(ref h, ref t) => {
-                        assert!(self.sink.same_node(h, &node));
-                        t.clone()
-                    }
-                    Marker => panic!("Found marker during adoption agency"),
-                };
-                // FIXME: Is there a way to avoid cloning the attributes twice here (once on their
-                // own, once as part of t.clone() above)?
-                let new_element = create_element(
-                    &mut self.sink,
-                    QualName::new(None, ns!(html), tag.name.clone()),
-                    tag.attrs.clone(),
-                );
-                self.open_elems[node_index] = new_element.clone();
-                self.active_formatting[node_formatting_index] = Element(new_element.clone(), tag);
-                node = new_element;
-
-                // 13.8.
-                if self.sink.same_node(&last_node, &furthest_block) {
-                    bookmark = Bookmark::InsertAfter(node.clone());
-                }
-
-                // 13.9.
-                self.sink.remove_from_parent(&last_node);
-                self.sink.append(&node, AppendNode(last_node.clone()));
-
-                // 13.10.
-                last_node = node.clone();
-
-                // 13.11.
-            }
-
-            // 14.
-            self.sink.remove_from_parent(&last_node);
-            self.insert_appropriately(AppendNode(last_node.clone()), Some(common_ancestor));
-
-            // 15.
-            // FIXME: Is there a way to avoid cloning the attributes twice here (once on their own,
-            // once as part of t.clone() above)?
-            let new_element = create_element(
-                &mut self.sink,
-                QualName::new(None, ns!(html), fmt_elem_tag.name.clone()),
-                fmt_elem_tag.attrs.clone(),
-            );
-            let new_entry = Element(new_element.clone(), fmt_elem_tag);
-
-            // 16.
-            self.sink.reparent_children(&furthest_block, &new_element);
-
-            // 17.
-            self.sink
-                .append(&furthest_block, AppendNode(new_element.clone()));
-
-            // 18.
-            // FIXME: We could probably get rid of the position_in_active_formatting() calls here
-            // if we had a more clever Bookmark representation.
-            match bookmark {
-                Bookmark::Replace(to_replace) => {
-                    let index = self
-                        .position_in_active_formatting(&to_replace)
-                        .expect("bookmark not found in active formatting elements");
-                    self.active_formatting[index] = new_entry;
-                }
-                Bookmark::InsertAfter(previous) => {
-                    let index = self
-                        .position_in_active_formatting(&previous)
-                        .expect("bookmark not found in active formatting elements")
-                        + 1;
-                    self.active_formatting.insert(index, new_entry);
-                    let old_index = self
-                        .position_in_active_formatting(&fmt_elem)
-                        .expect("formatting element not found in active formatting elements");
-                    self.active_formatting.remove(old_index);
-                }
-            }
-
-            // 19.
-            self.remove_from_stack(&fmt_elem);
-            let new_furthest_block_index = self
-                .open_elems
-                .iter()
-                .position(|n| self.sink.same_node(n, &furthest_block))
-                .expect("furthest block missing from open element stack");
+        let fmt_elem_stack_index = unwrap_or_return!(
             self.open_elems
-                .insert(new_furthest_block_index + 1, new_element);
+                .iter()
+                .rposition(|n| self.sink.same_node(n, &fmt_elem)),
+            {
+                self.sink
+                    .parse_error(Borrowed("Formatting element not open"));
+                self.active_formatting.remove(fmt_elem_index);
+            }
+        );
 
-            // 20.
+        // 7.
+        if !self.in_scope(default_scope, |n| self.sink.same_node(&n, &fmt_elem)) {
+            self.sink
+                .parse_error(Borrowed("Formatting element not in scope"));
+            return;
         }
+
+        // 8.
+        if !self.sink.same_node(self.current_node(), &fmt_elem) {
+            self.sink
+                .parse_error(Borrowed("Formatting element not current node"));
+        }
+
+        // 9.
+        self.open_elems.truncate(fmt_elem_stack_index);
+        self.active_formatting.remove(fmt_elem_index);
     }
 
     fn push(&mut self, elem: &Handle) {
@@ -783,25 +627,6 @@ where
         }
     }
 
-    /// Get the first element on the stack, which will be the <html> element.
-    fn html_elem(&self) -> &Handle {
-        &self.open_elems[0]
-    }
-
-    /// Get the second element on the stack, if it's a HTML body element.
-    fn body_elem(&self) -> Option<&Handle> {
-        if self.open_elems.len() <= 1 {
-            return None;
-        }
-
-        let node = &self.open_elems[1];
-        if self.html_elem_named(node, local_name!("body")) {
-            Some(node)
-        } else {
-            None
-        }
-    }
-
     /// Signal an error depending on the state of the stack of open elements at
     /// the end of the body.
     fn check_body_end(&mut self) {
@@ -861,12 +686,6 @@ where
         *expanded.ns == ns!(html) && *expanded.local == name
     }
 
-    fn in_html_elem_named(&self, name: LocalName) -> bool {
-        self.open_elems
-            .iter()
-            .any(|elem| self.html_elem_named(elem, name.clone()))
-    }
-
     fn current_node_named(&self, name: LocalName) -> bool {
         self.html_elem_named(self.current_node(), name)
     }
@@ -905,19 +724,6 @@ where
         });
     }
     //§ END
-
-    // Pop elements until the current element is in the set.
-    fn pop_until_current<TagSet>(&mut self, pred: TagSet)
-    where
-        TagSet: Fn(ExpandedName) -> bool,
-    {
-        loop {
-            if self.current_node_in(|x| pred(x)) {
-                break;
-            }
-            self.open_elems.pop();
-        }
-    }
 
     // Pop elements until an element from the set has been popped.  Returns the
     // number of elements popped.
@@ -961,12 +767,6 @@ where
         declare_tag_set!(implied = [cursory_implied_end] - "p");
         self.generate_implied_end(implied);
         self.expect_to_close(local_name!("p"));
-    }
-
-    fn close_p_element_in_button_scope(&mut self) {
-        if self.in_scope_named(button_scope, local_name!("p")) {
-            self.close_p_element();
-        }
     }
 
     fn append_text(&mut self, text: StrTendril) -> ProcessResult<Handle> {
