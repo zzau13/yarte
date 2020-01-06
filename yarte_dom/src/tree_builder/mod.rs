@@ -9,7 +9,13 @@
 
 //! The HTML5 tree builder.
 
-#![allow(warnings)]
+#![allow(
+    clippy::cognitive_complexity,
+    clippy::redundant_static_lifetimes,
+    clippy::suspicious_else_formatting,
+    clippy::unused_unit,
+    clippy::wrong_self_convention
+)]
 
 use std::{
     borrow::Cow::Borrowed,
@@ -29,9 +35,9 @@ use html5ever::{
     ExpandedName, LocalName, Namespace, QualName,
 };
 
-use self::{tag_sets::*, types::*};
-use html5ever::tokenizer::states::{RawData, RawKind};
-use log::{debug, log_enabled, warn, Level};
+use self::tag_sets::*;
+use html5ever::tokenizer::states::RawKind;
+use log::{debug, log_enabled, Level};
 use mac::{_tt_as_expr_hack, format_if, matches};
 
 use lazy_static::lazy_static;
@@ -254,8 +260,6 @@ where
         &mut self,
         override_target: Option<Handle>,
     ) -> InsertionPoint<Handle> {
-        use self::tag_sets::*;
-
         let target = override_target.unwrap_or_else(|| self.current_node().clone());
         LastChild(target)
     }
@@ -315,13 +319,13 @@ where
                         name,
                         public_id,
                         system_id,
-                        force_quirks: _,
+                        ..
                     } = dt;
                     if !self.opts.drop_doctype {
                         self.sink.append_doctype_to_document(
-                            name.unwrap_or(StrTendril::new()),
-                            public_id.unwrap_or(StrTendril::new()),
-                            system_id.unwrap_or(StrTendril::new()),
+                            name.unwrap_or_default(),
+                            public_id.unwrap_or_default(),
+                            system_id.unwrap_or_default(),
                         );
                     }
 
@@ -351,7 +355,7 @@ where
 
             tokenizer::CharacterTokens(mut x) => {
                 // TODO:
-                if ignore_lf && x.starts_with("\n") {
+                if ignore_lf && x.starts_with('\n') {
                     x.pop_front(1);
                 }
                 if x.is_empty() {
@@ -436,7 +440,7 @@ where
 
     /// Iterate over the active formatting elements (with index in the list) from the end
     /// to the last marker, or the beginning if there are no markers.
-    fn active_formatting_end_to_marker<'a>(&'a self) -> ActiveFormattingIter<'a, Handle> {
+    fn active_formatting_end_to_marker(&self) -> ActiveFormattingIter<Handle> {
         ActiveFormattingIter {
             iter: self.active_formatting.iter().enumerate().rev(),
         }
@@ -444,8 +448,8 @@ where
 
     fn position_in_active_formatting(&self, element: &Handle) -> Option<usize> {
         self.active_formatting.iter().position(|n| match n {
-            &Marker => false,
-            &Element(ref handle, _) => self.sink.same_node(handle, element),
+            Marker => false,
+            Element(ref handle, _) => self.sink.same_node(handle, element),
         })
     }
 
@@ -499,22 +503,20 @@ where
 
     fn adoption_agency(&mut self, subject: LocalName) {
         // 1.
-        if self.current_node_named(subject.clone()) {
-            if self
+        if self.current_node_named(subject.clone())
+            && self
                 .position_in_active_formatting(self.current_node())
                 .is_none()
-            {
-                self.pop();
-                return;
-            }
+        {
+            self.pop();
+            return;
         }
 
         // 5.
         let (fmt_elem_index, fmt_elem, fmt_elem_tag) = unwrap_or_return!(
             // We clone the Handle and Tag so they don't cause an immutable borrow of self.
             self.active_formatting_end_to_marker()
-                .filter(|&(_, _, tag)| tag.name == subject)
-                .next()
+                .find(|&(_, _, tag)| tag.name == subject)
                 .map(|(i, h, t)| (i, h.clone(), t.clone())),
             {
                 self.process_end_tag_in_body(Tag {
@@ -802,7 +804,7 @@ where
     ) -> Handle {
         // Step 7.
         let qname = QualName::new(None, ns, name);
-        let elem = create_element(&mut self.sink, qname.clone(), attrs.clone());
+        let elem = create_element(&mut self.sink, qname, attrs);
 
         let insertion_point = self.appropriate_place_for_insertion(None);
         let (node1, node2) = match insertion_point {
@@ -905,8 +907,7 @@ where
     fn handle_misnested_a_tags(&mut self, tag: &Tag) {
         let node = unwrap_or_return!(
             self.active_formatting_end_to_marker()
-                .filter(|&(_, n, _)| self.html_elem_named(n, local_name!("a")))
-                .next()
+                .find(|&(_, n, _)| self.html_elem_named(n, local_name!("a")))
                 .map(|(_, n, _)| n.clone()),
             ()
         );
@@ -924,7 +925,7 @@ where
             return false;
         }
 
-        if self.open_elems.len() == 0 {
+        if self.open_elems.is_empty() {
             return false;
         }
 

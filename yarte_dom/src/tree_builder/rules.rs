@@ -9,8 +9,7 @@
 
 // The tree builder rules, as a single, enormous nested match expression.
 
-use crate::tree_builder::{tag_sets::*, types::*};
-use html5ever::tokenizer::states::{Plaintext, Rawtext, Rcdata, ScriptData};
+use html5ever::tokenizer::states::{Rawtext, Rcdata};
 use markup5ever::{expanded_name, local_name, namespace_prefix, namespace_url, ns};
 
 use html5ever::tendril::SliceExt;
