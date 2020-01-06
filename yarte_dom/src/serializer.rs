@@ -10,7 +10,7 @@ use markup5ever::{
 
 use html5ever::serialize::serialize as html_serialize;
 
-use crate::parser::{ParseAttribute, MARK};
+use crate::sink::{ParseAttribute, MARK};
 
 pub fn serialize<Wr, T>(writer: Wr, node: &T) -> io::Result<()>
 where

@@ -9,13 +9,13 @@ use yarte_hir::{Each as HEach, IfElse as HIfElse, HIR};
 #[macro_use]
 mod macros;
 mod driver;
-mod parser;
 mod serializer;
+mod sink;
 mod tree_builder;
 
 use self::{
-    parser::{parse_document, parse_fragment, ParseResult, Sink, HEAD, TAIL},
     serializer::{serialize, TreeElement},
+    sink::{parse_document, parse_fragment, ParseResult, Sink, HEAD, TAIL},
 };
 
 pub type Document = Vec<Node>;
@@ -274,7 +274,7 @@ mod test {
     fn test_document_ok() {
         let src = "<html><body><div \
                    class=\"<!--yarteHashHTMLExpressionsATTT0x00000000-->\"></div></body></html>";
-        let expected = "<!DOCTYPE html><html><body><div \
+        let expected = "<html><body><div \
                         class=\"<!--yarteHashHTMLExpressionsATTT0x00000000-->\"></div></body></\
                         html>";
 
@@ -314,7 +314,7 @@ mod test {
     fn test_document_ok_table() {
         let src = "<html><body><table><!--yarteHashHTMLExpressionsATTT0x00000000--></table></\
                    body></html>";
-        let expected = "<!DOCTYPE html><html><body><table><!\
+        let expected = "<html><body><table><!\
                         --yarteHashHTMLExpressionsATTT0x00000000--></table></body></html>";
 
         let a = parse_document(src).unwrap();
@@ -334,7 +334,7 @@ mod test {
         let src = "<html><head><title><!--yarteHashHTMLExpressionsATTT0x00000000--></title></\
                    head><body><div attr=\"some\" \t class=\"any\"    \n>Hi!<br   /></div><div \
                    some7Na=\"hola\">hi</div></body></html>";
-        let expected = "<!DOCTYPE html><html><head><title><!\
+        let expected = "<html><head><title><!\
                         --yarteHashHTMLExpressionsATTT0x00000000--></title></head><body><div \
                         attr=\"some\" class=\"any\">Hi!<br></div><div \
                         some7na=\"hola\">hi</div></body></html>";

@@ -97,6 +97,7 @@ impl Debug for ParseElement {
 pub struct Sink {
     count: usize,
     nodes: BTreeMap<ParseNodeId, ParseElement>,
+    fragment: bool,
     err: Vec<ParseError>,
 }
 
@@ -171,10 +172,9 @@ impl TreeSink for Sink {
     }
 
     fn get_document(&mut self) -> Self::Handle {
-        let new_node = self.new_parse_node();
-        self.nodes
-            .insert(new_node.id, ParseElement::Document(vec![]));
-        new_node
+        let node = self.new_parse_node();
+        self.fragment = node.id != 0;
+        node
     }
 
     fn elem_name<'a>(&'a self, target: &'a Self::Handle) -> ExpandedName<'a> {
@@ -243,7 +243,8 @@ impl TreeSink for Sink {
             Some(ParseElement::Document(children)) | Some(ParseElement::Node { children, .. }) => {
                 children.push(id);
             }
-            _ => unreachable!(),
+            _ if p.id == 0 || self.fragment => (),
+            _ => panic!("append without parent {:?}, {:?} {:?}", p, id, self.nodes),
         };
     }
 
@@ -269,7 +270,13 @@ impl TreeSink for Sink {
     }
 
     fn append_doctype_to_document(&mut self, _: StrTendril, _: StrTendril, _: StrTendril) {
-        // DO nothing
+        if self
+            .nodes
+            .insert(0, ParseElement::Document(vec![]))
+            .is_some()
+        {
+            panic!("Double Doctype")
+        }
     }
 
     fn get_template_contents(&mut self, target: &Self::Handle) -> Self::Handle {
@@ -425,7 +432,6 @@ pub fn parse_fragment(doc: &str) -> ParseResult<Sink> {
     parser.one(doc.as_bytes()).and_then(|mut a| {
         a.nodes
             .remove(&0)
-            .and_then(|_| a.nodes.remove(&1))
             .and_then(|_| {
                 if let Some(ParseElement::Node { name, .. }) = a.nodes.get_mut(&2) {
                     *name = YARTE_TAG.clone();
