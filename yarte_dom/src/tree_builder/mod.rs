@@ -105,7 +105,6 @@ pub struct TreeBuilder<Handle, Sink> {
     // Whitespace control
     next_ws: Option<StrTendril>,
     skip_ws: bool,
-
 }
 
 lazy_static! {
@@ -304,9 +303,7 @@ where
 
             tokenizer::DoctypeToken(dt) => {
                 if self.mode == Initial {
-                    let (err, _quirk) =
-                        data::doctype_error_and_quirks(&dt, self.opts.iframe_srcdoc);
-                    if err {
+                    if data::doctype_error(&dt) {
                         self.sink.parse_error(format_if!(
                             self.opts.exact_errors,
                             "Bad DOCTYPE",
@@ -341,9 +338,7 @@ where
                 }
             }
 
-            tokenizer::TagToken(x) => {
-                TagToken(x)
-            }
+            tokenizer::TagToken(x) => TagToken(x),
             tokenizer::CommentToken(x) => {
                 self.skip_ws = false;
                 CommentToken(x)

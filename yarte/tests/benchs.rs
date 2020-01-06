@@ -55,7 +55,7 @@ fn teams() {
     };
     assert_eq!(
         teams.call().unwrap(),
-        "<!DOCTYPE html><html><head><title>2015</title></head><body><h1>CSL 2015</h1><ul><li \
+        "<html><head><title>2015</title></head><body><h1>CSL 2015</h1><ul><li \
          class=\"champion\"><b>Jiangsu</b>: 43</li><li class=\"\"><b>Beijing</b>: 27</li><li \
          class=\"\"><b>Guangzhou</b>: 22</li><li class=\"\"><b>Shandong</b>: \
          12</li></ul></body></html>"
