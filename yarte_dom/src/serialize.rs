@@ -2,6 +2,7 @@ use std::io::{self, Write};
 
 use markup5ever::QualName;
 
+use crate::serializer::Position;
 use crate::{
     serializer::HtmlSerializer,
     sink::{ParseAttribute, ParseElement, ParseNodeId, Sink, MARK},
@@ -108,7 +109,27 @@ fn _serialize<W: Write>(
     serializer: &mut HtmlSerializer<W>,
 ) -> io::Result<()> {
     use TreeElement::*;
-    for node in nodes {
+    for (pos, node) in nodes.iter().enumerate().map(|(i, x)| {
+        (
+            match i {
+                _ if nodes.len() == 1 => Position::One,
+                0 => Position::Head,
+                a => {
+                    if a + 1 == nodes.len() {
+                        Position::Tail
+                    } else if a + 2 == nodes.len() {
+                        match nodes.last().unwrap() {
+                            TreeElement::Text(_) | TreeElement::Mark(_) => Position::Tail,
+                            _ => Position::Middle
+                        }
+                    } else {
+                        Position::Middle
+                    }
+                },
+            },
+            x,
+        )
+    }) {
         match node {
             Node {
                 children,
@@ -118,9 +139,10 @@ fn _serialize<W: Write>(
                 serializer.start_elem(
                     name.clone(),
                     attrs.iter().map(|x| (&x.name, x.value.as_str())),
+                    pos,
                 )?;
                 _serialize(children, serializer)?;
-                serializer.end_elem(name.clone())?
+                serializer.end_elem(name.clone(), pos)?
             }
             Text(s) => serializer.write_text(s)?,
             DocType => serializer.write_doctype("html")?,
