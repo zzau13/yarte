@@ -137,9 +137,11 @@ impl<Wr: Write> Serializer for HtmlSerializer<Wr> {
             }
 
             self.writer.write_all(name.local.as_bytes())?;
-            self.writer.write_all(b"=\"")?;
-            self.write_escaped(value, true)?;
-            self.writer.write_all(b"\"")?;
+            if !value.is_empty() {
+                self.writer.write_all(b"=\"")?;
+                self.write_escaped(value, true)?;
+                self.writer.write_all(b"\"")?;
+            }
         }
         self.writer.write_all(b">")?;
 
