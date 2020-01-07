@@ -2,7 +2,7 @@
 #![allow(dead_code)]
 
 use std::{
-    borrow::Cow,
+    borrow::{Cow, Cow::Borrowed},
     collections::BTreeMap,
     fmt::{self, Debug, Formatter},
 };
@@ -226,6 +226,8 @@ impl TreeSink for Sink {
                         .to_string(),
                 ),
             );
+        } else {
+            self.parse_error(Borrowed("No use html comment, use yarte comments instead"))
         }
 
         node

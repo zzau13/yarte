@@ -2,9 +2,8 @@ use std::io::{self, Write};
 
 use markup5ever::QualName;
 
-use crate::serializer::Position;
 use crate::{
-    serializer::HtmlSerializer,
+    serializer::{HtmlSerializer, Position},
     sink::{ParseAttribute, ParseElement, ParseNodeId, Sink, MARK},
     tree_builder::YARTE_TAG,
 };
@@ -120,12 +119,12 @@ fn _serialize<W: Write>(
                     } else if a + 2 == nodes.len() {
                         match nodes.last().unwrap() {
                             TreeElement::Text(_) | TreeElement::Mark(_) => Position::Tail,
-                            _ => Position::Middle
+                            _ => Position::Middle,
                         }
                     } else {
                         Position::Middle
                     }
-                },
+                }
             },
             x,
         )

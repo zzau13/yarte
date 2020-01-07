@@ -28,9 +28,9 @@ fn test_fortune() {
         ],
     };
     assert_eq!(
-        "<!DOCTYPE html><html><head><title>Fortunes</title></head><body><table><tr>\
-         <th>id</th><th>message</th></tr><tr><td>0</td><td>foo</td></tr><tr><td>1</td>\
-         <td>bar</td></tr></table></body></html>",
+        "<!DOCTYPE html><html><head><title>Fortunes</title></head><body><table><tr><th>id</\
+         th><th>message</th></tr><tr><td>0</td><td>foo</td></tr><tr><td>1</td><td>bar</td></tr></\
+         table></body></html>",
         t.call().unwrap()
     );
 }
@@ -91,9 +91,12 @@ fn test_header() {
     };
 
     assert_eq!(
-        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\
-        <title>HTML5 Test Page</title></head><body><div id=\"top\" class=\"page\" role=\"document\"><header role=\"banner\"><h1>foo</h1>\
-        <p>bar</p></header><nav role=\"navigation\"><ul><li><a href=\"#text\">Text</a> <ul><li><a href=\"#bar\">Bar</a></li></ul></li></ul></nav></div></body></html>",
+        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" \
+         content=\"width=device-width, initial-scale=1.0\"><title>HTML5 Test \
+         Page</title></head><body><div id=\"top\" class=\"page\" role=\"document\"><header \
+         role=\"banner\"><h1>foo</h1><p>bar</p></header><nav role=\"navigation\"><ul><li><a \
+         href=\"#text\">Text</a> <ul><li><a \
+         href=\"#bar\">Bar</a></li></ul></li></ul></nav></div></body></html>",
         t.call().unwrap()
     );
 }
