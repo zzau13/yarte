@@ -1,6 +1,4 @@
-use std::{
-    io::{self, Write},
-};
+use std::io::{self, Write};
 
 use markup5ever::QualName;
 
@@ -73,21 +71,27 @@ fn get_children(children: &[ParseNodeId], sink: &Sink) -> Vec<TreeElement> {
     use ParseElement::*;
     let mut tree = vec![];
     for child in children {
-        tree.push(match sink.nodes.get(child).expect("Child") {
-            Text(s) => TreeElement::Text(s.clone()),
+        match sink.nodes.get(child).expect("Child") {
+            Text(s) => {
+                if let Some(TreeElement::Text(last)) = tree.last_mut() {
+                    last.push_str(s);
+                } else {
+                    tree.push(TreeElement::Text(s.clone()))
+                }
+            }
             Node {
                 name,
                 attrs,
                 children,
                 ..
-            } => TreeElement::Node {
+            } => tree.push(TreeElement::Node {
                 name: name.clone(),
                 attrs: attrs.to_vec(),
                 children: get_children(children, sink),
-            },
-            Mark(s) => TreeElement::Mark(s.clone()),
+            }),
+            Mark(s) => tree.push(TreeElement::Mark(s.clone())),
             _ => panic!("Expect document in root"),
-        });
+        }
     }
 
     tree

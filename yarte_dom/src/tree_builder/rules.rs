@@ -381,10 +381,7 @@ where
 
                 EOFToken => self.stop_parsing(),
 
-                token => {
-                    self.unexpected(&token);
-                    Reprocess(InHtml, token)
-                }
+                token => self.unexpected(&token),
             }),
              //§ parsing-main-incdata
             RawText => match_token!(token {
