@@ -28,7 +28,6 @@ enum Ws {
 
 #[derive(Copy, Clone)]
 pub enum Position {
-    One,
     Head,
     Middle,
     Tail,
@@ -312,10 +311,6 @@ impl<Wr: Write> HtmlSerializer<Wr> {
                                 _ => (),
                             }
                         }
-                        self.skip_ws = Some(Ws::Skip);
-                    }
-                    One => {
-                        self.next_ws = None;
                         self.skip_ws = Some(Ws::Skip);
                     }
                 }
