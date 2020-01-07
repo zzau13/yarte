@@ -111,20 +111,9 @@ fn _serialize<W: Write>(
     for (pos, node) in nodes.iter().enumerate().map(|(i, x)| {
         (
             match i {
-                _ if nodes.len() == 1 => Position::One,
                 0 => Position::Head,
-                a => {
-                    if a + 1 == nodes.len() {
-                        Position::Tail
-                    } else if a + 2 == nodes.len() {
-                        match nodes.last().unwrap() {
-                            TreeElement::Text(_) | TreeElement::Mark(_) => Position::Tail,
-                            _ => Position::Middle,
-                        }
-                    } else {
-                        Position::Middle
-                    }
-                }
+                a if a + 1 == nodes.len() => Position::Tail,
+                _ => Position::Middle,
             },
             x,
         )
