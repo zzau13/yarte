@@ -24,7 +24,6 @@ pub enum InsertionMode {
     AfterBody,
     AfterAfterBody,
     InHtml,
-    Text,
     RawText,
 }
 

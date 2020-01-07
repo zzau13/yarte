@@ -55,8 +55,7 @@ where
             }),
             //§ parsing-main-inbody
             InHtml => match_token!(token {
-                CharacterTokens(NotSplit, text) => SplitWhitespace(text),
-                token @ CharacterTokens(..) => self.step(Text, token),
+                CharacterTokens(_, text) => self.append_text(text),
                 CommentToken(text) => self.append_comment(text),
                 NullCharacterToken => self.unexpected(&token),
                 EOFToken => {
@@ -94,7 +93,6 @@ where
                     DoneAckSelfClosing
                 }
 
-                // TODO: Check tags and complete
                 tag @ <address> <applet> <article> <aside> <blockquote> <body> <caption>
                 <center> <col> <colgroup> <dd> <details> <dialog> <dir> <div> <dl>
                 <dt> <fieldset> <figcaption> <figure> <footer> <form> <frame> <frameset>
@@ -116,7 +114,6 @@ where
 
                 tag @ <pre> <listing> => {
                     self.insert_element_for(tag);
-                    self.ignore_lf = true;
                     Done
                 }
 
@@ -136,7 +133,6 @@ where
                     Done
                 }
 
-                // TODO: Check tags and complete
                 tag @ </address> </applet> </article> </aside> </blockquote> </caption>
                 </center> </col> </colgroup> </details> </dialog> </dir> </div> </dl>
                 </fieldset> </figcaption> </figure> </footer> </form> </frame> </frameset>
@@ -247,7 +243,6 @@ where
                 }
 
                 tag @ <textarea> => {
-                    self.ignore_lf = true;
                     self.parse_raw_data(tag, Rcdata)
                 }
 
@@ -357,8 +352,7 @@ where
             //§ parsing-main-afterbody
             AfterBody => match_token!(token {
                 CharacterTokens(NotSplit, text) => SplitWhitespace(text),
-                CharacterTokens(Whitespace, _) => self.step(InHtml, token),
-                CommentToken(text) => self.append_comment(text),
+                CharacterTokens(Whitespace, _) => Done,
 
                 <html> => self.step(InHtml, token),
 
@@ -381,8 +375,7 @@ where
              //§ the-after-after-body-insertion-mode
             AfterAfterBody => match_token!(token {
                 CharacterTokens(NotSplit, text) => SplitWhitespace(text),
-                CharacterTokens(Whitespace, _) => self.step(InHtml, token),
-                CommentToken(text) => self.append_comment(text),
+                CharacterTokens(Whitespace, _) => Done,
 
                 <html> => self.step(InHtml, token),
 
@@ -392,19 +385,6 @@ where
                     self.unexpected(&token);
                     Reprocess(InHtml, token)
                 }
-            }),
-            //§ parsing-text
-            Text => match_token!(token {
-            // TODO: remove whitespace or round inline tags replace by ' '
-                CharacterTokens(NotSplit, text) => SplitWhitespace(text),
-//                CharacterTokens(Whitespace, text) => self.append_whitespace(text),
-                CharacterTokens(_, text) => self.append_text(text),
-
-                CommentToken(text) => self.append_comment(text),
-
-                EOFToken => Reprocess(self.orig_mode.take().unwrap(), token),
-
-                tag => Reprocess(InHtml, tag),
             }),
              //§ parsing-main-incdata
             RawText => match_token!(token {

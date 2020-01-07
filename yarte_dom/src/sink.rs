@@ -16,9 +16,9 @@ use html5ever::{
     ExpandedName, ParseOpts, QualName,
 };
 
-use crate::{driver, serializer::TreeElement, tree_builder::YARTE_TAG};
+use crate::{driver, tree_builder::YARTE_TAG};
 
-type ParseNodeId = usize;
+pub type ParseNodeId = usize;
 
 #[derive(Clone)]
 pub struct ParseNode {
@@ -96,7 +96,7 @@ impl Debug for ParseElement {
 #[derive(Debug, Default)]
 pub struct Sink {
     count: usize,
-    nodes: BTreeMap<ParseNodeId, ParseElement>,
+    pub nodes: BTreeMap<ParseNodeId, ParseElement>,
     fragment: bool,
     err: Vec<ParseError>,
 }
@@ -340,63 +340,6 @@ impl TreeSink for Sink {
     fn reparent_children(&mut self, node: &Self::Handle, new_parent: &Self::Handle) {
         todo!()
     }
-}
-
-impl Into<Vec<TreeElement>> for Sink {
-    fn into(self) -> Vec<TreeElement> {
-        use ParseElement::*;
-
-        match self.nodes.values().next() {
-            Some(Document(children)) => {
-                let mut tree = vec![TreeElement::DocType];
-                tree.extend(get_children(children, &self));
-                tree
-            }
-            Some(Node {
-                name,
-                attrs,
-                children,
-                ..
-            }) => {
-                if name == &*YARTE_TAG {
-                    get_children(children, &self)
-                } else {
-                    vec![TreeElement::Node {
-                        name: name.clone(),
-                        attrs: attrs.to_vec(),
-                        children: get_children(children, &self),
-                    }]
-                }
-            }
-            Some(Text(s)) => vec![TreeElement::Text(s.clone())],
-            Some(Mark(s)) => vec![TreeElement::Mark(s.clone())],
-            None => vec![],
-        }
-    }
-}
-
-fn get_children(children: &[ParseNodeId], sink: &Sink) -> Vec<TreeElement> {
-    use ParseElement::*;
-    let mut tree = vec![];
-    for child in children {
-        tree.push(match sink.nodes.get(child).expect("Child") {
-            Text(s) => TreeElement::Text(s.clone()),
-            Node {
-                name,
-                attrs,
-                children,
-                ..
-            } => TreeElement::Node {
-                name: name.clone(),
-                attrs: attrs.to_vec(),
-                children: get_children(children, sink),
-            },
-            Mark(s) => TreeElement::Mark(s.clone()),
-            _ => panic!("Expect document in root"),
-        });
-    }
-
-    tree
 }
 
 pub fn parse_document(doc: &str) -> ParseResult<Sink> {
