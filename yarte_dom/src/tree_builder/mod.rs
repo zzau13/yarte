@@ -22,7 +22,6 @@ use std::{
     collections::VecDeque,
     fmt,
     iter::{Enumerate, Rev},
-    mem::replace,
     slice,
 };
 
@@ -89,22 +88,8 @@ pub struct TreeBuilder<Handle, Sink> {
     active_formatting: Vec<FormatEntry<Handle>>,
 
     //§ END
-    /// Ignore a following U+000A LINE FEED?
-    ignore_lf: bool,
-
     /// The context element for the fragment parsing algorithm.
     context_elem: Option<Handle>,
-
-    /// Track current line
-    current_line: u64,
-    // WARNING: If you add new fields that contain Handles, you
-    // must add them to trace_handles() below to preserve memory
-    // safety!
-    //
-    // FIXME: Auto-generate the trace hooks like Servo does.
-    // Whitespace control
-    next_ws: Option<StrTendril>,
-    skip_ws: bool,
 }
 
 lazy_static! {
@@ -129,11 +114,7 @@ where
             doc_handle,
             open_elems: vec![],
             active_formatting: vec![],
-            ignore_lf: false,
-            skip_ws: false,
-            next_ws: None,
             context_elem: None,
-            current_line: 1,
         }
     }
 
@@ -155,11 +136,7 @@ where
             doc_handle,
             open_elems: vec![],
             active_formatting: vec![],
-            ignore_lf: false,
-            skip_ws: false,
-            next_ws: None,
             context_elem: Some(context_elem),
-            current_line: 1,
         };
 
         tb.create_root(vec![]);
@@ -288,12 +265,6 @@ where
         token: tokenizer::Token,
         line_number: u64,
     ) -> TokenSinkResult<Handle> {
-        if line_number != self.current_line {
-            self.sink.set_current_line(line_number);
-        }
-        // TODO
-        let ignore_lf = replace(&mut self.ignore_lf, false);
-
         // Handle `ParseError` and `DoctypeToken`; convert everything else to the local `Token` type.
         let token = match token {
             tokenizer::ParseError(e) => {
@@ -339,18 +310,11 @@ where
             }
 
             tokenizer::TagToken(x) => TagToken(x),
-            tokenizer::CommentToken(x) => {
-                self.skip_ws = false;
-                CommentToken(x)
-            }
+            tokenizer::CommentToken(x) => CommentToken(x),
             tokenizer::NullCharacterToken => NullCharacterToken,
             tokenizer::EOFToken => EOFToken,
 
-            tokenizer::CharacterTokens(mut x) => {
-                // TODO:
-                if ignore_lf && x.starts_with('\n') {
-                    x.pop_front(1);
-                }
+            tokenizer::CharacterTokens(x) => {
                 if x.is_empty() {
                     return tokenizer::TokenSinkResult::Continue;
                 }

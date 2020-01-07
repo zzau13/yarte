@@ -14,7 +14,7 @@ mod sink;
 mod tree_builder;
 
 use self::{
-    serializer::{serialize, TreeElement},
+    serializer::serialize,
     sink::{parse_document, parse_fragment, ParseResult, Sink, HEAD, TAIL},
 };
 
@@ -84,9 +84,7 @@ fn to_domfmt(ir: Vec<HIR>) -> ParseResult<Vec<HIR>> {
 
 fn serialize_domfmt(sink: Sink, mut ir: Vec<HIR>) -> ParseResult<Vec<HIR>> {
     let mut writer = Vec::new();
-    for i in Into::<Vec<TreeElement>>::into(sink) {
-        serialize(&mut writer, &i).expect("some serialize node")
-    }
+    serialize(&mut writer, &sink.into()).expect("some serialize node");
 
     let html = String::from_utf8(writer).expect("");
     let mut chunks = html.split(HEAD).peekable();
@@ -218,11 +216,8 @@ mod test {
             "<div attr=\"some\" class=\"any\">Hi!<br></div><div some7na=\"hola\">hi</div>";
 
         let a = parse_fragment(src).unwrap();
-        let tree_elem: Vec<TreeElement> = a.into();
         let mut writer = Vec::new();
-        for i in tree_elem {
-            serialize(&mut writer, &i).expect("some serialize node")
-        }
+        serialize(&mut writer, &a.into()).expect("some serialize node");
 
         let html = String::from_utf8(writer).expect("");
 
@@ -235,11 +230,8 @@ mod test {
         let expected = "<table><!--yarteHashHTMLExpressionsATTT0x00000000--></table>";
 
         let a = parse_fragment(src).unwrap();
-        let tree_elem: Vec<TreeElement> = a.into();
         let mut writer = Vec::new();
-        for i in tree_elem {
-            serialize(&mut writer, &i).expect("some serialize node")
-        }
+        serialize(&mut writer, &a.into()).expect("some serialize node");
 
         let html = String::from_utf8(writer).expect("");
 
@@ -252,11 +244,8 @@ mod test {
         let expected = "<div class=\"<!--yarteHashHTMLExpressionsATTT0x00000000-->\"></div>";
 
         let a = parse_fragment(src).unwrap();
-        let tree_elem: Vec<TreeElement> = a.into();
         let mut writer = Vec::new();
-        for i in tree_elem {
-            serialize(&mut writer, &i).expect("some serialize node")
-        }
+        serialize(&mut writer, &a.into()).expect("some serialize node");
 
         let html = String::from_utf8(writer).expect("");
 
@@ -279,11 +268,8 @@ mod test {
                         html>";
 
         let a = parse_document(src).unwrap();
-        let tree_elem: Vec<TreeElement> = a.into();
         let mut writer = Vec::new();
-        for i in tree_elem {
-            serialize(&mut writer, &i).expect("some serialize node")
-        }
+        serialize(&mut writer, &a.into()).expect("some serialize node");
 
         let html = String::from_utf8(writer).expect("");
 
@@ -299,11 +285,8 @@ mod test {
                         html>";
 
         let a = parse_document(src).unwrap();
-        let tree_elem: Vec<TreeElement> = a.into();
         let mut writer = Vec::new();
-        for i in tree_elem {
-            serialize(&mut writer, &i).expect("some serialize node")
-        }
+        serialize(&mut writer, &a.into()).expect("some serialize node");
 
         let html = String::from_utf8(writer).expect("");
 
@@ -318,11 +301,8 @@ mod test {
                         --yarteHashHTMLExpressionsATTT0x00000000--></table></body></html>";
 
         let a = parse_document(src).unwrap();
-        let tree_elem: Vec<TreeElement> = a.into();
         let mut writer = Vec::new();
-        for i in tree_elem {
-            serialize(&mut writer, &i).expect("some serialize node")
-        }
+        serialize(&mut writer, &a.into()).expect("some serialize node");
 
         let html = String::from_utf8(writer).expect("");
 
@@ -340,11 +320,8 @@ mod test {
                         some7na=\"hola\">hi</div></body></html>";
 
         let a = parse_document(src).unwrap();
-        let tree_elem: Vec<TreeElement> = a.into();
         let mut writer = Vec::new();
-        for i in tree_elem {
-            serialize(&mut writer, &i).expect("some serialize node")
-        }
+        serialize(&mut writer, &a.into()).expect("some serialize node");
 
         let html = String::from_utf8(writer).expect("");
 
