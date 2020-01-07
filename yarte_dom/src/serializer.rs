@@ -7,25 +7,13 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use std::{
-    default::Default,
-    io::{self, Write},
-};
+use std::io::{self, Write};
 
 use log::warn;
-pub use markup5ever::serialize::{AttrRef, Serialize, Serializer, TraversalScope};
+pub use markup5ever::serialize::AttrRef;
 use markup5ever::{local_name, namespace_url, ns, LocalName, QualName};
 
-use html5ever::serialize::SerializeOpts;
-
-pub fn serialize<Wr, T>(writer: Wr, node: &T, opts: SerializeOpts) -> io::Result<()>
-where
-    Wr: Write,
-    T: Serialize,
-{
-    let mut ser = HtmlSerializer::new(writer, opts.clone());
-    node.serialize(&mut ser, opts.traversal_scope)
-}
+use yarte_parser::trim;
 
 #[derive(Default)]
 struct ElemInfo {
@@ -36,8 +24,9 @@ struct ElemInfo {
 
 pub struct HtmlSerializer<Wr: Write> {
     pub writer: Wr,
-    opts: SerializeOpts,
     stack: Vec<ElemInfo>,
+    skip_ws: bool,
+    next_ws: Option<String>,
 }
 
 fn tagname(name: &QualName) -> LocalName {
@@ -53,30 +42,22 @@ fn tagname(name: &QualName) -> LocalName {
 }
 
 impl<Wr: Write> HtmlSerializer<Wr> {
-    pub fn new(writer: Wr, opts: SerializeOpts) -> Self {
-        let html_name = match opts.traversal_scope {
-            TraversalScope::IncludeNode | TraversalScope::ChildrenOnly(None) => None,
-            TraversalScope::ChildrenOnly(Some(ref n)) => Some(tagname(n)),
-        };
+    pub fn new(writer: Wr) -> Self {
         HtmlSerializer {
             writer,
-            opts,
             stack: vec![ElemInfo {
-                html_name,
+                html_name: None,
                 ignore_children: false,
                 processed_first_child: false,
             }],
+            next_ws: None,
+            skip_ws: false,
         }
     }
 
     fn parent(&mut self) -> &mut ElemInfo {
         if self.stack.is_empty() {
-            if self.opts.create_missing_parent {
-                warn!("ElemInfo stack empty, creating new parent");
-                self.stack.push(Default::default());
-            } else {
-                panic!("no parent ElemInfo")
-            }
+            panic!("no parent ElemInfo")
         }
         self.stack.last_mut().unwrap()
     }
@@ -94,13 +75,14 @@ impl<Wr: Write> HtmlSerializer<Wr> {
         }
         Ok(())
     }
-}
 
-impl<Wr: Write> Serializer for HtmlSerializer<Wr> {
-    fn start_elem<'a, AttrIter>(&mut self, name: QualName, attrs: AttrIter) -> io::Result<()>
+    pub fn start_elem<'a, AttrIter>(&mut self, name: QualName, attrs: AttrIter) -> io::Result<()>
     where
         AttrIter: Iterator<Item = AttrRef<'a>>,
     {
+        if let Some(text) = &self.next_ws.take() {
+            self.writer.write_all(text.as_bytes())?;
+        }
         let html_name = match name.ns {
             ns!(html) => Some(name.local.clone()),
             _ => None,
@@ -179,13 +161,12 @@ impl<Wr: Write> Serializer for HtmlSerializer<Wr> {
         Ok(())
     }
 
-    fn end_elem(&mut self, name: QualName) -> io::Result<()> {
+    pub fn end_elem(&mut self, name: QualName) -> io::Result<()> {
+        if let Some(text) = &self.next_ws {
+            self.writer.write_all(text.as_bytes())?;
+        }
         let info = match self.stack.pop() {
             Some(info) => info,
-            None if self.opts.create_missing_parent => {
-                warn!("missing ElemInfo, creating default.");
-                Default::default()
-            }
             _ => panic!("no ElemInfo"),
         };
         if info.ignore_children {
@@ -197,7 +178,7 @@ impl<Wr: Write> Serializer for HtmlSerializer<Wr> {
         self.writer.write_all(b">")
     }
 
-    fn write_text(&mut self, text: &str) -> io::Result<()> {
+    pub fn write_text(&mut self, text: &str) -> io::Result<()> {
         let escape = match self.parent().html_name {
             Some(local_name!("style"))
             | Some(local_name!("script"))
@@ -207,11 +188,18 @@ impl<Wr: Write> Serializer for HtmlSerializer<Wr> {
             | Some(local_name!("noframes"))
             | Some(local_name!("plaintext")) => false,
 
-            Some(local_name!("noscript")) => !self.opts.scripting_enabled,
-
             _ => true,
         };
+        let (l, v, r) = trim(text);
+        if let Some(text) = self.next_ws.replace(r.into()) {
+            self.writer.write_all(text.as_bytes())?;
+        }
 
+        let text = if self.skip_ws {
+            v
+        } else {
+            &text[..l.len() + v.len()]
+        };
         if escape {
             self.write_escaped(text, false)
         } else {
@@ -219,23 +207,26 @@ impl<Wr: Write> Serializer for HtmlSerializer<Wr> {
         }
     }
 
-    fn write_comment(&mut self, text: &str) -> io::Result<()> {
+    pub fn write_comment(&mut self, text: &str) -> io::Result<()> {
+        if let Some(text) = &self.next_ws.take() {
+            self.writer.write_all(text.as_bytes())?;
+        }
+        self.skip_ws = false;
         self.writer.write_all(b"<!--")?;
         self.writer.write_all(text.as_bytes())?;
         self.writer.write_all(b"-->")
     }
 
-    fn write_doctype(&mut self, name: &str) -> io::Result<()> {
+    pub fn write_doctype(&mut self, name: &str) -> io::Result<()> {
         self.writer.write_all(b"<!DOCTYPE ")?;
         self.writer.write_all(name.as_bytes())?;
         self.writer.write_all(b">")
     }
 
-    fn write_processing_instruction(&mut self, target: &str, data: &str) -> io::Result<()> {
-        self.writer.write_all(b"<?")?;
-        self.writer.write_all(target.as_bytes())?;
-        self.writer.write_all(b" ")?;
-        self.writer.write_all(data.as_bytes())?;
-        self.writer.write_all(b">")
+    pub fn end(&mut self) -> io::Result<()> {
+        if let Some(text) = &self.next_ws.take() {
+            self.writer.write_all(text.as_bytes())?;
+        }
+        Ok(())
     }
 }

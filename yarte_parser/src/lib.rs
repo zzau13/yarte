@@ -527,7 +527,7 @@ fn path(i: Cursor) -> PResult<&str> {
     })
 }
 
-fn trim(i: &str) -> (&str, &str, &str) {
+pub fn trim(i: &str) -> (&str, &str, &str) {
     if i.is_empty() {
         return ("", "", "");
     }
