@@ -19,13 +19,17 @@ use yarte_parser::trim;
 struct ElemInfo {
     html_name: Option<LocalName>,
     ignore_children: bool,
-    processed_first_child: bool,
+}
+
+enum Ws {
+    Skip,
+    C,
 }
 
 pub struct HtmlSerializer<Wr: Write> {
     pub writer: Wr,
     stack: Vec<ElemInfo>,
-    skip_ws: bool,
+    skip_ws: Option<Ws>,
     next_ws: Option<String>,
 }
 
@@ -48,10 +52,9 @@ impl<Wr: Write> HtmlSerializer<Wr> {
             stack: vec![ElemInfo {
                 html_name: None,
                 ignore_children: false,
-                processed_first_child: false,
             }],
             next_ws: None,
-            skip_ws: false,
+            skip_ws: None,
         }
     }
 
@@ -80,8 +83,8 @@ impl<Wr: Write> HtmlSerializer<Wr> {
     where
         AttrIter: Iterator<Item = AttrRef<'a>>,
     {
-        if let Some(text) = &self.next_ws.take() {
-            self.writer.write_all(text.as_bytes())?;
+        if self.next_ws.take().is_some() {
+            self.writer.write_all(b" ")?;
         }
         let html_name = match name.ns {
             ns!(html) => Some(name.local.clone()),
@@ -92,10 +95,11 @@ impl<Wr: Write> HtmlSerializer<Wr> {
             self.stack.push(ElemInfo {
                 html_name,
                 ignore_children: true,
-                processed_first_child: false,
             });
             return Ok(());
         }
+
+        self.skip_ws = Some(Ws::C);
 
         self.writer.write_all(b"<")?;
         self.writer.write_all(tagname(&name).as_bytes())?;
@@ -150,21 +154,15 @@ impl<Wr: Write> HtmlSerializer<Wr> {
                 _ => false,
             };
 
-        self.parent().processed_first_child = true;
-
         self.stack.push(ElemInfo {
             html_name,
             ignore_children,
-            processed_first_child: false,
         });
 
         Ok(())
     }
 
     pub fn end_elem(&mut self, name: QualName) -> io::Result<()> {
-        if let Some(text) = &self.next_ws {
-            self.writer.write_all(text.as_bytes())?;
-        }
         let info = match self.stack.pop() {
             Some(info) => info,
             _ => panic!("no ElemInfo"),
@@ -173,12 +171,19 @@ impl<Wr: Write> HtmlSerializer<Wr> {
             return Ok(());
         }
 
+        if self.next_ws.take().is_some() {
+            self.writer.write_all(b" ")?;
+        }
+
+        self.skip_ws = Some(Ws::C);
+
         self.writer.write_all(b"</")?;
         self.writer.write_all(tagname(&name).as_bytes())?;
         self.writer.write_all(b">")
     }
 
     pub fn write_text(&mut self, text: &str) -> io::Result<()> {
+        assert!(self.next_ws.is_none(), "{:?} at \n{:?}", self.next_ws, text);
         let escape = match self.parent().html_name {
             Some(local_name!("style"))
             | Some(local_name!("script"))
@@ -190,20 +195,32 @@ impl<Wr: Write> HtmlSerializer<Wr> {
 
             _ => true,
         };
-        let (l, v, r) = trim(text);
-        if let Some(text) = self.next_ws.replace(r.into()) {
-            self.writer.write_all(text.as_bytes())?;
-        }
 
-        let text = if self.skip_ws {
-            v
-        } else {
-            &text[..l.len() + v.len()]
+        let v = match self.parent().html_name {
+            Some(local_name!("pre")) | Some(local_name!("listing")) => {
+                self.skip_ws = None;
+                self.next_ws = None;
+                text
+            }
+            _ => {
+                let (l, v, r) = trim(text);
+
+                match self.skip_ws.take() {
+                    Some(Ws::C) if !l.is_empty() => self.writer.write_all(b" ")?,
+                    None => self.writer.write_all(l.as_bytes())?,
+                    _ => (),
+                }
+                if !r.is_empty() {
+                    self.next_ws = Some(r.into());
+                }
+                v
+            }
         };
+
         if escape {
-            self.write_escaped(text, false)
+            self.write_escaped(v, false)
         } else {
-            self.writer.write_all(text.as_bytes())
+            self.writer.write_all(v.as_bytes())
         }
     }
 
@@ -211,13 +228,14 @@ impl<Wr: Write> HtmlSerializer<Wr> {
         if let Some(text) = &self.next_ws.take() {
             self.writer.write_all(text.as_bytes())?;
         }
-        self.skip_ws = false;
+        self.skip_ws = None;
         self.writer.write_all(b"<!--")?;
         self.writer.write_all(text.as_bytes())?;
         self.writer.write_all(b"-->")
     }
 
     pub fn write_doctype(&mut self, name: &str) -> io::Result<()> {
+        assert!(self.next_ws.is_none(), "text before doctype");
         self.writer.write_all(b"<!DOCTYPE ")?;
         self.writer.write_all(name.as_bytes())?;
         self.writer.write_all(b">")

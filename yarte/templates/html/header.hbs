@@ -15,32 +15,32 @@
     {{/with}}
     <nav role="navigation">
         <ul>
-            {{# if let Mode::Text = mode }}
+            {{~# if let Mode::Text = mode ~}}
                 <li>
                     <a href="#text">Text</a>
                     <ul>
-                        {{# each item }}
+                        {{~# each item ~}}
                             <li><a href="#{{ href }}">{{ name }}</a></li>
-                        {{/each}}
+                        {{~/each ~}}
                     </ul>
                 </li>
-            {{ else if let Mode::Embedded = mode }}
+            {{~ else if let Mode::Embedded = mode ~}}
                 <li>
                     <a href="#embedded">Embedded content</a>
                     <ul>
-                        {{# each item }}
+                        {{~# each item ~}}
                             <li><a href="#{{ href }}">{{ name }} foo</a></li>
-                        {{/each}}
+                        {{~/ each ~}}
                     </ul>
                 </li>
-            {{ else }}
+            {{~ else ~}}
                 <li>
                     <a href="#forms">Form elements</a>
                     <ul>
                         <li><a href="#forms__input">Input fields</a></li>
                     </ul>
                 </li>
-            {{/if}}
+            {{~/if ~}}
         </ul>
     </nav>
 </div>
