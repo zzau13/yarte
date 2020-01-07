@@ -9,12 +9,13 @@ use yarte_hir::{Each as HEach, IfElse as HIfElse, HIR};
 #[macro_use]
 mod macros;
 mod driver;
+mod serialize;
 mod serializer;
 mod sink;
 mod tree_builder;
 
 use self::{
-    serializer::serialize,
+    serialize::serialize,
     sink::{parse_document, parse_fragment, ParseResult, Sink, HEAD, TAIL},
 };
 
@@ -206,7 +207,7 @@ pub enum ExprOrText {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::serializer::serialize;
+    use crate::serialize::serialize;
 
     #[test]
     fn test_div() {
