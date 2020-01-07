@@ -27,5 +27,5 @@ fn test_article_title() {
     let t = ArticleTitleTemplate {
         article: Article { title: "bar" },
     };
-    assert_eq!("<h1>bar</h1> <h2>bar</h2>", t.call().unwrap());
+    assert_eq!("<h1>bar</h1><h2>bar</h2>", t.call().unwrap());
 }
