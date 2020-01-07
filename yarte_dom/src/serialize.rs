@@ -1,15 +1,11 @@
 use std::{
-    default::Default,
     io::{self, Write},
 };
 
-use markup5ever::{
-    serialize::{Serialize, Serializer, TraversalScope},
-    QualName,
-};
+use markup5ever::QualName;
 
 use crate::{
-    serializer,
+    serializer::HtmlSerializer,
     sink::{ParseAttribute, ParseElement, ParseNodeId, Sink, MARK},
     tree_builder::YARTE_TAG,
 };
@@ -18,7 +14,8 @@ pub fn serialize<Wr>(writer: Wr, node: &Tree) -> io::Result<()>
 where
     Wr: Write,
 {
-    serializer::serialize(writer, node, Default::default())
+    let mut ser = HtmlSerializer::new(writer);
+    node.serialize(&mut ser)
 }
 
 #[derive(Debug)]
@@ -96,16 +93,16 @@ fn get_children(children: &[ParseNodeId], sink: &Sink) -> Vec<TreeElement> {
     tree
 }
 
-impl Serialize for Tree {
-    fn serialize<S>(&self, serializer: &mut S, _traversal_scope: TraversalScope) -> io::Result<()>
-    where
-        S: Serializer,
-    {
+impl Tree {
+    pub fn serialize<W: Write>(&self, serializer: &mut HtmlSerializer<W>) -> io::Result<()> {
         _serialize(&self.nodes, serializer)
     }
 }
 
-fn _serialize<S: Serializer>(nodes: &[TreeElement], serializer: &mut S) -> io::Result<()> {
+fn _serialize<W: Write>(
+    nodes: &[TreeElement],
+    serializer: &mut HtmlSerializer<W>,
+) -> io::Result<()> {
     use TreeElement::*;
     for node in nodes {
         match node {
@@ -126,5 +123,5 @@ fn _serialize<S: Serializer>(nodes: &[TreeElement], serializer: &mut S) -> io::R
             Mark(s) => serializer.write_comment(&format!("{}{}", MARK, s))?,
         }
     }
-    Ok(())
+    serializer.end()
 }
