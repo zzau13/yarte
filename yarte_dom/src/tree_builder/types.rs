@@ -13,9 +13,7 @@ use html5ever::tokenizer::{states::RawKind, Tag};
 
 use html5ever::tendril::StrTendril;
 
-pub use self::{
-    FormatEntry::*, InsertionMode::*, InsertionPoint::*, ProcessResult::*, SplitStatus::*, Token::*,
-};
+pub use self::{FormatEntry::*, InsertionMode::*, ProcessResult::*, SplitStatus::*, Token::*};
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum InsertionMode {
@@ -59,16 +57,4 @@ pub enum ProcessResult<Handle> {
 pub enum FormatEntry<Handle> {
     Element(Handle, Tag),
     Marker,
-}
-
-pub enum InsertionPoint<Handle> {
-    /// Insert as last child in this parent.
-    LastChild(Handle),
-    /// Insert before this following sibling.
-    BeforeSibling(Handle),
-    /// Insertion point is decided based on existence of element's parent node.
-    TableFosterParenting {
-        element: Handle,
-        prev_element: Handle,
-    },
 }

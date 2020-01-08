@@ -230,26 +230,12 @@ where
         self.context_elem.is_some()
     }
 
-    /// https://html.spec.whatwg.org/multipage/#appropriate-place-for-inserting-a-node
-    fn appropriate_place_for_insertion(
-        &mut self,
-        override_target: Option<Handle>,
-    ) -> InsertionPoint<Handle> {
-        let target = override_target.unwrap_or_else(|| self.current_node().clone());
-        LastChild(target)
+    fn appropriate_place_for_insertion(&mut self, override_target: Option<Handle>) -> Handle {
+        override_target.unwrap_or_else(|| self.current_node().clone())
     }
 
-    fn insert_at(&mut self, insertion_point: InsertionPoint<Handle>, child: NodeOrText<Handle>) {
-        match insertion_point {
-            LastChild(parent) => self.sink.append(&parent, child),
-            BeforeSibling(sibling) => self.sink.append_before_sibling(&sibling, child),
-            TableFosterParenting {
-                element,
-                prev_element,
-            } => self
-                .sink
-                .append_based_on_parent_node(&element, &prev_element, child),
-        }
+    fn insert_at(&mut self, insertion_point: Handle, child: NodeOrText<Handle>) {
+        self.sink.append(&insertion_point, child)
     }
 }
 
@@ -751,7 +737,6 @@ where
         // FIXME: application cache selection algorithm
     }
 
-    // https://html.spec.whatwg.org/multipage/#create-an-element-for-the-token
     fn insert_element(
         &mut self,
         push: PushFlag,
@@ -764,14 +749,6 @@ where
         let elem = create_element(&mut self.sink, qname, attrs);
 
         let insertion_point = self.appropriate_place_for_insertion(None);
-        let (node1, node2) = match insertion_point {
-            LastChild(ref p) | BeforeSibling(ref p) => (p.clone(), None),
-            TableFosterParenting {
-                ref element,
-                ref prev_element,
-            } => (element.clone(), Some(prev_element.clone())),
-        };
-
         self.insert_at(insertion_point, AppendNode(elem.clone()));
 
         match push {
