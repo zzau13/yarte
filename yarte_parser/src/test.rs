@@ -31,6 +31,24 @@ fn test_fallback() {
 }
 
 #[test]
+fn test_1() {
+    let src = r#"{{# unless flag}}{{{/ unless}}"#;
+    let span = Span { lo: 17, hi: 18 };
+    let expr: syn::Expr = parse_str("flag").unwrap();
+    assert_eq!(
+        parse(src),
+        vec![S(
+            Node::Helper(Box::new(Helper::Unless(
+                ((false, false), (false, false)),
+                S(Box::new(expr), Span { lo: 11, hi: 15 }),
+                vec![S(Lit("", S("{", span), ""), span)]
+            ))),
+            Span { lo: 0, hi: 30 }
+        )]
+    );
+}
+
+#[test]
 fn test_eat_comment() {
     let src = r#"{{! Commentary !}}"#;
     let span = Span {
@@ -335,7 +353,7 @@ fn test_helpers() {
                 (WS, WS),
                 S(
                     Box::new(parse_str::<Expr>("name").unwrap()),
-                    Span { lo: 5, hi: 9 }
+                    Span { lo: 5, hi: 9 },
                 ),
                 vec![
                     S(
@@ -454,25 +472,25 @@ fn test_else_if() {
                     args,
                     vec![S(
                         Lit("", S("foo", Span { lo: 0, hi: 3 }), ""),
-                        Span { lo: 0, hi: 3 }
+                        Span { lo: 0, hi: 3 },
                     )]
                 ),
                 vec![(
                     WS,
                     S(
                         Box::new(parse_str::<Expr>("cond").unwrap()),
-                        Span { lo: 13, hi: 17 }
+                        Span { lo: 13, hi: 17 },
                     ),
                     vec![S(
                         Lit("", S("bar", Span { lo: 20, hi: 23 }), ""),
-                        Span { lo: 20, hi: 23 }
+                        Span { lo: 20, hi: 23 },
                     )]
                 )],
                 Some((
                     WS,
                     vec![S(
                         Lit("", S("foO", Span { lo: 31, hi: 34 }), ""),
-                        Span { lo: 31, hi: 34 }
+                        Span { lo: 31, hi: 34 },
                     )]
                 )),
             )))
@@ -496,14 +514,14 @@ fn test_defined() {
                 "foo",
                 S(
                     Box::new(parse_str::<Expr>("bar").unwrap()),
-                    Span { lo: 7, hi: 10 }
+                    Span { lo: 7, hi: 10 },
                 ),
                 vec![S(
                     Lit("", S("hello", Span { lo: 12, hi: 17 }), ""),
-                    Span { lo: 12, hi: 17 }
+                    Span { lo: 12, hi: 17 },
                 )],
             ))),
-            span
+            span,
         )]
     );
 }
@@ -522,10 +540,10 @@ fn test_ws_expr() {
                 (true, true),
                 S(
                     Box::new(parse_str::<Expr>("foo").unwrap()),
-                    Span { lo: 3, hi: 6 }
-                )
+                    Span { lo: 3, hi: 6 },
+                ),
             ),
-            span
+            span,
         )]
     );
     let src = "{{~ foo~}}";
@@ -540,10 +558,10 @@ fn test_ws_expr() {
                 (true, true),
                 S(
                     Box::new(parse_str::<Expr>("foo").unwrap()),
-                    Span { lo: 4, hi: 7 }
+                    Span { lo: 4, hi: 7 },
                 ),
             ),
-            span
+            span,
         )]
     );
     let src = "{{~ foo}}";
@@ -558,10 +576,10 @@ fn test_ws_expr() {
                 (true, false),
                 S(
                     Box::new(parse_str::<Expr>("foo").unwrap()),
-                    Span { lo: 4, hi: 7 }
+                    Span { lo: 4, hi: 7 },
                 ),
             ),
-            span
+            span,
         )]
     );
     let src = "{{foo    ~}}";
@@ -576,10 +594,10 @@ fn test_ws_expr() {
                 (false, true),
                 S(
                     Box::new(parse_str::<Expr>("foo").unwrap()),
-                    Span { lo: 2, hi: 5 }
+                    Span { lo: 2, hi: 5 },
                 ),
             ),
-            span
+            span,
         )]
     );
     let src = "{{~{foo }~}}";
@@ -594,10 +612,10 @@ fn test_ws_expr() {
                 (true, true),
                 S(
                     Box::new(parse_str::<Expr>("foo").unwrap()),
-                    Span { lo: 4, hi: 7 }
+                    Span { lo: 4, hi: 7 },
                 ),
             ),
-            span
+            span,
         )]
     );
     let src = "{{{foo }~}}";
@@ -612,10 +630,10 @@ fn test_ws_expr() {
                 (false, true),
                 S(
                     Box::new(parse_str::<Expr>("foo").unwrap()),
-                    Span { lo: 3, hi: 6 }
+                    Span { lo: 3, hi: 6 },
                 ),
             ),
-            span
+            span,
         )]
     );
 }
@@ -634,11 +652,11 @@ fn test_ws_each() {
                 ((true, true), (true, true)),
                 S(
                     Box::new(parse_str::<Expr>("bar").unwrap()),
-                    Span { lo: 9, hi: 12 }
+                    Span { lo: 9, hi: 12 },
                 ),
                 vec![],
             ))),
-            span
+            span,
         )]
     );
 }
@@ -658,14 +676,14 @@ fn test_ws_if() {
                     ((true, true), (true, true)),
                     S(
                         Box::new(parse_str::<Expr>("bar").unwrap()),
-                        Span { lo: 7, hi: 10 }
+                        Span { lo: 7, hi: 10 },
                     ),
                     vec![],
                 ),
                 vec![],
                 None,
             ))),
-            span
+            span,
         )]
     );
 }
@@ -685,14 +703,14 @@ fn test_ws_if_else() {
                     ((true, true), (true, true)),
                     S(
                         Box::new(parse_str::<Expr>("bar").unwrap()),
-                        Span { lo: 7, hi: 10 }
+                        Span { lo: 7, hi: 10 },
                     ),
                     vec![],
                 ),
                 vec![],
                 Some(((true, true), vec![])),
             ))),
-            span
+            span,
         )]
     );
 }
@@ -712,7 +730,7 @@ fn test_ws_if_else_if() {
                     ((true, true), (true, true)),
                     S(
                         Box::new(parse_str::<Expr>("bar").unwrap()),
-                        Span { lo: 7, hi: 10 }
+                        Span { lo: 7, hi: 10 },
                     ),
                     vec![],
                 ),
@@ -720,13 +738,13 @@ fn test_ws_if_else_if() {
                     (true, true),
                     S(
                         Box::new(parse_str::<Expr>("bar").unwrap()),
-                        Span { lo: 24, hi: 27 }
+                        Span { lo: 24, hi: 27 },
                     ),
                     vec![],
                 )],
                 Some(((true, true), vec![])),
             ))),
-            span
+            span,
         )]
     );
 }
@@ -747,7 +765,7 @@ fn test_ws_raw() {
                 S("{{#some }}{{/some}}", Span { lo: 7, hi: 26 }),
                 "",
             ),
-            span
+            span,
         )]
     );
     let src = "{{R  ~}}{{#some }}{{/some}}{{/R ~}}";
@@ -764,7 +782,7 @@ fn test_ws_raw() {
                 S("{{#some }}{{/some}}", Span { lo: 8, hi: 27 }),
                 "",
             ),
-            span
+            span,
         )]
     );
 }
@@ -783,9 +801,9 @@ fn test_partial_ws() {
             Node::Partial(Partial(
                 (true, true),
                 S("partial", Span { lo: 5, hi: 12 }),
-                S(vec![], Span { lo: 13, hi: 13 })
+                S(vec![], Span { lo: 13, hi: 13 }),
             )),
-            span
+            span,
         )]
     );
     let src = "{{> partial scope }}";
@@ -801,10 +819,10 @@ fn test_partial_ws() {
                 S("partial", Span { lo: 4, hi: 11 }),
                 S(
                     vec![parse_str::<Expr>("scope").unwrap()],
-                    Span { lo: 12, hi: 17 }
+                    Span { lo: 12, hi: 17 },
                 ),
             )),
-            span
+            span,
         )]
     );
     let src = "{{> partial scope ~}}";
@@ -820,10 +838,10 @@ fn test_partial_ws() {
                 S("partial", Span { lo: 4, hi: 11 }),
                 S(
                     vec![parse_str::<Expr>("scope").unwrap()],
-                    Span { lo: 12, hi: 17 }
+                    Span { lo: 12, hi: 17 },
                 ),
             )),
-            span
+            span,
         )]
     );
 }
@@ -841,9 +859,9 @@ fn test_partial() {
             Node::Partial(Partial(
                 WS,
                 S("partial", Span { lo: 4, hi: 11 }),
-                S(vec![], Span { lo: 12, hi: 12 })
+                S(vec![], Span { lo: 12, hi: 12 }),
             )),
-            span
+            span,
         )]
     );
     let src = "{{> partial scope }}";
@@ -859,10 +877,10 @@ fn test_partial() {
                 S("partial", Span { lo: 4, hi: 11 }),
                 S(
                     vec![parse_str::<Expr>("scope").unwrap()],
-                    Span { lo: 12, hi: 17 }
+                    Span { lo: 12, hi: 17 },
                 ),
             )),
-            span
+            span,
         )]
     );
 }
@@ -881,9 +899,9 @@ fn test_raw() {
                 (WS, WS),
                 "",
                 S("{{#some }}{{/some}}", Span { lo: 5, hi: 24 }),
-                ""
+                "",
             ),
-            span
+            span,
         )]
     );
 }
