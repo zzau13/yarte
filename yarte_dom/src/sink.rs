@@ -278,11 +278,7 @@ impl TreeSink for Sink {
         unreachable!()
     }
 
-    fn append_before_sibling(
-        &mut self,
-    _: &Self::Handle,
-        _: HtmlNodeOrText<Self::Handle>,
-    ) {
+    fn append_before_sibling(&mut self, _: &Self::Handle, _: HtmlNodeOrText<Self::Handle>) {
         unreachable!()
     }
 

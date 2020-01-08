@@ -342,11 +342,6 @@ pub enum PushFlag {
     NoPush,
 }
 
-enum Bookmark<Handle> {
-    Replace(Handle),
-    InsertAfter(Handle),
-}
-
 macro_rules! qualname {
     ("", $local:tt) => {
         QualName {
@@ -793,15 +788,6 @@ where
         elem
     }
 
-    fn clear_active_formatting_to_marker(&mut self) {
-        loop {
-            match self.active_formatting.pop() {
-                None | Some(Marker) => break,
-                _ => (),
-            }
-        }
-    }
-
     fn process_end_tag_in_body(&mut self, tag: Tag) {
         // Look back for a matching open element.
         let mut match_idx = None;
@@ -854,7 +840,7 @@ where
     }
 
     //§ tree-construction
-    fn is_foreign(&mut self, token: &Token) -> bool {
+    fn is_foreign(&self, token: &Token) -> bool {
         if let EOFToken = *token {
             return false;
         }
