@@ -74,7 +74,7 @@ pub fn parse(c: Cursor) -> Vec<SNode> {
 
 /// Step in eater
 ///     - Ok -> eat_lit -> push node -> restart in next cursor and continue
-///     - Err(Next) -> advance 3 chars and continue
+///     - Err(Next) -> advance
 ///     - Err(Fail) -> Insuperable error stop
 macro_rules! try_eat {
     ($nodes:ident, $i:ident, $at:ident, $j:ident, $($t:tt)+) => {
@@ -86,7 +86,7 @@ macro_rules! try_eat {
                 0
             },
             Err(LexError::Fail) => break Err(LexError::Fail),
-            Err(LexError::Next) => $at + $j + 3,
+            Err(LexError::Next) => $at + $j + 1,
         }
     };
 }
@@ -127,7 +127,7 @@ macro_rules! make_eater {
                         };
                     }
 
-                    let n = &i.rest[j + 1..].as_bytes();
+                    let n = &i.rest[at + j + 1..].as_bytes();
                     if 2 < n.len() {
                         at = if n[0] == b'{' {
                             if n[1] == b'~' {
@@ -137,10 +137,10 @@ macro_rules! make_eater {
                             }
                         } else {
                             // next
-                            at + j + 2
+                            at + j + 1
                         }
                     } else {
-                        kill!(buf, i.adv(i.len()), i, i.len());
+                        at += j + 1;
                     };
                 } else {
                     kill!(buf, i.adv(i.len()), i, i.len());

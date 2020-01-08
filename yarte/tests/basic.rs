@@ -29,14 +29,14 @@ fn test_brackets() {
 }
 
 #[derive(Template)]
-#[template(src = "{{{}}", ext = "txt")]
+#[template(src = "{{{}", ext = "txt")]
 
 struct Brackets2Template;
 
 #[test]
 fn test_brackets2() {
     let hello = Brackets2Template;
-    assert_eq!("{{{}}", hello.call().unwrap());
+    assert_eq!("{{{}", hello.call().unwrap());
 }
 #[derive(Template)]
 #[template(path = "simple.hbs")]
