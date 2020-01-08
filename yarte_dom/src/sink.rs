@@ -1,6 +1,3 @@
-#![allow(unused_variables)]
-#![allow(dead_code)]
-
 use std::{
     borrow::{Cow, Cow::Borrowed},
     collections::BTreeMap,
@@ -252,23 +249,11 @@ impl TreeSink for Sink {
 
     fn append_based_on_parent_node(
         &mut self,
-        element: &Self::Handle,
-        prev_element: &Self::Handle,
-        child: HtmlNodeOrText<Self::Handle>,
+        _: &Self::Handle,
+        _: &Self::Handle,
+        _: HtmlNodeOrText<Self::Handle>,
     ) {
-        let parent = match self.nodes.get(&prev_element.id) {
-            Some(ParseElement::Node { parent, .. }) => *parent,
-            _ => None,
-        }
-        .expect("Some parent of sibling");
-        let id = self.append_child(parent, child);
-
-        match self.nodes.get_mut(&parent) {
-            Some(ParseElement::Document(children)) | Some(ParseElement::Node { children, .. }) => {
-                children.push(id);
-            }
-            _ => unreachable!(),
-        };
+        unreachable!()
     }
 
     fn append_doctype_to_document(&mut self, _: StrTendril, _: StrTendril, _: StrTendril) {
@@ -290,57 +275,27 @@ impl TreeSink for Sink {
     }
 
     fn set_quirks_mode(&mut self, mode: QuirksMode) {
-        // DO nothing
+        unreachable!()
     }
 
     fn append_before_sibling(
         &mut self,
-        sibling: &Self::Handle,
-        new_node: HtmlNodeOrText<Self::Handle>,
+    _: &Self::Handle,
+        _: HtmlNodeOrText<Self::Handle>,
     ) {
-        let parent = match self.nodes.get(&sibling.id) {
-            Some(ParseElement::Node { parent, .. }) => *parent,
-            _ => None,
-        }
-        .expect("Some parent of sibling");
-
-        let id = self.append_child(parent, new_node);
-        match self.nodes.get_mut(&parent) {
-            Some(ParseElement::Document(children)) | Some(ParseElement::Node { children, .. }) => {
-                if let Some(position) = children.iter().position(|x| x == &sibling.id) {
-                    let mut head = children.get(..=position).unwrap().to_vec();
-                    head.push(id);
-                    head.extend_from_slice(children.get(position + 1..).unwrap());
-                    *children = head;
-                }
-            }
-            _ => unreachable!(),
-        }
+        unreachable!()
     }
 
-    fn add_attrs_if_missing(&mut self, target: &Self::Handle, html_attrs: Vec<HtmlAttribute>) {
-        let node = self.nodes.get_mut(&target.id).unwrap();
-        let html_attrs: Vec<ParseAttribute> = html_attrs
-            .into_iter()
-            .map(|attr| ParseAttribute {
-                name: attr.name,
-                value: String::from(attr.value),
-            })
-            .collect();
-
-        // TODO: if missing
-        match node {
-            ParseElement::Node { attrs, .. } => attrs.extend(html_attrs),
-            _ => panic!("add attributes if missing in Text or Document"),
-        }
+    fn add_attrs_if_missing(&mut self, _: &Self::Handle, _: Vec<HtmlAttribute>) {
+        unreachable!()
     }
 
     fn remove_from_parent(&mut self, target: &Self::Handle) {
-        todo!()
+        unreachable!()
     }
 
     fn reparent_children(&mut self, node: &Self::Handle, new_parent: &Self::Handle) {
-        todo!()
+        unreachable!()
     }
 }
 
