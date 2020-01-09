@@ -1,13 +1,13 @@
 [package]
 name = "yarte_wasm_app"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "Async core for yarte wasm applications"
 categories = ["template-engine"]
 documentation = "https://docs.rs/yarte_wasm_app"
 edition = "2018"
 include = ["src/**/*", "Cargo.toml"]
-keywords = ["markup", "template", "handlebars", "html"]
+keywords = ["markup", "template", "handlebars", "html", "wasm"]
 license = "MIT/Apache-2.0"
 readme = "../README.md"
 repository = "https://github.com/botika/yarte"

@@ -11,7 +11,7 @@ and using templates composition with partials.
 - `src`: template sources
 - `path`: path to sources relative to template directory
 - `print`: `all`, `ast` or `code` display debug info. Overridden by config file print option.
-- `assured`: If `true` don't wrap expressions wih `Render::render` function. If expression is in html file it will not escape.
+- `mode`: `text` or `html`
 - `ext`: Set file extension
 ###### `with-actix-web` feature 
 - `err`: Set error response body

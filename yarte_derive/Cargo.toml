@@ -1,6 +1,6 @@
 [package]
 name = "yarte_derive"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "Procedural macro package for yarte"
 categories = ["template-engine"]
