@@ -36,7 +36,7 @@ mod test {
     impl Message for Msg {}
 
     impl Handler<Msg> for Bench {
-        fn handle(&mut self, _: Msg, _: &Mailbox<Self>) {}
+        fn handle(&mut self, _: Msg, _: &Addr<Self>) {}
     }
 
     struct MsgR(usize);
@@ -44,7 +44,7 @@ mod test {
     impl Message for MsgR {}
 
     impl Handler<MsgR> for Bench {
-        fn handle(&mut self, msg: MsgR, mb: &Mailbox<Self>) {
+        fn handle(&mut self, msg: MsgR, mb: &Addr<Self>) {
             for _ in 0..msg.0 {
                 mb.send(Msg);
             }

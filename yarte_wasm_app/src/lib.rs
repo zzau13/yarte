@@ -22,16 +22,16 @@ pub trait App: Default + Sized + Unpin + 'static {
     /// empty for overridden in derive
     #[doc(hidden)]
     // TODO: derive
-    fn __render(&mut self, _mb: &Mailbox<Self>) {}
+    fn __render(&mut self, _mb: &Addr<Self>) {}
 
-    fn __hydrate(&mut self, _mb: &Mailbox<Self>) {}
+    fn __hydrate(&mut self, _mb: &Addr<Self>) {}
 
     /// Start a new asynchronous app, returning its address.
     fn start(self) -> Addr<Self>
     where
         Self: App,
     {
-        Addr(Rc::new(Context::new(self))).ready()
+        Addr(Rc::new(Context::new(self)))
     }
 
     /// Construct and start a new asynchronous app, returning its
@@ -51,17 +51,8 @@ pub trait App: Default + Sized + Unpin + 'static {
 pub struct Addr<A: App>(Rc<Context<A>>);
 
 impl<A: App> Addr<A> {
-    fn ready(self) -> Self {
-        assert!(self.0.mb.borrow().is_none());
-        assert!(!self.0.ready.get());
-        let cloned = self.clone();
-        *self.0.mb.borrow_mut() = Some(Mailbox::new(move |env| cloned.push(env)));
-        self.0.ready.replace(true);
-
-        self
-    }
-
     /// Enqueue message
+    #[inline]
     fn push(&self, env: Envelope<A>) {
         self.0.q.push(env);
         self.update();
@@ -70,6 +61,7 @@ impl<A: App> Addr<A> {
     /// Sends a message
     ///
     /// The message is always queued
+    #[inline]
     pub fn send<M>(&self, msg: M)
     where
         A: Handler<M>,
@@ -82,11 +74,7 @@ impl<A: App> Addr<A> {
         if self.0.ready.get() {
             self.0.ready.replace(false);
             while let Some(mut env) = self.0.q.pop() {
-                debug_assert!(self.0.mb.borrow().is_some());
-                env.handle(
-                    &mut self.0.app.borrow_mut(),
-                    &self.0.mb.borrow().as_ref().unwrap(),
-                )
+                env.handle(&mut self.0.app.borrow_mut(), &self)
             }
             self.0.ready.replace(true);
             self.render();
@@ -99,11 +87,7 @@ impl<A: App> Addr<A> {
     fn render(&self) {
         if self.0.ready.get() {
             self.0.ready.replace(false);
-            debug_assert!(self.0.mb.borrow().is_some());
-            self.0
-                .app
-                .borrow_mut()
-                .__render(&self.0.mb.borrow().as_ref().unwrap());
+            self.0.app.borrow_mut().__render(&self);
             self.0.ready.replace(true);
             if !self.0.q.is_empty() {
                 self.update()
@@ -115,15 +99,9 @@ impl<A: App> Addr<A> {
     ///
     /// Link events and get nodes
     pub fn hydrate(&self) {
-        if self.0.ready.get() {
-            self.0.ready.replace(false);
-            debug_assert!(self.0.mb.borrow().is_some());
-            self.0
-                .app
-                .borrow_mut()
-                .__hydrate(&self.0.mb.borrow().as_ref().unwrap());
-            self.0.ready.replace(true);
-        }
+        assert!(!self.0.ready.get());
+        self.0.app.borrow_mut().__hydrate(&self);
+        self.0.ready.replace(true);
     }
 }
 
@@ -138,7 +116,6 @@ pub struct Context<A: App> {
     app: RefCell<A>,
     q: Queue<Envelope<A>>,
     ready: Cell<bool>,
-    mb: RefCell<Option<Mailbox<A>>>,
 }
 
 impl<A: App> Context<A> {
@@ -147,34 +124,7 @@ impl<A: App> Context<A> {
             app: RefCell::new(app),
             q: Queue::new(),
             ready: Cell::new(false),
-            mb: RefCell::new(None),
         }
-    }
-}
-
-/// MailBox of messages enveloped with `App` type
-pub struct Mailbox<A: App>(Rc<Box<dyn Fn(Envelope<A>) + 'static>>);
-
-impl<A: App> Mailbox<A> {
-    fn new(f: impl Fn(Envelope<A>) + 'static) -> Self {
-        Mailbox(Rc::new(Box::new(f)))
-    }
-
-    /// Sends a message
-    ///
-    /// The message is always queued
-    pub fn send<M>(&self, msg: M)
-    where
-        A: Handler<M>,
-        M: Message,
-    {
-        (self.0)(Envelope::new(msg))
-    }
-}
-
-impl<A: App> Clone for Mailbox<A> {
-    fn clone(&self) -> Self {
-        Mailbox(Rc::clone(&self.0))
     }
 }
 
@@ -197,14 +147,15 @@ impl<A: App> Envelope<A> {
 trait EnvelopeProxy {
     type App: App;
 
-    fn handle(&mut self, act: &mut Self::App, mb: &Mailbox<Self::App>);
+    fn handle(&mut self, act: &mut Self::App, addr: &Addr<Self::App>);
 }
 
 impl<A: App> EnvelopeProxy for Envelope<A> {
     type App = A;
 
-    fn handle(&mut self, act: &mut Self::App, mb: &Mailbox<Self::App>) {
-        self.0.handle(act, mb)
+    #[inline]
+    fn handle(&mut self, act: &mut Self::App, addr: &Addr<Self::App>) {
+        self.0.handle(act, addr)
     }
 }
 
@@ -223,9 +174,10 @@ where
 {
     type App = A;
 
-    fn handle(&mut self, act: &mut Self::App, mb: &Mailbox<A>) {
+    #[inline]
+    fn handle(&mut self, act: &mut Self::App, addr: &Addr<A>) {
         if let Some(msg) = self.msg.take() {
-            <Self::App as Handler<M>>::handle(act, msg, mb);
+            <Self::App as Handler<M>>::handle(act, msg, addr);
         }
     }
 }
@@ -244,7 +196,7 @@ where
     M: Message,
 {
     /// This method is called for every message type `M` received by this app
-    fn handle(&mut self, msg: M, mb: &Mailbox<Self>);
+    fn handle(&mut self, msg: M, mb: &Addr<Self>);
 }
 
 /// Allow users to use `Arc<M>` as a message without having to re-impl `Message`
@@ -398,7 +350,7 @@ mod test {
     impl Message for MsgTree {}
 
     impl Handler<MsgTree> for Test {
-        fn handle(&mut self, msg: MsgTree, _mb: &Mailbox<Self>) {
+        fn handle(&mut self, msg: MsgTree, _mb: &Addr<Self>) {
             self.black_box.set_zero();
             // after first render
             let expected = BlackBox {
@@ -447,7 +399,7 @@ mod test {
     impl Message for Msg {}
 
     impl Handler<Msg> for Test {
-        fn handle(&mut self, msg: Msg, _mb: &Mailbox<Self>) {
+        fn handle(&mut self, msg: Msg, _mb: &Addr<Self>) {
             self.c.store(msg.0, Ordering::Relaxed);
         }
     }
@@ -457,7 +409,7 @@ mod test {
     impl Message for Reset {}
 
     impl Handler<Reset> for Test {
-        fn handle(&mut self, _: Reset, mb: &Mailbox<Self>) {
+        fn handle(&mut self, _: Reset, mb: &Addr<Self>) {
             mb.send(Msg(0));
         }
     }
@@ -467,7 +419,7 @@ mod test {
     impl Message for MsgFut {}
 
     impl Handler<MsgFut> for Test {
-        fn handle(&mut self, msg: MsgFut, mb: &Mailbox<Self>) {
+        fn handle(&mut self, msg: MsgFut, mb: &Addr<Self>) {
             mb.send(Reset);
             let mb = mb.clone();
             let work = unsafe {
@@ -491,6 +443,7 @@ mod test {
             ..Default::default()
         };
         let addr = app.start();
+        addr.hydrate();
         let addr2 = addr.clone();
         addr.send(Msg(2));
         assert_eq!(c2.load(Ordering::Relaxed), 2);

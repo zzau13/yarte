@@ -27,7 +27,7 @@ pub struct RowDOM {
 }
 
 impl RowDOM {
-    pub fn new(id: u32, label: &str, root: &Element, mb: &Mailbox<NonKeyed>) -> Self {
+    pub fn new(id: u32, label: &str, root: &Element, mb: &Addr<NonKeyed>) -> Self {
         let root = root.clone_node_with_deep(true).unwrap_throw();
         let id_node = root.first_child().unwrap_throw();
         let label_parent = id_node.next_sibling().unwrap_throw();
@@ -71,7 +71,7 @@ impl RowDOM {
         }
     }
 
-    pub fn update(&mut self, Row { id, label }: &Row, mb: &Mailbox<NonKeyed>) {
+    pub fn update(&mut self, Row { id, label }: &Row, mb: &Addr<NonKeyed>) {
         // depend label
         if self.t_root & 0b0000_0001 != 0 {
             self.label_node.set_text_content(Some(label));
@@ -130,7 +130,7 @@ impl RowDOM {
         self.t_root = 0;
     }
 
-    pub fn hydrate(&mut self, row: &Row, mb: &Mailbox<NonKeyed>) {
+    pub fn hydrate(&mut self, row: &Row, mb: &Addr<NonKeyed>) {
         let cloned = mb.clone();
         let id = row.id;
         let closure_select = Closure::wrap(Box::new(move |event: Event| {
