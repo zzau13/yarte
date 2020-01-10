@@ -5,18 +5,33 @@ publish = false
 edition = "2018"
 
 [workspace]
-members = ["."]
+members = [".", "codegen"]
 
 [dependencies]
 yarte_wasm_app = { path = "../.", version = "*" }
+codegen = { path = "./codegen", version = "*" }
 
 wasm-bindgen = "0.2"
 wasm-bindgen-test = "0.2"
+serde = "1.0"
+serde_json = "1.0"
+serde_derive = "1.0"
+rand = {version = "0.7", features = ["small_rng"]}
+byteorder = "1.3"
 
+js-sys = "0.3"
 [dependencies.web-sys]
 version = "0.3"
 features = [
-  "console"
+  "console",
+  "Node",
+  "Document",
+  "Window",
+  "Element",
+  "HtmlElement",
+  "EventTarget",
+  "Event",
+  "HtmlCollection"
 ]
 
 
