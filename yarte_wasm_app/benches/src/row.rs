@@ -12,6 +12,7 @@ pub struct Row {
 }
 
 pub struct RowDOM {
+    pub t_root: u8,
     pub root: Node,
     // depend item.id
     pub id_node: Node,
@@ -60,6 +61,7 @@ impl RowDOM {
             .unwrap_throw();
 
         RowDOM {
+            t_root: 0,
             root,
             id_node,
             label_node,
@@ -70,57 +72,62 @@ impl RowDOM {
     }
 
     pub fn update(&mut self, Row { id, label }: &Row, mb: &Mailbox<NonKeyed>) {
-        // depend id
-        self.id_node.set_text_content(Some(&id.to_string()));
-
         // depend label
-        self.label_node.set_text_content(Some(label));
+        if self.t_root & 0b0000_0001 != 0 {
+            self.label_node.set_text_content(Some(label));
+        }
 
         // depend id
-        if let Some(cl) = &self.closure_select {
-            self.label_node
-                .remove_event_listener_with_callback("click", cl.as_ref().unchecked_ref())
-                .unwrap_throw();
-        }
-        let id = *id;
-        let cloned = mb.clone();
-        self.closure_select = Some(Closure::wrap(Box::new(move |event: Event| {
-            event.prevent_default();
-            cloned.send(Select(id))
-        }) as Box<dyn Fn(Event)>));
-        self.label_node
-            .add_event_listener_with_callback(
-                "click",
-                &self
-                    .closure_select
-                    .as_ref()
-                    .unwrap_throw()
-                    .as_ref()
-                    .unchecked_ref(),
-            )
-            .unwrap_throw();
+        if self.t_root & 0b0000_0010 != 0 {
+            let id = *id;
+            self.id_node.set_text_content(Some(&id.to_string()));
 
-        let cloned = mb.clone();
-        if let Some(cl) = &self.closure_delete {
+            if let Some(cl) = &self.closure_select {
+                self.label_node
+                    .remove_event_listener_with_callback("click", cl.as_ref().unchecked_ref())
+                    .unwrap_throw();
+            }
+            let cloned = mb.clone();
+            self.closure_select = Some(Closure::wrap(Box::new(move |event: Event| {
+                event.prevent_default();
+                cloned.send(Select(id))
+            }) as Box<dyn Fn(Event)>));
+            self.label_node
+                .add_event_listener_with_callback(
+                    "click",
+                    &self
+                        .closure_select
+                        .as_ref()
+                        .unwrap_throw()
+                        .as_ref()
+                        .unchecked_ref(),
+                )
+                .unwrap_throw();
+
+            let cloned = mb.clone();
+            if let Some(cl) = &self.closure_delete {
+                self.delete_node
+                    .remove_event_listener_with_callback("click", cl.as_ref().unchecked_ref())
+                    .unwrap_throw();
+            }
+            self.closure_delete = Some(Closure::wrap(Box::new(move |event: Event| {
+                event.prevent_default();
+                cloned.send(Delete(id));
+            }) as Box<dyn Fn(Event)>));
             self.delete_node
-                .remove_event_listener_with_callback("click", cl.as_ref().unchecked_ref())
+                .add_event_listener_with_callback(
+                    "click",
+                    &self
+                        .closure_delete
+                        .as_ref()
+                        .unwrap_throw()
+                        .as_ref()
+                        .unchecked_ref(),
+                )
                 .unwrap_throw();
         }
-        self.closure_delete = Some(Closure::wrap(Box::new(move |event: Event| {
-            event.prevent_default();
-            cloned.send(Delete(id));
-        }) as Box<dyn Fn(Event)>));
-        self.delete_node
-            .add_event_listener_with_callback(
-                "click",
-                &self
-                    .closure_delete
-                    .as_ref()
-                    .unwrap_throw()
-                    .as_ref()
-                    .unchecked_ref(),
-            )
-            .unwrap_throw();
+
+        self.t_root = 0;
     }
 
     pub fn hydrate(&mut self, row: &Row, mb: &Mailbox<NonKeyed>) {
