@@ -29,6 +29,7 @@ zip_with_spaces!(
 );
 
 impl NonKeyed {
+    #[inline]
     fn run_n(&mut self, n: usize) {
         let update_n = min(n, self.data.len());
 
