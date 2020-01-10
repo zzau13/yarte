@@ -24,6 +24,8 @@ pub trait App: Default + Sized + Unpin + 'static {
     // TODO: derive
     fn __render(&mut self, _mb: &Mailbox<Self>) {}
 
+    fn __hydrate(&mut self, _mb: &Mailbox<Self>) {}
+
     /// Start a new asynchronous app, returning its address.
     fn start(self) -> Addr<Self>
     where
@@ -94,7 +96,7 @@ impl<A: App> Addr<A> {
     /// Render app
     ///
     /// if app if not ready will render when it's ready
-    pub fn render(&self) {
+    fn render(&self) {
         if self.0.ready.get() {
             self.0.ready.replace(false);
             debug_assert!(self.0.mb.borrow().is_some());
@@ -106,6 +108,21 @@ impl<A: App> Addr<A> {
             if !self.0.q.is_empty() {
                 self.update()
             }
+        }
+    }
+
+    /// Hydrate app
+    ///
+    /// Link events and get nodes
+    pub fn hydrate(&self) {
+        if self.0.ready.get() {
+            self.0.ready.replace(false);
+            debug_assert!(self.0.mb.borrow().is_some());
+            self.0
+                .app
+                .borrow_mut()
+                .__hydrate(&self.0.mb.borrow().as_ref().unwrap());
+            self.0.ready.replace(true);
         }
     }
 }
