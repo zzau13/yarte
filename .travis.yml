@@ -32,4 +32,4 @@ script:
     fi
   - cargo test --all-features --all -- --nocapture
   - cd yarte_wasm_app && wasm-pack test --node
-  - cd benches && wasm-pack test --chrome --release
+  - cd benches && wasm-pack build --target web --release
