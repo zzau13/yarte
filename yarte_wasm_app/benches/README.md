@@ -7,3 +7,17 @@ wasm-pack build --target web --release
 
 python3 -m http.server
 ```
+
+# Partial result of proof of concept
+> On intel i7-7700HQ
+
+### Non Keyed
+##### Duration in milliseconds ± 95% confidence interval (Slowdown = Duration / Fastest)
+![](shot-1.png)
+
+##### Startup metrics (lighthouse with mobile simulation)
+![](shot-2.png)
+
+##### Memory allocation in MBs ± 95% confidence interval
+![](shot-3.png)
+
