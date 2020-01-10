@@ -59,7 +59,7 @@ pub struct Create;
 impl Message for Create {}
 
 impl Handler<Create> for NonKeyed {
-    fn handle(&mut self, _msg: Create, _mb: &Mailbox<Self>) {
+    fn handle(&mut self, _msg: Create, _mb: &Addr<Self>) {
         self.run_n(1_000);
     }
 }
@@ -69,7 +69,7 @@ pub struct Create10;
 impl Message for Create10 {}
 
 impl Handler<Create10> for NonKeyed {
-    fn handle(&mut self, _msg: Create10, _mb: &Mailbox<Self>) {
+    fn handle(&mut self, _msg: Create10, _mb: &Addr<Self>) {
         self.run_n(10_000);
     }
 }
@@ -79,7 +79,7 @@ pub struct Append;
 impl Message for Append {}
 
 impl Handler<Append> for NonKeyed {
-    fn handle(&mut self, _msg: Append, _mb: &Mailbox<Self>) {
+    fn handle(&mut self, _msg: Append, _mb: &Addr<Self>) {
         for _ in 0..1000 {
             let id = self.id;
             self.id += 1;
@@ -97,7 +97,7 @@ pub struct Update;
 impl Message for Update {}
 
 impl Handler<Update> for NonKeyed {
-    fn handle(&mut self, _msg: Update, _mb: &Mailbox<Self>) {
+    fn handle(&mut self, _msg: Update, _mb: &Addr<Self>) {
         let step = 10;
         for i in (0..(self.data.len() / step)).map(|x| x * step) {
             self.data[i].label.push_str(" !!!");
@@ -113,7 +113,7 @@ pub struct Clear;
 impl Message for Clear {}
 
 impl Handler<Clear> for NonKeyed {
-    fn handle(&mut self, _msg: Clear, _mb: &Mailbox<Self>) {
+    fn handle(&mut self, _msg: Clear, _mb: &Addr<Self>) {
         self.data.clear();
         self.t_root |= 0b0000_0001;
     }
@@ -124,14 +124,14 @@ pub struct Swap;
 impl Message for Swap {}
 
 impl Handler<Swap> for NonKeyed {
-    fn handle(&mut self, _msg: Swap, _mb: &Mailbox<Self>) {
+    fn handle(&mut self, _msg: Swap, _mb: &Addr<Self>) {
         if self.data.len() < 999 {
             return;
         }
 
         self.data.swap(1, 998);
         self.tbody_children[1].t_root = 0xFF;
-        self.tbody_children[998].t_root= 0xFF;
+        self.tbody_children[998].t_root = 0xFF;
         self.t_root |= 0b0000_0001;
     }
 }
@@ -141,7 +141,7 @@ pub struct Select(pub u32);
 impl Message for Select {}
 
 impl Handler<Select> for NonKeyed {
-    fn handle(&mut self, msg: Select, _mb: &Mailbox<Self>) {
+    fn handle(&mut self, msg: Select, _mb: &Addr<Self>) {
         self.t_root |= 0b0000_0010;
 
         if let Some(t) = self.selected {
@@ -160,8 +160,7 @@ pub struct Delete(pub u32);
 impl Message for Delete {}
 
 impl Handler<Delete> for NonKeyed {
-    fn handle(&mut self, msg: Delete, _mb: &Mailbox<Self>) {
-
+    fn handle(&mut self, msg: Delete, _mb: &Addr<Self>) {
         if let Some(selected) = self.selected {
             if msg.0 == selected {
                 self.selected = None;

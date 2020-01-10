@@ -39,7 +39,7 @@ pub struct NonKeyed {
 impl App for NonKeyed {
     type BlackBox = ();
 
-    fn __render(&mut self, mb: &Mailbox<Self>) {
+    fn __render(&mut self, mb: &Addr<Self>) {
         if self.t_root & 0b0000_0001 != 0 {
             let dom_len = self.tbody_children.len();
             let row_len = self.data.len();
@@ -105,7 +105,7 @@ impl App for NonKeyed {
         self.t_root = 0;
     }
 
-    fn __hydrate(&mut self, mb: &Mailbox<Self>) {
+    fn __hydrate(&mut self, mb: &Addr<Self>) {
         let document = web_sys::window().unwrap_throw().document().unwrap_throw();
         let f = document
             .body()
