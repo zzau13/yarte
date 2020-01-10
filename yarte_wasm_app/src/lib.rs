@@ -16,18 +16,20 @@ use self::queue::Queue;
 ///
 /// App communicate exclusively by directional exchanging messages
 /// The sender can't wait the response since it never answer
-// TODO: lifecycle ?
+// TODO: derive
 pub trait App: Default + Sized + Unpin + 'static {
     type BlackBox: Default;
-    /// empty for overridden in derive
+    /// Private: empty for overridden in derive
     #[doc(hidden)]
-    // TODO: derive
     fn __render(&mut self, _mb: &Addr<Self>) {}
 
+    /// Private: empty for overridden in derive
+    #[doc(hidden)]
     fn __hydrate(&mut self, _mb: &Addr<Self>) {}
 
-    /// Start a new asynchronous app, returning its address.
-    fn start(self) -> Addr<Self>
+    /// Private: Start a new asynchronous app, returning its address.
+    #[doc(hidden)]
+    fn __start(self) -> Addr<Self>
     where
         Self: App,
     {
@@ -43,7 +45,7 @@ pub trait App: Default + Sized + Unpin + 'static {
     where
         Self: App,
     {
-        Self::default().start()
+        Self::default().__start()
     }
 }
 
@@ -442,7 +444,7 @@ mod test {
             c,
             ..Default::default()
         };
-        let addr = app.start();
+        let addr = app.__start();
         addr.hydrate();
         let addr2 = addr.clone();
         addr.send(Msg(2));
