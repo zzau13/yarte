@@ -43,7 +43,14 @@ impl App for NonKeyed {
         if self.t_root & 0b0000_0001 != 0 {
             let dom_len = self.tbody_children.len();
             let row_len = self.data.len();
-            if dom_len < row_len {
+            if row_len == 0 {
+                // Clear
+                while let Some(ref child) = self.tbody.first_child() {
+                    self.tbody.remove_child(child).unwrap_throw();
+                }
+                self.tbody_children.clear()
+            } else if dom_len < row_len {
+                // Add and update
                 for (dom, row) in self
                     .tbody_children
                     .iter_mut()
@@ -58,6 +65,7 @@ impl App for NonKeyed {
                     self.tbody_children.push(v);
                 }
             } else if row_len < dom_len {
+                // Remove and update
                 for (dom, row) in self.tbody_children[..row_len]
                     .iter_mut()
                     .zip(self.data.iter())
@@ -72,6 +80,7 @@ impl App for NonKeyed {
                 }
                 self.tbody_children.drain(row_len..);
             } else {
+                // Update
                 for (dom, row) in self
                     .tbody_children
                     .iter_mut()
