@@ -81,14 +81,14 @@ impl Message for Append {}
 
 impl Handler<Append> for NonKeyed {
     fn handle(&mut self, _msg: Append, _mb: &Addr<Self>) {
-        for _ in 0..1000 {
-            let id = self.id;
-            self.id += 1;
+        let n = 1000;
+        for i in 0..n {
             self.data.push(Row {
-                id,
+                id: self.id + i,
                 label: (*ZIPPED.choose(&mut self.rng).unwrap()).to_string(),
             })
         }
+        self.id += n;
         self.t_root |= 0b0000_0001;
     }
 }
