@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use js_sys::Date;
 use rand::{rngs::SmallRng, SeedableRng};
 use serde_json::from_str;
@@ -7,6 +9,7 @@ use web_sys::{Element, Event};
 use yarte_wasm_app::*;
 
 use crate::{
+    update_row,
     handler::*,
     row::{row_element, Row, RowDOM},
 };
@@ -47,45 +50,42 @@ impl App for NonKeyed {
                 // Clear
                 self.tbody.set_inner_html("");
                 self.tbody_children.clear()
-            } else if dom_len < row_len {
-                // Add and update
-                for (dom, row) in self
-                    .tbody_children
-                    .iter_mut()
-                    .zip(self.data[..dom_len].iter())
-                    .filter(|(dom, _)| dom.t_root != 0)
-                {
-                    dom.update(row, mb);
-                }
-                for row in self.data[dom_len..].iter() {
-                    let v = RowDOM::new(row.id, &row.label, &self.tr, mb);
-                    self.tbody.append_child(&v.root).unwrap_throw();
-                    self.tbody_children.push(v);
-                }
-            } else if row_len < dom_len {
-                // Remove and update
-                for (dom, row) in self.tbody_children[..row_len]
-                    .iter_mut()
-                    .zip(self.data.iter())
-                    .filter(|(dom, _)| dom.t_root != 0)
-                {
-                    dom.update(row, mb);
-                }
-                for _ in 0..dom_len - row_len {
-                    self.tbody
-                        .remove_child(&self.tbody.last_child().unwrap_throw())
-                        .unwrap_throw();
-                }
-                self.tbody_children.drain(row_len..);
             } else {
+                // select
+                let (ord, min) = match row_len.cmp(&dom_len) {
+                    ord @ Ordering::Equal | ord @ Ordering::Greater => (ord, dom_len),
+                    ord @ Ordering::Less => (ord, row_len),
+                };
+
                 // Update
                 for (dom, row) in self
-                    .tbody_children
+                    .tbody_children[..min]
                     .iter_mut()
-                    .zip(self.data.iter())
+                    .zip(self.data[..min].iter())
                     .filter(|(dom, _)| dom.t_root != 0)
-                {
-                    dom.update(row, mb)
+                    {
+                        update_row!(dom, row, mb);
+                    }
+
+                match ord {
+                    Ordering::Greater => {
+                        // Add
+                        for row in self.data[dom_len..].iter() {
+                            let v = RowDOM::new(row.id, &row.label, &self.tr, mb);
+                            self.tbody.append_child(&v.root).unwrap_throw();
+                            self.tbody_children.push(v);
+                        }
+                    }
+                    Ordering::Less => {
+                        // Remove
+                        for _ in 0..dom_len - row_len {
+                            self.tbody
+                                .remove_child(&self.tbody.last_child().unwrap_throw())
+                                .unwrap_throw();
+                        }
+                        self.tbody_children.drain(row_len..);
+                    }
+                    Ordering::Equal => (),
                 }
             }
         }

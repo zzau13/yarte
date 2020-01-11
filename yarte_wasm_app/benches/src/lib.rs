@@ -9,6 +9,7 @@ use crate::app::NonKeyed;
 
 mod app;
 mod handler;
+#[macro_use]
 mod row;
 
 #[wasm_bindgen(start)]
