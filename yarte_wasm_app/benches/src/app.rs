@@ -64,9 +64,9 @@ impl App for NonKeyed {
                     .iter_mut()
                     .zip(self.data[..min].iter())
                     .filter(|(dom, _)| dom.t_root != 0)
-                {
-                    update_row!(dom, row, mb);
-                }
+                    {
+                        update_row!(dom, row, mb);
+                    }
 
                 match ord {
                     Ordering::Greater => {
@@ -112,6 +112,8 @@ impl App for NonKeyed {
         // multiple elements use hashset<usize>
         if self.t_root & 0b0000_0011 != 0 {
             let children = self.tbody.children();
+            let len = self.data.len();
+
             if let Some(selected) = self.selected {
                 let selecteds =
                     self.data
@@ -132,31 +134,29 @@ impl App for NonKeyed {
                     .old_selected
                     .difference(&selecteds)
                     .copied()
-                    .collect::<HashSet<_>>()
-                {
-                    if i < self.data.len() {
-                        children.item(i as u32).unwrap_throw().set_class_name("");
+                    .collect::<Vec<_>>()
+                    {
+                        if i < len {
+                            children.item(i as u32).unwrap_throw().set_class_name("");
+                        }
+                        self.old_selected.remove(&i);
                     }
-                    self.old_selected.remove(&i);
-                }
 
                 for i in selecteds
                     .difference(&self.old_selected)
                     .copied()
-                    .collect::<HashSet<_>>()
-                {
-                    children
-                        .item(i as u32)
-                        .unwrap_throw()
-                        .set_class_name("danger");
+                    .collect::<Vec<_>>()
+                    {
+                        children
+                            .item(i as u32)
+                            .unwrap_throw()
+                            .set_class_name("danger");
 
-                    self.old_selected.insert(i);
-                }
-            } else {
-                for i in self.old_selected.drain() {
-                    if i < self.data.len() {
-                        children.item(i as u32).unwrap_throw().set_class_name("");
+                        self.old_selected.insert(i);
                     }
+            } else {
+                for i in self.old_selected.drain().filter(|i| *i < len) {
+                    children.item(i as u32).unwrap_throw().set_class_name("");
                 }
             }
             // Find new
