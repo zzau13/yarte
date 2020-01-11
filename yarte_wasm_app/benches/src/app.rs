@@ -45,6 +45,10 @@ impl App for NonKeyed {
     type BlackBox = ();
 
     fn __render(&mut self, mb: &Addr<Self>) {
+        if self.t_root == 0 {
+            return;
+        }
+
         if self.t_root & 0b0000_0001 != 0 {
             let dom_len = self.tbody_children.len();
             let row_len = self.data.len();
