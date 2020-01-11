@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::collections::HashSet;
 
 use js_sys::Date;
 use rand::{rngs::SmallRng, SeedableRng};
@@ -27,7 +28,7 @@ pub struct NonKeyed {
     pub rng: SmallRng,
     // Black box
     pub t_root: u8,
-    old_selected: Option<usize>,
+    old_selected: HashSet<usize>,
     tr: Element,
     tbody: Element,
     //
@@ -86,8 +87,9 @@ impl App for NonKeyed {
             }
         }
 
+        /*
+
         // TODO: attribute on expression selector is unique
-        // multiple elements use hashset<usize>
         if self.t_root & 0b0000_0011 != 0 {
             let children = self.tbody.children();
             if let Some(old) = self.old_selected.take() {
@@ -104,6 +106,60 @@ impl App for NonKeyed {
                     self.selected = None;
                 }
             }
+        }
+        */
+
+        // multiple elements use hashset<usize>
+        if self.t_root & 0b0000_0011 != 0 {
+            let children = self.tbody.children();
+            if let Some(selected) = self.selected {
+                let selecteds =
+                    self.data
+                        .iter()
+                        .enumerate()
+                        .fold(HashSet::new(), |mut acc, (i, row)| {
+                            if row.id == selected {
+                                acc.insert(i);
+                            }
+                            acc
+                        });
+
+                if selecteds.is_empty() {
+                    self.selected = None;
+                }
+
+                for i in self
+                    .old_selected
+                    .difference(&selecteds)
+                    .copied()
+                    .collect::<HashSet<_>>()
+                {
+                    if i < self.data.len() {
+                        children.item(i as u32).unwrap_throw().set_class_name("");
+                    }
+                    self.old_selected.remove(&i);
+                }
+
+                for i in selecteds
+                    .difference(&self.old_selected)
+                    .copied()
+                    .collect::<HashSet<_>>()
+                {
+                    children
+                        .item(i as u32)
+                        .unwrap_throw()
+                        .set_class_name("danger");
+
+                    self.old_selected.insert(i);
+                }
+            } else {
+                for i in self.old_selected.drain() {
+                    if i < self.data.len() {
+                        children.item(i as u32).unwrap_throw().set_class_name("");
+                    }
+                }
+            }
+            // Find new
         }
 
         self.t_root = 0;
@@ -274,7 +330,7 @@ impl Default for NonKeyed {
             rng: SmallRng::seed_from_u64(Date::now() as u64),
             // Black box
             t_root: 0,
-            old_selected: None,
+            old_selected: HashSet::new(),
             tbody,
             tbody_children,
             tr: row_element(),

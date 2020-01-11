@@ -99,10 +99,9 @@ impl Message for Update {}
 
 impl Handler<Update> for NonKeyed {
     fn handle(&mut self, _msg: Update, _mb: &Addr<Self>) {
-        let step = 10;
-        for i in (0..(self.data.len() / step)).map(|x| x * step) {
-            self.data[i].label.push_str(" !!!");
-            self.tbody_children[i].t_root |= 0b0000_0001;
+        for (row, dom) in self.data.iter_mut().zip(self.tbody_children.iter_mut()).step_by(10) {
+            row.label.push_str(" !!!");
+            dom.t_root |= 0b0000_0001;
         }
 
         self.t_root |= 0b0000_0001;
