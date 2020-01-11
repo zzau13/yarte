@@ -10,6 +10,7 @@ members = [".", "codegen"]
 [dependencies]
 yarte_wasm_app = { path = "../.", version = "*" }
 codegen = { path = "./codegen", version = "*" }
+hashbrown = { version ="0.6", default_features = false, features = ["ahash"] }
 
 serde = "1.0"
 serde_json = "1.0"
