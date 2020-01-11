@@ -104,6 +104,9 @@ impl<A: App> Addr<A> {
         assert!(!self.0.ready.get());
         self.0.app.borrow_mut().__hydrate(&self);
         self.0.ready.replace(true);
+        if !self.0.q.is_empty() {
+            self.update()
+        }
     }
 }
 
