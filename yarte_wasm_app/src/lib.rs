@@ -54,7 +54,6 @@ pub struct Addr<A: App>(Rc<Context<A>>);
 
 impl<A: App> Addr<A> {
     /// Enqueue message
-    #[inline]
     fn push(&self, env: Envelope<A>) {
         self.0.q.push(env);
         self.update();
@@ -72,6 +71,7 @@ impl<A: App> Addr<A> {
         self.push(Envelope::new(msg));
     }
 
+    #[inline]
     fn update(&self) {
         if self.0.ready.get() {
             self.0.ready.replace(false);
@@ -86,6 +86,7 @@ impl<A: App> Addr<A> {
     /// Render app
     ///
     /// if app if not ready will render when it's ready
+    #[inline]
     fn render(&self) {
         if self.0.ready.get() {
             self.0.ready.replace(false);
