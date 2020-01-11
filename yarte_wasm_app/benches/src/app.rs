@@ -86,8 +86,9 @@ impl App for NonKeyed {
             }
         }
 
-        // TODO:  detect `selected`
-        if self.t_root & 0b0000_0010 != 0 {
+        // TODO: attribute on expression selector is unique
+        // multiple elements use hashset<usize>
+        if self.t_root & 0b0000_0011 != 0 {
             let children = self.tbody.children();
             if let Some(old) = self.old_selected.take() {
                 children.item(old as u32).unwrap_throw().set_class_name("")
