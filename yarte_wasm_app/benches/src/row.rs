@@ -1,9 +1,5 @@
-use wasm_bindgen::{prelude::*, JsCast, UnwrapThrowExt};
+use wasm_bindgen::{prelude::*, UnwrapThrowExt};
 use web_sys::{window, Element, Event, Node};
-
-use yarte_wasm_app::*;
-
-use crate::{app::NonKeyed, handler::*};
 
 #[derive(Debug, Deserialize)]
 pub struct Row {
@@ -29,7 +25,7 @@ pub struct RowDOM {
 #[macro_export]
 macro_rules! update_row {
     ($dom:ident, $row:ident, $addr:ident) => {
-    // depend label
+        // depend label
         if $dom.t_root & 0b0000_0001 != 0 {
             // TODO: trait as str
             $dom.label_node.set_text_content(Some(&$row.label));
@@ -91,23 +87,27 @@ macro_rules! update_row {
     };
 }
 
-impl RowDOM {
-    pub fn new(id: u32, label: &str, root: &Element, mb: &Addr<NonKeyed>) -> Self {
-        let root = root.clone_node_with_deep(true).unwrap_throw();
+#[macro_export]
+macro_rules! new_row {
+    ($row:ident, $elem:expr, $addr:ident, $parent:expr) => {{
+        let root = $elem.clone_node_with_deep(true).unwrap_throw();
         let id_node = root.first_child().unwrap_throw();
         let label_parent = id_node.next_sibling().unwrap_throw();
         let label_node = label_parent.first_child().unwrap_throw();
         let delete_parent = label_parent.next_sibling().unwrap_throw();
         let delete_node = delete_parent.first_child().unwrap_throw();
 
+        let id = $row.id.clone();
         // depend id
+        // TODO: as_str
         id_node.set_text_content(Some(&id.to_string()));
 
         // depend label
-        label_node.set_text_content(Some(label));
+        // TODO: as_str
+        label_node.set_text_content(Some(&$row.label));
 
         // depend id
-        let cloned = mb.clone();
+        let cloned = $addr.clone();
         let closure_select = Closure::wrap(Box::new(move |event: Event| {
             event.prevent_default();
             cloned.send(Select(id));
@@ -116,7 +116,7 @@ impl RowDOM {
             .add_event_listener_with_callback("click", closure_select.as_ref().unchecked_ref())
             .unwrap_throw();
 
-        let cloned = mb.clone();
+        let cloned = $addr.clone();
         let closure_delete = Closure::wrap(Box::new(move |event: Event| {
             event.prevent_default();
             cloned.send(Delete(id));
@@ -124,6 +124,8 @@ impl RowDOM {
         delete_node
             .add_event_listener_with_callback("click", closure_delete.as_ref().unchecked_ref())
             .unwrap_throw();
+
+        $parent.append_child(&root).unwrap_throw();
 
         RowDOM {
             t_root: 0,
@@ -134,30 +136,33 @@ impl RowDOM {
             closure_select: Some(closure_select),
             closure_delete: Some(closure_delete),
         }
-    }
+    }};
+}
 
-    pub fn hydrate(&mut self, row: &Row, mb: &Addr<NonKeyed>) {
-        let cloned = mb.clone();
-        let id = row.id;
+#[macro_export]
+macro_rules! hydrate_row {
+    ($dom:ident, $row:ident, $addr:ident) => {
+        let cloned = $addr.clone();
+        let id = $row.id.clone();
         let closure_select = Closure::wrap(Box::new(move |event: Event| {
             event.prevent_default();
             cloned.send(Select(id));
         }) as Box<dyn Fn(Event)>);
-        self.label_node
+        $dom.label_node
             .add_event_listener_with_callback("click", closure_select.as_ref().unchecked_ref())
             .unwrap_throw();
-        self.closure_select = Some(closure_select);
+        $dom.closure_select = Some(closure_select);
 
-        let cloned = mb.clone();
+        let cloned = $addr.clone();
         let closure_delete = Closure::wrap(Box::new(move |event: Event| {
             event.prevent_default();
             cloned.send(Delete(id));
         }) as Box<dyn Fn(Event)>);
-        self.delete_node
+        $dom.delete_node
             .add_event_listener_with_callback("click", closure_delete.as_ref().unchecked_ref())
             .unwrap_throw();
-        self.closure_delete = Some(closure_delete);
-    }
+        $dom.closure_delete = Some(closure_delete);
+    };
 }
 
 pub fn row_element() -> Element {
