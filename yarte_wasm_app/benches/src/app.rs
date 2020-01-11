@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::HashSet;
+use hashbrown::HashSet;
 
 use js_sys::Date;
 use rand::{rngs::SmallRng, SeedableRng};
