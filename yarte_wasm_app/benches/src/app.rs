@@ -45,9 +45,7 @@ impl App for NonKeyed {
             let row_len = self.data.len();
             if row_len == 0 {
                 // Clear
-                while let Some(ref child) = self.tbody.first_child() {
-                    self.tbody.remove_child(child).unwrap_throw();
-                }
+                self.tbody.set_inner_html("");
                 self.tbody_children.clear()
             } else if dom_len < row_len {
                 // Add and update
