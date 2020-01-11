@@ -36,7 +36,7 @@ impl NonKeyed {
         for i in 0..update_n {
             let mut row = &mut self.data[i];
             row.id = self.id + i as u32;
-            row.label = ZIPPED.choose(&mut self.rng).unwrap().to_string();
+            row.label = (*ZIPPED.choose(&mut self.rng).unwrap()).to_string();
             self.tbody_children[i].t_root |= 0b0000_0011
         }
 
@@ -45,7 +45,7 @@ impl NonKeyed {
         for i in update_n..n {
             self.data.push(Row {
                 id: self.id + i as u32,
-                label: ZIPPED.choose(&mut self.rng).unwrap().to_string(),
+                label: (*ZIPPED.choose(&mut self.rng).unwrap()).to_string(),
             });
         }
 
@@ -86,7 +86,7 @@ impl Handler<Append> for NonKeyed {
             self.id += 1;
             self.data.push(Row {
                 id,
-                label: ZIPPED.choose(&mut self.rng).unwrap().to_string(),
+                label: (*ZIPPED.choose(&mut self.rng).unwrap()).to_string(),
             })
         }
         self.t_root |= 0b0000_0001;

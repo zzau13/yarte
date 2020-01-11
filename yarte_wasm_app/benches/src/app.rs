@@ -9,9 +9,10 @@ use web_sys::{Element, Event};
 use yarte_wasm_app::*;
 
 use crate::{
-    update_row,
     handler::*,
+    hydrate_row, new_row,
     row::{row_element, Row, RowDOM},
+    update_row,
 };
 
 #[wasm_bindgen]
@@ -58,32 +59,27 @@ impl App for NonKeyed {
                 };
 
                 // Update
-                for (dom, row) in self
-                    .tbody_children[..min]
+                for (dom, row) in self.tbody_children[..min]
                     .iter_mut()
                     .zip(self.data[..min].iter())
                     .filter(|(dom, _)| dom.t_root != 0)
-                    {
-                        update_row!(dom, row, mb);
-                    }
+                {
+                    update_row!(dom, row, mb);
+                }
 
                 match ord {
                     Ordering::Greater => {
                         // Add
                         for row in self.data[dom_len..].iter() {
-                            let v = RowDOM::new(row.id, &row.label, &self.tr, mb);
-                            self.tbody.append_child(&v.root).unwrap_throw();
-                            self.tbody_children.push(v);
+                            self.tbody_children
+                                .push(new_row!(row, self.tr, mb, self.tbody));
                         }
                     }
                     Ordering::Less => {
                         // Remove
-                        for _ in 0..dom_len - row_len {
-                            self.tbody
-                                .remove_child(&self.tbody.last_child().unwrap_throw())
-                                .unwrap_throw();
+                        for dom in self.tbody_children.drain(row_len..) {
+                            self.tbody.remove_child(&dom.root).unwrap_throw();
                         }
-                        self.tbody_children.drain(row_len..);
                     }
                     Ordering::Equal => (),
                 }
@@ -203,7 +199,7 @@ impl App for NonKeyed {
 
         // hydrate Each
         for (dom, row) in self.tbody_children.iter_mut().zip(self.data.iter()) {
-            dom.hydrate(row, mb);
+            hydrate_row!(dom, row, mb);
         }
     }
 }
