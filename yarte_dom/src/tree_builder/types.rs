@@ -56,5 +56,4 @@ pub enum ProcessResult<Handle> {
 
 pub enum FormatEntry<Handle> {
     Element(Handle, Tag),
-    Marker,
 }

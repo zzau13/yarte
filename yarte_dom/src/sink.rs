@@ -35,12 +35,6 @@ impl Debug for ParseNode {
     }
 }
 
-#[derive(Debug)]
-enum NodeOrText {
-    Node(ParseNode),
-    Text(String),
-}
-
 #[derive(Clone)]
 pub struct ParseAttribute {
     pub name: QualName,
@@ -125,10 +119,7 @@ impl Sink {
                             Some(())
                         }
                         ParseElement::Mark(_) => Some(()),
-                        _ => {
-                            panic!("Parent {:?} {:?}", node, x);
-                            None
-                        }
+                        _ => None,
                     })
                     .expect("Get parent");
                 node.id
@@ -186,7 +177,7 @@ impl TreeSink for Sink {
         &mut self,
         name: QualName,
         html_attrs: Vec<HtmlAttribute>,
-        flags: ElementFlags,
+        _flags: ElementFlags,
     ) -> Self::Handle {
         let mut new_node = self.new_parse_node();
         new_node.qual_name = Some(name.clone());
@@ -274,7 +265,7 @@ impl TreeSink for Sink {
         x.id == y.id
     }
 
-    fn set_quirks_mode(&mut self, mode: QuirksMode) {
+    fn set_quirks_mode(&mut self, _mode: QuirksMode) {
         unreachable!()
     }
 
@@ -286,11 +277,11 @@ impl TreeSink for Sink {
         unreachable!()
     }
 
-    fn remove_from_parent(&mut self, target: &Self::Handle) {
+    fn remove_from_parent(&mut self, _target: &Self::Handle) {
         unreachable!()
     }
 
-    fn reparent_children(&mut self, node: &Self::Handle, new_parent: &Self::Handle) {
+    fn reparent_children(&mut self, _node: &Self::Handle, _new_parent: &Self::Handle) {
         unreachable!()
     }
 }
