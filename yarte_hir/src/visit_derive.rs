@@ -88,7 +88,7 @@ impl StructBuilder {
         let mode = self.mode.map(Into::into).unwrap_or_else(|| {
             if let Some(e) = path.extension() {
                 if HTML_EXTENSIONS.contains(&e.to_str().unwrap()) {
-                    return Mode::HTML;
+                    return Mode::HTMLMin;
                 }
             }
 
@@ -206,8 +206,10 @@ impl From<Option<String>> for Print {
 
 #[derive(PartialEq, Debug)]
 pub enum Mode {
-    HTML,
     Text,
+    HTML,
+    HTMLMin,
+    WASM,
 }
 
 impl From<String> for Mode {
@@ -215,6 +217,8 @@ impl From<String> for Mode {
         match s.as_ref() {
             "text" => Mode::Text,
             "html" => Mode::HTML,
+            "html-min" => Mode::HTMLMin,
+            "wasm" | "iso" => Mode::WASM,
             v => panic!("invalid value for mode attribute: {}", v),
         }
     }

@@ -8,7 +8,11 @@ mod html;
 mod text;
 mod wasm;
 
-pub use self::{html::HTMLCodeGen, text::TextCodeGen, wasm::WASMCodeGen};
+pub use self::{
+    html::{HTMLCodeGen, HTMLMinCodeGen},
+    text::TextCodeGen,
+    wasm::WASMCodeGen,
+};
 
 pub trait CodeGen {
     fn gen(&self, v: Vec<HIR>) -> TokenStream;
@@ -30,7 +34,7 @@ impl<'a, T: CodeGen> FmtCodeGen<'a, T> {
                 Some(s) => s.to_str().unwrap(),
                 None => "txt",
             },
-            Mode::HTML => "html",
+            _ => "html",
         };
 
         from_ext(ext).first_or_text_plain().to_string()
