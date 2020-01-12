@@ -46,8 +46,9 @@ impl App for NonKeyed {
             let dom_len = self.tbody_children.len();
             let row_len = self.data.len();
             if row_len == 0 {
+                // TODO: not in fragment
                 // Clear
-                self.tbody.set_inner_html("");
+                self.tbody.set_text_content(None);
                 self.tbody_children.clear()
             } else {
                 // select
@@ -69,6 +70,7 @@ impl App for NonKeyed {
                     Ordering::Greater => {
                         // Add
                         for row in self.data[dom_len..].iter() {
+                            // TODO: select insert point for fragments and insert_before or append_child
                             self.tbody_children
                                 .push(new_row!(row, self.tr, mb, self.tbody));
                         }
@@ -85,6 +87,7 @@ impl App for NonKeyed {
         }
 
         // TODO: attribute on expression selector is unique
+        // TODO: in fragment bounds dynamics (Sum before_elements.len() + C) or static
         if self.t_root & 0b0000_0011 != 0 {
             let children = self.tbody.children();
             if let Some(old) = self
