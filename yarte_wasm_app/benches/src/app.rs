@@ -32,12 +32,6 @@ pub struct NonKeyed {
     pub tbody_children: Vec<RowDOM>,
     //
     tr: Element,
-    closure_create: Option<Closure<dyn Fn(Event)>>,
-    closure_create_10: Option<Closure<dyn Fn(Event)>>,
-    closure_append: Option<Closure<dyn Fn(Event)>>,
-    closure_update: Option<Closure<dyn Fn(Event)>>,
-    closure_clear: Option<Closure<dyn Fn(Event)>>,
-    closure_swap: Option<Closure<dyn Fn(Event)>>,
 }
 
 impl App for NonKeyed {
@@ -198,7 +192,7 @@ impl App for NonKeyed {
         button_create
             .add_event_listener_with_callback("click", cl.as_ref().unchecked_ref())
             .unwrap_throw();
-        self.closure_create = Some(cl);
+        cl.forget();
 
         let f_0_1_0_1 = f_0_1_0_0.next_sibling().unwrap_throw(); // div.col-sm-6 smallpad
         let button_create_10 = f_0_1_0_1.first_child().unwrap_throw(); // button CREATE 10_000
@@ -210,7 +204,7 @@ impl App for NonKeyed {
         button_create_10
             .add_event_listener_with_callback("click", cl.as_ref().unchecked_ref())
             .unwrap_throw();
-        self.closure_create_10 = Some(cl);
+        cl.forget();
 
         let f_0_1_0_2 = f_0_1_0_1.next_sibling().unwrap_throw(); // div.col-sm-6 smallpad
         let button_append = f_0_1_0_2.first_child().unwrap_throw(); // button  APPEND 1_000
@@ -222,7 +216,7 @@ impl App for NonKeyed {
         button_append
             .add_event_listener_with_callback("click", cl.as_ref().unchecked_ref())
             .unwrap_throw();
-        self.closure_append = Some(cl);
+        cl.forget();
 
         let f_0_1_0_3 = f_0_1_0_2.next_sibling().unwrap_throw(); // div.col-sm-6 smallpad
         let button_update = f_0_1_0_3.first_child().unwrap_throw(); // button  UPDATE
@@ -234,7 +228,7 @@ impl App for NonKeyed {
         button_update
             .add_event_listener_with_callback("click", cl.as_ref().unchecked_ref())
             .unwrap_throw();
-        self.closure_update = Some(cl);
+        cl.forget();
 
         let f_0_1_0_4 = f_0_1_0_3.next_sibling().unwrap_throw(); // div.col-sm-6 smallpad
         let button_clear = f_0_1_0_4.first_child().unwrap_throw(); // button CLEAR
@@ -246,7 +240,7 @@ impl App for NonKeyed {
         button_clear
             .add_event_listener_with_callback("click", cl.as_ref().unchecked_ref())
             .unwrap_throw();
-        self.closure_clear = Some(cl);
+        cl.forget();
 
         let f_0_1_0_5 = f_0_1_0_4.next_sibling().unwrap_throw(); // div.col-sm-6 smallpad
         let button_swap = f_0_1_0_5.first_child().unwrap_throw(); // button SWAP
@@ -258,7 +252,7 @@ impl App for NonKeyed {
         button_swap
             .add_event_listener_with_callback("click", cl.as_ref().unchecked_ref())
             .unwrap_throw();
-        self.closure_swap = Some(cl);
+        cl.forget();
 
         assert_eq!(self.tbody_children.len(), self.data.len());
 
@@ -342,12 +336,6 @@ impl Default for NonKeyed {
             tbody,
             tbody_children,
             tr: row_element(),
-            closure_create: None,
-            closure_create_10: None,
-            closure_append: None,
-            closure_update: None,
-            closure_clear: None,
-            closure_swap: None,
         }
     }
 }
