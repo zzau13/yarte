@@ -44,7 +44,9 @@ impl App for NonKeyed {
 
         if self.t_root & 0b0000_0001 != 0 {
             let dom_len = self.tbody_children.len();
-            let row_len = self.data.len();
+            // TODO: attribute #[filter] on each arguments
+            //            let row_len = self.data.iter().map(|_| 1).fold(0, |acc, x| acc + x);
+            let row_len = self.data.iter().size_hint().0;
             if row_len == 0 {
                 // TODO: not in fragment
                 // Clear
@@ -58,9 +60,11 @@ impl App for NonKeyed {
                 };
 
                 // Update
-                for (dom, row) in self.tbody_children[..min]
+                for (dom, row) in self
+                    .tbody_children
                     .iter_mut()
-                    .zip(self.data[..min].iter())
+                    .take(min)
+                    .zip(self.data.iter().take(min))
                     .filter(|(dom, _)| dom.t_root != 0)
                 {
                     update_row!(dom, row, mb);
@@ -69,7 +73,7 @@ impl App for NonKeyed {
                 match ord {
                     Ordering::Greater => {
                         // Add
-                        for row in self.data[dom_len..].iter() {
+                        for row in self.data.iter().skip(dom_len) {
                             // TODO: select insert point for fragments and insert_before or append_child
                             self.tbody_children
                                 .push(new_row!(row, self.tr, mb, self.tbody));
