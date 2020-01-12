@@ -249,7 +249,7 @@ where
     fn process_token(
         &mut self,
         token: tokenizer::Token,
-        line_number: u64,
+        _line_number: u64,
     ) -> TokenSinkResult<Handle> {
         // Handle `ParseError` and `DoctypeToken`; convert everything else to the local `Token` type.
         let token = match token {
@@ -331,7 +331,7 @@ impl<'a, Handle> Iterator for ActiveFormattingIter<'a, Handle> {
     type Item = (usize, &'a Handle, &'a Tag);
     fn next(&mut self) -> Option<(usize, &'a Handle, &'a Tag)> {
         match self.iter.next() {
-            None | Some((_, &Marker)) => None,
+            None => None,
             Some((i, &Element(ref h, ref t))) => Some((i, h, t)),
         }
     }
@@ -385,8 +385,8 @@ where
     }
 
     fn position_in_active_formatting(&self, element: &Handle) -> Option<usize> {
+        // TODO
         self.active_formatting.iter().position(|n| match n {
-            Marker => false,
             Element(ref handle, _) => self.sink.same_node(handle, element),
         })
     }
@@ -451,7 +451,7 @@ where
         }
 
         // 5.
-        let (fmt_elem_index, fmt_elem, fmt_elem_tag) = unwrap_or_return!(
+        let (fmt_elem_index, fmt_elem, _) = unwrap_or_return!(
             // We clone the Handle and Tag so they don't cause an immutable borrow of self.
             self.active_formatting_end_to_marker()
                 .find(|&(_, _, tag)| tag.name == subject)
@@ -518,8 +518,8 @@ where
     }
 
     fn is_marker_or_open(&self, entry: &FormatEntry<Handle>) -> bool {
+        // TODO
         match *entry {
-            Marker => true,
             Element(ref node, _) => self
                 .open_elems
                 .iter()
@@ -550,9 +550,9 @@ where
         }
 
         loop {
+            // TODO
             let tag = match self.active_formatting[entry_index] {
                 Element(_, ref t) => t.clone(),
-                Marker => panic!("Found marker during formatting element reconstruction"),
             };
 
             // FIXME: Is there a way to avoid cloning the attributes twice here (once on their own,

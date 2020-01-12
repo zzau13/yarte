@@ -14,11 +14,6 @@ use markup5ever::{expanded_name, local_name, namespace_prefix, namespace_url, ns
 
 use html5ever::tendril::SliceExt;
 
-fn any_not_whitespace(x: &StrTendril) -> bool {
-    // FIXME: this might be much faster as a byte scan
-    x.chars().any(|c| !is_ascii_whitespace(c))
-}
-
 fn current_node<Handle>(open_elems: &[Handle]) -> &Handle {
     open_elems.last().expect("no current element")
 }

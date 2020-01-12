@@ -49,10 +49,6 @@ macro_rules! declare_tag_set (
 pub fn empty_set(_: ExpandedName) -> bool {
     false
 }
-#[inline(always)]
-pub fn full_set(_: ExpandedName) -> bool {
-    true
-}
 
 declare_tag_set!(pub html_default_scope =
     "applet" "caption" "html" "table" "td" "th" "marquee" "object" "template");
@@ -66,18 +62,9 @@ pub fn default_scope(name: ExpandedName) -> bool {
 
 declare_tag_set!(pub list_item_scope = [default_scope] + "ol" "ul");
 declare_tag_set!(pub button_scope = [default_scope] + "button");
-declare_tag_set!(pub table_scope = "html" "table" "template");
-declare_tag_set!(pub select_scope = [full_set] - "optgroup" "option");
-
-declare_tag_set!(pub table_body_context = "tbody" "tfoot" "thead" "template" "html");
-declare_tag_set!(pub table_row_context = "tr" "template" "html");
-declare_tag_set!(pub td_th = "td" "th");
 
 declare_tag_set!(pub cursory_implied_end =
     "dd" "dt" "li" "option" "optgroup" "p" "rb" "rp" "rt" "rtc");
-
-declare_tag_set!(pub thorough_implied_end = [cursory_implied_end]
-    + "caption" "colgroup" "tbody" "td" "tfoot" "th" "thead" "tr");
 
 declare_tag_set!(pub heading_tag = "h1" "h2" "h3" "h4" "h5" "h6");
 
@@ -90,9 +77,6 @@ declare_tag_set!(pub special_tag =
     "object" "ol" "p" "param" "plaintext" "pre" "script" "section" "select" "source" "style"
     "summary" "table" "tbody" "td" "template" "textarea" "tfoot" "th" "thead" "title" "tr" "track"
     "ul" "wbr" "xmp");
-// https://html.spec.whatwg.org/multipage/syntax.html#void-elements
-declare_tag_set!(pub void_tag = "area" "base" "br" "col" "embed" "hr" "img" "input" "link" "meta"
-"param" "source" "track");
 //§ END
 
 pub fn mathml_text_integration_point(p: ExpandedName) -> bool {
