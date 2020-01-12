@@ -27,7 +27,7 @@ mac = "0.1"
 log = "0.4"
 html5ever = "0.25"
 markup5ever = "0.10"
-syn = { version = "1.0", features = ["extra-traits", "full", "parsing"] }
+syn = { version = "1.0", features = ["extra-traits", "full", "visit"] }
 lazy_static = "1.4"
 
 [build-dependencies]
