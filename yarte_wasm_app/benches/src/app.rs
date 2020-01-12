@@ -1,5 +1,4 @@
 use std::cmp::Ordering;
-use hashbrown::HashSet;
 
 use js_sys::Date;
 use rand::{rngs::SmallRng, SeedableRng};
@@ -28,11 +27,11 @@ pub struct NonKeyed {
     pub rng: SmallRng,
     // Black box
     pub t_root: u8,
-    old_selected: HashSet<usize>,
-    tr: Element,
-    tbody: Element,
-    //
+    pub old_selected: Option<usize>,
+    pub tbody: Element,
     pub tbody_children: Vec<RowDOM>,
+    //
+    tr: Element,
     closure_create: Option<Closure<dyn Fn(Event)>>,
     closure_create_10: Option<Closure<dyn Fn(Event)>>,
     closure_append: Option<Closure<dyn Fn(Event)>>,
@@ -68,9 +67,9 @@ impl App for NonKeyed {
                     .iter_mut()
                     .zip(self.data[..min].iter())
                     .filter(|(dom, _)| dom.t_root != 0)
-                    {
-                        update_row!(dom, row, mb);
-                    }
+                {
+                    update_row!(dom, row, mb);
+                }
 
                 match ord {
                     Ordering::Greater => {
@@ -91,28 +90,32 @@ impl App for NonKeyed {
             }
         }
 
-        /*
-
         // TODO: attribute on expression selector is unique
         if self.t_root & 0b0000_0011 != 0 {
             let children = self.tbody.children();
-            if let Some(old) = self.old_selected.take() {
-                children.item(old as u32).unwrap_throw().set_class_name("")
+            if let Some(old) = self
+                .old_selected
+                .take()
+                .and_then(|x| children.item(x as u32))
+            {
+                old.set_class_name("");
             }
             if let Some(new) = self.selected {
-                if let Some(new) = self.data.iter().position(|x| x.id == new) {
-                    children
-                        .item(new as u32)
-                        .unwrap_throw()
-                        .set_class_name("danger");
-                    self.old_selected = Some(new);
+                if let Some((dom, i)) = self
+                    .data
+                    .iter()
+                    .position(|x| x.id == new)
+                    .and_then(|x| children.item(x as u32).map(|dom| (dom, x)))
+                {
+                    dom.set_class_name("danger");
+                    self.old_selected = Some(i);
                 } else {
                     self.selected = None;
                 }
             }
         }
-        */
 
+        /*
         // multiple elements use hashset<usize>
         if self.t_root & 0b0000_0011 != 0 {
             let children = self.tbody.children();
@@ -165,6 +168,7 @@ impl App for NonKeyed {
             }
             // Find new
         }
+        */
 
         self.t_root = 0;
     }
@@ -334,7 +338,7 @@ impl Default for NonKeyed {
             rng: SmallRng::seed_from_u64(Date::now() as u64),
             // Black box
             t_root: 0,
-            old_selected: HashSet::new(),
+            old_selected: None,
             tbody,
             tbody_children,
             tr: row_element(),
