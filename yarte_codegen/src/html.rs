@@ -11,7 +11,7 @@ impl EachCodeGen for HTMLCodeGen {}
 
 impl IfElseCodeGen for HTMLCodeGen {}
 impl CodeGen for HTMLCodeGen {
-    fn gen(&self, v: Vec<HIR>) -> TokenStream {
+    fn gen(&mut self, v: Vec<HIR>) -> TokenStream {
         gen(self, v)
     }
 }
@@ -21,13 +21,13 @@ impl EachCodeGen for HTMLMinCodeGen {}
 impl IfElseCodeGen for HTMLMinCodeGen {}
 
 impl CodeGen for HTMLMinCodeGen {
-    fn gen(&self, v: Vec<HIR>) -> TokenStream {
+    fn gen(&mut self, v: Vec<HIR>) -> TokenStream {
         let dom: DOMFmt = v.into();
         gen(self, dom.0)
     }
 }
 
-fn gen<C>(codegen: &C, v: Vec<HIR>) -> TokenStream
+fn gen<C>(codegen: &mut C, v: Vec<HIR>) -> TokenStream
 where
     C: CodeGen + EachCodeGen + IfElseCodeGen,
 {

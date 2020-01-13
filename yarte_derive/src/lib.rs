@@ -66,12 +66,12 @@ fn sources_to_tokens(sources: Sources, config: &Config, s: &Struct) -> proc_macr
 }
 
 fn hir_to_tokens(hir: Vec<HIR>, config: &Config, s: &Struct) -> proc_macro2::TokenStream {
-    let codegen: Box<dyn CodeGen> = match s.mode {
+    let mut codegen: Box<dyn CodeGen> = match s.mode {
         Mode::Text => Box::new(FmtCodeGen::new(TextCodeGen, s)),
         Mode::HTML => Box::new(FmtCodeGen::new(HTMLCodeGen, s)),
         Mode::HTMLMin => Box::new(FmtCodeGen::new(HTMLMinCodeGen, s)),
         Mode::WASM => Box::new(WASMCodeGen::new(config, s)),
     };
 
-    CodeGen::gen(&*codegen, hir)
+    CodeGen::gen(&mut *codegen, hir)
 }

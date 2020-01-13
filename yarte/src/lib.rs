@@ -14,6 +14,8 @@ use std::fmt::{self, Write};
 
 pub use yarte_derive::Template;
 pub use yarte_helpers::{helpers::Render, Error, Result};
+#[cfg(target_arch = "wasm32")]
+pub use yarte_wasm_app::{App as Template, Message, Handler};
 
 pub mod recompile;
 
@@ -31,6 +33,7 @@ pub mod recompile;
 /// println!("{}", HelloTemplate { name: "world" })
 /// ```
 ///
+#[cfg(not(target_arch = "wasm32"))]
 pub trait Template: fmt::Display {
     /// which will write this template
     fn call(&self) -> Result<String> {
@@ -39,6 +42,7 @@ pub trait Template: fmt::Display {
     }
 
     /// https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types
+    #[cfg(feature = "with-actix-web")]
     fn mime() -> &'static str
     where
         Self: Sized;
@@ -48,7 +52,7 @@ pub trait Template: fmt::Display {
     fn size_hint() -> usize;
 }
 
-#[cfg(feature = "with-actix-web")]
+#[cfg(all(feature = "with-actix-web", not(target_arch = "wasm32")))]
 pub mod aw {
     pub use actix_web::{
         error::ErrorInternalServerError, Error, HttpRequest, HttpResponse, Responder,
