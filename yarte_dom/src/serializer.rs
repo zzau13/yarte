@@ -16,7 +16,7 @@ use markup5ever::{local_name, namespace_url, ns, LocalName, QualName};
 use yarte_parser::trim;
 
 #[derive(Default)]
-struct ElemInfo {
+pub struct ElemInfo {
     html_name: Option<LocalName>,
     ignore_children: bool,
 }

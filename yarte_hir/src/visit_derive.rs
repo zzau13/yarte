@@ -18,6 +18,7 @@ pub struct Struct<'a> {
     pub print: Print,
     pub mode: Mode,
     pub err_msg: String,
+    pub fields: Vec<syn::Field>,
     ident: &'a syn::Ident,
     generics: &'a syn::Generics,
 }
@@ -40,6 +41,7 @@ struct StructBuilder {
     print: Option<String>,
     src: Option<String>,
     err_msg: Option<String>,
+    fields: Vec<syn::Field>,
 }
 
 impl Default for StructBuilder {
@@ -51,6 +53,7 @@ impl Default for StructBuilder {
             print: None,
             src: None,
             err_msg: None,
+            fields: vec![],
         }
     }
 }
@@ -105,6 +108,7 @@ impl StructBuilder {
             err_msg: self
                 .err_msg
                 .unwrap_or_else(|| "Template parsing error".into()),
+            fields: self.fields,
         }
     }
 }
@@ -118,6 +122,10 @@ impl<'a> Visit<'a> for StructBuilder {
             }
             Enum(_) | Union(_) => panic!("Not valid need a `struc`"),
         }
+    }
+
+    fn visit_field(&mut self, e: &'a syn::Field) {
+        self.fields.push(e.clone());
     }
 
     fn visit_meta_list(&mut self, syn::MetaList { path, nested, .. }: &'a syn::MetaList) {

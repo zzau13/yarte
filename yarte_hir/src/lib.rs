@@ -11,6 +11,8 @@ use yarte_config::Config;
 use yarte_helpers::helpers::ErrorMessage;
 use yarte_parser::{Helper, Node, Partial, SExpr, SNode, SVExpr, Ws};
 
+#[macro_use]
+mod macros;
 mod scope;
 mod validator;
 mod visit_derive;
