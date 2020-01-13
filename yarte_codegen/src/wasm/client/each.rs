@@ -54,7 +54,7 @@ impl<'a> WASMCodeGen<'a> {
             }
         };
 
-        let render_elem= TokenStream::new();
+        let render_elem = TokenStream::new();
         let new_elem = TokenStream::new();
 
         let inner = quote! {
@@ -118,7 +118,5 @@ impl<'a> WASMCodeGen<'a> {
                 #hydrate_elem
             }
         };
-
-
     }
 }

@@ -1,5 +1,4 @@
 #[allow(warnings)]
-
 #[cfg(not(target_arch = "wasm32"))]
 #[path = "./server/mod.rs"]
 mod codegen;

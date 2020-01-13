@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream;
 
-use yarte_hir::{Struct, HIR};
 use yarte_config::Config;
+use yarte_hir::{Struct, HIR};
 
 use crate::CodeGen;
 
@@ -17,7 +17,6 @@ impl<'a> WASMCodeGen<'a> {
 }
 
 impl<'a> CodeGen for WASMCodeGen<'a> {
-
     fn gen(&mut self, ir: Vec<HIR>) -> TokenStream {
         todo!()
     }
