@@ -23,6 +23,7 @@ use self::{
     visit_each::resolve_each, visit_expr::resolve_expr, visit_if_else::resolve_if_else,
     visit_local::resolve_local,
 };
+use crate::serializer::ElemInfo;
 
 pub type Document = Vec<Node>;
 pub type ExprId = usize;
@@ -50,15 +51,15 @@ pub enum Expression {
 pub struct IfElse {
     ifs: ((ExprId, Option<VarId>, syn::Expr), Document),
     if_else: Vec<((ExprId, Option<VarId>, syn::Expr), Document)>,
-    els: Option<(ExprId, Document)>,
+    els: Option<Document>,
 }
 
 /// `for expr in args `
 ///
 pub struct Each {
-    args: (ExprId, syn::Expr),
+    args: syn::Expr,
     body: Document,
-    expr: (ExprId, VarId, syn::Expr),
+    expr: syn::Expr,
 }
 
 pub enum Ns {
@@ -99,6 +100,7 @@ impl From<Vec<HIR>> for DOM {
 
 #[derive(Default)]
 pub struct DOMBuilder {
+    stack: Vec<ElemInfo>,
     inner: bool,
     count: usize,
     tree_map: HashMap<ExprId, Vec<VarId>>,
@@ -131,7 +133,6 @@ impl DOMBuilder {
                     let id = self.count;
                     self.count += 1;
                     html.push_str(&format!("{:#08x?}", id));
-                    self.resolve_expressions(h, id);
                     html.push_str(TAIL);
                     true
                 }
@@ -157,24 +158,13 @@ impl DOMBuilder {
         self.serialize(parse_fragment(&html)?, ir)
     }
 
-    fn resolve_expressions(&mut self, ir: &HIR, id: usize) {
-        use HIR::*;
-        match ir {
-            Each(x) => resolve_each(x, id, self),
-            Expr(x) | Safe(x) => resolve_expr(x, id, self),
-            IfElse(x) => resolve_if_else(x, id, self),
-            Local(x) => resolve_local(x, id, self),
-            Lit(_) => unreachable!(),
-        }
-    }
-
     fn serialize(&mut self, sink: Sink, mut ir: Vec<HIR>) -> ParseResult<Document> {
         let mut ir = ir.drain(..);
 
         let nodes = match sink.nodes.values().next() {
             Some(ParseElement::Document(children)) => {
                 self.inner = true;
-                self.get_children(children, &sink, &mut ir)
+                self.get_children(children, &sink, &mut ir)?
             }
             Some(ParseElement::Node {
                 name,
@@ -187,13 +177,13 @@ impl DOMBuilder {
                         panic!("not use <{}> tag", &*YARTE_TAG.local);
                     }
                     self.inner = true;
-                    self.get_children(children, &sink, &mut ir)
+                    self.get_children(children, &sink, &mut ir)?
                 } else {
-                    vec![self.resolve_node(name, attrs, children)]
+                    vec![self.resolve_node(name, attrs, children)?]
                 }
             }
             Some(ParseElement::Text(s)) => vec![self.resolve_text(s)],
-            Some(ParseElement::Mark(s)) => vec![self.resolve_mark(s, &mut ir)],
+            Some(ParseElement::Mark(s)) => vec![self.resolve_mark(s, &mut ir)?],
             None => vec![],
         };
 
@@ -207,45 +197,48 @@ impl DOMBuilder {
         name: &QualName,
         attrs: &[ParseAttribute],
         children: &[ParseNodeId],
-    ) -> Node {
+    ) -> ParseResult<Node> {
         todo!()
     }
 
-    fn resolve_mark(&mut self, id: &str, ir: &mut Drain<HIR>) -> Node {
+    fn resolve_mark(&mut self, id: &str, ir: &mut Drain<HIR>) -> ParseResult<Node> {
         assert_eq!(id.len(), 10);
         assert_eq!(&id[..2], "0x");
         let id = u32::from_str_radix(&id[2..], 16).unwrap() as usize;
         let ir = ir.next().expect("Some HIR");
 
         match ir {
-            HIR::Expr(e) => Node::Expr(Expression::Unsafe(id, e)),
-            HIR::Safe(e) => Node::Expr(Expression::Safe(id, e)),
-            HIR::Local(e) => self.resolve_local(e, id),
-            HIR::Each(e) => self.resolve_each(e, id),
-            HIR::IfElse(e) => self.resolve_if_else(e, id),
+            HIR::Expr(e) => {
+                resolve_expr(&e, id, self);
+                Ok(Node::Expr(Expression::Unsafe(id, e)))
+            }
+            HIR::Safe(e) => {
+                resolve_expr(&e, id, self);
+                Ok(Node::Expr(Expression::Safe(id, e)))
+            }
+            HIR::Local(e) => {
+                let var_id = resolve_local(&e, id, self);
+                Ok(Node::Expr(Expression::Local(id, var_id, e)))
+            }
+            HIR::Each(e) => {
+                resolve_each(&e, id, self);
+                let HEach { args, body, expr } = *e;
+                Ok(Node::Expr(Expression::Each(
+                    id,
+                    Box::new(Each {
+                        args,
+                        body: self.step(body)?,
+                        expr,
+                    }),
+                )))
+            }
+            HIR::IfElse(e) => {
+                resolve_if_else(&e, id, self);
+                let HIfElse { ifs, if_else, els } = *e;
+                todo!()
+            }
             HIR::Lit(_) => unreachable!(),
         }
-    }
-
-    fn resolve_local(&mut self, e: Box<Local>, id: ExprId) -> Node {
-        let var_id = *self
-            .var_map
-            .iter()
-            .find_map(|(x, v)| match v {
-                Var::Local(i, _) if *i == id => Some(x),
-                _ => None,
-            })
-            .unwrap();
-
-        Node::Expr(Expression::Local(id, var_id, e))
-    }
-
-    fn resolve_each(&mut self, e: Box<HEach>, id: ExprId) -> Node {
-        todo!()
-    }
-
-    fn resolve_if_else(&mut self, e: Box<HIfElse>, id: ExprId) -> Node {
-        todo!()
     }
 
     fn resolve_text(&mut self, s: &str) -> Node {
@@ -257,22 +250,22 @@ impl DOMBuilder {
         children: &[ParseNodeId],
         sink: &Sink,
         ir: &mut Drain<HIR>,
-    ) -> Document {
+    ) -> ParseResult<Document> {
         let mut buff = vec![];
         for child in children.iter().map(|x| sink.nodes.get(x).unwrap()) {
             buff.push(match child {
                 ParseElement::Text(s) => self.resolve_text(s),
-                ParseElement::Mark(s) => self.resolve_mark(s, ir),
+                ParseElement::Mark(s) => self.resolve_mark(s, ir)?,
                 ParseElement::Node {
                     name,
                     attrs,
                     children,
-                    parent,
-                } => todo!(),
+                    ..
+                } => self.resolve_node(name, attrs, children)?,
                 ParseElement::Document(_) => unreachable!(),
             })
         }
 
-        buff
+        Ok(buff)
     }
 }

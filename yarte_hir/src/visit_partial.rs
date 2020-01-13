@@ -25,14 +25,6 @@ impl<'a> Default for PartialBuilder<'a> {
     }
 }
 
-macro_rules! panic_attrs {
-    ($attrs:expr) => {
-        if !$attrs.is_empty() {
-            panic!("Not available attributes in a template expression");
-        }
-    };
-}
-
 macro_rules! panic_some {
     ($some:expr) => {
         if $some.is_some() {
@@ -71,7 +63,6 @@ impl<'a> Visit<'a> for PartialBuilder<'a> {
         use syn::Expr::*;
         match *i {
             Path(ref e) => {
-                panic_attrs!(e.attrs);
                 panic_some!(e.qself);
                 panic_some!(e.path.leading_colon);
                 if !self.ident.is_empty() {
@@ -104,7 +95,6 @@ impl<'a> Visit<'a> for PartialBuilder<'a> {
     fn visit_expr_assign(&mut self, i: &'a syn::ExprAssign) {
         validator::partial_assign(&i.right);
 
-        panic_attrs!(i.attrs);
         self.visit_expr(&i.left);
         panic_some!(self
             .ctx
