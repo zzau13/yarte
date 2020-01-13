@@ -16,29 +16,44 @@ pub struct WASMCodeGen<'a> {
     build: TokenStream,
     render: TokenStream,
     hydrate: TokenStream,
-    struct_: Vec<(Ident, Expr)>,
+    helpers: TokenStream,
+    black_box: Vec<(Ident, Expr)>,
 }
 
 impl<'a> WASMCodeGen<'a> {
     pub fn new<'n>(config: &'n Config<'n>, s: &'n Struct<'n>) -> WASMCodeGen<'n> {
-        WASMCodeGen { config, build: TokenStream::new(), render: TokenStream::new(), hydrate: TokenStream::new(), s, struct_: vec![] }
+        WASMCodeGen { config, build: TokenStream::new(), render: TokenStream::new(), hydrate: TokenStream::new(), helpers: TokenStream::new(),s, black_box: vec![] }
     }
 }
 
 impl<'a> CodeGen for WASMCodeGen<'a> {
-    fn gen(&self, ir: Vec<HIR>) -> TokenStream {
+    fn gen(&mut self, ir: Vec<HIR>) -> TokenStream {
         let dom: DOM = ir.into();
 
-        let default = self.s.implement_head(quote!(Default), quote!());
-        let app = self.s.implement_head(quote!(yarte::Template), quote!());
         let initial_state = quote! {};
         let black_box = quote! {};
-        let get_state_fn = quote! {
+        let default = self.s.implement_head(quote!(std::default::Default), self.build);
+        let render = self.render;
+        let hydrate = self.hydrate;
+        let app = self.s.implement_head(quote!(yarte::Template), quote! {
+            #[doc(hidden)]
+            fn __render(&mut self, __addr: &Addr<Self>) { #render }
+            #[doc(hidden)]
+            fn __hydrate(&mut self, __addr: &Addr<Self>) { #hydrate }
+        });
+        let helpers = self.helpers;
+
+        quote! {
             #[wasm_bindgen]
             extern "C" {
                 fn get_state() -> String;
             }
-        };
-        todo!()
+
+            #initial_state
+            #black_box
+            #default
+            #app
+            #helpers
+        }
     }
 }

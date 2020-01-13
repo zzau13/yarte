@@ -18,7 +18,7 @@ impl<'a> WASMCodeGen<'a> {
 
 impl<'a> CodeGen for WASMCodeGen<'a> {
 
-    fn gen(&self, ir: Vec<HIR>) -> TokenStream {
+    fn gen(&mut self, ir: Vec<HIR>) -> TokenStream {
         todo!()
     }
 }

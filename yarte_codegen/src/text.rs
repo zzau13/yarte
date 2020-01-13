@@ -9,7 +9,7 @@ impl EachCodeGen for TextCodeGen {}
 impl IfElseCodeGen for TextCodeGen {}
 
 impl CodeGen for TextCodeGen {
-    fn gen(&self, v: Vec<HIR>) -> TokenStream {
+    fn gen(&mut self, v: Vec<HIR>) -> TokenStream {
         let mut tokens = TokenStream::new();
         for i in v {
             use HIR::*;
