@@ -10,10 +10,7 @@ impl<'a> VisitMut for Generator<'a> {
     fn visit_arm_mut(
         &mut self,
         syn::Arm {
-            pat,
-            guard,
-            body,
-            ..
+            pat, guard, body, ..
         }: &mut syn::Arm,
     ) {
         self.scp.push_scope(vec![]);
@@ -44,12 +41,7 @@ impl<'a> VisitMut for Generator<'a> {
         };
     }
 
-    fn visit_expr_assign_mut(
-        &mut self,
-        syn::ExprAssign {
-            left, right, ..
-        }: &mut syn::ExprAssign,
-    ) {
+    fn visit_expr_assign_mut(&mut self, syn::ExprAssign { left, right, .. }: &mut syn::ExprAssign) {
         if let Some(ident) = self.scp.get_by(&quote!(#left).to_string()) {
             *left = Box::new(ident.clone());
             self.visit_expr_mut(right);
@@ -60,9 +52,7 @@ impl<'a> VisitMut for Generator<'a> {
 
     fn visit_expr_assign_op_mut(
         &mut self,
-        syn::ExprAssignOp {
-            left, right, ..
-        }: &mut syn::ExprAssignOp,
+        syn::ExprAssignOp { left, right, .. }: &mut syn::ExprAssignOp,
     ) {
         if let Some(ident) = self.scp.get_by(&quote!(#left).to_string()) {
             *left = Box::new(ident.clone());
@@ -76,12 +66,7 @@ impl<'a> VisitMut for Generator<'a> {
         panic!("Not available async in a template expression");
     }
 
-    fn visit_expr_call_mut(
-        &mut self,
-        syn::ExprCall {
-            func, args, ..
-        }: &mut syn::ExprCall,
-    ) {
+    fn visit_expr_call_mut(&mut self, syn::ExprCall { func, args, .. }: &mut syn::ExprCall) {
         if let Some(ident) = self.scp.get_by(&quote!(#func).to_string()) {
             *func = Box::new(ident.clone());
         }
@@ -110,10 +95,7 @@ impl<'a> VisitMut for Generator<'a> {
     fn visit_expr_for_loop_mut(
         &mut self,
         syn::ExprForLoop {
-            pat,
-            expr,
-            body,
-            ..
+            pat, expr, body, ..
         }: &mut syn::ExprForLoop,
     ) {
         self.scp.push_scope(vec![]);
@@ -134,7 +116,6 @@ impl<'a> VisitMut for Generator<'a> {
             ..
         }: &mut syn::ExprIf,
     ) {
-
         self.scp.push_scope(vec![]);
 
         self.visit_expr_mut(cond);
@@ -147,13 +128,7 @@ impl<'a> VisitMut for Generator<'a> {
         };
     }
 
-    fn visit_expr_let_mut(
-        &mut self,
-        syn::ExprLet {
-            expr, pat, ..
-        }: &mut syn::ExprLet,
-    ) {
-
+    fn visit_expr_let_mut(&mut self, syn::ExprLet { expr, pat, .. }: &mut syn::ExprLet) {
         self.scp.push_scope(vec![]);
         self.visit_pat_mut(pat);
         let last = self.scp.pops();
@@ -170,12 +145,7 @@ impl<'a> VisitMut for Generator<'a> {
         panic!("Not allowed yield expression in a template expression");
     }
 
-    fn visit_local_mut(
-        &mut self,
-        syn::Local {
-            pat, init, ..
-        }: &mut syn::Local,
-    ) {
+    fn visit_local_mut(&mut self, syn::Local { pat, init, .. }: &mut syn::Local) {
         self.scp.push_scope(vec![]);
         self.visit_pat_mut(pat);
         let scope = self.scp.pops();
@@ -185,15 +155,7 @@ impl<'a> VisitMut for Generator<'a> {
         self.scp.extend(scope);
     }
 
-    fn visit_pat_ident_mut(
-        &mut self,
-        syn::PatIdent {
-            ident,
-            subpat,
-            ..
-        }: &mut syn::PatIdent,
-    ) {
-
+    fn visit_pat_ident_mut(&mut self, syn::PatIdent { ident, subpat, .. }: &mut syn::PatIdent) {
         if subpat.is_some() {
             panic!("Subpat is not allowed");
         }

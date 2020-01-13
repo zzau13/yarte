@@ -15,7 +15,7 @@ use std::fmt::{self, Write};
 pub use yarte_derive::Template;
 pub use yarte_helpers::{helpers::Render, Error, Result};
 #[cfg(target_arch = "wasm32")]
-pub use yarte_wasm_app::{App as Template, Message, Handler};
+pub use yarte_wasm_app::{App as Template, Handler, Message};
 
 pub mod recompile;
 
