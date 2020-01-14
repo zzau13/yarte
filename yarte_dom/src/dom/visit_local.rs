@@ -1,6 +1,8 @@
+#![allow(warnings)]
+
 use syn::{visit::Visit, Local};
 
-use crate::dom::{DOMBuilder, Node, VarId};
+use crate::dom::{DOMBuilder, VarId};
 
 pub fn resolve_local<'a>(expr: &'a Local, id: usize, builder: &'a mut DOMBuilder) -> VarId {
     ResolveLocal::new(builder, id).resolve(expr)

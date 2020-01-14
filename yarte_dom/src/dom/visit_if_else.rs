@@ -1,3 +1,5 @@
+#![allow(warnings)]
+
 use syn::visit::Visit;
 
 use crate::dom::DOMBuilder;
