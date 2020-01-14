@@ -100,13 +100,14 @@ fn get_children(children: &[ParseNodeId], sink: &Sink) -> Vec<TreeElement> {
 
 impl Tree {
     pub fn serialize<W: Write>(&self, serializer: &mut HtmlSerializer<W>) -> io::Result<()> {
-        _serialize(&self.nodes, serializer)
+        _serialize(&self.nodes, serializer, None)
     }
 }
 
 fn _serialize<W: Write>(
     nodes: &[TreeElement],
     serializer: &mut HtmlSerializer<W>,
+    parent: Option<(Position, QualName)>,
 ) -> io::Result<()> {
     use TreeElement::*;
     for (pos, node) in nodes.iter().enumerate().map(|(i, x)| {
@@ -130,7 +131,7 @@ fn _serialize<W: Write>(
                     attrs.iter().map(|x| (&x.name, x.value.as_str())),
                     pos,
                 )?;
-                _serialize(children, serializer)?;
+                _serialize(children, serializer, Some((pos, name.clone())))?;
                 serializer.end_elem(name.clone(), pos)?
             }
             Text(s) => serializer.write_text(s)?,
@@ -138,7 +139,7 @@ fn _serialize<W: Write>(
             Mark(s) => serializer.write_comment(&format!("{}{}", MARK, s))?,
         }
     }
-    serializer.end()
+    serializer.end(parent)
 }
 
 impl From<Document> for Tree {

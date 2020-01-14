@@ -2,7 +2,7 @@
 
 use std::{collections::HashMap, vec::Drain};
 
-use markup5ever::QualName;
+use markup5ever::{LocalName, QualName};
 use syn::Local;
 use yarte_hir::{Each as HEach, IfElse as HIfElse, HIR};
 
@@ -57,9 +57,9 @@ pub struct IfElse {
 /// `for expr in args `
 ///
 pub struct Each {
-    args: syn::Expr,
-    body: Document,
-    expr: syn::Expr,
+    pub args: syn::Expr,
+    pub body: Document,
+    pub expr: syn::Expr,
 }
 
 pub enum Ns {
@@ -69,7 +69,7 @@ pub enum Ns {
 
 pub enum Element {
     Node {
-        name: (Ns, String),
+        name: (Ns, LocalName),
         attrs: Vec<Attribute>,
         children: Document,
     },
@@ -77,8 +77,8 @@ pub enum Element {
 }
 
 pub struct Attribute {
-    name: String,
-    value: Vec<ExprOrText>,
+    pub name: String,
+    pub value: Vec<ExprOrText>,
 }
 
 pub enum ExprOrText {
@@ -87,9 +87,9 @@ pub enum ExprOrText {
 }
 
 pub struct DOM {
-    doc: Document,
-    tree_map: HashMap<ExprId, Vec<VarId>>,
-    var_map: HashMap<VarId, Var>,
+    pub doc: Document,
+    pub tree_map: HashMap<ExprId, Vec<VarId>>,
+    pub var_map: HashMap<VarId, Var>,
 }
 
 impl From<Vec<HIR>> for DOM {
