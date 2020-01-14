@@ -210,17 +210,22 @@ impl<Wr: Write> HtmlSerializer<Wr> {
             _ => {
                 let (l, v, r) = trim(text);
 
-                match self.skip_ws.take() {
-                    Some(Ws::C) if !l.is_empty() => self.writer.write_all(b" ")?,
-                    None => self.writer.write_all(l.as_bytes())?,
-                    _ => (),
-                }
-                if !r.is_empty() {
-                    self.next_ws = Some(r.into());
+                if !l.is_empty() && v.is_empty() && r.is_empty() {
+                    self.next_ws = Some(l.into());
+                    v
                 } else {
-                    self.next_ws = None;
+                    match self.skip_ws.take() {
+                        Some(Ws::C) if !l.is_empty() => self.writer.write_all(b" ")?,
+                        None => self.writer.write_all(l.as_bytes())?,
+                        _ => (),
+                    }
+                    if !r.is_empty() {
+                        self.next_ws = Some(r.into());
+                    } else {
+                        self.next_ws = None;
+                    }
+                    v
                 }
-                v
             }
         };
 
@@ -233,7 +238,11 @@ impl<Wr: Write> HtmlSerializer<Wr> {
 
     pub fn write_comment(&mut self, text: &str) -> io::Result<()> {
         if let Some(text) = &self.next_ws.take() {
-            self.writer.write_all(text.as_bytes())?;
+            match self.skip_ws {
+                Some(Ws::C) => self.writer.write_all(b" ")?,
+                None => self.writer.write_all(text.as_bytes())?,
+                Some(Ws::Skip) => (),
+            }
         }
         self.skip_ws = None;
         self.writer.write_all(b"<!--")?;
@@ -248,9 +257,15 @@ impl<Wr: Write> HtmlSerializer<Wr> {
         self.writer.write_all(b">")
     }
 
-    pub fn end(&mut self) -> io::Result<()> {
-        if let Some(text) = &self.next_ws.take() {
-            self.writer.write_all(text.as_bytes())?;
+    pub fn end(&mut self, parent: Option<(Position, QualName)>) -> io::Result<()> {
+        if let Some((pos, name)) = parent {
+            self.tag_whitespace(&name, pos)?;
+        } else if let Some(text) = &self.next_ws.take() {
+            match self.skip_ws {
+                Some(Ws::C) => self.writer.write_all(b" ")?,
+                None => self.writer.write_all(text.as_bytes())?,
+                Some(Ws::Skip) => (),
+            }
         }
         Ok(())
     }
@@ -296,18 +311,22 @@ impl<Wr: Write> HtmlSerializer<Wr> {
                         self.skip_ws = Some(Ws::C);
                     }
                     Middle => {
-                        if self.next_ws.take().is_some() {
+                        if let Some(text) = self.next_ws.take() {
                             match self.skip_ws {
-                                Some(Ws::C) | None => self.writer.write_all(b" ")?,
+                                Some(Ws::C) | None if !text.is_empty() => {
+                                    self.writer.write_all(b" ")?
+                                }
                                 _ => (),
                             }
                         }
                         self.skip_ws = Some(Ws::C);
                     }
                     Tail => {
-                        if self.next_ws.take().is_some() {
+                        if let Some(text) = self.next_ws.take() {
                             match self.skip_ws {
-                                Some(Ws::C) | None => self.writer.write_all(b" ")?,
+                                Some(Ws::C) | None if !text.is_empty() => {
+                                    self.writer.write_all(b" ")?
+                                }
                                 _ => (),
                             }
                         }

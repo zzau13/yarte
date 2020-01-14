@@ -1,7 +1,6 @@
 #![allow(clippy::into_iter_on_ref)]
 
 use yarte::Template;
-use yarte_config::{read_config_file, Config};
 
 pub struct Fortune {
     id: i32,
@@ -34,20 +33,6 @@ fn test_fortune() {
          table></body></html>",
         t.call().unwrap()
     );
-}
-
-#[derive(Template)]
-#[template(path = "html/raw/index.html")]
-struct RawIndexTemplate;
-
-#[test]
-fn test_raw_index() {
-    let config = read_config_file();
-    let config = Config::new(&config);
-    let (_, expected) = config.get_template("html/raw/index-expected.html");
-    let t = RawIndexTemplate.call().unwrap();
-
-    assert_eq!(t, expected);
 }
 
 #[allow(dead_code)]
@@ -96,7 +81,7 @@ fn test_header() {
          content=\"width=device-width, initial-scale=1.0\"><title>HTML5 Test \
          Page</title></head><body><div id=\"top\" class=\"page\" role=\"document\"><header \
          role=\"banner\"><h1>foo</h1><p>bar</p></header><nav role=\"navigation\"><ul><li><a \
-         href=\"#text\">Text</a> <ul><li><a \
+         href=\"#text\">Text</a><ul><li><a \
          href=\"#bar\">Bar</a></li></ul></li></ul></nav></div></body></html>",
         t.call().unwrap()
     );
