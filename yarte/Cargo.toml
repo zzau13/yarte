@@ -30,11 +30,7 @@ yarte_helpers = { version = "0.5", path = "../yarte_helpers" }
 actix-web = { version = "2.0", optional = true }
 futures = { version = "0.3", optional = true }
 
-[target.'cfg(target_os="wasm32")'.dependencies]
 yarte_wasm_app = { version = "0.0", path = "../yarte_wasm_app" }
 
 [build-dependencies]
 yarte_config = { version = "0.5", path = "../yarte_config" }
-
-[dev-dependencies]
-actix-rt = "1.0"

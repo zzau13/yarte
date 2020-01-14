@@ -1,10 +1,11 @@
+#![allow(warnings)]
 use std::collections::{HashMap, HashSet};
 
 use proc_macro2::TokenStream;
-use syn::{
-    parse2, parse_str, punctuated::Punctuated, token::Comma, Expr, Field, Ident, Token, Type,
-    VisPublic, Visibility,
-};
+use syn::{parse2, punctuated::Punctuated, Field, Ident, Token, Type, Visibility};
+use syn::parse::{Parse, ParseBuffer};
+use quote::quote;
+use markup5ever::local_name;
 
 use yarte_config::Config;
 use yarte_dom::dom::{
@@ -14,7 +15,6 @@ use yarte_dom::ElemInfo;
 use yarte_hir::{Struct, HIR};
 
 use crate::CodeGen;
-use test::NamePadding::PadNone;
 
 mod each;
 mod if_else;
@@ -45,6 +45,13 @@ fn is_state(f: &Field) -> bool {
     todo!()
 }
 
+struct PAttr(syn::Attribute);
+impl Parse for PAttr {
+    fn parse(input: &ParseBuffer) -> syn::Result<Self> {
+        Ok(PAttr(input.call(syn::Attribute::parse_outer)?.remove(0)))
+    }
+}
+
 impl<'a> WASMCodeGen<'a> {
     pub fn new<'n>(config: &'n Config<'n>, s: &'n Struct<'n>) -> WASMCodeGen<'n> {
         WASMCodeGen {
@@ -55,6 +62,7 @@ impl<'a> WASMCodeGen<'a> {
             helpers: TokenStream::new(),
             s,
             black_box: vec![],
+            stack: vec![],
             path: vec![],
             bit_array: HashSet::new(),
             tree_map: HashMap::new(),
@@ -63,14 +71,11 @@ impl<'a> WASMCodeGen<'a> {
     }
 
     fn parent(&mut self) -> &mut ElemInfo {
-        if self.stack.is_empty() {
-            panic!("no parent ElemInfo")
-        }
-        self.stack.last_mut().unwrap()
+        self.stack.last_mut().expect("no parent ElemInfo")
     }
 
     fn initial_state(&self) -> TokenStream {
-        let attr: syn::Attribute = parse2(quote!(#[serde(default)])).unwrap();
+        let attr: PAttr = parse2(quote!(#[serde(default)])).unwrap();
         let fields = self
             .s
             .fields
@@ -78,10 +83,10 @@ impl<'a> WASMCodeGen<'a> {
             .filter(|x| is_state(x))
             .map(|x| {
                 let mut f = x.clone();
-                f.attrs.push(attr.clone());
+                f.attrs.push(attr.0.clone());
                 f
             })
-            .fold(Punctuated < Field, Comma > ::new(), |mut acc, x| {
+            .fold(Punctuated::<Field, Token![,]>::new(), |mut acc, x| {
                 acc.push(x);
                 acc
             });
@@ -101,11 +106,11 @@ impl<'a> WASMCodeGen<'a> {
             .map(|(ident, ty)| Field {
                 attrs: vec![],
                 vis: Visibility::Inherited,
-                ident: ident.clone(),
-                colon_token: Some(<Token![;]>::default()),
+                ident: Some(ident.clone()),
+                colon_token: Some(<Token![:]>::default()),
                 ty: ty.clone(),
             })
-            .fold(Punctuated < Field, Comma > ::new(), |mut acc, x| {
+            .fold(Punctuated::<Field, Token![,]>::new(), |mut acc, x| {
                 acc.push(x);
                 acc
             });
@@ -175,7 +180,7 @@ impl<'a> WASMCodeGen<'a> {
         tree_map: HashMap<ExprId, Vec<VarId>>,
         var_map: HashMap<VarId, Var>,
     ) {
-        for expr in &tree_map.values() {
+        for expr in tree_map.values() {
             for var_id in expr {
                 match var_map.get(&var_id).expect("variable in map") {
                     Var::This(var) if var.starts_with("self.") => {
@@ -193,25 +198,23 @@ impl<'a> WASMCodeGen<'a> {
 
 impl<'a> CodeGen for WASMCodeGen<'a> {
     fn gen(&mut self, ir: Vec<HIR>) -> TokenStream {
-        self.read_doc(ir.into());
+        self.init(ir.into());
 
         let initial_state = self.initial_state();
         let black_box = self.black_box();
         let default = self
             .s
-            .implement_head(quote!(std::default::Default), self.build);
-        let render = self.render;
-        let hydrate = self.hydrate;
-        let app = self.s.implement_head(
-            quote!(yarte::Template),
-            quote! {
+            .implement_head(quote!(std::default::Default), &self.build);
+        let render = &self.render;
+        let hydrate = &self.hydrate;
+        let app = quote! {
             # [doc(hidden)]
             fn __render(& mut self, __addr: & Addr < Self> ) { # render }
             # [doc(hidden)]
             fn __hydrate(& mut self, __addr: & Addr < Self> ) { # hydrate }
-            },
-        );
-        let helpers = self.helpers;
+        };
+        let app = self.s.implement_head(quote!(yarte::Template), &app);
+        let helpers = &self.helpers;
 
         quote! {
             # [wasm_bindgen]

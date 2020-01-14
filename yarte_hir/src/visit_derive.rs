@@ -24,7 +24,7 @@ pub struct Struct<'a> {
 }
 
 impl<'a> Struct<'a> {
-    pub fn implement_head(&self, t: TokenStream, body: TokenStream) -> TokenStream {
+    pub fn implement_head(&self, t: TokenStream, body: &TokenStream) -> TokenStream {
         let Struct {
             ident, generics, ..
         } = *self;
@@ -218,6 +218,7 @@ pub enum Mode {
     HTML,
     HTMLMin,
     WASM,
+    WASMServer,
 }
 
 impl From<String> for Mode {
@@ -226,7 +227,8 @@ impl From<String> for Mode {
             "text" => Mode::Text,
             "html" => Mode::HTML,
             "html-min" => Mode::HTMLMin,
-            "wasm" | "iso" => Mode::WASM,
+            "wasm" | "client" | "front" => Mode::WASM,
+            "wasm-server" | "iso" | "server" | "back" => Mode::WASMServer,
             v => panic!("invalid value for mode attribute: {}", v),
         }
     }
