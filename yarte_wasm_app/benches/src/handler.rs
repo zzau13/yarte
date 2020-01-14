@@ -208,9 +208,7 @@ impl Handler<Delete> for NonKeyed {
             .position(|x| x.id == msg.0)
             .map(|x| {
                 // #macro remove_data(_self, i: usize)
-                self.tbody
-                    .remove_child(&self.tbody_children.remove(x).root)
-                    .unwrap_throw();
+                self.tbody_children.remove(x).root.remove();
                 self.data.remove(x);
                 self.t_root |= 0b0000_0001;
                 // /macro

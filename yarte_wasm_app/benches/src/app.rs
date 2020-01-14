@@ -90,8 +90,11 @@ impl App for NonKeyed {
             }
         }
 
-        // TODO: attribute on expression selector is unique
-        // TODO: in fragment bounds dynamics (Sum before_elements.len() + C) or static
+        // TODO: select insert point
+        // TODO: #[id]
+        //  {{#each}}
+        //      {{# if #[id] super::selected == id }}{{else}}{{/if}
+        //  {{/each}}
         if self.t_root & 0b0000_0011 != 0 {
             if let Some(old) = self
                 .old_selected
