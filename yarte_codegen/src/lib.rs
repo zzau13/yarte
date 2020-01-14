@@ -8,7 +8,6 @@ mod html;
 mod text;
 pub mod wasm;
 
-
 pub use self::{
     html::{HTMLCodeGen, HTMLMinCodeGen},
     text::TextCodeGen,

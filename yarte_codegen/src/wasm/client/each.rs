@@ -1,7 +1,7 @@
 use crate::wasm::client::WASMCodeGen;
 use proc_macro2::TokenStream;
-use yarte_dom::dom::Each;
 use quote::quote;
+use yarte_dom::dom::Each;
 
 impl<'a> WASMCodeGen<'a> {
     fn gen_each(&self, e: Box<Each>, fragment: Option<TokenStream>) {
@@ -16,7 +16,7 @@ impl<'a> WASMCodeGen<'a> {
 
         let parent = TokenStream::new();
         let new = TokenStream::new();
-        let update= TokenStream::new();
+        let update = TokenStream::new();
 
         let build = quote! {
             let mut tbody_children = vec![];

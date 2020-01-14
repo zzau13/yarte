@@ -1,17 +1,23 @@
 #![allow(warnings)]
 use std::collections::{HashMap, HashSet};
 
-use proc_macro2::TokenStream;
-use syn::{parse2, punctuated::Punctuated, Field, Ident, Token, Type, Visibility};
-use syn::parse::{Parse, ParseBuffer};
-use quote::quote;
 use markup5ever::local_name;
+use proc_macro2::TokenStream;
+use quote::quote;
+use syn::{
+    parse::{Parse, ParseBuffer},
+    parse2,
+    punctuated::Punctuated,
+    Field, Ident, Token, Type, Visibility,
+};
 
 use yarte_config::Config;
-use yarte_dom::dom::{
-    Attribute, Document, Element, ExprId, ExprOrText, Expression, Node, Ns, Var, VarId, DOM,
+use yarte_dom::{
+    dom::{
+        Attribute, Document, Element, ExprId, ExprOrText, Expression, Node, Ns, Var, VarId, DOM,
+    },
+    ElemInfo,
 };
-use yarte_dom::ElemInfo;
 use yarte_hir::{Struct, HIR};
 
 use crate::CodeGen;

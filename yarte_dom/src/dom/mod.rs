@@ -2,7 +2,7 @@
 
 use std::{collections::HashMap, vec::Drain};
 
-use markup5ever::{LocalName, QualName};
+use markup5ever::{namespace_url, ns, LocalName, QualName};
 use syn::Local;
 use yarte_hir::{Each as HEach, IfElse as HIfElse, HIR};
 
@@ -179,7 +179,7 @@ impl DOMBuilder {
                     self.inner = true;
                     self.get_children(children, &sink, &mut ir)?
                 } else {
-                    vec![self.resolve_node(name, attrs, children)?]
+                    vec![self.resolve_node(name, attrs, children, &sink, &mut ir)?]
                 }
             }
             Some(ParseElement::Text(s)) => vec![self.resolve_text(s)],
@@ -197,40 +197,99 @@ impl DOMBuilder {
         name: &QualName,
         attrs: &[ParseAttribute],
         children: &[ParseNodeId],
+        sink: &Sink,
+        ir: &mut Drain<HIR>,
     ) -> ParseResult<Node> {
-        todo!()
+        let ns = match name.ns {
+            ns!(html) => Ns::Html,
+            ns!(svg) => Ns::Svg,
+            _ => panic!("Name space"),
+        };
+
+        Ok(Node::Elem(Element::Node {
+            name: (ns, name.local.clone()),
+            attrs: self.resolve_attrs(attrs, ir)?,
+            children: self.get_children(children, sink, ir)?,
+        }))
+    }
+
+    fn resolve_attrs(
+        &mut self,
+        attrs: &[ParseAttribute],
+        ir: &mut Drain<HIR>,
+    ) -> ParseResult<Vec<Attribute>> {
+        let mut buff = vec![];
+        for attr in attrs {
+            buff.push(self.resolve_attr(attr, ir)?);
+        }
+
+        Ok(buff)
+    }
+
+    fn resolve_attr(
+        &mut self,
+        attr: &ParseAttribute,
+        ir: &mut Drain<HIR>,
+    ) -> ParseResult<Attribute> {
+        let name = attr.name.local.to_string();
+        let mut chunks = attr.value.split(HEAD).peekable();
+        if let Some(first) = chunks.peek() {
+            if first.is_empty() {
+                chunks.next();
+            }
+        }
+        let mut value = vec![];
+        for chunk in chunks {
+            if HASH_LEN < chunk.len() && &chunk[..2] == "0x" {
+                if let Ok(id) = u32::from_str_radix(&chunk[2..HASH_LEN], 16).map(|x| x as usize) {
+                    if self.tree_map.contains_key(&id) {
+                        value.push(ExprOrText::Expr(self.resolve_expr(id, ir)?));
+                        continue;
+                    }
+                }
+            }
+
+            value.push(ExprOrText::Text(chunk.into()))
+        }
+
+        Ok(Attribute { name, value })
     }
 
     fn resolve_mark(&mut self, id: &str, ir: &mut Drain<HIR>) -> ParseResult<Node> {
         assert_eq!(id.len(), 10);
         assert_eq!(&id[..2], "0x");
         let id = u32::from_str_radix(&id[2..], 16).unwrap() as usize;
+
+        Ok(Node::Expr(self.resolve_expr(id, ir)?))
+    }
+
+    fn resolve_expr(&mut self, id: ExprId, ir: &mut Drain<HIR>) -> ParseResult<Expression> {
         let ir = ir.next().expect("Some HIR");
 
         match ir {
             HIR::Expr(e) => {
                 resolve_expr(&e, id, self);
-                Ok(Node::Expr(Expression::Unsafe(id, e)))
+                Ok(Expression::Unsafe(id, e))
             }
             HIR::Safe(e) => {
                 resolve_expr(&e, id, self);
-                Ok(Node::Expr(Expression::Safe(id, e)))
+                Ok(Expression::Safe(id, e))
             }
             HIR::Local(e) => {
                 let var_id = resolve_local(&e, id, self);
-                Ok(Node::Expr(Expression::Local(id, var_id, e)))
+                Ok(Expression::Local(id, var_id, e))
             }
             HIR::Each(e) => {
                 resolve_each(&e, id, self);
                 let HEach { args, body, expr } = *e;
-                Ok(Node::Expr(Expression::Each(
+                Ok(Expression::Each(
                     id,
                     Box::new(Each {
                         args,
                         body: self.step(body)?,
                         expr,
                     }),
-                )))
+                ))
             }
             HIR::IfElse(e) => {
                 resolve_if_else(&e, id, self);
@@ -261,7 +320,7 @@ impl DOMBuilder {
                     attrs,
                     children,
                     ..
-                } => self.resolve_node(name, attrs, children)?,
+                } => self.resolve_node(name, attrs, children, sink, ir)?,
                 ParseElement::Document(_) => unreachable!(),
             })
         }
