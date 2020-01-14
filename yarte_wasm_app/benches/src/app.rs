@@ -47,7 +47,7 @@ impl App for NonKeyed {
             let row_len = self.data.len();
             if row_len == 0 {
                 // Clear
-                self.tbody.set_inner_html("");
+                self.tbody.set_text_content(None);
                 self.tbody_children.clear()
             } else {
                 // select
@@ -76,7 +76,7 @@ impl App for NonKeyed {
                     Ordering::Less => {
                         // Remove
                         for dom in self.tbody_children.drain(row_len..) {
-                            self.tbody.remove_child(&dom.root).unwrap_throw();
+                            dom.root.remove()
                         }
                     }
                     Ordering::Equal => (),
@@ -86,22 +86,21 @@ impl App for NonKeyed {
 
         // TODO: attribute on expression selector is unique
         if self.t_root & 0b0000_0011 != 0 {
-            let children = self.tbody.children();
             if let Some(old) = self
                 .old_selected
                 .take()
-                .and_then(|x| children.item(x as u32))
+                .and_then(|x| self.tbody_children.get(x))
             {
-                old.set_class_name("");
+                old.root.set_class_name("");
             }
             if let Some(new) = self.selected {
                 if let Some((dom, i)) = self
                     .data
                     .iter()
                     .position(|x| x.id == new)
-                    .and_then(|x| children.item(x as u32).map(|dom| (dom, x)))
+                    .and_then(|x| self.tbody_children.get(x).map(|dom| (dom, x)))
                 {
-                    dom.set_class_name("danger");
+                    dom.root.set_class_name("danger");
                     self.old_selected = Some(i);
                 } else {
                     self.selected = None;
@@ -287,15 +286,15 @@ impl Default for NonKeyed {
         let tbody = n1.first_element_child().unwrap_throw(); // tbody
 
         let mut tbody_children = vec![];
-        if let Some(mut curr) = tbody.first_child() {
+        if let Some(mut curr) = tbody.first_element_child() {
             loop {
-                let id_node = curr.first_child().unwrap_throw();
-                let label_parent = id_node.next_sibling().unwrap_throw();
-                let label_node = label_parent.first_child().unwrap_throw();
-                let delete_parent = label_parent.next_sibling().unwrap_throw();
-                let delete_node = delete_parent.first_child().unwrap_throw();
+                let id_node = curr.first_element_child().unwrap_throw();
+                let label_parent = id_node.next_element_sibling().unwrap_throw();
+                let label_node = label_parent.first_element_child().unwrap_throw();
+                let delete_parent = label_parent.next_element_sibling().unwrap_throw();
+                let delete_node = delete_parent.first_element_child().unwrap_throw();
 
-                curr = if let Some(new) = curr.next_sibling() {
+                curr = if let Some(new) = curr.next_element_sibling() {
                     tbody_children.push(RowDOM {
                         t_root: 0,
                         root: curr,

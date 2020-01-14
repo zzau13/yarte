@@ -1,5 +1,5 @@
 use wasm_bindgen::{prelude::*, UnwrapThrowExt};
-use web_sys::{window, Element, Event, Node};
+use web_sys::{window, Element, Event};
 
 #[derive(Debug, Deserialize)]
 pub struct Row {
@@ -9,13 +9,13 @@ pub struct Row {
 
 pub struct RowDOM {
     pub t_root: u8,
-    pub root: Node,
+    pub root: Element,
     // depend item.id
-    pub id_node: Node,
+    pub id_node: Element,
     // depend item.label item.id
-    pub label_node: Node,
+    pub label_node: Element,
     // depend item.id
-    pub delete_node: Node,
+    pub delete_node: Element,
     // depend item.id
     pub closure_select: Option<Closure<dyn Fn(Event)>>,
     // depend item.id
@@ -90,12 +90,12 @@ macro_rules! update_row {
 #[macro_export]
 macro_rules! new_row {
     ($row:ident, $elem:expr, $addr:ident, $parent:expr) => {{
-        let root = $elem.clone_node_with_deep(true).unwrap_throw();
-        let id_node = root.first_child().unwrap_throw();
-        let label_parent = id_node.next_sibling().unwrap_throw();
-        let label_node = label_parent.first_child().unwrap_throw();
-        let delete_parent = label_parent.next_sibling().unwrap_throw();
-        let delete_node = delete_parent.first_child().unwrap_throw();
+        let root = $elem.clone_node_with_deep(true).unwrap_throw().unchecked_into::<Element>();
+        let id_node = root.first_element_child().unwrap_throw();
+        let label_parent = id_node.next_element_sibling().unwrap_throw();
+        let label_node = label_parent.first_element_child().unwrap_throw();
+        let delete_parent = label_parent.next_element_sibling().unwrap_throw();
+        let delete_node = delete_parent.first_element_child().unwrap_throw();
 
         let id = $row.id.clone();
         // depend id
