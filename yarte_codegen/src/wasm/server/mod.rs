@@ -1,3 +1,4 @@
+#![allow(warnings)]
 use proc_macro2::TokenStream;
 
 use yarte_config::Config;

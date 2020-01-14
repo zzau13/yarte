@@ -24,6 +24,7 @@ yarte_config = { version = "0.5", path = "../yarte_config" }
 yarte_dom = { version = "0.5", path = "../yarte_dom" }
 yarte_hir = { version = "0.5", path = "../yarte_hir" }
 
+markup5ever = "0.10"
 mime_guess = "2.0"
 proc-macro2 = { version = "1.0", features = ["span-locations"] }
 quote = "1.0"

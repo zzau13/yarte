@@ -6,12 +6,12 @@ use yarte_hir::{Each, IfElse, Mode, Struct, HIR};
 
 mod html;
 mod text;
-mod wasm;
+pub mod wasm;
+
 
 pub use self::{
     html::{HTMLCodeGen, HTMLMinCodeGen},
     text::TextCodeGen,
-    wasm::WASMCodeGen,
 };
 
 pub trait CodeGen {
@@ -48,7 +48,7 @@ impl<'a, T: CodeGen> FmtCodeGen<'a, T> {
                 #size_hint
             }
         );
-        tokens.extend(self.s.implement_head(quote!(::yarte::Template), body));
+        tokens.extend(self.s.implement_head(quote!(::yarte::Template), &body));
     }
 
     fn display(&mut self, nodes: Vec<HIR>, tokens: &mut TokenStream) -> usize {
@@ -62,7 +62,7 @@ impl<'a, T: CodeGen> FmtCodeGen<'a, T> {
             }
         );
 
-        tokens.extend(self.s.implement_head(quote!(::std::fmt::Display), func));
+        tokens.extend(self.s.implement_head(quote!(::std::fmt::Display), &func));
 
         size_hint
     }
@@ -87,7 +87,7 @@ impl<'a, T: CodeGen> FmtCodeGen<'a, T> {
             }
         );
 
-        tokens.extend(self.s.implement_head(quote!(::yarte::aw::Responder), body));
+        tokens.extend(self.s.implement_head(quote!(::yarte::aw::Responder), &body));
     }
 }
 
