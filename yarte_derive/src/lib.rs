@@ -4,7 +4,10 @@ use std::collections::BTreeMap;
 
 use proc_macro::TokenStream;
 
-use yarte_codegen::{CodeGen, FmtCodeGen, HTMLCodeGen, HTMLMinCodeGen, TextCodeGen, wasm::{client, server}};
+use yarte_codegen::{
+    wasm::{client, server},
+    CodeGen, FmtCodeGen, HTMLCodeGen, HTMLMinCodeGen, TextCodeGen,
+};
 use yarte_config::{read_config_file, Config, PrintConfig};
 use yarte_helpers::helpers;
 use yarte_hir::{generate, visit_derive, Mode, Print, Struct, HIR};

@@ -8,8 +8,7 @@ mod serializer;
 mod sink;
 mod tree_builder;
 
-pub use self::dom_fmt::DOMFmt;
-pub use self::serializer::ElemInfo;
+pub use self::{dom_fmt::DOMFmt, serializer::ElemInfo};
 
 #[cfg(test)]
 mod test {
