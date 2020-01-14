@@ -1,9 +1,8 @@
-#![allow(warnings)]
+#![allow(dead_code)]
 
 use std::{collections::HashMap, vec::Drain};
 
 use markup5ever::{namespace_url, ns, LocalName, QualName};
-use syn::Local;
 use yarte_hir::{Each as HEach, IfElse as HIfElse, HIR};
 
 mod visit_each;
@@ -23,7 +22,6 @@ use self::{
     visit_each::resolve_each, visit_expr::resolve_expr, visit_if_else::resolve_if_else,
     visit_local::resolve_local,
 };
-use crate::serializer::ElemInfo;
 
 pub type Document = Vec<Node>;
 pub type ExprId = usize;
@@ -49,8 +47,8 @@ pub enum Expression {
 
 #[allow(clippy::type_complexity)]
 pub struct IfElse {
-    ifs: ((ExprId, Option<VarId>, syn::Expr), Document),
-    if_else: Vec<((ExprId, Option<VarId>, syn::Expr), Document)>,
+    ifs: (syn::Expr, Document),
+    if_else: Vec<(syn::Expr, Document)>,
     els: Option<Document>,
 }
 
@@ -100,7 +98,6 @@ impl From<Vec<HIR>> for DOM {
 
 #[derive(Default)]
 pub struct DOMBuilder {
-    stack: Vec<ElemInfo>,
     inner: bool,
     count: usize,
     tree_map: HashMap<ExprId, Vec<VarId>>,
@@ -128,7 +125,7 @@ impl DOMBuilder {
                     html.push_str(x);
                     false
                 }
-                h => {
+                _ => {
                     html.push_str(HEAD);
                     let id = self.count;
                     self.count += 1;
@@ -167,11 +164,11 @@ impl DOMBuilder {
                 self.get_children(children, &sink, &mut ir)?
             }
             Some(ParseElement::Node {
-                name,
-                attrs,
-                children,
-                ..
-            }) => {
+                     name,
+                     attrs,
+                     children,
+                     ..
+                 }) => {
                 if name == &*YARTE_TAG {
                     if self.inner {
                         panic!("not use <{}> tag", &*YARTE_TAG.local);
@@ -242,8 +239,12 @@ impl DOMBuilder {
         for chunk in chunks {
             if HASH_LEN < chunk.len() && &chunk[..2] == "0x" {
                 if let Ok(id) = u32::from_str_radix(&chunk[2..HASH_LEN], 16).map(|x| x as usize) {
-                    if self.tree_map.contains_key(&id) {
+                    if self.tree_map.contains_key(&id) && chunk[HASH_LEN..].starts_with(TAIL) {
                         value.push(ExprOrText::Expr(self.resolve_expr(id, ir)?));
+                        if !&chunk[HASH_LEN + TAIL.len()..].is_empty() {
+                            value.push(ExprOrText::Text(chunk[HASH_LEN + TAIL.len()..].into()))
+                        }
+
                         continue;
                     }
                 }
@@ -294,14 +295,33 @@ impl DOMBuilder {
             HIR::IfElse(e) => {
                 resolve_if_else(&e, id, self);
                 let HIfElse { ifs, if_else, els } = *e;
-                todo!()
+
+                let (expr, body) = ifs;
+                let body = self.step(body)?;
+
+                let mut buff = vec![];
+                for (expr, body) in if_else {
+                    buff.push((expr, self.step(body)?))
+                }
+
+                let els = if let Some(body) = els {
+                    Some(self.step(body)?)
+                } else {
+                    None
+                };
+
+                Ok(Expression::IfElse(id, Box::new(IfElse {
+                    ifs: (expr, body),
+                    if_else: buff,
+                    els
+                })))
             }
             HIR::Lit(_) => unreachable!(),
         }
     }
 
     fn resolve_text(&mut self, s: &str) -> Node {
-        todo!()
+        Node::Elem(Element::Text(s.to_owned()))
     }
 
     fn get_children(
