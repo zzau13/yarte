@@ -2,7 +2,7 @@
 
 use syn::visit::Visit;
 
-use crate::dom::{DOMBuilder};
+use crate::dom::DOMBuilder;
 use yarte_hir::Each;
 
 pub fn resolve_each<'a>(expr: &'a Each, id: usize, builder: &'a mut DOMBuilder) {
