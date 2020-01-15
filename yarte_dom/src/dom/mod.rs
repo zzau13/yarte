@@ -22,6 +22,7 @@ use self::{
     visit_each::resolve_each, visit_expr::resolve_expr, visit_if_else::resolve_if_else,
     visit_local::resolve_local,
 };
+use std::collections::BTreeMap;
 
 pub type Document = Vec<Node>;
 pub type ExprId = usize;
@@ -101,7 +102,7 @@ pub struct DOMBuilder {
     inner: bool,
     count: usize,
     tree_map: HashMap<ExprId, Vec<VarId>>,
-    var_map: HashMap<VarId, Var>,
+    var_map: BTreeMap<VarId, Var>,
 }
 
 // 0x00_00_00_00
@@ -112,7 +113,7 @@ impl DOMBuilder {
         DOM {
             doc: self.init(ir).expect("Dom builder"),
             tree_map: self.tree_map,
-            var_map: self.var_map,
+            var_map: self.var_map.into_iter().collect(),
         }
     }
 
@@ -141,13 +142,7 @@ impl DOMBuilder {
 
     fn init(&mut self, ir: Vec<HIR>) -> ParseResult<Document> {
         let (ir, html) = self.generate_html(ir);
-
-        let sink = match parse_document(&html) {
-            Ok(a) => a,
-            Err(_) => parse_fragment(&html)?,
-        };
-
-        self.serialize(sink, ir)
+        self.serialize(parse_document(&html)?, ir)
     }
 
     fn step(&mut self, ir: Vec<HIR>) -> ParseResult<Document> {
@@ -164,11 +159,11 @@ impl DOMBuilder {
                 self.get_children(children, &sink, &mut ir)?
             }
             Some(ParseElement::Node {
-                     name,
-                     attrs,
-                     children,
-                     ..
-                 }) => {
+                name,
+                attrs,
+                children,
+                ..
+            }) => {
                 if name == &*YARTE_TAG {
                     if self.inner {
                         panic!("not use <{}> tag", &*YARTE_TAG.local);
@@ -310,11 +305,14 @@ impl DOMBuilder {
                     None
                 };
 
-                Ok(Expression::IfElse(id, Box::new(IfElse {
-                    ifs: (expr, body),
-                    if_else: buff,
-                    els
-                })))
+                Ok(Expression::IfElse(
+                    id,
+                    Box::new(IfElse {
+                        ifs: (expr, body),
+                        if_else: buff,
+                        els,
+                    }),
+                ))
             }
             HIR::Lit(_) => unreachable!(),
         }

@@ -2,7 +2,10 @@ use std::{collections::BTreeMap, mem, path::PathBuf, str};
 
 use quote::quote;
 use syn::{
-    export::Span, parse_str, punctuated::Punctuated, visit_mut::VisitMut, PathSegment, Token,
+    export::Span, parse_str, punctuated::Punctuated, visit_mut::VisitMut, ExprArray, ExprBinary,
+    ExprBlock, ExprCall, ExprCast, ExprClosure, ExprField, ExprGroup, ExprIf, ExprIndex, ExprLoop,
+    ExprMacro, ExprMatch, ExprMethodCall, ExprParen, ExprPath, ExprRange, ExprReference,
+    ExprRepeat, ExprTuple, ExprUnary, ExprUnsafe, PathSegment, Token,
 };
 use v_eval::{eval, Value};
 use v_htmlescape::escape;
@@ -157,7 +160,9 @@ impl<'a> Generator<'a> {
                     self.handle_ws(*ws);
                     self.visit_expr_mut(&mut expr);
 
-                    if self.const_eval(&expr, true).is_none() {
+                    if self.read_attributes(&mut expr).is_none()
+                        && self.const_eval(&expr, true).is_none()
+                    {
                         validator::expression(sexpr, &mut self.errors);
                         self.buf_w.push(Writable::Expr(Box::new(expr), true));
                     }
@@ -579,6 +584,41 @@ impl<'a> Generator<'a> {
             Value::Str(s) => Some(s.chars().map(|x| Value::Str(x.to_string())).collect()),
             _ => None,
         })
+    }
+
+    fn read_attributes(&mut self, e: &mut syn::Expr) -> Option<()> {
+        use syn::Expr::*;
+        match e {
+            Array(ExprArray { attrs, .. })
+            | Binary(ExprBinary { attrs, .. })
+            | Block(ExprBlock { attrs, .. })
+            | Call(ExprCall { attrs, .. })
+            | Cast(ExprCast { attrs, .. })
+            | Closure(ExprClosure { attrs, .. })
+            | Field(ExprField { attrs, .. })
+            | Group(ExprGroup { attrs, .. })
+            | If(ExprIf { attrs, .. })
+            | Index(ExprIndex { attrs, .. })
+            | Loop(ExprLoop { attrs, .. })
+            | Macro(ExprMacro { attrs, .. })
+            | Match(ExprMatch { attrs, .. })
+            | MethodCall(ExprMethodCall { attrs, .. })
+            | Paren(ExprParen { attrs, .. })
+            | Path(ExprPath { attrs, .. })
+            | Range(ExprRange { attrs, .. })
+            | Reference(ExprReference { attrs, .. })
+            | Repeat(ExprRepeat { attrs, .. })
+            | Tuple(ExprTuple { attrs, .. })
+            | Unary(ExprUnary { attrs, .. })
+            | Unsafe(ExprUnsafe { attrs, .. }) => {
+                if attrs.is_empty() {
+                    None
+                } else {
+                    todo!()
+                }
+            }
+            _ => None,
+        }
     }
 
     fn resolve_path(
