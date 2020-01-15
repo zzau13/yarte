@@ -40,13 +40,16 @@ impl<'a, T: CodeGen> FmtCodeGen<'a, T> {
     }
 
     fn template(&self, size_hint: usize, tokens: &mut TokenStream) {
-        let mime = self.get_mime() + "; charset=utf-8";
-        let body = quote!(
-            fn mime() -> &'static str { #mime }
+        let mut body = quote!(
             fn size_hint() -> usize {
                 #size_hint
             }
         );
+        if cfg!(feature = "actix-web") {
+            let mime = self.get_mime() + "; charset=utf-8";
+            body.extend(quote!(fn mime() -> &'static str { #mime }))
+        }
+
         tokens.extend(self.s.implement_head(quote!(::yarte::Template), &body));
     }
 

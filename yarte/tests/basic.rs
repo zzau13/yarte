@@ -38,6 +38,8 @@ fn test_brackets2() {
     let hello = Brackets2Template;
     assert_eq!("{{{}", hello.call().unwrap());
 }
+
+#[cfg(feature = "with-actix-web")]
 #[derive(Template)]
 #[template(path = "simple.hbs")]
 struct VariablesTemplate<'a> {
@@ -46,6 +48,7 @@ struct VariablesTemplate<'a> {
     i18n: String,
 }
 
+#[cfg(feature = "with-actix-web")]
 #[test]
 fn test_variables() {
     let s = VariablesTemplate {

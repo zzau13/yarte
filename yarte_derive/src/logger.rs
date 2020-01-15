@@ -39,13 +39,13 @@ fn logger(s: &str, path: String, option: &PrintOption) {
         .status();
 
     let mut s = fs::read_to_string(&outfile_path).unwrap();
-    if option.short.unwrap_or(true) {
+    if option.short.unwrap_or(false) {
         let lines: Vec<&str> = s.lines().collect();
         s = if cfg!(feature = "actix-web") {
             lines[0..lines.len() - 25].join("\n")
         } else {
             // TODO: Count lines
-            lines[0..lines.len() - 10].join("\n")
+            lines[0..lines.len() - 5].join("\n")
         };
         s.push('\n');
     }
