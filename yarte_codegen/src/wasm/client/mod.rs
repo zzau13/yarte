@@ -1,12 +1,16 @@
 #![allow(warnings)]
-use std::collections::{HashMap, HashSet};
+
+use std::{
+    collections::{BTreeSet, HashMap, HashSet},
+    mem,
+};
 
 use markup5ever::local_name;
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{format_ident, quote};
 use syn::{
     parse::{Parse, ParseBuffer},
-    parse2,
+    parse2, parse_str,
     punctuated::Punctuated,
     Field, Ident, Token, Type, VisPublic, Visibility,
 };
@@ -39,10 +43,11 @@ pub struct WASMCodeGen<'a> {
     render: TokenStream,
     hydrate: TokenStream,
     helpers: TokenStream,
+    buff_render: Vec<(HashSet<VarId>, TokenStream)>,
     black_box: Vec<BlackBox>,
     stack: Vec<ElemInfo>,
     path: Vec<Path>,
-    bit_array: HashSet<VarId>,
+    bit_array: Vec<VarId>,
     tree_map: HashMap<ExprId, Vec<VarId>>,
     var_map: HashMap<VarId, Var>,
 }
@@ -75,6 +80,7 @@ fn is_state(f: &Field) -> bool {
 }
 
 struct PAttr(Vec<syn::Attribute>);
+
 impl Parse for PAttr {
     fn parse(input: &ParseBuffer) -> syn::Result<Self> {
         Ok(PAttr(input.call(syn::Attribute::parse_outer)?))
@@ -93,9 +99,11 @@ impl<'a> WASMCodeGen<'a> {
             black_box: vec![],
             stack: vec![],
             path: vec![],
-            bit_array: HashSet::new(),
+            // Only this
+            bit_array: Vec::new(),
             tree_map: HashMap::new(),
             var_map: HashMap::new(),
+            buff_render: vec![],
         }
     }
 
@@ -120,9 +128,10 @@ impl<'a> WASMCodeGen<'a> {
                 acc
             });
 
+        let name = format_ident!("{}InitialState", self.s.ident);
         quote! {
-            #[derive(Default, Deserialize)]
-            struct InitialState {
+            #[derive(Default, yarte::Deserialize)]
+            pub struct InitialState {
                 #fields
             }
         }
@@ -137,12 +146,45 @@ impl<'a> WASMCodeGen<'a> {
             },
         );
 
+        let name = format_ident!("{}BlackBox", self.s.ident);
         quote! {
             #[doc = "Internal elements and difference tree"]
-            struct BlackBox {
+            pub struct #name {
                 #fields
             }
         }
+    }
+
+    fn build_render(&mut self, parent: Ident) -> TokenStream {
+        let mut tokens = TokenStream::new();
+        let len = self.bit_array.len();
+        let base = match len {
+            0..=8 => 8,
+            9..=16 => 16,
+            17..=32 => 32,
+            _ => todo!(),
+        };
+        self.black_box.push(BlackBox {
+            doc: "Difference tree".to_string(),
+            name: format_ident!("t_root"),
+            ty: parse_str(&format!("u{}", base)).unwrap(),
+        });
+        for (set, token) in mem::take(&mut self.buff_render) {
+            let set: Vec<_> = set
+                .into_iter()
+                .map(|a| self.bit_array.iter().position(|b| a == *b).unwrap())
+                .collect();
+            let mut expr = "0b".to_string();
+            for i in 0..base {
+                expr.push(if set.contains(&i) { '1' } else { '0' });
+            }
+
+            let expr: syn::Expr = parse_str(&expr).unwrap();
+
+            tokens.extend(quote!(if #parent.t_root & #expr != 0 { #token }));
+        }
+
+        tokens
     }
 
     fn init(&mut self, mut dom: DOM) {
@@ -205,12 +247,7 @@ impl<'a> WASMCodeGen<'a> {
     ) {
         for expr in tree_map.values() {
             for var_id in expr {
-                match var_map.get(&var_id).expect("variable in map") {
-                    Var::This(var) if var.starts_with("self.") => {
-                        self.bit_array.insert(*var_id);
-                    }
-                    _ => (),
-                }
+                todo!()
             }
         }
 
