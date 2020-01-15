@@ -8,7 +8,7 @@ use syn::{
     parse::{Parse, ParseBuffer},
     parse2,
     punctuated::Punctuated,
-    Field, Ident, Token, Type, Visibility,
+    Field, Ident, Token, Type, VisPublic, Visibility,
 };
 
 use yarte_config::Config;
@@ -54,14 +54,30 @@ struct BlackBox {
     ty: Type,
 }
 
+impl Into<Field> for BlackBox {
+    fn into(self) -> Field {
+        let BlackBox { name, ty, doc } = self;
+        let attr: PAttr = parse2(quote!(#[doc = #doc])).unwrap();
+        Field {
+            attrs: attr.0,
+            vis: Visibility::Public(VisPublic {
+                pub_token: <Token![pub]>::default(),
+            }),
+            ident: Some(name),
+            colon_token: Some(<Token![:]>::default()),
+            ty,
+        }
+    }
+}
+
 fn is_state(f: &Field) -> bool {
     todo!()
 }
 
-struct PAttr(syn::Attribute);
+struct PAttr(Vec<syn::Attribute>);
 impl Parse for PAttr {
     fn parse(input: &ParseBuffer) -> syn::Result<Self> {
-        Ok(PAttr(input.call(syn::Attribute::parse_outer)?.remove(0)))
+        Ok(PAttr(input.call(syn::Attribute::parse_outer)?))
     }
 }
 
@@ -96,7 +112,7 @@ impl<'a> WASMCodeGen<'a> {
             .filter(|x| is_state(x))
             .map(|x| {
                 let mut f = x.clone();
-                f.attrs.push(attr.0.clone());
+                f.attrs.extend(attr.0.clone());
                 f
             })
             .fold(Punctuated::<Field, Token![,]>::new(), |mut acc, x| {
@@ -113,26 +129,16 @@ impl<'a> WASMCodeGen<'a> {
     }
 
     fn black_box(&mut self) -> TokenStream {
-        let fields = self
-            .black_box
-            .drain(..)
-            .map(|b| {
-                let BlackBox {name, ty, doc } = b;
-                let attr: PAttr = parse2(quote!(#[doc = #doc])).unwrap();
-                Field {
-                    attrs: vec![attr.0],
-                    vis: Visibility::Inherited,
-                    ident: Some(name),
-                    colon_token: Some(<Token![:]>::default()),
-                    ty,
-                }
-            })
-            .fold(Punctuated::<Field, Token![,]>::new(), |mut acc, x| {
+        let fields = self.black_box.drain(..).map(Into::into).fold(
+            Punctuated::<Field, Token![,]>::new(),
+            |mut acc, x| {
                 acc.push(x);
                 acc
-            });
+            },
+        );
 
         quote! {
+            #[doc = "Internal elements and difference tree"]
             struct BlackBox {
                 #fields
             }
