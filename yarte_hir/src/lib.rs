@@ -707,8 +707,13 @@ impl<'a> Generator<'a> {
         if path.segments.len() == 1 {
             let ident: &str = &path.segments[0].ident.to_string();
 
-            // static or constant
-            if ident.chars().all(|x| x.is_ascii_uppercase() || x.eq(&'_')) {
+            // static or constant or struct or enum
+            if ident
+                .chars()
+                .next()
+                .map(|x| x.is_uppercase())
+                .unwrap_or(false)
+            {
                 let ident = &path.segments[0].ident;
                 writes!(#ident)
             }
