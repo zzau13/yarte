@@ -4,7 +4,7 @@ use markup5ever::QualName;
 
 use crate::{
     dom::Document,
-    serializer::{HtmlSerializer, Position},
+    serializer::HtmlSerializer,
     sink::{ParseAttribute, ParseElement, ParseNodeId, Sink, MARK},
     tree_builder::YARTE_TAG,
 };
@@ -107,19 +107,10 @@ impl Tree {
 fn _serialize<W: Write>(
     nodes: &[TreeElement],
     serializer: &mut HtmlSerializer<W>,
-    parent: Option<(Position, QualName)>,
+    parent: Option<QualName>,
 ) -> io::Result<()> {
     use TreeElement::*;
-    for (pos, node) in nodes.iter().enumerate().map(|(i, x)| {
-        (
-            match i {
-                0 => Position::Head,
-                a if a + 1 == nodes.len() => Position::Tail,
-                _ => Position::Middle,
-            },
-            x,
-        )
-    }) {
+    for node in nodes {
         match node {
             Node {
                 children,
@@ -129,10 +120,9 @@ fn _serialize<W: Write>(
                 serializer.start_elem(
                     name.clone(),
                     attrs.iter().map(|x| (&x.name, x.value.as_str())),
-                    pos,
                 )?;
-                _serialize(children, serializer, Some((pos, name.clone())))?;
-                serializer.end_elem(name.clone(), pos)?
+                _serialize(children, serializer, Some(name.clone()))?;
+                serializer.end_elem(name.clone())?
             }
             Text(s) => serializer.write_text(s)?,
             DocType => serializer.write_doctype("html")?,

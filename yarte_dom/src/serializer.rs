@@ -26,13 +26,6 @@ enum Ws {
     C,
 }
 
-#[derive(Copy, Clone)]
-pub enum Position {
-    Head,
-    Middle,
-    Tail,
-}
-
 pub struct HtmlSerializer<Wr: Write> {
     pub writer: Wr,
     stack: Vec<ElemInfo>,
@@ -86,12 +79,7 @@ impl<Wr: Write> HtmlSerializer<Wr> {
         Ok(())
     }
 
-    pub fn start_elem<'a, AttrIter>(
-        &mut self,
-        name: QualName,
-        attrs: AttrIter,
-        pos: Position,
-    ) -> io::Result<()>
+    pub fn start_elem<'a, AttrIter>(&mut self, name: QualName, attrs: AttrIter) -> io::Result<()>
     where
         AttrIter: Iterator<Item = AttrRef<'a>>,
     {
@@ -108,7 +96,7 @@ impl<Wr: Write> HtmlSerializer<Wr> {
             return Ok(());
         }
 
-        self.tag_whitespace(&name, pos)?;
+        self.tag_whitespace(&name)?;
 
         self.writer.write_all(b"<")?;
         self.writer.write_all(tagname(&name).as_bytes())?;
@@ -171,7 +159,7 @@ impl<Wr: Write> HtmlSerializer<Wr> {
         Ok(())
     }
 
-    pub fn end_elem(&mut self, name: QualName, pos: Position) -> io::Result<()> {
+    pub fn end_elem(&mut self, name: QualName) -> io::Result<()> {
         let info = match self.stack.pop() {
             Some(info) => info,
             _ => panic!("no ElemInfo"),
@@ -180,7 +168,7 @@ impl<Wr: Write> HtmlSerializer<Wr> {
             return Ok(());
         }
 
-        self.tag_whitespace(&name, pos)?;
+        self.tag_whitespace(&name)?;
 
         self.writer.write_all(b"</")?;
         self.writer.write_all(tagname(&name).as_bytes())?;
@@ -257,9 +245,9 @@ impl<Wr: Write> HtmlSerializer<Wr> {
         self.writer.write_all(b">")
     }
 
-    pub fn end(&mut self, parent: Option<(Position, QualName)>) -> io::Result<()> {
-        if let Some((pos, name)) = parent {
-            self.tag_whitespace(&name, pos)?;
+    pub fn end(&mut self, parent: Option<QualName>) -> io::Result<()> {
+        if let Some(name) = parent {
+            self.tag_whitespace(&name)?;
         } else if let Some(text) = &self.next_ws.take() {
             match self.skip_ws {
                 Some(Ws::C) => self.writer.write_all(b" ")?,
@@ -270,7 +258,7 @@ impl<Wr: Write> HtmlSerializer<Wr> {
         Ok(())
     }
 
-    fn tag_whitespace(&mut self, name: &QualName, pos: Position) -> io::Result<()> {
+    fn tag_whitespace(&mut self, name: &QualName) -> io::Result<()> {
         match name.local {
             local_name!("a")
             | local_name!("abbr")
@@ -304,35 +292,13 @@ impl<Wr: Write> HtmlSerializer<Wr> {
             | local_name!("u")
             | local_name!("var")
             | local_name!("wbr") => {
-                use Position::*;
-                match pos {
-                    Head => {
-                        self.next_ws = None;
-                        self.skip_ws = Some(Ws::C);
-                    }
-                    Middle => {
-                        if let Some(text) = self.next_ws.take() {
-                            match self.skip_ws {
-                                Some(Ws::C) | None if !text.is_empty() => {
-                                    self.writer.write_all(b" ")?
-                                }
-                                _ => (),
-                            }
-                        }
-                        self.skip_ws = Some(Ws::C);
-                    }
-                    Tail => {
-                        if let Some(text) = self.next_ws.take() {
-                            match self.skip_ws {
-                                Some(Ws::C) | None if !text.is_empty() => {
-                                    self.writer.write_all(b" ")?
-                                }
-                                _ => (),
-                            }
-                        }
-                        self.skip_ws = Some(Ws::Skip);
+                if let Some(text) = self.next_ws.take() {
+                    match self.skip_ws {
+                        Some(Ws::C) | None if !text.is_empty() => self.writer.write_all(b" ")?,
+                        _ => (),
                     }
                 }
+                self.skip_ws = Some(Ws::C);
             }
             _ => {
                 self.next_ws = None;
