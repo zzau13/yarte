@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(warnings)]
 
 use std::{collections::HashMap, vec::Drain};
 
@@ -29,8 +29,8 @@ pub type ExprId = usize;
 pub type VarId = usize;
 
 pub enum Var {
-    This(String),
-    Local(ExprId, String),
+    This(Option<VarId>, String),
+    Local(Option<VarId>, ExprId, String),
 }
 
 pub enum Node {
@@ -46,16 +46,22 @@ pub enum Expression {
     Local(ExprId, VarId, Box<syn::Local>),
 }
 
-#[allow(clippy::type_complexity)]
+pub struct IfBlock {
+    pub vars: Vec<VarId>,
+    pub expr: syn::Expr,
+    pub block: Document,
+}
+
 pub struct IfElse {
-    ifs: (syn::Expr, Document),
-    if_else: Vec<(syn::Expr, Document)>,
-    els: Option<Document>,
+    pub ifs: IfBlock,
+    pub if_else: Vec<IfBlock>,
+    pub els: Option<Document>,
 }
 
 /// `for expr in args `
 ///
 pub struct Each {
+    pub var: VarId,
     pub args: syn::Expr,
     pub body: Document,
     pub expr: syn::Expr,
@@ -278,41 +284,28 @@ impl DOMBuilder {
             HIR::Each(e) => {
                 resolve_each(&e, id, self);
                 let HEach { args, body, expr } = *e;
-                Ok(Expression::Each(
-                    id,
-                    Box::new(Each {
-                        args,
-                        body: self.step(body)?,
-                        expr,
-                    }),
-                ))
+
+                todo!()
             }
             HIR::IfElse(e) => {
                 resolve_if_else(&e, id, self);
                 let HIfElse { ifs, if_else, els } = *e;
 
-                let (expr, body) = ifs;
-                let body = self.step(body)?;
+                let (_expr, body) = ifs;
+                let _body = self.step(body)?;
 
                 let mut buff = vec![];
                 for (expr, body) in if_else {
                     buff.push((expr, self.step(body)?))
                 }
 
-                let els = if let Some(body) = els {
+                let _els = if let Some(body) = els {
                     Some(self.step(body)?)
                 } else {
                     None
                 };
 
-                Ok(Expression::IfElse(
-                    id,
-                    Box::new(IfElse {
-                        ifs: (expr, body),
-                        if_else: buff,
-                        els,
-                    }),
-                ))
+                todo!()
             }
             HIR::Lit(_) => unreachable!(),
         }

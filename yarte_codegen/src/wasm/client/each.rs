@@ -4,8 +4,13 @@ use quote::quote;
 use yarte_dom::dom::Each;
 
 impl<'a> WASMCodeGen<'a> {
-    fn gen_each(&self, e: Box<Each>, fragment: Option<TokenStream>) {
-        let Each { args, body, expr } = *e;
+    fn gen_each(&self, e: Box<Each>, insert_point: TokenStream) {
+        let Each {
+            args,
+            body,
+            expr,
+            var,
+        } = *e;
         // TODO: read attributes
         // TODO: attribute #[filter] on each arguments
         //  let row_len = self.data.iter().map(|_| 1).fold(0, |acc, x| acc + x);

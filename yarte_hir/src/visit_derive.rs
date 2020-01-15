@@ -19,7 +19,7 @@ pub struct Struct<'a> {
     pub mode: Mode,
     pub err_msg: String,
     pub fields: Vec<syn::Field>,
-    ident: &'a syn::Ident,
+    pub ident: &'a syn::Ident,
     generics: &'a syn::Generics,
 }
 
