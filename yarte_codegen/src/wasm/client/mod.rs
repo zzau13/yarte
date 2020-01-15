@@ -39,12 +39,19 @@ pub struct WASMCodeGen<'a> {
     render: TokenStream,
     hydrate: TokenStream,
     helpers: TokenStream,
-    black_box: Vec<(Ident, Type)>,
+    black_box: Vec<BlackBox>,
     stack: Vec<ElemInfo>,
     path: Vec<Path>,
     bit_array: HashSet<VarId>,
     tree_map: HashMap<ExprId, Vec<VarId>>,
     var_map: HashMap<VarId, Var>,
+}
+
+#[derive(Debug)]
+struct BlackBox {
+    doc: String,
+    name: Ident,
+    ty: Type,
 }
 
 fn is_state(f: &Field) -> bool {
@@ -105,16 +112,20 @@ impl<'a> WASMCodeGen<'a> {
         }
     }
 
-    fn black_box(&self) -> TokenStream {
+    fn black_box(&mut self) -> TokenStream {
         let fields = self
             .black_box
-            .iter()
-            .map(|(ident, ty)| Field {
-                attrs: vec![],
-                vis: Visibility::Inherited,
-                ident: Some(ident.clone()),
-                colon_token: Some(<Token![:]>::default()),
-                ty: ty.clone(),
+            .drain(..)
+            .map(|b| {
+                let BlackBox {name, ty, doc } = b;
+                let attr: PAttr = parse2(quote!(#[doc = #doc])).unwrap();
+                Field {
+                    attrs: vec![attr.0],
+                    vis: Visibility::Inherited,
+                    ident: Some(name),
+                    colon_token: Some(<Token![:]>::default()),
+                    ty,
+                }
             })
             .fold(Punctuated::<Field, Token![,]>::new(), |mut acc, x| {
                 acc.push(x);
@@ -225,7 +236,7 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
         quote! {
             # [wasm_bindgen]
             extern "C" {
-            fn get_state() -> String;
+                fn get_state() -> String;
             }
 
             # initial_state
