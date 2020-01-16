@@ -43,6 +43,7 @@ pub struct WASMCodeGen<'a> {
     render: TokenStream,
     hydrate: TokenStream,
     helpers: TokenStream,
+    //
     buff_render: Vec<(HashSet<VarId>, TokenStream)>,
     black_box: Vec<BlackBox>,
     stack: Vec<ElemInfo>,

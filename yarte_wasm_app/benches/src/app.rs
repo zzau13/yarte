@@ -21,9 +21,9 @@ extern "C" {
 }
 
 pub struct NonKeyed {
-    pub id: u32,
+    pub id: usize,
     pub data: Vec<Row>,
-    pub selected: Option<u32>,
+    pub selected: Option<usize>,
     pub rng: SmallRng,
     // Black box
     pub t_root: u8,
@@ -36,6 +36,7 @@ pub struct NonKeyed {
 
 impl App for NonKeyed {
     type BlackBox = ();
+    type Message = Msg;
 
     fn __render(&mut self, mb: &Addr<Self>) {
         if self.t_root == 0 {
@@ -196,7 +197,7 @@ impl App for NonKeyed {
         let cloned = mb.clone();
         let cl = Closure::wrap(Box::new(move |event: Event| {
             event.prevent_default();
-            cloned.send(Create);
+            cloned.send(Msg::Create);
         }) as Box<dyn Fn(Event)>);
         button_create
             .add_event_listener_with_callback("click", cl.as_ref().unchecked_ref())
@@ -208,7 +209,7 @@ impl App for NonKeyed {
         let cloned = mb.clone();
         let cl = Closure::wrap(Box::new(move |event: Event| {
             event.prevent_default();
-            cloned.send(Create10);
+            cloned.send(Msg::Create10);
         }) as Box<dyn Fn(Event)>);
         button_create_10
             .add_event_listener_with_callback("click", cl.as_ref().unchecked_ref())
@@ -220,7 +221,7 @@ impl App for NonKeyed {
         let cloned = mb.clone();
         let cl = Closure::wrap(Box::new(move |event: Event| {
             event.prevent_default();
-            cloned.send(Append)
+            cloned.send(Msg::Append)
         }) as Box<dyn Fn(Event)>);
         button_append
             .add_event_listener_with_callback("click", cl.as_ref().unchecked_ref())
@@ -232,7 +233,7 @@ impl App for NonKeyed {
         let cloned = mb.clone();
         let cl = Closure::wrap(Box::new(move |event: Event| {
             event.prevent_default();
-            cloned.send(Update);
+            cloned.send(Msg::Update);
         }) as Box<dyn Fn(Event)>);
         button_update
             .add_event_listener_with_callback("click", cl.as_ref().unchecked_ref())
@@ -244,7 +245,7 @@ impl App for NonKeyed {
         let cloned = mb.clone();
         let cl = Closure::wrap(Box::new(move |event: Event| {
             event.prevent_default();
-            cloned.send(Clear);
+            cloned.send(Msg::Clear);
         }) as Box<dyn Fn(Event)>);
         button_clear
             .add_event_listener_with_callback("click", cl.as_ref().unchecked_ref())
@@ -256,7 +257,7 @@ impl App for NonKeyed {
         let cloned = mb.clone();
         let cl = Closure::wrap(Box::new(move |event: Event| {
             event.prevent_default();
-            cloned.send(Swap)
+            cloned.send(Msg::Swap)
         }) as Box<dyn Fn(Event)>);
         button_swap
             .add_event_listener_with_callback("click", cl.as_ref().unchecked_ref())
@@ -270,6 +271,22 @@ impl App for NonKeyed {
             hydrate_row!(dom, row, mb);
         }
     }
+
+    fn __dispatch(&mut self, msg: Msg, addr: &Addr<Self>)
+    where
+        Self: App,
+    {
+        match msg {
+            Msg::Append => append(self, addr),
+            Msg::Clear => clear(self, addr),
+            Msg::Create => create(self, addr),
+            Msg::Create10 => create_10(self, addr),
+            Msg::Delete(i) => delete(self, i, addr),
+            Msg::Select(i) => select(self, i, addr),
+            Msg::Swap => swap(self, addr),
+            Msg::Update => update(self, addr),
+        }
+    }
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -277,9 +294,9 @@ struct InitialState {
     #[serde(default)]
     data: Vec<Row>,
     #[serde(default)]
-    id: u32,
+    id: usize,
     #[serde(default)]
-    selected: Option<u32>,
+    selected: Option<usize>,
 }
 
 // Construct pre hydrate App

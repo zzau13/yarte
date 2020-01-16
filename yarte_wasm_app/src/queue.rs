@@ -98,14 +98,6 @@ impl<T> Queue<T> {
             }
         }
     }
-
-    /// Return queue is empty
-    pub fn is_empty(&self) -> bool {
-        unsafe {
-            let tail = *self.tail.get();
-            (*tail).next.borrow().is_null()
-        }
-    }
 }
 
 impl<T> Drop for Queue<T> {

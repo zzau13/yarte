@@ -6,6 +6,7 @@ use syn::visit::Visit;
 use yarte_config::Config;
 
 use proc_macro2::TokenStream;
+use syn::{parse2, ItemEnum, parse_str};
 
 pub fn visit_derive<'a>(i: &'a syn::DeriveInput, config: &Config) -> Struct<'a> {
     StructBuilder::default().build(i, config)
@@ -71,7 +72,14 @@ impl StructBuilder {
         config: &Config,
     ) -> Struct<'n> {
         for i in attrs {
-            self.visit_meta(&i.parse_meta().expect("valid meta attributes"));
+            if i.path.is_ident("template") {
+                self.visit_meta(&i.parse_meta().expect("valid meta attributes"));
+            } else if i.path.is_ident("msg") {
+                let tokens = i.tokens.to_string();
+                let tokens = tokens.get(1..tokens.len() - 1).expect("some");
+                let enu: ItemEnum = parse_str(tokens).expect("valid enum");
+                self.visit_item_enum(&enu);
+            }
         }
 
         self.visit_data(data);
@@ -188,6 +196,20 @@ impl<'a> Visit<'a> for StructBuilder {
             panic!("invalid attribute '{:?}'", path.get_ident());
         }
     }
+
+    fn visit_variant(
+        &mut self,
+        syn::Variant {
+            attrs,
+            ident,
+            fields,
+            discriminant,
+        }: &'a syn::Variant,
+    ) {
+        if discriminant.is_some() {
+            panic!("")
+        }
+    }
 }
 
 #[derive(PartialEq, Debug)]
@@ -277,5 +299,23 @@ mod test {
         assert_eq!(s.path, config.get_dir().join(PathBuf::from("Test.txt")));
         assert_eq!(s.print, Print::Code);
         assert_eq!(s.mode, Mode::Text);
+    }
+
+    #[test]
+    fn test_msg() {
+        let src = r#"
+            #[derive(Template)]
+            #[template(src = "", ext = "txt", mode = "wasm")]
+            #[msg(enum Msg {
+                #[foo::bar]
+                Foo(usize, Bar)
+            })]
+            struct Test;
+        "#;
+        let i = parse_str::<syn::DeriveInput>(src).unwrap();
+        let config = Config::new("");
+        let s = visit_derive(&i, &config);
+
+        assert_eq!(s.mode, Mode::WASM);
     }
 }
