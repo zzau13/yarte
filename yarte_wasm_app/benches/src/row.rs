@@ -3,7 +3,7 @@ use web_sys::{window, Element, Event};
 
 #[derive(Debug, Deserialize)]
 pub struct Row {
-    pub id: u32,
+    pub id: usize,
     pub label: String,
 }
 
@@ -63,7 +63,7 @@ macro_rules! update_row {
             let cloned = $addr.clone();
             $dom.closure_delete = Some(Closure::wrap(Box::new(move |event: Event| {
                 event.prevent_default();
-                cloned.send(Delete(id));
+                cloned.send(Msg::Delete(id));
             }) as Box<dyn Fn(Event)>));
             $dom.delete_node
                 .add_event_listener_with_callback(
@@ -80,7 +80,7 @@ macro_rules! update_row {
             let cloned = $addr.clone();
             $dom.closure_select = Some(Closure::wrap(Box::new(move |event: Event| {
                 event.prevent_default();
-                cloned.send(Select(id))
+                cloned.send(Msg::Select(id))
             }) as Box<dyn Fn(Event)>));
             $dom.label_node
                 .add_event_listener_with_callback(
@@ -124,7 +124,7 @@ macro_rules! new_row {
         let cloned = $addr.clone();
         let closure_select = Closure::wrap(Box::new(move |event: Event| {
             event.prevent_default();
-            cloned.send(Select(id));
+            cloned.send(Msg::Select(id));
         }) as Box<dyn Fn(Event)>);
         label_node
             .add_event_listener_with_callback("click", closure_select.as_ref().unchecked_ref())
@@ -133,7 +133,7 @@ macro_rules! new_row {
         let cloned = $addr.clone();
         let closure_delete = Closure::wrap(Box::new(move |event: Event| {
             event.prevent_default();
-            cloned.send(Delete(id));
+            cloned.send(Msg::Delete(id));
         }) as Box<dyn Fn(Event)>);
         delete_node
             .add_event_listener_with_callback("click", closure_delete.as_ref().unchecked_ref())
@@ -160,7 +160,7 @@ macro_rules! hydrate_row {
         let id = $row.id.clone();
         let closure_select = Closure::wrap(Box::new(move |event: Event| {
             event.prevent_default();
-            cloned.send(Select(id));
+            cloned.send(Msg::Select(id));
         }) as Box<dyn Fn(Event)>);
         $dom.label_node
             .add_event_listener_with_callback("click", closure_select.as_ref().unchecked_ref())
@@ -170,7 +170,7 @@ macro_rules! hydrate_row {
         let cloned = $addr.clone();
         let closure_delete = Closure::wrap(Box::new(move |event: Event| {
             event.prevent_default();
-            cloned.send(Delete(id));
+            cloned.send(Msg::Delete(id));
         }) as Box<dyn Fn(Event)>);
         $dom.delete_node
             .add_event_listener_with_callback("click", closure_delete.as_ref().unchecked_ref())

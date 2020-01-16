@@ -12,7 +12,7 @@
     {{# each fortunes }}
         <tr>
             <td>{{id}}</td>
-            <td>{{message}}</td>
+            <td>{{super::head}} {{message}}</td>
         </tr>
     {{/each }}
   </table>

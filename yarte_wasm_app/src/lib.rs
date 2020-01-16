@@ -2,9 +2,7 @@
 use std::{
     cell::{Cell, RefCell},
     default::Default,
-    marker::PhantomData,
     rc::Rc,
-    sync::Arc,
 };
 
 mod queue;
@@ -19,13 +17,18 @@ use self::queue::Queue;
 // TODO: derive
 pub trait App: Default + Sized + Unpin + 'static {
     type BlackBox: Default;
+    type Message: 'static;
     /// Private: empty for overridden in derive
     #[doc(hidden)]
-    fn __render(&mut self, _mb: &Addr<Self>) {}
+    fn __render(&mut self, _addr: &Addr<Self>) {}
 
     /// Private: empty for overridden in derive
     #[doc(hidden)]
-    fn __hydrate(&mut self, _mb: &Addr<Self>) {}
+    fn __hydrate(&mut self, _addr: &Addr<Self>) {}
+
+    /// Private: empty for overridden in derive
+    #[doc(hidden)]
+    fn __dispatch(&mut self, _msg: Self::Message, _addr: &Addr<Self>) {}
 
     /// Private: Start a new asynchronous app, returning its address.
     #[doc(hidden)]
@@ -54,47 +57,31 @@ pub struct Addr<A: App>(Rc<Context<A>>);
 
 impl<A: App> Addr<A> {
     /// Enqueue message
-    fn push(&self, env: Envelope<A>) {
-        self.0.q.push(env);
+    #[inline]
+    fn push(&self, msg: A::Message) {
+        self.0.q.push(msg);
         self.update();
     }
 
     /// Sends a message
     ///
     /// The message is always queued
-    #[inline]
-    pub fn send<M>(&self, msg: M)
-    where
-        A: Handler<M>,
-        M: Message,
-    {
-        self.push(Envelope::new(msg));
+    pub fn send(&self, msg: A::Message) {
+        self.push(msg);
     }
 
     #[inline]
     fn update(&self) {
         if self.0.ready.get() {
             self.0.ready.replace(false);
-            while let Some(mut env) = self.0.q.pop() {
-                env.handle(&mut self.0.app.borrow_mut(), &self)
+            while let Some(msg) = self.0.q.pop() {
+                self.0.app.borrow_mut().__dispatch(msg, &self);
+                while let Some(msg) = self.0.q.pop() {
+                    self.0.app.borrow_mut().__dispatch(msg, &self);
+                }
+                self.0.app.borrow_mut().__render(&self);
             }
             self.0.ready.replace(true);
-            self.render();
-        }
-    }
-
-    /// Render app
-    ///
-    /// if app if not ready will render when it's ready
-    #[inline]
-    fn render(&self) {
-        if self.0.ready.get() {
-            self.0.ready.replace(false);
-            self.0.app.borrow_mut().__render(&self);
-            self.0.ready.replace(true);
-            if !self.0.q.is_empty() {
-                self.update()
-            }
         }
     }
 
@@ -105,9 +92,7 @@ impl<A: App> Addr<A> {
         assert!(!self.0.ready.get());
         self.0.app.borrow_mut().__hydrate(&self);
         self.0.ready.replace(true);
-        if !self.0.q.is_empty() {
-            self.update()
-        }
+        self.update();
     }
 }
 
@@ -120,7 +105,7 @@ impl<A: App> Clone for Addr<A> {
 /// Encapsulate inner context of the App
 pub struct Context<A: App> {
     app: RefCell<A>,
-    q: Queue<Envelope<A>>,
+    q: Queue<A::Message>,
     ready: Cell<bool>,
 }
 
@@ -133,83 +118,6 @@ impl<A: App> Context<A> {
         }
     }
 }
-
-/// Envelope `Message` in a `App` type
-pub struct Envelope<A: App>(Box<dyn EnvelopeProxy<App = A>>);
-
-impl<A: App> Envelope<A> {
-    pub fn new<M>(msg: M) -> Self
-    where
-        A: Handler<M>,
-        M: Message,
-    {
-        Envelope(Box::new(SyncEnvelopeProxy {
-            msg: Some(msg),
-            act: PhantomData,
-        }))
-    }
-}
-
-trait EnvelopeProxy {
-    type App: App;
-
-    fn handle(&mut self, act: &mut Self::App, addr: &Addr<Self::App>);
-}
-
-impl<A: App> EnvelopeProxy for Envelope<A> {
-    type App = A;
-
-    #[inline]
-    fn handle(&mut self, act: &mut Self::App, addr: &Addr<Self::App>) {
-        self.0.handle(act, addr)
-    }
-}
-
-struct SyncEnvelopeProxy<A, M>
-where
-    M: Message,
-{
-    act: PhantomData<A>,
-    msg: Option<M>,
-}
-
-impl<A, M> EnvelopeProxy for SyncEnvelopeProxy<A, M>
-where
-    M: Message,
-    A: App + Handler<M>,
-{
-    type App = A;
-
-    #[inline]
-    fn handle(&mut self, act: &mut Self::App, addr: &Addr<A>) {
-        if let Some(msg) = self.msg.take() {
-            <Self::App as Handler<M>>::handle(act, msg, addr);
-        }
-    }
-}
-
-/// Represent message that can be handled by the app.
-pub trait Message: 'static {}
-
-/// Describes how to handle messages of a specific type.
-///
-/// Implementing `Handler` is a way to handle incoming messages
-///
-/// The type `M` is a message which can be handled by the app.
-pub trait Handler<M>
-where
-    Self: App,
-    M: Message,
-{
-    /// This method is called for every message type `M` received by this app
-    fn handle(&mut self, msg: M, mb: &Addr<Self>);
-}
-
-/// Allow users to use `Arc<M>` as a message without having to re-impl `Message`
-impl<M> Message for Arc<M> where M: Message {}
-
-/// Allow users to use `Box<M>` as a message without having to re-impl `Message`
-impl<M> Message for Box<M> where M: Message {}
 
 #[cfg(test)]
 mod test {
@@ -235,6 +143,15 @@ mod test {
 
     impl App for Test {
         type BlackBox = BlackBox;
+        type Message = Msg;
+        fn __dispatch(&mut self, m: Self::Message, addr: &Addr<Self>) {
+            match m {
+                Msg::Msg(i) => msg(self, i, addr),
+                Msg::Reset => reset(self, addr),
+                Msg::MsgTree(i) => msg_tree(self, i, addr),
+                Msg::MsgFut(i) => msg_fut(self, i, addr),
+            }
+        }
     }
 
     /// PoC tree builder and diff
@@ -351,93 +268,91 @@ mod test {
         };
     }
 
-    struct MsgTree(usize);
-
-    impl Message for MsgTree {}
-
-    impl Handler<MsgTree> for Test {
-        fn handle(&mut self, msg: MsgTree, _mb: &Addr<Self>) {
-            self.black_box.set_zero();
-            // after first render
-            let expected = BlackBox {
-                t_root: 0,
-                t_children_0: vec![],
-            };
-            assert_eq!(self.black_box, expected);
-            set_any!(self, msg.0);
-            set_it!(self, vec![1, 2, 3, 4]);
-            let expected = BlackBox {
-                t_root: 6,
-                t_children_0: vec![true, true, true, true],
-            };
-            assert_eq!(self.black_box, expected);
-            self.black_box.set_zero();
-            push_it!(self, 5);
-            let expected = BlackBox {
-                t_root: 4,
-                t_children_0: vec![false, false, false, false, true],
-            };
-            assert_eq!(self.black_box, expected);
-            self.black_box.set_zero();
-            let _ = pop_it!(self);
-            let expected = BlackBox {
-                t_root: 4,
-                t_children_0: vec![false, false, false, false],
-            };
-            assert_eq!(self.black_box, expected);
-            self.black_box.set_zero();
-            let expected = BlackBox {
-                t_root: 0,
-                t_children_0: vec![false, false, false, false],
-            };
-            assert_eq!(self.black_box, expected);
-            set_it_index!(self [1] 6);
-            let expected = BlackBox {
-                t_root: 4,
-                t_children_0: vec![false, true, false, false],
-            };
-            assert_eq!(self.black_box, expected)
-        }
+    // #[templates(.., mode = "wasm")]
+    // #[msg enum Msg {
+    //      #[fn(msg)]
+    //      Msg,
+    //      #[fn(reset)]
+    //      Reset,
+    //      #[fn(msg_tree)]
+    //      MsgTree(usize),
+    //      #[fn(msg_fut)]
+    //      MsgFut(usize),
+    // }]
+    enum Msg {
+        Msg(usize),
+        Reset,
+        MsgTree(usize),
+        MsgFut(usize),
     }
 
-    struct Msg(usize);
-
-    impl Message for Msg {}
-
-    impl Handler<Msg> for Test {
-        fn handle(&mut self, msg: Msg, _mb: &Addr<Self>) {
-            self.c.store(msg.0, Ordering::Relaxed);
-        }
+    #[inline]
+    fn msg_tree(app: &mut Test, msg: usize, _addr: &Addr<Test>) {
+        app.black_box.set_zero();
+        // after first render
+        let expected = BlackBox {
+            t_root: 0,
+            t_children_0: vec![],
+        };
+        assert_eq!(app.black_box, expected);
+        set_any!(app, msg);
+        set_it!(app, vec![1, 2, 3, 4]);
+        let expected = BlackBox {
+            t_root: 6,
+            t_children_0: vec![true, true, true, true],
+        };
+        assert_eq!(app.black_box, expected);
+        app.black_box.set_zero();
+        push_it!(app, 5);
+        let expected = BlackBox {
+            t_root: 4,
+            t_children_0: vec![false, false, false, false, true],
+        };
+        assert_eq!(app.black_box, expected);
+        app.black_box.set_zero();
+        let _ = pop_it!(app);
+        let expected = BlackBox {
+            t_root: 4,
+            t_children_0: vec![false, false, false, false],
+        };
+        assert_eq!(app.black_box, expected);
+        app.black_box.set_zero();
+        let expected = BlackBox {
+            t_root: 0,
+            t_children_0: vec![false, false, false, false],
+        };
+        assert_eq!(app.black_box, expected);
+        set_it_index!(app [1] 6);
+        let expected = BlackBox {
+            t_root: 4,
+            t_children_0: vec![false, true, false, false],
+        };
+        assert_eq!(app.black_box, expected)
     }
 
-    struct Reset;
-
-    impl Message for Reset {}
-
-    impl Handler<Reset> for Test {
-        fn handle(&mut self, _: Reset, mb: &Addr<Self>) {
-            mb.send(Msg(0));
-        }
+    #[inline]
+    fn msg(app: &mut Test, msg: usize, _addr: &Addr<Test>) {
+        app.c.store(msg, Ordering::Relaxed);
     }
 
-    struct MsgFut(usize);
+    #[inline]
+    fn reset(_app: &mut Test, addr: &Addr<Test>) {
+        addr.send(Msg::Msg(0));
+    }
 
-    impl Message for MsgFut {}
-
-    impl Handler<MsgFut> for Test {
-        fn handle(&mut self, msg: MsgFut, mb: &Addr<Self>) {
-            mb.send(Reset);
-            let mb = mb.clone();
-            let work = unsafe {
-                async_timer::Timed::platform_new_unchecked(
-                    async move { mb.send(Msg(msg.0)) },
-                    core::time::Duration::from_secs(1),
-                )
-            };
-            spawn_local(async move {
-                work.await.unwrap();
-            });
-        }
+    #[inline]
+    fn msg_fut(_app: &mut Test, msg: usize, addr: &Addr<Test>) {
+        addr.send(Msg::Reset);
+        let mb = addr.clone();
+        let work = unsafe {
+            async_timer::Timed::platform_new_unchecked(
+                async move { mb.send(Msg::Msg(msg)) },
+                core::time::Duration::from_secs(1),
+            )
+        };
+        spawn_local(async move {
+            work.await.unwrap();
+        });
     }
 
     #[wasm_bindgen_test]
@@ -451,19 +366,19 @@ mod test {
         let addr = app.__start();
         addr.hydrate();
         let addr2 = addr.clone();
-        addr.send(Msg(2));
+        addr.send(Msg::Msg(2));
         assert_eq!(c2.load(Ordering::Relaxed), 2);
-        addr2.send(Msg(3));
-        addr.send(Msg(1));
+        addr2.send(Msg::Msg(3));
+        addr.send(Msg::Msg(1));
         assert_eq!(c2.load(Ordering::Relaxed), 1);
-        addr.send(Msg(1));
-        addr2.send(Msg(3));
+        addr.send(Msg::Msg(1));
+        addr2.send(Msg::Msg(3));
         assert_eq!(c2.load(Ordering::Relaxed), 3);
-        addr2.send(Reset);
+        addr2.send(Msg::Reset);
         assert_eq!(c2.load(Ordering::Relaxed), 0);
-        addr2.send(Msg(3));
+        addr2.send(Msg::Msg(3));
         assert_eq!(c2.load(Ordering::Relaxed), 3);
-        addr2.send(MsgFut(7));
+        addr2.send(Msg::MsgFut(7));
         assert_eq!(c2.load(Ordering::Relaxed), 0);
         let c3 = Rc::clone(&c2);
         let work = unsafe {
@@ -472,11 +387,11 @@ mod test {
         spawn_local(async move {
             work.await.unwrap();
             assert_eq!(c3.load(Ordering::Relaxed), 7);
-            addr2.send(Reset);
+            addr2.send(Msg::Reset);
             assert_eq!(c3.load(Ordering::Relaxed), 0);
         });
-        addr.send(Reset);
+        addr.send(Msg::Reset);
         assert_eq!(c2.load(Ordering::Relaxed), 0);
-        addr.send(MsgTree(0))
+        addr.send(Msg::MsgTree(0))
     }
 }

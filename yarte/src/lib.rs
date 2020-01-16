@@ -17,7 +17,7 @@ pub use yarte_derive::Template;
 #[cfg(not(target_arch = "wasm32"))]
 pub use yarte_helpers::{helpers::Render, Error, Result};
 #[cfg(target_arch = "wasm32")]
-pub use yarte_wasm_app::{App as Template, Handler, Message};
+pub use yarte_wasm_app::App as Template;
 
 pub mod recompile;
 
