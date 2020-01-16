@@ -1,7 +1,6 @@
 use std::ops::Index;
 
-use quote::quote;
-use syn::export::Span;
+use quote::{quote, format_ident};
 
 #[derive(Debug)]
 pub(super) struct Scope {
@@ -45,7 +44,7 @@ impl Scope {
     }
 
     pub(super) fn push_ident(&mut self, ident: &str) -> syn::Ident {
-        let ident = syn::Ident::new(&format!("{}__{}", ident, self.count), Span::call_site());
+        let ident = format_ident!("{}__{}", ident, self.count);
         self.scope
             .push(syn::parse2(quote!(#ident)).expect("Correct expression"));
         self.count += 1;
