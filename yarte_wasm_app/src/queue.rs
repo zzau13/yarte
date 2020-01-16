@@ -34,10 +34,7 @@
 // NOTE: this implementation is lifted from the standard library and
 //      modified for single thread
 // Unsafe only use in single thread environment
-use std::{
-    cell::UnsafeCell,
-    ptr,
-};
+use std::{cell::UnsafeCell, ptr};
 
 #[derive(Debug)]
 struct Node<T> {

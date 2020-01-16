@@ -6,7 +6,10 @@ use yarte::Template;
 
 #[derive(Template)]
 #[template(path = "hello.hbs")]
-
+#[msg(enum Test {
+    #[path:func]
+    Msg,
+})]
 struct HelloTemplate<'a> {
     name: &'a str,
 }

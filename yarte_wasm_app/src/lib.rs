@@ -148,8 +148,8 @@ mod test {
             match m {
                 Msg::Msg(i) => msg(self, i, addr),
                 Msg::Reset => reset(self, addr),
-                Msg::MsgTree(i) => msg_tree(self, i, addr),
-                Msg::MsgFut(i) => msg_fut(self, i, addr),
+                Msg::Tree(i) => msg_tree(self, i, addr),
+                Msg::Fut(i) => msg_fut(self, i, addr),
             }
         }
     }
@@ -282,8 +282,8 @@ mod test {
     enum Msg {
         Msg(usize),
         Reset,
-        MsgTree(usize),
-        MsgFut(usize),
+        Tree(usize),
+        Fut(usize),
     }
 
     #[inline]
@@ -378,7 +378,7 @@ mod test {
         assert_eq!(c2.load(Ordering::Relaxed), 0);
         addr2.send(Msg::Msg(3));
         assert_eq!(c2.load(Ordering::Relaxed), 3);
-        addr2.send(Msg::MsgFut(7));
+        addr2.send(Msg::Fut(7));
         assert_eq!(c2.load(Ordering::Relaxed), 0);
         let c3 = Rc::clone(&c2);
         let work = unsafe {
@@ -392,6 +392,6 @@ mod test {
         });
         addr.send(Msg::Reset);
         assert_eq!(c2.load(Ordering::Relaxed), 0);
-        addr.send(Msg::MsgTree(0))
+        addr.send(Msg::Tree(0))
     }
 }

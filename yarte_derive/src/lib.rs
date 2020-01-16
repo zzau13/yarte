@@ -13,13 +13,12 @@ use yarte_helpers::helpers;
 use yarte_hir::{generate, visit_derive, Mode, Print, Struct, HIR};
 use yarte_parser::{parse, source_map};
 
-
 mod logger;
 
 use self::logger::log;
 use yarte_helpers::helpers::Sources;
 
-#[proc_macro_derive(Template, attributes(template))]
+#[proc_macro_derive(Template, attributes(template, msg))]
 pub fn derive(input: TokenStream) -> TokenStream {
     build(&syn::parse(input).unwrap())
 }
