@@ -6,7 +6,7 @@ use syn::visit::Visit;
 use yarte_config::Config;
 
 use proc_macro2::TokenStream;
-use syn::{parse2, ItemEnum, parse_str};
+use syn::{parse_str, ItemEnum};
 
 pub fn visit_derive<'a>(i: &'a syn::DeriveInput, config: &Config) -> Struct<'a> {
     StructBuilder::default().build(i, config)
@@ -36,25 +36,27 @@ impl<'a> Struct<'a> {
 }
 
 struct StructBuilder {
-    mode: Option<String>,
+    err_msg: Option<String>,
     ext: Option<String>,
+    fields: Vec<syn::Field>,
+    mode: Option<String>,
+    _msg: Option<syn::ItemEnum>,
     path: Option<String>,
     print: Option<String>,
     src: Option<String>,
-    err_msg: Option<String>,
-    fields: Vec<syn::Field>,
 }
 
 impl Default for StructBuilder {
     fn default() -> Self {
         StructBuilder {
-            mode: None,
+            err_msg: None,
             ext: None,
+            fields: vec![],
+            mode: None,
+            _msg: None,
             path: None,
             print: None,
             src: None,
-            err_msg: None,
-            fields: vec![],
         }
     }
 }
@@ -136,16 +138,6 @@ impl<'a> Visit<'a> for StructBuilder {
         self.fields.push(e.clone());
     }
 
-    fn visit_meta_list(&mut self, syn::MetaList { path, nested, .. }: &'a syn::MetaList) {
-        if path.is_ident("template") {
-            use syn::punctuated::Punctuated;
-            for el in Punctuated::pairs(nested) {
-                let it = el.value();
-                self.visit_nested_meta(it)
-            }
-        }
-    }
-
     fn visit_meta_name_value(
         &mut self,
         syn::MetaNameValue { path, lit, .. }: &'a syn::MetaNameValue,
@@ -194,20 +186,6 @@ impl<'a> Visit<'a> for StructBuilder {
             }
         } else {
             panic!("invalid attribute '{:?}'", path.get_ident());
-        }
-    }
-
-    fn visit_variant(
-        &mut self,
-        syn::Variant {
-            attrs,
-            ident,
-            fields,
-            discriminant,
-        }: &'a syn::Variant,
-    ) {
-        if discriminant.is_some() {
-            panic!("")
         }
     }
 }
