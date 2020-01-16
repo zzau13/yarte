@@ -272,10 +272,7 @@ impl App for NonKeyed {
         }
     }
 
-    fn __dispatch(&mut self, msg: <Self as App>::Message, addr: &Addr<Self>)
-    where
-        Self: App,
-    {
+    fn __dispatch(&mut self, msg: <Self as App>::Message, addr: &Addr<Self>) {
         match msg {
             Msg::Append => append(self, addr),
             Msg::Clear => clear(self, addr),
