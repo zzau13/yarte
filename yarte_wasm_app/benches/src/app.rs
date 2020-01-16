@@ -1,5 +1,3 @@
-use std::cmp::Ordering;
-
 use js_sys::Date;
 use rand::{rngs::SmallRng, SeedableRng};
 use serde_json::from_str;
@@ -54,39 +52,28 @@ impl App for NonKeyed {
                 self.tbody.set_text_content(None);
                 self.tbody_children.clear()
             } else {
-                // select
-                let (ord, min) = match row_len.cmp(&dom_len) {
-                    ord @ Ordering::Equal | ord @ Ordering::Greater => (ord, dom_len),
-                    ord @ Ordering::Less => (ord, row_len),
-                };
-
                 // Update
                 for (dom, row) in self
                     .tbody_children
                     .iter_mut()
-                    .take(min)
-                    .zip(self.data.iter().take(min))
+                    .zip(self.data.iter())
                     .filter(|(dom, _)| dom.t_root != 0)
-                {
-                    update_row!(dom, row, mb);
-                }
+                    {
+                        update_row!(dom, row, mb);
+                    }
 
-                match ord {
-                    Ordering::Greater => {
-                        // Add
-                        for row in self.data.iter().skip(dom_len) {
-                            // TODO: select insert point for fragments and insert_before or append_child
-                            self.tbody_children
-                                .push(new_row!(row, self.tr, mb, self.tbody));
-                        }
+                if dom_len < row_len {
+                    // Add
+                    for row in self.data.iter().skip(dom_len) {
+                        // TODO: select insert point for fragments and insert_before or append_child
+                        self.tbody_children
+                            .push(new_row!(row, self.tr, mb, self.tbody));
                     }
-                    Ordering::Less => {
-                        // Remove
-                        for dom in self.tbody_children.drain(row_len..) {
-                            dom.root.remove()
-                        }
+                } else {
+                    // Remove
+                    for dom in self.tbody_children.drain(row_len..) {
+                        dom.root.remove()
                     }
-                    Ordering::Equal => (),
                 }
             }
         }
