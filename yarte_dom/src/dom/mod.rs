@@ -28,16 +28,19 @@ pub type Document = Vec<Node>;
 pub type ExprId = usize;
 pub type VarId = usize;
 
+#[derive(Debug)]
 pub enum Var {
     This(Option<VarId>, String),
     Local(Option<VarId>, ExprId, String),
 }
 
+#[derive(Debug)]
 pub enum Node {
     Elem(Element),
     Expr(Expression),
 }
 
+#[derive(Debug)]
 pub enum Expression {
     Unsafe(ExprId, Box<syn::Expr>),
     Safe(ExprId, Box<syn::Expr>),
@@ -46,12 +49,14 @@ pub enum Expression {
     Local(ExprId, VarId, Box<syn::Local>),
 }
 
+#[derive(Debug)]
 pub struct IfBlock {
     pub vars: Vec<VarId>,
     pub expr: syn::Expr,
     pub block: Document,
 }
 
+#[derive(Debug)]
 pub struct IfElse {
     pub ifs: IfBlock,
     pub if_else: Vec<IfBlock>,
@@ -60,6 +65,7 @@ pub struct IfElse {
 
 /// `for expr in args `
 ///
+#[derive(Debug)]
 pub struct Each {
     pub var: VarId,
     pub args: syn::Expr,
@@ -67,11 +73,13 @@ pub struct Each {
     pub expr: syn::Expr,
 }
 
+#[derive(Debug)]
 pub enum Ns {
     Html,
     Svg,
 }
 
+#[derive(Debug)]
 pub enum Element {
     Node {
         name: (Ns, LocalName),
@@ -81,16 +89,19 @@ pub enum Element {
     Text(String),
 }
 
+#[derive(Debug)]
 pub struct Attribute {
     pub name: String,
     pub value: Vec<ExprOrText>,
 }
 
+#[derive(Debug)]
 pub enum ExprOrText {
     Text(String),
     Expr(Expression),
 }
 
+#[derive(Debug)]
 pub struct DOM {
     pub doc: Document,
     pub tree_map: HashMap<ExprId, Vec<VarId>>,
@@ -136,7 +147,7 @@ impl DOMBuilder {
                     html.push_str(HEAD);
                     let id = self.count;
                     self.count += 1;
-                    html.push_str(&format!("{:#08x?}", id));
+                    html.push_str(&format!("{:#010x?}", id));
                     html.push_str(TAIL);
                     true
                 }
@@ -152,6 +163,7 @@ impl DOMBuilder {
     }
 
     fn step(&mut self, ir: Vec<HIR>) -> ParseResult<Document> {
+        self.inner = false;
         let (ir, html) = self.generate_html(ir);
         self.serialize(parse_fragment(&html)?, ir)
     }
@@ -258,7 +270,7 @@ impl DOMBuilder {
     }
 
     fn resolve_mark(&mut self, id: &str, ir: &mut Drain<HIR>) -> ParseResult<Node> {
-        assert_eq!(id.len(), 10);
+        assert_eq!(id.len(), 10, "{}", id);
         assert_eq!(&id[..2], "0x");
         let id = u32::from_str_radix(&id[2..], 16).unwrap() as usize;
 
@@ -282,10 +294,17 @@ impl DOMBuilder {
                 Ok(Expression::Local(id, var_id, e))
             }
             HIR::Each(e) => {
-                resolve_each(&e, id, self);
+                let var = resolve_each(&e, id, self);
                 let HEach { args, body, expr } = *e;
-
-                todo!()
+                Ok(Expression::Each(
+                    id,
+                    Box::new(Each {
+                        var,
+                        args,
+                        body: self.step(body)?,
+                        expr,
+                    }),
+                ))
             }
             HIR::IfElse(e) => {
                 resolve_if_else(&e, id, self);
