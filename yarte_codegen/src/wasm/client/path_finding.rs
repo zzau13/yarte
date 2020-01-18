@@ -1,9 +1,6 @@
 use markup5ever::local_name;
 use quote::quote;
-use std::collections::BTreeMap;
-use std::iter::Filter;
-use std::mem;
-use std::slice::Iter;
+use std::{collections::BTreeMap, iter::Filter, mem, slice::Iter};
 use syn::{parse2, Expr};
 use yarte_dom::dom::{Document, Each, Element, ExprId, Expression, IfBlock, IfElse, Node};
 
