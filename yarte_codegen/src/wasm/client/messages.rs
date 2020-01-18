@@ -11,6 +11,7 @@ fn gen_messages(e: &ItemEnum) -> (TokenStream, TokenStream) {
     let i = &e.ident;
     (
         quote! {
+            #[inline]
             fn __dispatch(&mut self, __msg: Self::Message, __addr: &Addr<Self>) {
                 use #i::*;
                 match __msg {
