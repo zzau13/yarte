@@ -1,6 +1,6 @@
 use std::ops::Index;
 
-use quote::{quote, format_ident};
+use quote::{format_ident, quote};
 
 #[derive(Debug)]
 pub(super) struct Scope {

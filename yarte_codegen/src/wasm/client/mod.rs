@@ -28,13 +28,7 @@ use crate::CodeGen;
 
 mod each;
 mod if_else;
-
-enum Path {
-    FirstChild,
-    NextSibling,
-    LastChild,
-    PreviousSibling,
-}
+mod path_finding;
 
 pub struct WASMCodeGen<'a> {
     s: &'a Struct<'a>,
@@ -47,7 +41,7 @@ pub struct WASMCodeGen<'a> {
     buff_render: Vec<(HashSet<VarId>, TokenStream)>,
     black_box: Vec<BlackBox>,
     stack: Vec<ElemInfo>,
-    path: Vec<Path>,
+    scope: Vec<String>,
     bit_array: Vec<VarId>,
     tree_map: HashMap<ExprId, Vec<VarId>>,
     var_map: HashMap<VarId, Var>,
@@ -99,8 +93,7 @@ impl<'a> WASMCodeGen<'a> {
             s,
             black_box: vec![],
             stack: vec![],
-            path: vec![],
-            // Only this
+            scope: vec!["self".into()],
             bit_array: Vec::new(),
             tree_map: HashMap::new(),
             var_map: HashMap::new(),

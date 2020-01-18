@@ -10,6 +10,7 @@ use yarte_parser::source_map::Span;
 use crate::helpers::Sources;
 
 // TODO: Display errors ?
+#[derive(Debug)]
 pub struct ErrorMessage {
     pub message: String,
     pub span: Span,
