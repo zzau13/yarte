@@ -28,6 +28,7 @@ use crate::CodeGen;
 
 mod each;
 mod if_else;
+mod messages;
 mod path_finding;
 
 pub struct WASMCodeGen<'a> {

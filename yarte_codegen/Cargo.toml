@@ -28,7 +28,7 @@ markup5ever = "0.10"
 mime_guess = "2.0"
 proc-macro2 = { version = "1.0", features = ["span-locations"] }
 quote = "1.0"
-syn = "1.0"
+syn = { version = "1.0", features = ["extra-traits", "full"] }
 
 [dev-dependencies]
 yarte_parser = { version = "0.5", path = "../yarte_parser" }
