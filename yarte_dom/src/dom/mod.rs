@@ -19,7 +19,7 @@ use crate::{
 };
 
 use self::{
-    visit_each::resolve_each, visit_expr::resolve_expr, visit_if_else::resolve_if_else,
+    visit_each::resolve_each, visit_expr::resolve_expr, visit_if_else::resolve_if_block,
     visit_local::resolve_local,
 };
 use std::collections::BTreeMap;
@@ -307,24 +307,39 @@ impl DOMBuilder {
                 ))
             }
             HIR::IfElse(e) => {
-                resolve_if_else(&e, id, self);
                 let HIfElse { ifs, if_else, els } = *e;
-
-                let (_expr, body) = ifs;
-                let _body = self.step(body)?;
+                let (expr, body) = ifs;
+                let vars = resolve_if_block(&expr, id, self);
+                let ifs = IfBlock {
+                    vars,
+                    expr,
+                    block: self.step(body)?,
+                };
 
                 let mut buff = vec![];
                 for (expr, body) in if_else {
-                    buff.push((expr, self.step(body)?))
+                    let vars = resolve_if_block(&expr, id, self);
+                    buff.push(IfBlock {
+                        vars,
+                        expr,
+                        block: self.step(body)?,
+                    });
                 }
 
-                let _els = if let Some(body) = els {
+                let els = if let Some(body) = els {
                     Some(self.step(body)?)
                 } else {
                     None
                 };
 
-                todo!()
+                Ok(Expression::IfElse(
+                    id,
+                    Box::new(IfElse {
+                        ifs,
+                        if_else: buff,
+                        els,
+                    }),
+                ))
             }
             HIR::Lit(_) => unreachable!(),
         }

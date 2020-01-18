@@ -185,9 +185,9 @@ impl PathBuilder {
                         v: self.steps[..parent].to_vec(),
                     },
                 );
-                self.if_block(ifs);
+                self.if_block(ifs, *id);
                 for b in if_else {
-                    self.if_block(b)
+                    self.if_block(b, *id);
                 }
                 if let Some(body) = els {
                     self.do_step(body, *id);
@@ -198,8 +198,8 @@ impl PathBuilder {
         }
     }
 
-    fn if_block(&mut self, b: &IfBlock) {
-        todo!();
+    fn if_block(&mut self, IfBlock { block, .. }: &IfBlock, id: ExprId) {
+        self.do_step(block, id);
     }
 
     fn insert_point<'a, F: Iterator<Item = &'a Node>>(
@@ -275,7 +275,7 @@ mod test {
     }
 
     #[test]
-    fn test() {
+    fn test_each() {
         let s = r#"
         #[derive(Template)]
         #[template(path = "fortune.hbs")]
@@ -290,5 +290,19 @@ mod test {
         assert_eq!(each.v, make_path!(f));
         assert_eq!(id.v, make_path!(f f));
         assert_eq!(msg.v, make_path!(f f n));
+    }
+
+    #[test]
+    fn test_if() {
+        let s = r#"
+        #[derive(Template)]
+        #[template(path = "article.hbs")]
+        struct ArticleTemplate;
+        "#;
+
+        let paths = test_paths(s);
+        assert_eq!(paths.len(), 1);
+        let expr = paths.get(&0).unwrap();
+        assert_eq!(expr.v, make_path!(f f n f n));
     }
 }
