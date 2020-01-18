@@ -2,10 +2,11 @@
 
 use syn::visit::Visit;
 
-use crate::dom::DOMBuilder;
+use crate::dom::{DOMBuilder, VarId};
+use syn::Expr;
 use yarte_hir::IfElse;
 
-pub fn resolve_if_else<'a>(expr: &'a IfElse, id: usize, builder: &'a mut DOMBuilder) {
+pub fn resolve_if_block<'a>(expr: &'a Expr, id: usize, builder: &'a mut DOMBuilder) -> Vec<VarId> {
     ResolveIfElse::new(builder, id).resolve(expr)
 }
 
@@ -19,8 +20,8 @@ impl<'a> ResolveIfElse<'a> {
         ResolveIfElse { builder, id }
     }
 
-    fn resolve(mut self, expr: &'a IfElse) {
-        todo!()
+    fn resolve(mut self, expr: &'a Expr) -> Vec<VarId> {
+        vec![]
     }
 }
 
