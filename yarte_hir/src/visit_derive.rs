@@ -19,6 +19,8 @@ pub struct Struct<'a> {
     pub print: Print,
     pub mode: Mode,
     pub err_msg: String,
+    pub msgs: Option<ItemEnum>,
+    pub script: Option<String>,
     pub fields: Vec<syn::Field>,
     pub ident: &'a syn::Ident,
     generics: &'a syn::Generics,
@@ -40,9 +42,9 @@ struct StructBuilder {
     ext: Option<String>,
     fields: Vec<syn::Field>,
     mode: Option<String>,
-    _msg: Option<syn::ItemEnum>,
     path: Option<String>,
     print: Option<String>,
+    script: Option<String>,
     src: Option<String>,
 }
 
@@ -53,9 +55,9 @@ impl Default for StructBuilder {
             ext: None,
             fields: vec![],
             mode: None,
-            _msg: None,
             path: None,
             print: None,
+            script: None,
             src: None,
         }
     }
@@ -73,6 +75,7 @@ impl StructBuilder {
         }: &'n syn::DeriveInput,
         config: &Config,
     ) -> Struct<'n> {
+        let mut msgs = None;
         for i in attrs {
             if i.path.is_ident("template") {
                 self.visit_meta(&i.parse_meta().expect("valid meta attributes"));
@@ -80,7 +83,7 @@ impl StructBuilder {
                 let tokens = i.tokens.to_string();
                 let tokens = tokens.get(1..tokens.len() - 1).expect("some");
                 let enu: ItemEnum = parse_str(tokens).expect("valid enum");
-                self.visit_item_enum(&enu);
+                msgs = Some(enu);
             }
         }
 
@@ -109,16 +112,18 @@ impl StructBuilder {
         });
 
         Struct {
-            src,
-            path,
-            print: self.print.into(),
-            mode,
-            generics,
-            ident,
             err_msg: self
                 .err_msg
                 .unwrap_or_else(|| "Template parsing error".into()),
             fields: self.fields,
+            generics,
+            ident,
+            mode,
+            msgs,
+            path,
+            print: self.print.into(),
+            script: self.script,
+            src,
         }
     }
 }
@@ -177,6 +182,12 @@ impl<'a> Visit<'a> for StructBuilder {
                 self.ext = Some(s.value());
             } else {
                 panic!("attribute 'ext' must be string literal");
+            }
+        } else if path.is_ident("script") {
+            if let syn::Lit::Str(ref s) = lit {
+                self.script = Some(s.value());
+            } else {
+                panic!("attribute 'script' must be string literal");
             }
         } else if cfg!(feature = "actix-web") && path.is_ident("err") {
             if let syn::Lit::Str(ref s) = lit {
