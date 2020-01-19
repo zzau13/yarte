@@ -27,7 +27,7 @@ In order to  fully understand Yarte's capabilities take a look at the following 
 - [ ] intellij plugin (help wanted)
 - [x] Minify html
 - [ ] Minify Css
-- [x] WASM static dispatch message oriented framework 
+- [x] WASM message oriented framework 
 - [ ] Derive for compiled DOM, implement [`App`](./yarte_wasm_app/src/lib.rs) trait 
 - [ ] yarte/html/css UI like [sciter](https://sciter.com/)
 - [ ] ... you can open a issue!
