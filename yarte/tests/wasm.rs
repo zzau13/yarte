@@ -12,9 +12,6 @@ struct Fortune {
 
 #[derive(Template, Serialize)]
 #[template(path = "html/fortune.hbs", mode = "iso")]
-#[msg(enum Msg {
-    Unit
-})]
 struct WasmServer {
     fortunes: Vec<Fortune>,
 }
