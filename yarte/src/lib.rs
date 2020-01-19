@@ -61,3 +61,8 @@ pub mod aw {
     };
     pub use futures::future::{err, ok, Ready};
 }
+
+#[cfg(all(feature = "wasm", not(target_arch = "wasm32")))]
+pub mod serde_json {
+    pub use serde_json::to_string;
+}
