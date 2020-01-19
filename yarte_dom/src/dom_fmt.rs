@@ -51,7 +51,7 @@ pub fn to_wasmfmt(ir: Vec<HIR>, s: &Struct) -> ParseResult<Vec<HIR>> {
 
 pub const MARK_SCRIPT: &str = "__YARTE_MARKER__";
 
-fn add_scripts(_s: &Struct, sink: &mut Sink) {
+fn add_scripts(s: &Struct, sink: &mut Sink) {
     let mut head: Option<usize> = None;
     use ParseElement::*;
     match sink.nodes.values().next() {
@@ -92,10 +92,9 @@ fn add_scripts(_s: &Struct, sink: &mut Sink) {
     let state = last;
     last += 1;
 
-    let script_path = "./pkg/example.js";
     let init_s = format!(
         "import init from '{}';async function run(){{await init()}}",
-        script_path
+        s.script.as_ref().expect("Need `script` attribute")
     );
     let init = Node {
         name: QualName {
