@@ -38,8 +38,14 @@ fn get_html(ir: &[HIR]) -> String {
 
 pub fn to_wasmfmt(ir: Vec<HIR>, s: &Struct) -> ParseResult<Vec<HIR>> {
     let html = get_html(&ir);
-    let mut sink = parse_document(&html)?;
-    add_scripts(s, &mut sink);
+    let sink = match parse_document(&html) {
+        Ok(mut sink) => {
+            add_scripts(s, &mut sink);
+            sink
+        }
+        Err(_) => parse_fragment(&html)?,
+    };
+
     serialize_domfmt(sink, ir, SerializerOpt { wasm: true })
 }
 
@@ -50,10 +56,14 @@ fn add_scripts(_s: &Struct, sink: &mut Sink) {
     use ParseElement::*;
     match sink.nodes.values().next() {
         Some(Document(children)) => {
-            for i in children {
-                if let Some(Node { name, .. }) = sink.nodes.get(i) {
-                    if let local_name!("head") = name.local {
-                        head = Some(*i);
+            if let Some(Node { name, children, .. }) = sink.nodes.get(&children[0]) {
+                if let local_name!("html") = name.local {
+                    for i in children {
+                        if let Some(Node { name, .. }) = sink.nodes.get(i) {
+                            if let local_name!("head") = name.local {
+                                head = Some(*i);
+                            }
+                        }
                     }
                 }
             }
@@ -96,7 +106,7 @@ fn add_scripts(_s: &Struct, sink: &mut Sink) {
         attrs: vec![ParseAttribute {
             name: QualName {
                 prefix: None,
-                ns: ns!(html),
+                ns: ns!(),
                 local: local_name!("type"),
             },
             value: "module".to_string(),

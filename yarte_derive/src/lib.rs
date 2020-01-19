@@ -74,7 +74,7 @@ fn hir_to_tokens(hir: Vec<HIR>, config: &Config, s: &Struct) -> proc_macro2::Tok
         Mode::HTML => Box::new(FmtCodeGen::new(HTMLCodeGen, s)),
         Mode::HTMLMin => Box::new(FmtCodeGen::new(HTMLMinCodeGen, s)),
         Mode::WASM => Box::new(client::WASMCodeGen::new(config, s)),
-        Mode::WASMServer => Box::new(server::WASMCodeGen::new(config, s)),
+        Mode::WASMServer => Box::new(FmtCodeGen::new(server::WASMCodeGen::new(config, s), s)),
     };
 
     CodeGen::gen(&mut *codegen, hir)
