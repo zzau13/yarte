@@ -1,3 +1,5 @@
+/// Adapted from [`html5ever`](https://github.com/servo/html5ever)
+
 #[macro_use]
 mod macros;
 pub mod dom;
@@ -26,7 +28,7 @@ mod test {
 
         let a = parse_fragment(src).unwrap();
         let mut writer = Vec::new();
-        serialize(&mut writer, &a.into()).expect("some serialize node");
+        serialize(&mut writer, &a.into(), Default::default()).expect("some serialize node");
 
         let html = String::from_utf8(writer).expect("");
 
@@ -40,7 +42,7 @@ mod test {
 
         let a = parse_fragment(src).unwrap();
         let mut writer = Vec::new();
-        serialize(&mut writer, &a.into()).expect("some serialize node");
+        serialize(&mut writer, &a.into(), Default::default()).expect("some serialize node");
 
         let html = String::from_utf8(writer).expect("");
 
@@ -54,7 +56,7 @@ mod test {
 
         let a = parse_fragment(src).unwrap();
         let mut writer = Vec::new();
-        serialize(&mut writer, &a.into()).expect("some serialize node");
+        serialize(&mut writer, &a.into(), Default::default()).expect("some serialize node");
 
         let html = String::from_utf8(writer).expect("");
 
@@ -78,7 +80,7 @@ mod test {
 
         let a = parse_document(src).unwrap();
         let mut writer = Vec::new();
-        serialize(&mut writer, &a.into()).expect("some serialize node");
+        serialize(&mut writer, &a.into(), Default::default()).expect("some serialize node");
 
         let html = String::from_utf8(writer).expect("");
 
@@ -95,7 +97,7 @@ mod test {
 
         let a = parse_document(src).unwrap();
         let mut writer = Vec::new();
-        serialize(&mut writer, &a.into()).expect("some serialize node");
+        serialize(&mut writer, &a.into(), Default::default()).expect("some serialize node");
 
         let html = String::from_utf8(writer).expect("");
 
@@ -111,7 +113,7 @@ mod test {
 
         let a = parse_document(src).unwrap();
         let mut writer = Vec::new();
-        serialize(&mut writer, &a.into()).expect("some serialize node");
+        serialize(&mut writer, &a.into(), Default::default()).expect("some serialize node");
 
         let html = String::from_utf8(writer).expect("");
 
@@ -129,7 +131,7 @@ mod test {
 
         let a = parse_document(src).unwrap();
         let mut writer = Vec::new();
-        serialize(&mut writer, &a.into()).expect("some serialize node");
+        serialize(&mut writer, &a.into(), Default::default()).expect("some serialize node");
 
         let html = String::from_utf8(writer).expect("");
 

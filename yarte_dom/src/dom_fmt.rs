@@ -1,24 +1,28 @@
-use yarte_hir::{Each as HEach, IfElse as HIfElse, HIR};
+use yarte_hir::{Each as HEach, IfElse as HIfElse, Struct, HIR};
 
 use crate::{
     serialize::serialize,
-    sink::{parse_document, parse_fragment, ParseResult, Sink, HEAD, TAIL},
+    serializer::SerializerOpt,
+    sink::{
+        parse_document, parse_fragment, ParseAttribute, ParseElement, ParseResult, Sink, HEAD, TAIL,
+    },
 };
+use markup5ever::{local_name, namespace_url, ns, QualName};
 
 pub struct DOMFmt(pub Vec<HIR>);
 
 // TODO: to try from
 impl From<Vec<HIR>> for DOMFmt {
     fn from(ir: Vec<HIR>) -> Self {
-        DOMFmt(to_domfmt(ir).expect("correct html"))
+        DOMFmt(to_domfmt_init(ir).expect("correct html"))
     }
 }
 
 const HASH: &str = "0x00000000";
 
-fn to_domfmt(ir: Vec<HIR>) -> ParseResult<Vec<HIR>> {
+fn get_html(ir: &[HIR]) -> String {
     let mut html = String::new();
-    for x in &ir {
+    for x in ir {
         match x {
             HIR::Lit(x) => html.push_str(x),
             _ => {
@@ -29,17 +33,131 @@ fn to_domfmt(ir: Vec<HIR>) -> ParseResult<Vec<HIR>> {
         }
     }
 
+    html
+}
+
+pub fn to_wasmfmt(ir: Vec<HIR>, s: &Struct) -> ParseResult<Vec<HIR>> {
+    let html = get_html(&ir);
+    let mut sink = parse_document(&html)?;
+    add_scripts(s, &mut sink);
+    serialize_domfmt(sink, ir, SerializerOpt { wasm: true })
+}
+
+pub const MARK_SCRIPT: &str = "__YARTE_MARKER__";
+
+fn add_scripts(_s: &Struct, sink: &mut Sink) {
+    let mut head: Option<usize> = None;
+    use ParseElement::*;
+    match sink.nodes.values().next() {
+        Some(Document(children)) => {
+            for i in children {
+                if let Some(Node { name, .. }) = sink.nodes.get(i) {
+                    if let local_name!("head") = name.local {
+                        head = Some(*i);
+                    }
+                }
+            }
+        }
+        _ => panic!("Need <!doctype html>"),
+    }
+
+    let mut last = *sink.nodes.keys().last().unwrap() + 1;
+    let get_state = format!(
+        "function get_state(){{return JSON.stringify({});}}",
+        MARK_SCRIPT
+    );
+    let state = Node {
+        name: QualName {
+            prefix: None,
+            ns: ns!(html),
+            local: local_name!("script"),
+        },
+        attrs: vec![],
+        children: vec![last],
+        parent: None,
+    };
+    sink.nodes.insert(last, Text(get_state));
+    last += 1;
+    sink.nodes.insert(last, state);
+    let state = last;
+    last += 1;
+
+    let script_path = "./pkg/example.js";
+    let init_s = format!(
+        "import init from '{}';async function run(){{await init()}}",
+        script_path
+    );
+    let init = Node {
+        name: QualName {
+            prefix: None,
+            ns: ns!(html),
+            local: local_name!("script"),
+        },
+        attrs: vec![ParseAttribute {
+            name: QualName {
+                prefix: None,
+                ns: ns!(html),
+                local: local_name!("type"),
+            },
+            value: "module".to_string(),
+        }],
+        children: vec![last],
+        parent: None,
+    };
+    sink.nodes.insert(last, Text(init_s));
+    last += 1;
+    sink.nodes.insert(last, init);
+    let init = last;
+    if let Some(head) = head {
+        match sink.nodes.get_mut(&head).unwrap() {
+            Node { children, .. } => {
+                children.push(state);
+                children.push(init);
+            }
+            _ => unreachable!(),
+        }
+    } else {
+        let head = Node {
+            name: QualName {
+                prefix: None,
+                ns: ns!(html),
+                local: local_name!("head"),
+            },
+            attrs: vec![],
+            children: vec![state, init],
+            parent: None,
+        };
+        last += 1;
+        sink.nodes.insert(last, head);
+        match sink.nodes.values_mut().next() {
+            Some(Document(children)) => {
+                let mut new = vec![last];
+                new.extend_from_slice(children);
+                *children = new;
+            }
+            _ => unreachable!(),
+        }
+    }
+}
+
+fn to_domfmt_init(ir: Vec<HIR>) -> ParseResult<Vec<HIR>> {
+    let html = get_html(&ir);
     let sink = match parse_document(&html) {
         Ok(a) => a,
         Err(_) => parse_fragment(&html)?,
     };
 
-    serialize_domfmt(sink, ir)
+    serialize_domfmt(sink, ir, Default::default())
 }
 
-fn serialize_domfmt(sink: Sink, mut ir: Vec<HIR>) -> ParseResult<Vec<HIR>> {
+fn to_domfmt(ir: Vec<HIR>, opts: SerializerOpt) -> ParseResult<Vec<HIR>> {
+    let html = get_html(&ir);
+    serialize_domfmt(parse_fragment(&html)?, ir, opts)
+}
+
+fn serialize_domfmt(sink: Sink, mut ir: Vec<HIR>, opts: SerializerOpt) -> ParseResult<Vec<HIR>> {
     let mut writer = Vec::new();
-    serialize(&mut writer, &sink.into()).expect("some serialize node");
+    serialize(&mut writer, &sink.into(), opts).expect("some serialize node");
 
     let html = String::from_utf8(writer).expect("");
     let mut chunks = html.split(HEAD).peekable();
@@ -55,7 +173,7 @@ fn serialize_domfmt(sink: Sink, mut ir: Vec<HIR>) -> ParseResult<Vec<HIR>> {
         if chunk.is_empty() {
             panic!("chunk empty")
         } else if chunk.starts_with(HASH) {
-            resolve_node(ir.remove(0), &mut buff)?;
+            resolve_node(ir.remove(0), &mut buff, opts)?;
             let cut = &chunk[HASH.len() + TAIL.len()..];
             if !cut.is_empty() {
                 buff.push(HIR::Lit(cut.into()));
@@ -73,29 +191,29 @@ fn serialize_domfmt(sink: Sink, mut ir: Vec<HIR>) -> ParseResult<Vec<HIR>> {
     Ok(buff)
 }
 
-fn resolve_node(ir: HIR, buff: &mut Vec<HIR>) -> ParseResult<()> {
+fn resolve_node(ir: HIR, buff: &mut Vec<HIR>, opts: SerializerOpt) -> ParseResult<()> {
     match ir {
         HIR::Each(each) => {
             let HEach { args, body, expr } = *each;
             buff.push(HIR::Each(Box::new(HEach {
                 args,
                 expr,
-                body: to_domfmt(body)?,
+                body: to_domfmt(body, opts)?,
             })))
         }
         HIR::IfElse(if_else) => {
             let HIfElse { ifs, if_else, els } = *if_else;
             let mut buf_if_else = vec![];
             for (expr, body) in if_else {
-                buf_if_else.push((expr, to_domfmt(body)?));
+                buf_if_else.push((expr, to_domfmt(body, opts)?));
             }
             let els = if let Some(els) = els {
-                Some(to_domfmt(els)?)
+                Some(to_domfmt(els, opts)?)
             } else {
                 None
             };
             buff.push(HIR::IfElse(Box::new(HIfElse {
-                ifs: (ifs.0, to_domfmt(ifs.1)?),
+                ifs: (ifs.0, to_domfmt(ifs.1, opts)?),
                 if_else: buf_if_else,
                 els,
             })));

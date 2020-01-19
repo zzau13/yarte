@@ -3,17 +3,16 @@ use std::io::{self, Write};
 use markup5ever::QualName;
 
 use crate::{
-    dom::Document,
-    serializer::HtmlSerializer,
+    serializer::{HtmlSerializer, SerializerOpt},
     sink::{ParseAttribute, ParseElement, ParseNodeId, Sink, MARK},
     tree_builder::YARTE_TAG,
 };
 
-pub fn serialize<Wr>(writer: Wr, node: &Tree) -> io::Result<()>
+pub fn serialize<Wr>(writer: Wr, node: &Tree, opts: SerializerOpt) -> io::Result<()>
 where
     Wr: Write,
 {
-    let mut ser = HtmlSerializer::new(writer);
+    let mut ser = HtmlSerializer::new(writer, opts);
     node.serialize(&mut ser)
 }
 
@@ -130,10 +129,4 @@ fn _serialize<W: Write>(
         }
     }
     serializer.end(parent)
-}
-
-impl From<Document> for Tree {
-    fn from(_doc: Document) -> Self {
-        todo!()
-    }
 }

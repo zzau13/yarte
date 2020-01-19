@@ -1,12 +1,3 @@
-// Copyright 2014-2017 The html5ever Project Developers. See the
-// COPYRIGHT file at the top-level directory of this distribution.
-//
-// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
-// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
-// option. This file may not be copied, modified, or distributed
-// except according to those terms.
-
 use std::io::{self, Write};
 
 use log::warn;
@@ -26,11 +17,17 @@ enum Ws {
     C,
 }
 
+#[derive(Copy, Clone, Default)]
+pub struct SerializerOpt {
+    pub wasm: bool,
+}
+
 pub struct HtmlSerializer<Wr: Write> {
     pub writer: Wr,
     stack: Vec<ElemInfo>,
     skip_ws: Option<Ws>,
     next_ws: Option<String>,
+    opts: SerializerOpt,
 }
 
 fn tagname(name: &QualName) -> LocalName {
@@ -46,7 +43,7 @@ fn tagname(name: &QualName) -> LocalName {
 }
 
 impl<Wr: Write> HtmlSerializer<Wr> {
-    pub fn new(writer: Wr) -> Self {
+    pub fn new(writer: Wr, opts: SerializerOpt) -> Self {
         HtmlSerializer {
             writer,
             stack: vec![ElemInfo {
@@ -55,6 +52,7 @@ impl<Wr: Write> HtmlSerializer<Wr> {
             }],
             next_ws: None,
             skip_ws: None,
+            opts,
         }
     }
 
@@ -101,6 +99,9 @@ impl<Wr: Write> HtmlSerializer<Wr> {
         self.writer.write_all(b"<")?;
         self.writer.write_all(tagname(&name).as_bytes())?;
         for (name, value) in attrs {
+            if self.opts.wasm && name.local.to_string().starts_with("on") {
+                continue;
+            }
             self.writer.write_all(b" ")?;
 
             match name.ns {
