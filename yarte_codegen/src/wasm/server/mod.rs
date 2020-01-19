@@ -39,7 +39,7 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
                     tokens.extend(quote!(_fmt.write_str(#head)?;));
                     if let Some(tail) = chunks.next() {
                         tokens.extend(quote!(::std::fmt::Display::fmt(
-                            yarte::serde_json::to_string(&self).map(|_| yarte::Error)?, _fmt)?;
+                            &::yarte::serde_json::to_string(&self).map_err(|_| ::yarte::Error)?, _fmt)?;
                         ));
                         tokens.extend(quote!(_fmt.write_str(#tail)?;));
                     }
