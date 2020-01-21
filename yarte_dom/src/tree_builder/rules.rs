@@ -254,8 +254,6 @@ where
                     self.parse_raw_data(tag, Rawtext)
                 }
 
-                // <noscript> handled in wildcard case below
-
                 tag @ <rb> <rtc> => {
                     if self.in_scope_named(default_scope, local_name!("ruby")) {
                         self.generate_implied_end(cursory_implied_end);
@@ -326,13 +324,9 @@ where
                 tag @ <svg> => self.enter_foreign(tag, ns!(svg)),
 
                 tag @ <_> => {
-                    if self.opts.scripting_enabled && tag.name == local_name!("noscript") {
-                        self.parse_raw_data(tag, Rawtext)
-                    } else {
-                        self.reconstruct_formatting();
-                        self.insert_element_for(tag);
-                        Done
-                    }
+                    self.reconstruct_formatting();
+                    self.insert_element_for(tag);
+                    Done
                 }
 
                 tag @ </_> => {
@@ -367,7 +361,7 @@ where
                     Reprocess(InHtml, token)
                 }
             }),
-             //§ the-after-after-body-insertion-mode
+            //§ the-after-after-body-insertion-mode
             AfterAfterBody => match_token!(token {
                 CharacterTokens(NotSplit, text) => SplitWhitespace(text),
                 CharacterTokens(Whitespace, _) => Done,
@@ -378,7 +372,7 @@ where
 
                 token => self.unexpected(&token),
             }),
-             //§ parsing-main-incdata
+            //§ parsing-main-incdata
             RawText => match_token!(token {
                 CommentToken(text) => self.append_comment(text),
                 CharacterTokens(_, text) => self.append_text(text),

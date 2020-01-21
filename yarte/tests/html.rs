@@ -161,3 +161,17 @@ fn test_section() {
 
     assert_eq!(expected, t.call().unwrap())
 }
+
+#[derive(Template)]
+#[template(src = "
+<noscript> <meta> <style></style> <link></noscript>
+")]
+struct NoScript;
+
+#[test]
+fn test_noscript() {
+    assert_eq!(
+        NoScript.call().unwrap(),
+        "<noscript><meta><style></sytle><link></noscript>"
+    )
+}
