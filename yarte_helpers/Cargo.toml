@@ -1,6 +1,6 @@
 [package]
 name = "yarte_helpers"
-version = "0.5.2"
+version = "0.5.3"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "Helper collection for yarte"
 categories = ["template-engine"]

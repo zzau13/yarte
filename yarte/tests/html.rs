@@ -172,6 +172,6 @@ struct NoScript;
 fn test_noscript() {
     assert_eq!(
         NoScript.call().unwrap(),
-        "<noscript><meta><style></sytle><link></noscript>"
+        "<noscript><meta><style></style><link></noscript>"
     )
 }
