@@ -1,18 +1,18 @@
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use syn::{
-    punctuated::Punctuated, visit_mut::VisitMut, Expr, Fields, FieldsNamed, FieldsUnnamed, Ident,
+    punctuated::Punctuated, visit_mut::VisitMut, Fields, FieldsNamed, FieldsUnnamed, Ident,
     ItemEnum, Path, Token, Variant,
 };
 
-fn gen_messages(e: &ItemEnum) -> (TokenStream, TokenStream) {
+pub fn gen_messages(e: &ItemEnum) -> (TokenStream, TokenStream) {
     let mut e = e.clone();
     let msgs = MsgBuilder::default().build(&mut e);
     let i = &e.ident;
     (
         quote! {
             #[inline]
-            fn __dispatch(&mut self, __msg: Self::Message, __addr: &Addr<Self>) {
+            fn __dispatch(&mut self, __msg: Self::Message, __addr: &yarte::Addr<Self>) {
                 use #i::*;
                 match __msg {
                     #(#msgs), *
@@ -96,7 +96,11 @@ impl VisitMut for MsgBuilder {
             discriminant,
         }: &mut Variant,
     ) {
-        assert_eq!(attrs.len(), 1);
+        assert_eq!(
+            attrs.len(),
+            1,
+            "Need function attribute in every variant of Enum of messages"
+        );
         let attrs = attrs.remove(0);
         self.paths.push(Msg {
             func: attrs.path,

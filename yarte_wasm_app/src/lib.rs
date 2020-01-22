@@ -16,7 +16,7 @@ use self::queue::Queue;
 /// The sender can't wait the response since it never answer
 // TODO: derive
 pub trait App: Default + Sized + Unpin + 'static {
-    type BlackBox: Default;
+    type BlackBox;
     type Message: 'static;
     /// Private: empty for overridden in derive
     #[doc(hidden)]

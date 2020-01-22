@@ -1,3 +1,4 @@
+#![allow(warnings)]
 use crate::wasm::client::WASMCodeGen;
 use proc_macro2::TokenStream;
 use quote::quote;

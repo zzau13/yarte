@@ -19,7 +19,7 @@ impl<'a> ResolveLocal<'a> {
     }
 
     fn resolve(mut self, expr: &'a Local) -> VarId {
-        todo!()
+        todo!("resolve local")
     }
 }
 
