@@ -96,7 +96,7 @@ mod test {
         let q1 = Rc::clone(&q);
 
         spawn_local(async move {
-            for _ in 0..100000 {
+            for _ in 0..100_000 {
                 loop {
                     match q1.pop() {
                         Some(1) => break,
@@ -106,7 +106,7 @@ mod test {
                 }
             }
         });
-        for _ in 0..100000 {
+        for _ in 0..100_000 {
             q.push(1);
         }
     }

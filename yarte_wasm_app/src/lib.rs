@@ -1,4 +1,3 @@
-/// Adapted from [`actix`](https://github.com/actix/actix) and [`draco`](https://github.com/utkarshkukreti/draco)
 use std::{
     cell::{Cell, RefCell},
     default::Default,
@@ -121,21 +120,15 @@ impl<A: App> Context<A> {
 
 #[cfg(test)]
 mod test {
-    #![allow(dead_code)]
-
     use super::*;
-    use std::{
-        default::Default,
-        rc::Rc,
-        sync::atomic::{AtomicUsize, Ordering},
-    };
+    use std::default::Default;
 
     use wasm_bindgen_futures::spawn_local;
     use wasm_bindgen_test::*;
 
     #[derive(Default)]
     struct Test {
-        c: Rc<AtomicUsize>,
+        c: Rc<Cell<usize>>,
         any: usize,
         it: Vec<usize>,
         black_box: <Self as App>::BlackBox,
@@ -332,7 +325,7 @@ mod test {
 
     #[inline]
     fn msg(app: &mut Test, msg: usize, _addr: &Addr<Test>) {
-        app.c.store(msg, Ordering::Relaxed);
+        app.c.replace(msg);
     }
 
     #[inline]
@@ -357,7 +350,7 @@ mod test {
 
     #[wasm_bindgen_test]
     fn test() {
-        let c = Rc::new(AtomicUsize::new(0));
+        let c = Rc::new(Cell::new(0));
         let c2 = Rc::clone(&c);
         let app = Test {
             c,
@@ -367,31 +360,31 @@ mod test {
         addr.hydrate();
         let addr2 = addr.clone();
         addr.send(Msg::Msg(2));
-        assert_eq!(c2.load(Ordering::Relaxed), 2);
+        assert_eq!(c2.get(), 2);
         addr2.send(Msg::Msg(3));
         addr.send(Msg::Msg(1));
-        assert_eq!(c2.load(Ordering::Relaxed), 1);
+        assert_eq!(c2.get(), 1);
         addr.send(Msg::Msg(1));
         addr2.send(Msg::Msg(3));
-        assert_eq!(c2.load(Ordering::Relaxed), 3);
+        assert_eq!(c2.get(), 3);
         addr2.send(Msg::Reset);
-        assert_eq!(c2.load(Ordering::Relaxed), 0);
+        assert_eq!(c2.get(), 0);
         addr2.send(Msg::Msg(3));
-        assert_eq!(c2.load(Ordering::Relaxed), 3);
+        assert_eq!(c2.get(), 3);
         addr2.send(Msg::Fut(7));
-        assert_eq!(c2.load(Ordering::Relaxed), 0);
+        assert_eq!(c2.get(), 0);
         let c3 = Rc::clone(&c2);
         let work = unsafe {
             async_timer::Timed::platform_new_unchecked(async {}, core::time::Duration::from_secs(1))
         };
         spawn_local(async move {
             work.await.unwrap();
-            assert_eq!(c3.load(Ordering::Relaxed), 7);
+            assert_eq!(c3.get(), 7);
             addr2.send(Msg::Reset);
-            assert_eq!(c3.load(Ordering::Relaxed), 0);
+            assert_eq!(c3.get(), 0);
         });
         addr.send(Msg::Reset);
-        assert_eq!(c2.load(Ordering::Relaxed), 0);
+        assert_eq!(c2.get(), 0);
         addr.send(Msg::Tree(0))
     }
 }
