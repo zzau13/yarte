@@ -320,10 +320,7 @@ impl<'a> Generator<'a> {
             } else {
                 syn::parse2::<syn::Expr>(quote!(((&(#args)).into_iter().enumerate()))).unwrap()
             };
-            (
-                args,
-                syn::parse2::<syn::Expr>(quote!((#i, #v))).unwrap(),
-            )
+            (args, syn::parse2::<syn::Expr>(quote!((#i, #v))).unwrap())
         } else {
             let args = if let syn::Expr::Range(..) = args {
                 args
