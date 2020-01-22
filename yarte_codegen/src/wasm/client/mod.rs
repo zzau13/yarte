@@ -14,8 +14,8 @@ use syn::{
 };
 
 use yarte_dom::dom::{
-    Attribute, Document, Each, Element, ExprId, ExprOrText, Expression, IfBlock, IfElse, Node, Var,
-    VarId, DOM,
+    Attribute, Document, Each, Element, ExprId, ExprOrText, Expression, IfBlock, IfElse, Node,
+    TreeMap, Var, VarId, VarMap, DOM,
 };
 use yarte_hir::{Struct, HIR};
 
@@ -27,6 +27,7 @@ mod leaf_text;
 mod messages;
 
 use self::leaf_text::get_leaf_text;
+use std::collections::HashSet;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Step {
@@ -62,11 +63,11 @@ pub struct WASMCodeGen<'a> {
     steps: Vec<(Option<Ident>, Step)>,
     on: Option<Parent>,
     //
-    buff_render: Vec<(Vec<VarId>, TokenStream)>,
+    buff_render: Vec<(HashSet<VarId>, TokenStream)>,
     black_box: Vec<BlackBox>,
     bit_array: Vec<VarId>,
-    tree_map: HashMap<ExprId, Vec<VarId>>,
-    var_map: HashMap<VarId, Var>,
+    tree_map: TreeMap,
+    var_map: VarMap,
 }
 
 #[derive(Debug)]
@@ -436,7 +437,8 @@ impl<'a> WASMCodeGen<'a> {
                     }
                 }
                 if all_children_text(children) {
-                    self.buff_render.push(get_leaf_text(children));
+                    self.buff_render
+                        .push(get_leaf_text(children, &self.tree_map, &self.var_map));
                 } else {
                     self.steps.push((None, step.expect("Some step")));
                     self.step(children);
@@ -530,11 +532,7 @@ impl<'a> WASMCodeGen<'a> {
         tokens
     }
 
-    fn resolve_tree_var(
-        &mut self,
-        tree_map: HashMap<ExprId, Vec<VarId>>,
-        var_map: HashMap<VarId, Var>,
-    ) {
+    fn resolve_tree_var(&mut self, tree_map: TreeMap, var_map: VarMap) {
         for expr in tree_map.values() {
             for var_id in expr {
                 todo!()

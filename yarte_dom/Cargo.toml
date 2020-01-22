@@ -21,6 +21,7 @@ actix-web = ["yarte_hir/actix-web"]
 
 [dependencies]
 yarte_hir = { version = "0.5", path = "../yarte_hir" }
+yarte_helpers = { version = "0.5", path = "../yarte_helpers" }
 yarte_parser = { version = "0.5", path = "../yarte_parser" }
 
 mac = "0.1"

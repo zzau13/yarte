@@ -1,11 +1,12 @@
 use std::{
-    collections::{hash_map::DefaultHasher, BTreeMap, BTreeSet},
-    hash::{Hash, Hasher},
+    collections::{BTreeMap, BTreeSet},
     path::PathBuf,
 };
 
 use yarte_config::{get_source, Config};
 use yarte_parser::{parse_partials, Partial};
+
+use crate::helpers::calculate_hash;
 
 pub type Sources<'a> = &'a BTreeMap<PathBuf, String>;
 
@@ -46,10 +47,4 @@ pub fn read(path: PathBuf, src: String, config: &Config) -> BTreeMap<PathBuf, St
     _read(path, src, config, &mut visited, &mut Vec::new());
 
     visited
-}
-
-fn calculate_hash<T: Hash>(t: &T) -> u64 {
-    let mut s = DefaultHasher::new();
-    t.hash(&mut s);
-    s.finish()
 }

@@ -22,16 +22,16 @@ use self::{
     visit_each::resolve_each, visit_expr::resolve_expr, visit_if_else::resolve_if_block,
     visit_local::resolve_local,
 };
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
 pub type Document = Vec<Node>;
 pub type ExprId = usize;
-pub type VarId = usize;
+pub type VarId = u64;
 
 #[derive(Debug)]
 pub enum Var {
-    This(Option<VarId>, String),
-    Local(Option<VarId>, ExprId, String),
+    This(String),
+    Local(ExprId, String),
 }
 
 #[derive(Debug)]
@@ -101,11 +101,14 @@ pub enum ExprOrText {
     Expr(Expression),
 }
 
+pub type TreeMap = HashMap<ExprId, HashSet<VarId>>;
+pub type VarMap = HashMap<VarId, Var>;
+
 #[derive(Debug)]
 pub struct DOM {
     pub doc: Document,
-    pub tree_map: HashMap<ExprId, Vec<VarId>>,
-    pub var_map: HashMap<VarId, Var>,
+    pub tree_map: TreeMap,
+    pub var_map: VarMap,
 }
 
 impl From<Vec<HIR>> for DOM {
@@ -118,8 +121,8 @@ impl From<Vec<HIR>> for DOM {
 pub struct DOMBuilder {
     inner: bool,
     count: usize,
-    tree_map: HashMap<ExprId, Vec<VarId>>,
-    var_map: BTreeMap<VarId, Var>,
+    tree_map: HashMap<ExprId, HashSet<VarId>>,
+    var_map: HashMap<VarId, Var>,
 }
 
 // 0x00_00_00_00
