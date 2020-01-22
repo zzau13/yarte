@@ -9,7 +9,8 @@ use syn::{
     parse::{Parse, ParseBuffer},
     parse2, parse_str,
     punctuated::Punctuated,
-    Field, FieldValue, Ident, Member, Token, Type, VisPublic, Visibility,
+    Field, FieldValue, Ident, Member, Meta, MetaList, MetaNameValue, NestedMeta, Path, Token, Type,
+    VisPublic, Visibility,
 };
 
 use yarte_dom::dom::{
@@ -96,8 +97,12 @@ fn is_black_box(ty: &Type) -> bool {
     ty.eq(&black)
 }
 
+fn is_inner(attrs: &[syn::Attribute]) -> bool {
+    attrs.iter().any(|attr| attr.path.is_ident("inner"))
+}
+
 fn is_state(Field { attrs, ty, .. }: &Field) -> bool {
-    !(attrs.iter().any(|attr| attr.path.is_ident("inner")) || is_black_box(ty))
+    !(is_inner(attrs) || is_black_box(ty))
 }
 
 struct PAttr(Vec<syn::Attribute>);
@@ -218,6 +223,51 @@ impl<'a> WASMCodeGen<'a> {
             .filter(|x| is_state(x))
             .fold(<Punctuated<&Ident, Token![,]>>::new(), |mut acc, x| {
                 acc.push(&x.ident.as_ref().expect("Named fields"));
+                acc
+            })
+            .into_token_stream()
+    }
+
+    fn get_inner(&self) -> TokenStream {
+        self.s
+            .fields
+            .iter()
+            .filter(|x| is_inner(&x.attrs))
+            .fold(<Punctuated<FieldValue, Token![,]>>::new(), |mut acc, x| {
+                let expr = x
+                    .attrs
+                    .iter()
+                    .find_map(|x| {
+                        if x.path.is_ident("inner") {
+                            match x.parse_meta() {
+                                Ok(Meta::Path(p)) => Some(quote!(Default::default())),
+                                Ok(Meta::List(MetaList { nested, .. })) => {
+                                    assert_eq!(nested.len(), 1);
+                                    if let NestedMeta::Lit(lit) = &nested[0] {
+                                        if let syn::Lit::Str(l) = lit {
+                                            let path: Path = parse_str(&l.value()).expect("path");
+                                            return Some(quote!(#path()));
+                                        }
+                                    }
+                                    None
+                                }
+                                _ => None,
+                            }
+                        } else {
+                            None
+                        }
+                    })
+                    .expect("valid inner attribute");
+                acc.push(FieldValue {
+                    attrs: vec![],
+                    member: x
+                        .ident
+                        .clone()
+                        .map(|x| Member::Named(x))
+                        .expect("Named fields"),
+                    colon_token: Some(<Token![:]>::default()),
+                    expr: parse2(expr).expect("valid expression"),
+                });
                 acc
             })
             .into_token_stream()
@@ -509,11 +559,13 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
         let black_box = self.black_box(&black_box_name);
         let args = self.get_state_fields();
         let bb_ident = self.get_black_box_ident();
+        let inner = self.get_inner();
         let build = &self.build;
         let build = quote! {
             #build
             Self {
                 #args,
+                #inner,
                 #bb_ident: #black_box_name { #bb_fields }
             }
         };
