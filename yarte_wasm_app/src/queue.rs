@@ -1,31 +1,3 @@
-/* Copyright (c) 2010-2011 Dmitry Vyukov. All rights reserved.
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met: */
-//
-//    1. Redistributions of source code must retain the above copyright notice,
-//       this list of conditions and the following disclaimer.
-//
-//    2. Redistributions in binary form must reproduce the above copyright
-//       notice, this list of conditions and the following disclaimer in the
-//       documentation and/or other materials provided with the distribution.
-//
-// THIS SOFTWARE IS PROVIDED BY DMITRY VYUKOV "AS IS" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
-// EVENT SHALL DMITRY VYUKOV OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
-// OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
-// EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// The views and conclusions contained in the software and documentation are
-// those of the authors and should not be interpreted as representing official
-// policies, either expressed or implied, of Dmitry Vyukov.
-//
-
 //! A mostly lock-free single-producer, single consumer queue.
 //!
 // http://www.1024cores.net/home/lock-free-algorithms
@@ -106,6 +78,36 @@ impl<T> Drop for Queue<T> {
                 drop(Box::from_raw(cur));
                 cur = *next;
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::rc::Rc;
+    use wasm_bindgen_futures::spawn_local;
+    use wasm_bindgen_test::*;
+
+    use super::*;
+
+    #[wasm_bindgen_test]
+    fn test() {
+        let q = Rc::new(Queue::new());
+        let q1 = Rc::clone(&q);
+
+        spawn_local(async move {
+            for _ in 0..100000 {
+                loop {
+                    match q1.pop() {
+                        Some(1) => break,
+                        Some(_) => panic!(),
+                        None => {}
+                    }
+                }
+            }
+        });
+        for _ in 0..100000 {
+            q.push(1);
         }
     }
 }
