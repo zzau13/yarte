@@ -27,4 +27,6 @@ fn func(_app: &mut Test, _addr: &yarte::Addr<Test>) {}
 #[wasm_bindgen_test]
 fn test() {
     let app = Test::start_default();
+    // Send init messages
+    app.hydrate();
 }
