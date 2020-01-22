@@ -1,6 +1,6 @@
 [package]
 name = "yarte_wasm_app"
-version = "0.0.4"
+version = "0.0.5"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "Async core for yarte wasm applications"
 categories = ["template-engine"]
