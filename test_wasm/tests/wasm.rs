@@ -13,8 +13,7 @@ struct Fortune {
 #[derive(Template)]
 #[template(path = "fortune.hbs", print = "code", mode = "wasm")]
 #[msg(enum Msg {
-    #[func]
-    Any,
+    AnyMsg(usize),
 })]
 struct Test {
     fortunes: Vec<Fortune>,
@@ -22,7 +21,7 @@ struct Test {
     black_box: <Self as Template>::BlackBox,
 }
 
-fn func(_app: &mut Test, _addr: &yarte::Addr<Test>) {}
+fn any_msg(_app: &mut Test, _0: usize, _addr: &yarte::Addr<Test>) {}
 
 #[wasm_bindgen_test]
 fn test() {

@@ -29,6 +29,6 @@ mime_guess = "2.0"
 proc-macro2 = { version = "1.0", features = ["span-locations"] }
 quote = "1.0"
 syn = { version = "1.0", features = ["extra-traits", "full"] }
-
+heck = "0.3"
 [dev-dependencies]
 yarte_parser = { version = "0.5", path = "../yarte_parser" }
