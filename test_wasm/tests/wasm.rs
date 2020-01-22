@@ -14,6 +14,10 @@ struct Fortune {
 #[template(path = "fortune.hbs", print = "code", mode = "wasm")]
 #[msg(enum Msg {
     AnyMsg(usize),
+    NewPoint { a: usize, b: usize },
+    Ping,
+    #[path::func]
+    Other,
 })]
 struct Test {
     fortunes: Vec<Fortune>,
@@ -22,6 +26,12 @@ struct Test {
 }
 
 fn any_msg(_app: &mut Test, _0: usize, _addr: &yarte::Addr<Test>) {}
+fn new_point(_app: &mut Test, _a: usize, _b: usize, _addr: &yarte::Addr<Test>) {}
+fn ping(_app: &mut Test, _addr: &yarte::Addr<Test>) {}
+mod path {
+    use super::*;
+    pub(super) fn func(_app: &mut Test, _addr: &yarte::Addr<Test>) {}
+}
 
 #[wasm_bindgen_test]
 fn test() {
