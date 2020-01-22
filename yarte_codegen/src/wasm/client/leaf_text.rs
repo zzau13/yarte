@@ -1,5 +1,3 @@
-#![allow(warnings)]
-
 use std::collections::{HashMap, HashSet};
 
 use proc_macro2::TokenStream;

@@ -311,9 +311,10 @@ impl<'a> Generator<'a> {
         self.write_buf_writable(buf);
 
         let id = self.scp.len();
-        let v = parse_str(&format!("_key_{}", id)).unwrap();
-        let (args, expr, ctx) = if loop_var {
-            let i = parse_str(&format!("_index_{}", id)).unwrap();
+        self.scp.push_scope(vec![]);
+        let v = self.scp.push_ident("__key_");
+        let (args, expr) = if loop_var {
+            let i = self.scp.push_ident("__index_");
             let args = if let syn::Expr::Range(..) = args {
                 syn::parse2::<syn::Expr>(quote!(((#args).enumerate()))).unwrap()
             } else {
@@ -322,7 +323,6 @@ impl<'a> Generator<'a> {
             (
                 args,
                 syn::parse2::<syn::Expr>(quote!((#i, #v))).unwrap(),
-                vec![v, i],
             )
         } else {
             let args = if let syn::Expr::Range(..) = args {
@@ -330,10 +330,9 @@ impl<'a> Generator<'a> {
             } else {
                 syn::parse2::<syn::Expr>(quote!(((&(#args)).into_iter()))).unwrap()
             };
-            (args, syn::parse2::<syn::Expr>(quote!(#v)).unwrap(), vec![v])
+            (args, syn::parse2::<syn::Expr>(quote!(#v)).unwrap())
         };
         self.on.push(On::Each(id));
-        self.scp.push_scope(ctx);
 
         let mut body = Vec::new();
         self.handle(nodes, &mut body);
