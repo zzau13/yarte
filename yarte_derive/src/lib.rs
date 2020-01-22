@@ -18,7 +18,7 @@ mod logger;
 use self::logger::log;
 use yarte_helpers::helpers::Sources;
 
-#[proc_macro_derive(Template, attributes(template, msg))]
+#[proc_macro_derive(Template, attributes(template, msg, inner))]
 pub fn derive(input: TokenStream) -> TokenStream {
     build(&syn::parse(input).unwrap())
 }
@@ -51,7 +51,7 @@ fn sources_to_tokens(sources: Sources, config: &Config, s: &Struct) -> proc_macr
     // when multiple templates
     source_map::clean();
 
-    let tokens = hir_to_tokens(hir, config, s);
+    let tokens = hir_to_tokens(hir, s);
 
     if cfg!(debug_assertions) && config.print_override == PrintConfig::Code
         || config.print_override == PrintConfig::All
@@ -68,14 +68,12 @@ fn sources_to_tokens(sources: Sources, config: &Config, s: &Struct) -> proc_macr
     tokens
 }
 
-fn hir_to_tokens(hir: Vec<HIR>, config: &Config, s: &Struct) -> proc_macro2::TokenStream {
-    let mut codegen: Box<dyn CodeGen> = match s.mode {
-        Mode::Text => Box::new(FmtCodeGen::new(TextCodeGen, s)),
-        Mode::HTML => Box::new(FmtCodeGen::new(HTMLCodeGen, s)),
-        Mode::HTMLMin => Box::new(FmtCodeGen::new(HTMLMinCodeGen, s)),
-        Mode::WASM => Box::new(client::WASMCodeGen::new(config, s)),
-        Mode::WASMServer => Box::new(FmtCodeGen::new(server::WASMCodeGen::new(s), s)),
-    };
-
-    CodeGen::gen(&mut *codegen, hir)
+fn hir_to_tokens(hir: Vec<HIR>, s: &Struct) -> proc_macro2::TokenStream {
+    match s.mode {
+        Mode::Text => FmtCodeGen::new(TextCodeGen, s).gen(hir),
+        Mode::HTML => FmtCodeGen::new(HTMLCodeGen, s).gen(hir),
+        Mode::HTMLMin => FmtCodeGen::new(HTMLMinCodeGen, s).gen(hir),
+        Mode::WASM => client::WASMCodeGen::new(s).gen(hir),
+        Mode::WASMServer => FmtCodeGen::new(server::WASMCodeGen::new(s), s).gen(hir),
+    }
 }

@@ -1,26 +1,20 @@
 #![allow(warnings)]
 
-use std::{
-    collections::{BTreeSet, HashMap, HashSet},
-    mem,
-};
+use std::{collections::HashMap, mem};
 
 use markup5ever::local_name;
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote};
+use quote::{format_ident, quote, ToTokens};
 use syn::{
     parse::{Parse, ParseBuffer},
     parse2, parse_str,
     punctuated::Punctuated,
-    Field, Ident, Token, Type, VisPublic, Visibility,
+    Field, FieldValue, Ident, Member, Token, Type, VisPublic, Visibility,
 };
 
-use yarte_config::Config;
-use yarte_dom::{
-    dom::{
-        Attribute, Document, Element, ExprId, ExprOrText, Expression, Node, Ns, Var, VarId, DOM,
-    },
-    ElemInfo,
+use yarte_dom::dom::{
+    Attribute, Document, Each, Element, ExprId, ExprOrText, Expression, IfBlock, IfElse, Node, Var,
+    VarId, DOM,
 };
 use yarte_hir::{Struct, HIR};
 
@@ -28,21 +22,47 @@ use crate::CodeGen;
 
 mod each;
 mod if_else;
+mod leaf_text;
 mod messages;
-mod path_finding;
+
+use self::leaf_text::get_leaf_text;
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum Step {
+    FirstChild,
+    NextSibling,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum Parent {
+    Head,
+    Body,
+    Expr(ExprId),
+}
+
+#[derive(Clone, Debug)]
+pub enum InsertPoint {
+    Append,
+    LastBefore(Vec<InsertPath>),
+}
+
+#[derive(Clone, Debug)]
+pub enum InsertPath {
+    Before,
+    Expr(ExprId),
+}
 
 pub struct WASMCodeGen<'a> {
     s: &'a Struct<'a>,
-    config: &'a Config<'a>,
     build: TokenStream,
     render: TokenStream,
     hydrate: TokenStream,
     helpers: TokenStream,
+    steps: Vec<(Option<Ident>, Step)>,
+    on: Option<Parent>,
     //
-    buff_render: Vec<(HashSet<VarId>, TokenStream)>,
+    buff_render: Vec<(Vec<VarId>, TokenStream)>,
     black_box: Vec<BlackBox>,
-    stack: Vec<ElemInfo>,
-    scope: Vec<String>,
     bit_array: Vec<VarId>,
     tree_map: HashMap<ExprId, Vec<VarId>>,
     var_map: HashMap<VarId, Var>,
@@ -71,8 +91,13 @@ impl Into<Field> for BlackBox {
     }
 }
 
-fn is_state(f: &Field) -> bool {
-    todo!()
+fn is_black_box(ty: &Type) -> bool {
+    let black: Type = parse2(quote!(<Self as Template>::BlackBox)).unwrap();
+    ty.eq(&black)
+}
+
+fn is_state(Field { attrs, ty, .. }: &Field) -> bool {
+    !(attrs.iter().any(|attr| attr.path.is_ident("inner")) || is_black_box(ty))
 }
 
 struct PAttr(Vec<syn::Attribute>);
@@ -84,26 +109,21 @@ impl Parse for PAttr {
 }
 
 impl<'a> WASMCodeGen<'a> {
-    pub fn new<'n>(config: &'n Config<'n>, s: &'n Struct<'n>) -> WASMCodeGen<'n> {
+    pub fn new<'n>(s: &'n Struct<'n>) -> WASMCodeGen<'n> {
         WASMCodeGen {
-            config,
             build: TokenStream::new(),
             render: TokenStream::new(),
             hydrate: TokenStream::new(),
             helpers: TokenStream::new(),
+            steps: vec![],
             s,
             black_box: vec![],
-            stack: vec![],
-            scope: vec!["self".into()],
             bit_array: Vec::new(),
             tree_map: HashMap::new(),
             var_map: HashMap::new(),
             buff_render: vec![],
+            on: None,
         }
-    }
-
-    fn parent(&mut self) -> &mut ElemInfo {
-        self.stack.last_mut().expect("no parent ElemInfo")
     }
 
     fn initial_state(&self) -> TokenStream {
@@ -125,14 +145,14 @@ impl<'a> WASMCodeGen<'a> {
 
         let name = format_ident!("{}InitialState", self.s.ident);
         quote! {
-            #[derive(Default, yarte::Deserialize)]
-            pub struct InitialState {
+            #[derive(Default, serde::Deserialize)]
+            struct #name {
                 #fields
             }
         }
     }
 
-    fn black_box(&mut self) -> TokenStream {
+    fn black_box(&mut self, name: &Ident) -> TokenStream {
         let fields = self.black_box.drain(..).map(Into::into).fold(
             Punctuated::<Field, Token![,]>::new(),
             |mut acc, x| {
@@ -141,7 +161,6 @@ impl<'a> WASMCodeGen<'a> {
             },
         );
 
-        let name = format_ident!("{}BlackBox", self.s.ident);
         quote! {
             #[doc = "Internal elements and difference tree"]
             pub struct #name {
@@ -150,8 +169,7 @@ impl<'a> WASMCodeGen<'a> {
         }
     }
 
-    fn build_render(&mut self, parent: Ident) -> TokenStream {
-        let mut tokens = TokenStream::new();
+    fn add_black_box_t_root(&mut self) {
         let len = self.bit_array.len();
         let base = match len {
             0..=8 => 8,
@@ -164,75 +182,305 @@ impl<'a> WASMCodeGen<'a> {
             name: format_ident!("t_root"),
             ty: parse_str(&format!("u{}", base)).unwrap(),
         });
-        for (set, token) in mem::take(&mut self.buff_render) {
-            let set: Vec<_> = set
-                .into_iter()
-                .map(|a| self.bit_array.iter().position(|b| a == *b).unwrap())
-                .collect();
-            let mut expr = "0b".to_string();
-            for i in 0..base {
-                expr.push(if set.contains(&i) { '1' } else { '0' });
-            }
-
-            let expr: syn::Expr = parse_str(&expr).unwrap();
-
-            tokens.extend(quote!(if #parent.t_root & #expr != 0 { #token }));
-        }
-
-        tokens
     }
 
-    fn init(&mut self, mut dom: DOM) {
+    fn get_black_box_fields(&mut self) -> TokenStream {
+        let t_root = format_ident!("t_root");
+        self.black_box
+            .iter()
+            .fold(<Punctuated<FieldValue, Token![,]>>::new(), |mut acc, x| {
+                if x.name == t_root {
+                    acc.push(FieldValue {
+                        attrs: vec![],
+                        member: Member::Named(x.name.clone()),
+                        colon_token: Some(<Token![:]>::default()),
+                        expr: parse2(quote!(0)).unwrap(),
+                    });
+                } else {
+                    let name = &x.name;
+                    acc.push(FieldValue {
+                        attrs: vec![],
+                        member: Member::Named(x.name.clone()),
+                        colon_token: Some(<Token![:]>::default()),
+                        expr: parse2(quote!(#name)).unwrap(),
+                    });
+                }
+
+                acc
+            })
+            .into_token_stream()
+    }
+
+    fn get_state_fields(&self) -> TokenStream {
+        self.s
+            .fields
+            .iter()
+            .filter(|x| is_state(x))
+            .fold(<Punctuated<&Ident, Token![,]>>::new(), |mut acc, x| {
+                acc.push(&x.ident.as_ref().expect("Named fields"));
+                acc
+            })
+            .into_token_stream()
+    }
+
+    fn build_init(&mut self) {
+        let ident = format_ident!("{}InitialState", self.s.ident);
+        let args = self.get_state_fields();
+        self.build.extend(quote! {
+            let #ident { #args } = yarte::from_str(&get_state()).unwrap_or_default();
+            let doc = yarte::web_sys::window().unwrap_throw().document().unwrap_throw();
+        });
+    }
+
+    fn hydrate_init(&mut self) {
+        self.hydrate.extend(quote! {
+            let body = yarte::web_sys::window().unwrap_throw()
+                .document().unwrap_throw()
+                .body().unwrap_throw();
+        });
+    }
+
+    fn render_init(&mut self) {
+        let name = self.get_black_box_ident();
+        self.render.extend(quote! {
+            if self.#name.t_root == 0 {
+                return;
+            }
+        });
+        self.add_black_box_t_root()
+    }
+
+    fn get_black_box_ident(&self) -> Ident {
+        self.s
+            .fields
+            .iter()
+            .find_map(|x| {
+                if is_black_box(&x.ty) {
+                    Some(x.ident.clone().unwrap())
+                } else {
+                    None
+                }
+            })
+            .expect("Black box field")
+    }
+
+    fn init(&mut self, dom: DOM) {
         self.resolve_tree_var(dom.tree_map, dom.var_map);
+        self.build_init();
+        self.hydrate_init();
+        self.render_init();
 
         assert_eq!(dom.doc.len(), 1);
-        match dom.doc.remove(0) {
-            Node::Elem(Element::Node {
-                name,
-                attrs,
-                children,
-            }) => {
-                match name.0 {
-                    Ns::Html => (),
-                    _ => panic!("Need <html> tag"),
+        match &dom.doc[0] {
+            Node::Elem(Element::Node { name, children, .. }) => {
+                assert_eq!(local_name!("html"), name.1);
+                assert!(children.iter().all(|x| match x {
+                    Node::Elem(Element::Node { name, .. }) => match name.1 {
+                        local_name!("body") | local_name!("head") => true,
+                        _ => false,
+                    },
+                    Node::Elem(Element::Text(text)) => text.chars().all(|x| x.is_whitespace()),
+                    _ => false,
+                }));
+
+                let (head, body) = children.into_iter().fold((None, None), |acc, x| match x {
+                    Node::Elem(Element::Node { name, children, .. }) => match name.1 {
+                        local_name!("body") => (acc.0, Some(children)),
+                        local_name!("head") => (Some(children), acc.1),
+                        _ => acc,
+                    },
+                    _ => acc,
+                });
+                if let Some(head) = head {
+                    self.on = Some(Parent::Head);
+                    self.step(head);
+                    self.on.take().unwrap();
                 }
-                match name.1 {
-                    local_name!("html") => (),
-                    _ => panic!("Need <html> tag"),
+                if let Some(body) = body {
+                    self.on = Some(Parent::Body);
+                    self.step(body);
+                    self.on.take().unwrap();
+                } else {
+                    panic!("Need <body> tag")
                 }
-                for attr in attrs {
-                    if !check_attr_is_text(attr) {
-                        panic!("Only static attributes in <html>")
-                    }
-                }
-                self.read_doc(children);
             }
-            _ => panic!("Need <html> tag"),
+            _ => panic!("Need html at root"),
+        }
+        let tokens = self.empty_buff();
+        self.render.extend(tokens);
+    }
+
+    fn step(&mut self, doc: &Document) {
+        let len = doc.iter().fold(0, |acc, x| match x {
+            Node::Elem(Element::Text(_)) => acc,
+            _ => acc + 1,
+        });
+        let mut last = 0usize;
+        let nodes = doc.iter().map(|x| match x {
+            Node::Elem(Element::Text(_)) => (last, x),
+            _ => {
+                let l = last;
+                last += 1;
+                (l, x)
+            }
+        });
+        let children = doc.iter().filter(|x| match x {
+            Node::Elem(Element::Text(_)) => false,
+            _ => true,
+        });
+        let mut last = None;
+        for (i, node) in nodes {
+            match node {
+                Node::Elem(Element::Node { .. }) if last.is_none() => {
+                    last = Some(Step::FirstChild);
+                }
+                Node::Elem(Element::Node { .. }) => {
+                    last = Some(Step::NextSibling);
+                }
+                _ => (),
+            }
+
+            self.resolve_node(node, last, (i, len), children.clone());
+        }
+
+        if last.is_some() {
+            let last = self.parent_node();
+            self.steps.drain(last..);
         }
     }
 
-    fn read_doc(&mut self, doc: Document) {
-        let fragment = 1 < doc.len();
-        let bound = 0;
-        for (i, node) in doc.into_iter().enumerate() {
-            match node {
-                Node::Elem(elem) => match elem {
-                    Element::Node {
-                        name,
-                        attrs,
-                        children,
-                    } => {}
-                    Element::Text(s) => {}
-                },
-                Node::Expr(expr) => match expr {
-                    Expression::Local(_, _, _) => {}
-                    Expression::Unsafe(_, _) => {}
-                    Expression::Safe(_, _) => {}
-                    Expression::Each(_, _) => {}
-                    Expression::IfElse(_, _) => {}
-                },
+    fn parent_node(&mut self) -> usize {
+        self.steps
+            .iter()
+            .rposition(|(_, x)| match x {
+                Step::FirstChild => true,
+                _ => false,
+            })
+            .unwrap_or_default()
+    }
+
+    fn do_step(&mut self, body: &Document, id: ExprId) {
+        let on = self.on.replace(Parent::Expr(id));
+        let steps = mem::take(&mut self.steps);
+        self.step(body);
+        self.on = on;
+        self.steps = steps;
+    }
+
+    #[inline]
+    fn resolve_node<'b, F: Iterator<Item = &'b Node> + Clone>(
+        &mut self,
+        node: &'b Node,
+        step: Option<Step>,
+        pos: (usize, usize),
+        o: F,
+    ) {
+        let mut buff = vec![];
+        match node {
+            Node::Elem(Element::Node {
+                children, attrs, ..
+            }) => {
+                // TODO
+                for attr in attrs {
+                    for e in &attr.value {
+                        if let ExprOrText::Expr(e) = e {
+                            buff.push((e, Some(attr.name.clone())));
+                        }
+                    }
+                }
+                if all_children_text(children) {
+                    self.buff_render.push(get_leaf_text(children));
+                } else {
+                    self.steps.push((None, step.expect("Some step")));
+                    self.step(children);
+                }
+            }
+            Node::Expr(e) => {
+                buff.push((e, None));
+            }
+            Node::Elem(Element::Text(_)) => (),
+        }
+
+        for (i, attr) in buff {
+            match i {
+                Expression::Each(id, each) => {
+                    let vars = self.tree_map.get(id).cloned().unwrap_or_default();
+                    let parent = self.parent_node();
+                    let Each { body, .. } = &**each;
+                    let insert_point = self.insert_point(pos, o.clone());
+                    let node = self.on.unwrap();
+                    let v = &self.steps[..parent];
+                    let old_b = mem::take(&mut self.black_box);
+                    let mut old_buff = mem::take(&mut self.buff_render);
+
+                    self.do_step(body, *id);
+
+                    let name = format_ident!("Component{}", id);
+                    self.add_black_box_t_root();
+                    let black_box = self.black_box(&name);
+                    self.helpers.extend(black_box);
+                    self.black_box = old_b;
+                    old_buff.push((vars.clone(), self.empty_buff()));
+                    self.buff_render = old_buff;
+                }
+                Expression::Safe(id, _) | Expression::Unsafe(id, _) => {
+                    let node = self.on.unwrap();
+                    let vars = self.tree_map.get(id).cloned().unwrap_or_default();
+                }
+                Expression::IfElse(id, if_else) => {
+                    todo!();
+                    let IfElse { ifs, if_else, els } = &**if_else;
+
+                    self.if_block(ifs, *id);
+                    for b in if_else {
+                        self.if_block(b, *id);
+                    }
+                    if let Some(body) = els {
+                        self.do_step(body, *id);
+                    }
+                }
+                Expression::Local(..) => todo!(),
             }
         }
+    }
+
+    #[inline]
+    fn if_block(&mut self, IfBlock { block, .. }: &IfBlock, id: ExprId) {
+        self.do_step(block, id);
+    }
+
+    fn insert_point<'b, F: Iterator<Item = &'b Node>>(
+        &self,
+        pos: (usize, usize),
+        o: F,
+    ) -> InsertPoint {
+        if pos.0 + 1 == pos.1 {
+            InsertPoint::Append
+        } else {
+            let mut buff = Vec::with_capacity(pos.1 - 1 - pos.0);
+            let o: Vec<&Node> = o.collect();
+            for i in o.iter().skip(pos.0 + 1).rev() {
+                match i {
+                    Node::Elem(Element::Node { .. }) => {
+                        buff.push(InsertPath::Before);
+                    }
+                    Node::Expr(Expression::Each(id, _)) | Node::Expr(Expression::IfElse(id, _)) => {
+                        buff.push(InsertPath::Expr(*id));
+                    }
+                    _ => (),
+                }
+            }
+
+            InsertPoint::LastBefore(buff)
+        }
+    }
+
+    #[allow(warnings)]
+    fn empty_buff(&mut self) -> TokenStream {
+        let mut tokens = TokenStream::new();
+        for i in self.buff_render.drain(..) {}
+
+        tokens
     }
 
     fn resolve_tree_var(
@@ -256,34 +504,90 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
         self.init(ir.into());
 
         let initial_state = self.initial_state();
-        let black_box = self.black_box();
-        let default = self
-            .s
-            .implement_head(quote!(std::default::Default), &self.build);
+        let black_box_name = format_ident!("{}BlackBox", self.s.ident);
+        let bb_fields = self.get_black_box_fields();
+        let black_box = self.black_box(&black_box_name);
+        let args = self.get_state_fields();
+        let bb_ident = self.get_black_box_ident();
+        let build = &self.build;
+        let build = quote! {
+            #build
+            Self {
+                #args,
+                #bb_ident: #black_box_name { #bb_fields }
+            }
+        };
+        let default = self.s.implement_head(
+            quote!(std::default::Default),
+            &quote!(fn default() -> Self { #build }),
+        );
         let render = &self.render;
         let hydrate = &self.hydrate;
+        let msgs = self
+            .s
+            .msgs
+            .as_ref()
+            .expect("Need define messages for application");
+        let (func, enu) = messages::gen_messages(msgs);
+        let type_msgs = &msgs.ident;
         let app = quote! {
-            # [doc(hidden)]
-            fn __render(& mut self, __addr: & Addr < Self> ) { # render }
-            # [doc(hidden)]
-            fn __hydrate(& mut self, __addr: & Addr < Self> ) { # hydrate }
+            type BlackBox = #black_box_name;
+            type Message = #type_msgs;
+
+            #[doc(hidden)]
+            #[inline]
+            fn __render(& mut self, __addr: &yarte::Addr<Self>) { # render }
+
+            #[doc(hidden)]
+            #[inline]
+            fn __hydrate(& mut self, __addr: &yarte::Addr<Self>) { # hydrate }
+
+            #[doc(hidden)]
+            #func
         };
         let app = self.s.implement_head(quote!(yarte::Template), &app);
         let helpers = &self.helpers;
 
         quote! {
-            # [wasm_bindgen]
+            #[wasm_bindgen]
             extern "C" {
                 fn get_state() -> String;
             }
 
-            # initial_state
-            # black_box
-            # default
-            # app
-            # helpers
+            #initial_state
+            #black_box
+            #default
+            #enu
+            #app
+            #helpers
         }
     }
+}
+
+fn all_children_text(doc: &Document) -> bool {
+    doc.iter().all(|x| match x {
+        Node::Elem(Element::Text(_)) => true,
+        Node::Expr(e) => match e {
+            Expression::IfElse(_, block) => {
+                let IfElse { ifs, if_else, els } = &**block;
+                all_if_block_text(ifs)
+                    && if_else.iter().all(|x| all_if_block_text(x))
+                    && els.as_ref().map(|x| all_children_text(x)).unwrap_or(true)
+            }
+            Expression::Each(_, block) => {
+                let Each { body, .. } = &**block;
+                all_children_text(body)
+            }
+            Expression::Local(..) => false,
+            _ => true,
+        },
+        _ => false,
+    })
+}
+
+#[inline]
+fn all_if_block_text(IfBlock { block, .. }: &IfBlock) -> bool {
+    all_children_text(block)
 }
 
 fn check_attr_is_text(attr: Attribute) -> bool {

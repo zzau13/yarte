@@ -7,7 +7,7 @@ categories = ["template-engine"]
 documentation = "https://docs.rs/yarte"
 edition = "2018"
 include = ["src/**/*", "Cargo.toml"]
-keywords = ["markup", "template", "handlebars", "html"]
+keywords = ["markup", "template", "handlebars", "html", "web", "wasm"]
 license = "MIT/Apache-2.0"
 readme = "../README.md"
 repository = "https://github.com/botika/yarte"
@@ -36,6 +36,20 @@ futures = { version = "0.3", optional = true }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
 yarte_wasm_app = { version = "0.0", path = "../yarte_wasm_app" }
+serde_json = "1.0"
+[target.'cfg(target_arch="wasm32")'.dependencies.web-sys]
+version = "0.3"
+features = [
+  "Node",
+  "Document",
+  "Window",
+  "Element",
+  "HtmlElement",
+  "EventTarget",
+  "Event",
+  "HtmlCollection"
+]
+
 
 [build-dependencies]
 yarte_config = { version = "0.5", path = "../yarte_config" }

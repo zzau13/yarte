@@ -614,7 +614,7 @@ impl<'a> Generator<'a> {
                 if attrs.is_empty() {
                     None
                 } else {
-                    todo!()
+                    todo!("read expression attributes")
                 }
             }
             _ => None,

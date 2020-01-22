@@ -1,7 +1,5 @@
 [main]
 debug = "code"
 
-[partials]
-
 [debug]
 short = false
