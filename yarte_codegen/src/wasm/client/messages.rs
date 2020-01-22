@@ -1,8 +1,9 @@
+use heck::SnakeCase;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use syn::{
-    punctuated::Punctuated, visit_mut::VisitMut, Fields, FieldsNamed, FieldsUnnamed, Ident,
-    ItemEnum, Path, Token, Variant,
+    parse_str, punctuated::Punctuated, visit_mut::VisitMut, Fields, FieldsNamed, FieldsUnnamed,
+    Ident, ItemEnum, Path, Token, Variant,
 };
 
 pub fn gen_messages(e: &ItemEnum) -> (TokenStream, TokenStream) {
@@ -96,14 +97,15 @@ impl VisitMut for MsgBuilder {
             discriminant,
         }: &mut Variant,
     ) {
-        assert_eq!(
-            attrs.len(),
-            1,
-            "Need function attribute in every variant of Enum of messages"
-        );
-        let attrs = attrs.remove(0);
+        let func = if attrs.len() == 1 {
+            attrs.remove(0).path
+        } else {
+            let ident = ident.to_string().to_snake_case();
+            parse_str(&ident).expect("correct path")
+        };
+
         self.paths.push(Msg {
-            func: attrs.path,
+            func,
             fields: fields.clone(),
             ident: ident.clone(),
         });
