@@ -189,7 +189,7 @@ impl<'a> WASMCodeGen<'a> {
         });
     }
 
-    fn get_black_box_fields(&mut self) -> TokenStream {
+    fn get_black_box_fields(&mut self) -> Punctuated<FieldValue, Token![,]> {
         let t_root = format_ident!("t_root");
         self.black_box
             .iter()
@@ -213,7 +213,6 @@ impl<'a> WASMCodeGen<'a> {
 
                 acc
             })
-            .into_token_stream()
     }
 
     fn get_state_fields(&self) -> TokenStream {
@@ -228,12 +227,10 @@ impl<'a> WASMCodeGen<'a> {
             .into_token_stream()
     }
 
-    fn get_inner(&self) -> TokenStream {
-        self.s
-            .fields
-            .iter()
-            .filter(|x| is_inner(&x.attrs))
-            .fold(<Punctuated<FieldValue, Token![,]>>::new(), |mut acc, x| {
+    fn get_inner(&self) -> Punctuated<FieldValue, Token![,]> {
+        self.s.fields.iter().filter(|x| is_inner(&x.attrs)).fold(
+            <Punctuated<FieldValue, Token![,]>>::new(),
+            |mut acc, x| {
                 let expr = x
                     .attrs
                     .iter()
@@ -269,8 +266,8 @@ impl<'a> WASMCodeGen<'a> {
                     expr: parse2(expr).expect("valid expression"),
                 });
                 acc
-            })
-            .into_token_stream()
+            },
+        )
     }
 
     fn build_init(&mut self) {
