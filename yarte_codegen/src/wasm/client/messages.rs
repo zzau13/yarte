@@ -12,12 +12,9 @@ pub fn gen_messages(e: &ItemEnum) -> (TokenStream, TokenStream) {
     let i = &e.ident;
     (
         quote! {
-            #[inline]
-            fn __dispatch(&mut self, __msg: Self::Message, __addr: &yarte::Addr<Self>) {
-                use #i::*;
-                match __msg {
-                    #(#msgs), *
-                }
+            use #i::*;
+            match __msg {
+                #(#msgs), *
             }
         },
         quote!(#e),

@@ -68,6 +68,7 @@ pub struct WASMCodeGen<'a> {
     bit_array: Vec<VarId>,
     tree_map: TreeMap,
     var_map: VarMap,
+    count: usize,
 }
 
 #[derive(Debug)]
@@ -129,6 +130,7 @@ impl<'a> WASMCodeGen<'a> {
             var_map: HashMap::new(),
             buff_render: vec![],
             on: None,
+            count: 0,
         }
     }
 
@@ -437,8 +439,26 @@ impl<'a> WASMCodeGen<'a> {
                     }
                 }
                 if all_children_text(children) {
-                    self.buff_render
-                        .push(get_leaf_text(children, &self.tree_map, &self.var_map));
+                    let (t, e) = get_leaf_text(children, &self.tree_map, &self.var_map);
+                    let name = format_ident!("ynode_{}", self.count);
+                    let black_box_name = self.get_black_box_ident();
+                    self.count += 1;
+                    let dom = match self.on.expect("Some parent") {
+                        Parent::Body => self.get_black_box_ident(),
+                        Parent::Expr(_) => format_ident!("dom"),
+                        Parent::Head => panic!(""),
+                    };
+                    self.buff_render.push((
+                        t,
+                        quote! {
+                            dom.#name.set_text_content(Some(&#e));
+                        },
+                    ));
+                    self.black_box.push(BlackBox {
+                        doc: "Yarte Node element".to_string(),
+                        name,
+                        ty: parse2(quote!(yarte::web::Element)).unwrap(),
+                    });
                 } else {
                     self.steps.push((None, step.expect("Some step")));
                     self.step(children);
@@ -527,16 +547,16 @@ impl<'a> WASMCodeGen<'a> {
     #[allow(warnings)]
     fn empty_buff(&mut self) -> TokenStream {
         let mut tokens = TokenStream::new();
-        for i in self.buff_render.drain(..) {}
+        for (_i, t) in self.buff_render.drain(..) {
+            tokens.extend(quote!(if true { #t }));
+        }
 
         tokens
     }
 
     fn resolve_tree_var(&mut self, tree_map: TreeMap, var_map: VarMap) {
         for expr in tree_map.values() {
-            for var_id in expr {
-                todo!()
-            }
+            for var_id in expr {}
         }
 
         self.tree_map = tree_map;
@@ -575,7 +595,7 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
             .msgs
             .as_ref()
             .expect("Need define messages for application");
-        let (func, enu) = messages::gen_messages(msgs);
+        let (dispatch, enu) = messages::gen_messages(msgs);
         let type_msgs = &msgs.ident;
         let app = quote! {
             type BlackBox = #black_box_name;
@@ -583,14 +603,14 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
 
             #[doc(hidden)]
             #[inline]
-            fn __render(& mut self, __addr: &yarte::Addr<Self>) { # render }
+            fn __render(&mut self, __addr: &yarte::Addr<Self>) { # render }
 
             #[doc(hidden)]
             #[inline]
-            fn __hydrate(& mut self, __addr: &yarte::Addr<Self>) { # hydrate }
+            fn __hydrate(&mut self, __addr: &yarte::Addr<Self>) { # hydrate }
 
             #[doc(hidden)]
-            #func
+            fn __dispatch(&mut self, __msg: Self::Message, __addr: &yarte::Addr<Self>) { #dispatch }
         };
         let app = self.s.implement_head(quote!(yarte::Template), &app);
         let helpers = &self.helpers;
@@ -612,7 +632,13 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
 }
 
 fn all_children_text(doc: &Document) -> bool {
-    doc.iter().all(|x| match x {
+    !doc.iter().all(|x| {
+        if let Node::Elem(Element::Text(_)) = x {
+            true
+        } else {
+            false
+        }
+    }) && doc.iter().all(|x| match x {
         Node::Elem(Element::Text(_)) => true,
         Node::Expr(e) => match e {
             Expression::IfElse(_, block) => {

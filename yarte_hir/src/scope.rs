@@ -44,7 +44,7 @@ impl Scope {
     }
 
     pub(super) fn push_ident(&mut self, ident: &str) -> syn::Ident {
-        let ident = format_ident!("{}__{}", ident, self.count);
+        let ident = format_ident!("{}__{}", ident, format!("{:#010x?}", self.count));
         self.scope
             .push(syn::parse2(quote!(#ident)).expect("Correct expression"));
         self.count += 1;
@@ -89,10 +89,10 @@ impl Scope {
             let e = e.as_bytes();
             let ident = ident.as_bytes();
             e.eq(ident)
-                || (ident.len() + 2 < e.len()
+                || (ident.len() + 12 == e.len()
                     && ident.eq(&e[..ident.len()])
-                    && e[ident.len()..ident.len() + 2].eq(b"__")
-                    && e[ident.len() + 2].is_ascii_digit())
+                    && e[ident.len()..ident.len() + 4].eq(b"__0x")
+                    && e[ident.len() + 4..].iter().all(|x| x.is_ascii_hexdigit()))
         })
     }
 }
