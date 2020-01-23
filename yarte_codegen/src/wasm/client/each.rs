@@ -18,6 +18,7 @@ impl<'a> WASMCodeGen<'a> {
             expr,
             var,
         }: &Each,
+        fragment: bool,
         insert_point: TokenStream,
     ) {
         // TODO: add Each to tree map
@@ -29,23 +30,18 @@ impl<'a> WASMCodeGen<'a> {
         let old_b = mem::take(&mut self.black_box);
         let mut old_buff = mem::take(&mut self.buff_render);
 
+        self.add_black_box_t_root();
+        self.black_box.push(BlackBox {
+            doc: "root dom element".to_string(),
+            name: format_ident!("root"),
+            ty: parse2(quote!(yarte::web::Element)).unwrap(),
+        });
+
         self.do_step(body, id);
 
         let ty = format_ident!("Component{}", id);
         let name = format_ident!("ytable_{}", id);
         let name_elem = format_ident!("ytable_dom_{}", id);
-
-        self.add_black_box_t_root();
-        self.black_box.push(BlackBox {
-            doc: "Each root dom element".to_string(),
-            name: name_elem.clone(),
-            ty: parse2(quote!(Vec<#ty>)).unwrap(),
-        });
-        self.black_box.push(BlackBox {
-            doc: "Each dom elements".to_string(),
-            name: name.clone(),
-            ty: parse2(quote!(yarte::web::Element)).unwrap(),
-        });
 
         let black_box = self.black_box(&ty);
 
@@ -56,43 +52,75 @@ impl<'a> WASMCodeGen<'a> {
         let elem = quote!(#c_bb.#name_elem);
         let dom = format_ident!("dom_{}", id);
 
-        old_buff.push((vars.clone(), self.render_each(table, args, expr, elem, dom)));
+        old_buff.push((
+            vars.clone(),
+            self.render_each(table, args, expr, elem, dom, fragment),
+        ));
 
         self.helpers.extend(black_box);
 
         self.black_box = old_b;
+        self.black_box.push(BlackBox {
+            doc: "Each root dom element".to_string(),
+            name,
+            ty: parse2(quote!(Vec<#ty>)).unwrap(),
+        });
+        self.black_box.push(BlackBox {
+            doc: "Each dom elements".to_string(),
+            name: name_elem,
+            ty: parse2(quote!(yarte::web::Element)).unwrap(),
+        });
+
         self.buff_render = old_buff;
     }
 
-    fn render_each(&mut self, table: TokenStream, args: &Expr, expr: &Expr, elem: TokenStream, dom: Ident) -> TokenStream {
+    fn render_each(
+        &mut self,
+        table: TokenStream,
+        args: &Expr,
+        expr: &Expr,
+        elem: TokenStream,
+        dom: Ident,
+        fragment: bool,
+    ) -> TokenStream {
         let new = TokenStream::new();
         let render = self.empty_buff();
         // TODO get parents dependency
         let check = quote!(d.t_root != 0);
 
-        quote! {
-            let dom_len = #table.len();
-            let data_len = #args.size_hint().0;
-            if data_len == 0 {
-                #elem.set_text_content(None);
-                #table.clear()
-            } else {
-                for (#dom, #expr) in #table
+        let body = quote! {
+        for (#dom, #expr) in #table
                     .iter_mut()
                     .zip(#args)
                     .filter(|(d, _)| #check)
                     { #render }
 
                 if dom_len < data_len {
-                    for row in self.data.iter().skip(dom_len) {
+                    for row in #args.skip(dom_len) {
                         #table.push(#new);
                     }
                 } else {
-                    for dom in #table.drain(data_len..) {
-                        dom.root.remove()
+                    for d in #table.drain(data_len..) {
+                        d.root.remove()
                     }
                 }
+        };
+
+        if fragment {
+            quote! {
+                let dom_len = #table.len();
+                let data_len = #args.size_hint().0;
+                #body
             }
+        } else {
+            quote! {
+            let dom_len = #table.len();
+            let data_len = #args.size_hint().0;
+            if data_len == 0 {
+                #elem.set_text_content(None);
+                #table.clear()
+            } else { #body }
             }
+        }
     }
 }
