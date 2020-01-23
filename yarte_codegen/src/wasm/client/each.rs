@@ -1,131 +1,83 @@
-#![allow(warnings)]
-use crate::wasm::client::WASMCodeGen;
+use std::mem;
+
 use proc_macro2::TokenStream;
-use quote::quote;
-use yarte_dom::dom::Each;
+use quote::{format_ident, quote};
+use syn::parse2;
+
+use yarte_dom::dom::{Each, ExprId};
+
+use super::{BlackBox, WASMCodeGen};
 
 impl<'a> WASMCodeGen<'a> {
-    fn gen_each(&self, e: Box<Each>, insert_point: TokenStream) {
-        let Each {
+    pub(super) fn gen_each(
+        &mut self,
+        id: ExprId,
+        Each {
             args,
             body,
             expr,
             var,
-        } = *e;
-        // TODO: read attributes
-        // TODO: attribute #[filter] on each arguments
-        //  let row_len = self.data.iter().map(|_| 1).fold(0, |acc, x| acc + x);
-        let data = TokenStream::new();
-        let vdom = TokenStream::new();
-        let data_len = TokenStream::new();
-        let vdom_len = TokenStream::new();
+        }: &Each,
+        insert_point: TokenStream,
+    ) {
+        let vars = self.tree_map.get(&id).cloned().unwrap_or_default();
+        let parent = self.parent_node();
 
-        let parent = TokenStream::new();
+        let node = self.on.unwrap();
+        let v = &self.steps[..parent];
+        let old_b = mem::take(&mut self.black_box);
+        let mut old_buff = mem::take(&mut self.buff_render);
+
+        self.do_step(body, id);
+
+        let ty = format_ident!("Component{}", id);
+        let name = format_ident!("ytable_{}", id);
+        let name_elem = format_ident!("ytable_dom_{}", id);
+        self.add_black_box_t_root();
+        self.black_box.push(BlackBox {
+            doc: "Each root dom element".to_string(),
+            name: name_elem.clone(),
+            ty: parse2(quote!(Vec<#ty>)).unwrap(),
+        });
+        self.black_box.push(BlackBox {
+            doc: "Each dom elements".to_string(),
+            name: name.clone(),
+            ty: parse2(quote!(yarte::web::Element)).unwrap(),
+        });
+        let black_box = self.black_box(&ty);
+        self.helpers.extend(black_box);
+        self.black_box = old_b;
+        let bb_name = self.get_black_box_ident();
+        let table = quote!(self.#bb_name.#name);
+        let render = self.empty_buff();
+        let dom = format_ident!("dom_{}", id);
         let new = TokenStream::new();
-        let update = TokenStream::new();
-
-        let build = quote! {
-            let mut tbody_children = vec![];
-            if let Some(mut curr) = #parent.first_child() {
-                loop {
-                    let id_node = curr.first_child().unwrap_throw();
-                    let label_parent = id_node.next_sibling().unwrap_throw();
-                    let label_node = label_parent.first_child().unwrap_throw();
-                    let delete_parent = label_parent.next_sibling().unwrap_throw();
-                    let delete_node = delete_parent.first_child().unwrap_throw();
-
-                    curr = if let Some(new) = curr.next_sibling() {
-                        tbody_children.push(RowDOM {
-                            t_root: 0,
-                            root: curr,
-                            id_node,
-                            label_node,
-                            delete_node,
-                            closure_select: None,
-                            closure_delete: None,
-                        });
-
-                        new
-                    } else {
-                        tbody_children.push(RowDOM {
-                            t_root: 0,
-                            root: curr,
-                            id_node,
-                            label_node,
-                            delete_node,
-                            closure_select: None,
-                            closure_delete: None,
-                        });
-
-                        break;
-                    }
-                }
-            }
-        };
-
-        let render_elem = TokenStream::new();
-        let new_elem = TokenStream::new();
-
-        let inner = quote! {
-            // select
-            let (ord, min) = match data_len.cmp(&dom_len) {
-                ord @ Ordering::Equal | ord @ Ordering::Greater => (ord, dom_len),
-                ord @ Ordering::Less => (ord, row_len),
-            };
-
-            // Update
-            for (dom, row) #vdom.iter_mut()
-                .take(min)
-                .zip(#data.take(min))
-                .filter(|(dom, _)| dom.t_root != 0)
-                {
-                    #update
-                }
-
-            match ord {
-                Ordering::Greater => {
-                    // Add
-                    for ele in #data.skip(dom_len) {
-                        // TODO: select insert point for fragments and insert_before or append_child
-                        #vdom.push(#new);
-                    }
-                }
-                Ordering::Less => {
-                    // Remove
-                    for dom in #vdom.drain(data_len..) {
-                        #parent.remove_child(&dom.root).unwrap_throw();
-                    }
-                }
-                Ordering::Equal => (),
-            }
-        };
-
-        // TODO: not in fragment
-        let body = quote! {
+        old_buff.push((
+            vars.clone(),
+            quote! {
+            let dom_len = #table.len();
+            let data_len = #args.size_hint().0;
             if data_len == 0 {
-                // Clear
-                #parent.set_text_content(None);
-                #vdom.clear()
+                self.#name_elem.set_text_content(None);
+                #table.clear()
             } else {
-                #inner
+                for (#dom, #expr) in #table
+                    .iter_mut()
+                    .zip(#args)
+                    .filter(|(dom, _)| dom.t_root != 0) { #render }
+
+                if dom_len < data_len {
+                    for row in self.data.iter().skip(dom_len) {
+                        #table.push(new_row!(row, self.tr, mb, self.tbody));
+                    }
+                } else {
+                    for dom in #table.drain(data_len..) {
+                        dom.root.remove()
+                    }
+                }
             }
-        };
-
-        let render = quote! {
-            let dom_len = #vdom_len;
-            let data_len = #data_len;
-            #body
-        };
-
-        let hydrate_elem = quote! {};
-
-        let hydrate = quote! {
-            assert_eq!(#vdom_len, #data_len);
-
-            // hydrate Each
-            for (dom, elem) in #vdom.iter_mut().zip(#data) {
-                #hydrate_elem
-            }
-        };
+            },
+        ));
+        self.buff_render = old_buff;
     }
 }

@@ -278,13 +278,13 @@ impl<'a> WASMCodeGen<'a> {
         let args = self.get_state_fields();
         self.build.extend(quote! {
             let #ident { #args } = yarte::from_str(&get_state()).unwrap_or_default();
-            let doc = yarte::web_sys::window().unwrap_throw().document().unwrap_throw();
+            let doc = yarte::web::window().unwrap_throw().document().unwrap_throw();
         });
     }
 
     fn hydrate_init(&mut self) {
         self.hydrate.extend(quote! {
-            let body = yarte::web_sys::window().unwrap_throw()
+            let body = yarte::web::window().unwrap_throw()
                 .document().unwrap_throw()
                 .body().unwrap_throw();
         });
@@ -445,13 +445,13 @@ impl<'a> WASMCodeGen<'a> {
                     self.count += 1;
                     let dom = match self.on.expect("Some parent") {
                         Parent::Body => self.get_black_box_ident(),
-                        Parent::Expr(_) => format_ident!("dom"),
+                        Parent::Expr(i) => format_ident!("dom_{}", i),
                         Parent::Head => panic!(""),
                     };
                     self.buff_render.push((
                         t,
                         quote! {
-                            dom.#name.set_text_content(Some(&#e));
+                            #dom.#name.set_text_content(Some(&#e));
                         },
                     ));
                     self.black_box.push(BlackBox {
@@ -473,24 +473,8 @@ impl<'a> WASMCodeGen<'a> {
         for (i, attr) in buff {
             match i {
                 Expression::Each(id, each) => {
-                    let vars = self.tree_map.get(id).cloned().unwrap_or_default();
-                    let parent = self.parent_node();
-                    let Each { body, .. } = &**each;
-                    let insert_point = self.insert_point(pos, o.clone());
-                    let node = self.on.unwrap();
-                    let v = &self.steps[..parent];
-                    let old_b = mem::take(&mut self.black_box);
-                    let mut old_buff = mem::take(&mut self.buff_render);
-
-                    self.do_step(body, *id);
-
-                    let name = format_ident!("Component{}", id);
-                    self.add_black_box_t_root();
-                    let black_box = self.black_box(&name);
-                    self.helpers.extend(black_box);
-                    self.black_box = old_b;
-                    old_buff.push((vars.clone(), self.empty_buff()));
-                    self.buff_render = old_buff;
+                    let _insert_point = self.insert_point(pos, o.clone());
+                    self.gen_each(*id, each, quote!())
                 }
                 Expression::Safe(id, _) | Expression::Unsafe(id, _) => {
                     let node = self.on.unwrap();
