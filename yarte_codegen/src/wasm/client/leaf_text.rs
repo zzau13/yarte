@@ -51,7 +51,7 @@ impl<'a> LeafTextBuilder<'a> {
                     Expression::Safe(id, e) | Expression::Unsafe(id, e) => {
                         let vars = self.tree_map.get(id).expect("Expression to be defined");
                         self.buff.extend(vars);
-                        self.buff_expr.push_str("{{}}");
+                        self.buff_expr.push_str("{}");
                         self.buff_args.push(*e.clone());
                     }
                     Expression::Each(id, e) => todo!(),
