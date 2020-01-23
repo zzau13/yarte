@@ -474,7 +474,7 @@ impl<'a> WASMCodeGen<'a> {
             match i {
                 Expression::Each(id, each) => {
                     let _insert_point = self.insert_point(pos, o.clone());
-                    self.gen_each(*id, each, quote!())
+                    self.gen_each(*id, each, pos.1 != 1, quote!())
                 }
                 Expression::Safe(id, _) | Expression::Unsafe(id, _) => {
                     let node = self.on.unwrap();
