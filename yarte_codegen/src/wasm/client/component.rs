@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::Ident;
 
-use yarte_dom::dom::{Attribute, DOMBuilder, Document, Element, ExprId, Node, ExprOrText};
+use yarte_dom::dom::{Attribute, DOMBuilder, Document, Element, ExprId, ExprOrText, Node};
 
 use super::{BlackBox, WASMCodeGen};
 use std::mem;
@@ -12,12 +12,12 @@ pub fn get_component(id: ExprId, doc: &Document, builder: &mut WASMCodeGen) {
 }
 
 const HEAD: &str = "n__";
+
 struct ComponentBuilder<'a, 'b> {
     builder: &'a mut WASMCodeGen<'b>,
     id: ExprId,
     count: usize,
     tokens: TokenStream,
-    children: Vec<Ident>,
 }
 
 impl<'a, 'b> ComponentBuilder<'a, 'b> {
@@ -27,7 +27,6 @@ impl<'a, 'b> ComponentBuilder<'a, 'b> {
             id,
             count: 0,
             tokens: TokenStream::new(),
-            children: vec![],
         }
     }
 
@@ -43,15 +42,15 @@ impl<'a, 'b> ComponentBuilder<'a, 'b> {
                     attrs,
                     children,
                 }) => {
-                    let id = format_ident!("{}{}", HEAD, self.count);
+                    let id = self.get_ident();
                     let tag = name.1.to_string();
-                    self.count += 1;
+
                     self.tokens.extend(quote! {
                         let #id = doc.create_element(#tag).unwrap_throw();
                     });
                     self.step(children, &id);
                     self.set_attrs(&id, attrs);
-                    self.empty_buff(&id);
+
                     self.tokens.extend(quote!(#id))
                 }
                 _ => todo!("no node element"),
@@ -85,22 +84,16 @@ impl<'a, 'b> ComponentBuilder<'a, 'b> {
                     attrs,
                     children,
                 }) => {
-                    let id = format_ident!("{}{}", HEAD, self.count);
-                    self.count += 1;
+                    let id = self.get_ident();
                     let tag = name.1.to_string();
-                    let old = mem::take(&mut self.children);
 
                     self.tokens.extend(quote! {
                         let #id = doc.create_element(#tag).unwrap_throw();
                         #p_id.append_child(&#id).unwrap_throw();
                     });
+                    self.set_attrs(&id, attrs);
 
                     self.step(children, &id);
-
-                    self.set_attrs(&id, attrs);
-                    self.empty_buff(&id);
-                    self.children = old;
-                    self.children.push(id)
                 }
                 Node::Elem(Element::Text(s)) => {
                     if doc.len() == 1 {
@@ -118,21 +111,30 @@ impl<'a, 'b> ComponentBuilder<'a, 'b> {
 
     fn set_attrs(&mut self, id: &Ident, attrs: &[Attribute]) {
         for attr in attrs {
-            let value = attr.value.iter().fold(String::new(), |mut acc, x| {
+            if attr.value.iter().all(|x| {
                 if let ExprOrText::Text(t) = x {
-                    acc.push_str(t)
+                    true
+                } else {
+                    false
                 }
+            }) {
+                let value = attr.value.iter().fold(String::new(), |mut acc, x| {
+                    if let ExprOrText::Text(t) = x {
+                        acc.push_str(t)
+                    }
 
-                acc
-            });
-            let name = &attr.name;
-            self.tokens.extend(quote!(#id.set_attribute(#name, #value).unwrap_throw();));
-
+                    acc
+                });
+                let name = &attr.name;
+                self.tokens
+                    .extend(quote!(#id.set_attribute(#name, #value).unwrap_throw();));
+            }
         }
     }
 
-    fn empty_buff(&mut self, base: &Ident) {
-        for child in self.children.drain(..) {
-        }
+    fn get_ident(&mut self) -> Ident {
+        let id = format_ident!("{}{}", HEAD, self.count);
+        self.count += 1;
+        id
     }
 }
