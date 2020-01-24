@@ -1,0 +1,7 @@
+# TODO: unique config file or composable
+[main]
+dir = "../templates"
+debug = "code"
+
+[debug]
+short = false

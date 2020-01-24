@@ -1,0 +1,12 @@
+[package]
+name = "model"
+version = "0.0.1"
+authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
+description = "Coverage for WASM applications"
+edition = "2018"
+license = "MIT/Apache-2.0"
+repository = "https://github.com/botika/yarte"
+workspace = ".."
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }

@@ -38,6 +38,7 @@ impl<'a> WASMCodeGen<'a> {
         });
 
         self.do_step(body, id);
+        self.component(id, body);
 
         let ty = format_ident!("Component{}", id);
         let name = format_ident!("ytable_{}", id);
@@ -88,22 +89,23 @@ impl<'a> WASMCodeGen<'a> {
         // TODO get parents dependency
         let check = quote!(d.t_root != 0);
 
+        // TODO: remove for fragments
         let body = quote! {
-        for (#dom, #expr) in #table
-                    .iter_mut()
-                    .zip(#args)
-                    .filter(|(d, _)| #check)
-                    { #render }
+            for (#dom, #expr) in #table
+                .iter_mut()
+                .zip(#args)
+                .filter(|(d, _)| #check)
+                { #render }
 
-                if dom_len < data_len {
-                    for row in #args.skip(dom_len) {
-                        #table.push(#new);
-                    }
-                } else {
-                    for d in #table.drain(data_len..) {
-                        d.root.remove()
-                    }
+            if dom_len < data_len {
+                for row in #args.skip(dom_len) {
+                    #table.push(#new);
                 }
+            } else {
+                for d in #table.drain(data_len..) {
+                    d.root.remove()
+                }
+            }
         };
 
         if fragment {

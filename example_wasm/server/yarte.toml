@@ -1,4 +1,5 @@
 [main]
+dir = "../templates"
 debug = "code"
 
 [debug]
