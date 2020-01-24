@@ -11,8 +11,9 @@
     </tr>
     {{# each fortunes }}
         <tr>
-            <td>{{id}}</td>
-            <td>{{super::head}} {{message}}</td>
+            <td class="col-id">{{id}}</td>
+            <td class="col-msg">{{super::head}} {{message}}</td>
+            <td class="another"><a class="button">Delete</a></td>
         </tr>
     {{/each }}
 </table>

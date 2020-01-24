@@ -7,6 +7,7 @@ use syn::{parse2, Expr, Ident};
 use yarte_dom::dom::{Each, ExprId};
 
 use super::{BlackBox, WASMCodeGen};
+use crate::wasm::client::component::get_component;
 
 impl<'a> WASMCodeGen<'a> {
     pub(super) fn gen_each(
@@ -38,7 +39,7 @@ impl<'a> WASMCodeGen<'a> {
         });
 
         self.do_step(body, id);
-        self.component(id, body);
+        get_component(id, body, self);
 
         let ty = format_ident!("Component{}", id);
         let name = format_ident!("ytable_{}", id);
