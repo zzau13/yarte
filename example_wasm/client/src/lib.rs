@@ -41,3 +41,9 @@ mod path {
     #[inline]
     pub(super) fn func(_app: &mut Test, _addr: &yarte::Addr<Test>) {}
 }
+
+#[wasm_bindgen(start)]
+pub fn start() {
+    let app = Test::start_default();
+    app.hydrate();
+}
