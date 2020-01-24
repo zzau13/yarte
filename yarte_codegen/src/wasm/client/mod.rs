@@ -1,6 +1,7 @@
 #![allow(warnings)]
 
 use std::{collections::HashMap, mem};
+use std::collections::HashSet;
 
 use markup5ever::local_name;
 use proc_macro2::TokenStream;
@@ -21,13 +22,13 @@ use yarte_hir::{Struct, HIR};
 
 use crate::CodeGen;
 
+mod component;
 mod each;
 mod if_else;
 mod leaf_text;
 mod messages;
 
 use self::leaf_text::get_leaf_text;
-use std::collections::HashSet;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Step {
@@ -64,6 +65,7 @@ pub struct WASMCodeGen<'a> {
     on: Option<Parent>,
     //
     buff_render: Vec<(HashSet<VarId>, TokenStream)>,
+    buff_component: Vec<(Ident, TokenStream)>,
     black_box: Vec<BlackBox>,
     bit_array: Vec<VarId>,
     tree_map: TreeMap,
@@ -118,19 +120,20 @@ impl Parse for PAttr {
 impl<'a> WASMCodeGen<'a> {
     pub fn new<'n>(s: &'n Struct<'n>) -> WASMCodeGen<'n> {
         WASMCodeGen {
-            build: TokenStream::new(),
-            render: TokenStream::new(),
-            hydrate: TokenStream::new(),
-            helpers: TokenStream::new(),
-            steps: vec![],
-            s,
-            black_box: vec![],
             bit_array: Vec::new(),
+            black_box: vec![],
+            buff_component: vec![],
+            buff_render: vec![],
+            build: TokenStream::new(),
+            count: 0,
+            helpers: TokenStream::new(),
+            hydrate: TokenStream::new(),
+            on: None,
+            render: TokenStream::new(),
+            s,
+            steps: vec![],
             tree_map: HashMap::new(),
             var_map: HashMap::new(),
-            buff_render: vec![],
-            on: None,
-            count: 0,
         }
     }
 
@@ -473,7 +476,10 @@ impl<'a> WASMCodeGen<'a> {
         for (i, attr) in buff {
             match i {
                 Expression::Each(id, each) => {
-                    let _insert_point = self.insert_point(pos, o.clone());
+                    let insert_point = match self.insert_point(pos, o.clone()) {
+                        InsertPoint::Append => quote!(append_child),
+                        _ => todo!(),
+                    };
                     self.gen_each(*id, each, pos.1 != 1, quote!())
                 }
                 Expression::Safe(id, _) | Expression::Unsafe(id, _) => {
@@ -546,6 +552,25 @@ impl<'a> WASMCodeGen<'a> {
         self.tree_map = tree_map;
         self.var_map = var_map;
     }
+
+    fn get_components(&mut self) -> TokenStream {
+        self.buff_component
+            .drain(..)
+            .fold(
+                <Punctuated<FieldValue, Token![,]>>::new(),
+                |mut acc, (i, t)| {
+                    acc.push(FieldValue {
+                        attrs: vec![],
+                        member: Member::Named(i),
+                        colon_token: Some(<Token![:]>::default()),
+                        expr: parse2(quote!({ #t })).unwrap(),
+                    });
+
+                    acc
+                },
+            )
+            .into_token_stream()
+    }
 }
 
 impl<'a> CodeGen for WASMCodeGen<'a> {
@@ -555,6 +580,15 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
         let initial_state = self.initial_state();
         let black_box_name = format_ident!("{}BlackBox", self.s.ident);
         let bb_fields = self.get_black_box_fields();
+        let ty_component: Type = parse2(quote!(yarte::web::Element)).unwrap();
+        for (i, _) in &self.buff_component {
+            self.black_box.push(BlackBox {
+                doc: "Component".to_string(),
+                name: i.clone(),
+                ty: ty_component.clone(),
+            })
+        }
+        let components = self.get_components();
         let black_box = self.black_box(&black_box_name);
         let args = self.get_state_fields();
         let bb_ident = self.get_black_box_ident();
@@ -565,7 +599,10 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
             Self {
                 #args,
                 #inner,
-                #bb_ident: #black_box_name { #bb_fields }
+                #bb_ident: #black_box_name {
+                    #bb_fields,
+                    #components
+                }
             }
         };
         let default = self.s.implement_head(

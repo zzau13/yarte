@@ -1,21 +1,22 @@
 [package]
-name = "test_wasm"
+name = "server"
 version = "0.0.1"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "Coverage for WASM applications"
 edition = "2018"
 license = "MIT/Apache-2.0"
 repository = "https://github.com/botika/yarte"
-[workspace]
-members = ["."]
+workspace = ".."
 
 [dependencies]
-yarte = { version = "*", path = "../yarte" }
-wasm-bindgen = "0.2"
+yarte = { version = "0.5", path = "../../yarte", features = ["with-actix-web", "wasm"] }
+model = { version = "*", path = "../model" }
 serde = { version = "1.0", features = ["derive"] }
 
-[dev-dependencies]
-wasm-bindgen-test = "0.3"
+env_logger = "0.7"
+
+actix-web = "2.0"
+actix-rt = "1.0"
 
 [build-dependencies]
-yarte = { version = "0.5", path = "../yarte" }
+yarte = { version = "0.5", path = "../../yarte", features = ["with-actix-web", "wasm"] }

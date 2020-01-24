@@ -1,25 +1,21 @@
-#![allow(warnings)]
-use serde::Deserialize;
+#![cfg(target_arch = "wasm32")]
+
 use wasm_bindgen::prelude::*;
-use wasm_bindgen_test::*;
+
 use yarte::Template;
 
-#[derive(Default, Deserialize)]
-struct Fortune {
-    id: i32,
-    message: String,
-}
+use model::Fortune;
 
 #[derive(Template)]
 #[template(path = "fortune.hbs", print = "code", mode = "wasm")]
-#[msg(enum Msg {
+#[msg(pub enum Msg {
     AnyMsg(usize),
     NewPoint { a: usize, b: usize },
     Ping,
     #[path::func]
     Other,
 })]
-struct Test {
+pub struct Test {
     fortunes: Vec<Fortune>,
     head: String,
     #[inner]
@@ -44,11 +40,4 @@ mod path {
     use super::*;
     #[inline]
     pub(super) fn func(_app: &mut Test, _addr: &yarte::Addr<Test>) {}
-}
-
-#[wasm_bindgen_test]
-fn test() {
-    let app = Test::start_default();
-    // Send init messages
-    app.hydrate();
 }
