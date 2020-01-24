@@ -1,7 +1,7 @@
 #![allow(warnings)]
 
-use std::{collections::HashMap, mem};
 use std::collections::HashSet;
+use std::{collections::HashMap, mem};
 
 use markup5ever::local_name;
 use proc_macro2::TokenStream;
