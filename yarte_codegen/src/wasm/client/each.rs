@@ -2,7 +2,7 @@ use std::mem;
 
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{parse2, Expr, FieldValue, Ident, Token};
+use syn::{parse2, Expr, ExprField, FieldValue, Ident, Token};
 
 use yarte_dom::dom::{Each, ExprId};
 
@@ -67,7 +67,7 @@ impl<'a> WASMCodeGen<'a> {
         }
         let new = self.write_steps(dom.clone());
 
-        self.build_each(&new, &name, &dom, &name_elem, &ty, &fields, &insert_point);
+        self.build_each(args, &new, &name, &dom, &name_elem, &ty, &fields);
         let new = self.new_each(
             &new,
             &component,
@@ -132,38 +132,33 @@ impl<'a> WASMCodeGen<'a> {
 
     fn build_each(
         &mut self,
+        args: &Expr,
         new: &TokenStream,
         table: &Ident,
         dom: &Ident,
         elem: &Ident,
         c_name: &Ident,
         fields: &Punctuated<FieldValue, Token![,]>,
-        insert_point: &InsertPoint,
     ) {
         // TODO: init element
-        let init = quote!(first_element_child());
-        let end_condition = match insert_point {
-            InsertPoint::Append => quote!(),
-            InsertPoint::LastBefore(_) => todo!(),
-        };
+        let args: TokenStream = quote!(#args)
+            .to_string()
+            .replace("self .", "")
+            .parse()
+            .unwrap();
+        let init = quote!(first_element_child().unwrap_throw());
         self.buff_build.extend(quote! {
-                let mut #table = vec![];
-                if let Some(mut #dom) = #elem.#init {
-                loop {
-                    #new
-
-                    #dom = if let Some(__new) = #dom.next_element_sibling() {
-                        #end_condition
-
-                        #table.push(#c_name { #fields });
-
-                        __new
-                    } else {
-                        #table.push(#c_name { #fields });
-
-                        break;
-                    }
-                }
+            let mut #table = vec![];
+            let mut _iter = #args;
+            if let Some(_) = _iter.next() {
+                let #dom = #elem.#init;
+                #new
+                #table.push(#c_name { #fields });
+            }
+            for _ in _iter {
+                let #dom = #table.last().unwrap().root.next_element_sibling().unwrap_throw();
+                #new
+                #table.push(#c_name { #fields });
             }
         });
     }
