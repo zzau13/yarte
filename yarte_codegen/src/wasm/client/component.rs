@@ -7,7 +7,7 @@ use yarte_dom::dom::{Attribute, DOMBuilder, Document, Element, ExprId, ExprOrTex
 use super::{BlackBox, WASMCodeGen};
 use std::mem;
 
-pub fn get_component(id: ExprId, doc: &Document, builder: &mut WASMCodeGen) {
+pub fn get_component(id: ExprId, doc: &Document, builder: &mut WASMCodeGen) -> Ident {
     ComponentBuilder::new(id, builder).build(doc)
 }
 
@@ -30,7 +30,7 @@ impl<'a, 'b> ComponentBuilder<'a, 'b> {
         }
     }
 
-    fn build(mut self, doc: &Document) {
+    fn build(mut self, doc: &Document) -> Ident {
         let ident = format_ident!("component_{}", self.id);
 
         let doc: Vec<&Node> = Self::filter(doc).collect();
@@ -59,7 +59,10 @@ impl<'a, 'b> ComponentBuilder<'a, 'b> {
             todo!("len +1")
         }
 
-        self.builder.buff_component.push((ident, self.tokens))
+        self.builder
+            .buff_component
+            .push((ident.clone(), self.tokens));
+        ident
     }
 
     fn filter(doc: &Document) -> impl Iterator<Item = &Node> {
