@@ -8,7 +8,9 @@ use yarte_dom::dom::{Each, ExprId};
 
 use super::{BlackBox, WASMCodeGen};
 use crate::wasm::client::component::get_component;
+use crate::wasm::client::InsertPoint;
 use syn::punctuated::Punctuated;
+use yarte_dom::dom_fmt::to_wasmfmt;
 
 impl<'a> WASMCodeGen<'a> {
     pub(super) fn gen_each(
@@ -21,7 +23,7 @@ impl<'a> WASMCodeGen<'a> {
             var,
         }: &Each,
         fragment: bool,
-        insert_point: TokenStream,
+        insert_point: InsertPoint,
     ) {
         // TODO: add Each to tree map
         let vars = self.tree_map.get(&id).cloned().unwrap_or_default();
@@ -56,12 +58,12 @@ impl<'a> WASMCodeGen<'a> {
         let table = quote!(#c_bb.#name);
         let elem = quote!(#c_bb.#name_elem);
 
-        let new2 = TokenStream::new();
         let new = self.write_steps(dom.clone());
-        self.build_each(&new, &name, &dom, &name_elem, &ty, &fields);
+        self.build_each(&new, &name, &dom, &name_elem, &ty, &fields, &insert_point);
+        let new = self.new_each(&new, &component, &fields, &ty, &c_bb, &dom, &insert_point);
         old_buff.push((
             vars.clone(),
-            self.render_each(table, args, expr, elem, dom, new2, fragment),
+            self.render_each(table, args, expr, elem, dom, new, fragment),
         ));
 
         self.helpers.extend(black_box);
@@ -80,6 +82,29 @@ impl<'a> WASMCodeGen<'a> {
 
         self.buff_render = old_buff;
         self.path_nodes.push((name_elem, path));
+        self.buff_render.clear();
+    }
+
+    fn new_each(
+        &self,
+        new: &TokenStream,
+        component: &Ident,
+        fields: &Punctuated<FieldValue, Token![,]>,
+        c_name: &Ident,
+        bb: &TokenStream,
+        root: &Ident,
+        insert_point: &InsertPoint,
+    ) -> TokenStream {
+        let render = self.buff_render.iter().map(|(_, x)| x);
+        quote! {
+             let #root = yarte::JsCast::unchecked_into::<yarte::web::Element>(#bb.#component
+                 .clone_node_with_deep(true)
+                 .unwrap_throw());
+             #new
+             let #root = #c_name { #fields };
+             #(#render)*
+             #root
+        }
     }
 
     fn build_each(
@@ -90,9 +115,14 @@ impl<'a> WASMCodeGen<'a> {
         elem: &Ident,
         c_name: &Ident,
         fields: &Punctuated<FieldValue, Token![,]>,
+        insert_point: &InsertPoint,
     ) {
+        // TODO: init element
         let init = quote!(first_element_child());
-        let end_condition = quote!();
+        let end_condition = match insert_point {
+            InsertPoint::Append => quote!(),
+            InsertPoint::LastBefore(_) => todo!(),
+        };
         self.buff_build.extend(quote! {
                 let mut #table = vec![];
                 if let Some(mut #dom) = #elem.#init {
@@ -100,9 +130,9 @@ impl<'a> WASMCodeGen<'a> {
                     #new
 
                     #dom = if let Some(__new) = #dom.next_element_sibling() {
-                        #table.push(#c_name { #fields });
-
                         #end_condition
+
+                        #table.push(#c_name { #fields });
 
                         __new
                     } else {
@@ -125,7 +155,7 @@ impl<'a> WASMCodeGen<'a> {
         new: TokenStream,
         fragment: bool,
     ) -> TokenStream {
-        let render = self.empty_buff();
+        let render = self.write_render();
         // TODO get parents dependency
         let check = quote!(d.t_root != 0);
 
@@ -138,7 +168,7 @@ impl<'a> WASMCodeGen<'a> {
                 { #render }
 
             if dom_len < data_len {
-                for row in #args.skip(dom_len) {
+                for #expr in #args.skip(dom_len) {
                     #table.push({ #new });
                 }
             } else {
@@ -148,16 +178,22 @@ impl<'a> WASMCodeGen<'a> {
             }
         };
 
+        // TODO: #[filter] or child is `if`
+        let data_len = if true {
+            quote!(let data_len = #args.size_hint().0;)
+        } else {
+            quote!(let data_len = #args.fold(0. |acc, _| acc + 1);)
+        };
         if fragment {
             quote! {
                 let dom_len = #table.len();
-                let data_len = #args.size_hint().0;
+                #data_len
                 #body
             }
         } else {
             quote! {
             let dom_len = #table.len();
-            let data_len = #args.size_hint().0;
+            #data_len;
             if data_len == 0 {
                 #elem.set_text_content(None);
                 #table.clear()

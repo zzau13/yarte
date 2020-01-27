@@ -396,7 +396,8 @@ impl<'a> WASMCodeGen<'a> {
             }
             _ => panic!("Need html at root"),
         }
-        let tokens = self.empty_buff();
+        let tokens = self.write_render();
+        self.buff_render.clear();
         self.render.extend(tokens);
     }
 
@@ -494,10 +495,7 @@ impl<'a> WASMCodeGen<'a> {
         for (i, attr) in buff {
             match i {
                 Expression::Each(id, each) => {
-                    let insert_point = match self.insert_point(pos, o.clone()) {
-                        InsertPoint::Append => quote!(append_child),
-                        _ => todo!(),
-                    };
+                    let insert_point = self.insert_point(pos, o.clone());
                     self.gen_each(*id, each, pos.1 != 1, insert_point)
                 }
                 Expression::Safe(id, _) | Expression::Unsafe(id, _) => {
@@ -552,10 +550,10 @@ impl<'a> WASMCodeGen<'a> {
         }
     }
 
-    #[allow(warnings)]
-    fn empty_buff(&mut self) -> TokenStream {
+    // TODO: checks
+    fn write_render(&self) -> TokenStream {
         let mut tokens = TokenStream::new();
-        for (_i, t) in self.buff_render.drain(..) {
+        for (_i, t) in &self.buff_render {
             tokens.extend(quote!(if true { #t }));
         }
 

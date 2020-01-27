@@ -70,7 +70,9 @@ pub mod serde_json {
 #[cfg(target_arch = "wasm32")]
 pub mod wasm {
     pub use serde_json::from_str;
+    pub use wasm_bindgen::{JsCast, UnwrapThrowExt};
     pub use web_sys as web;
 }
+
 #[cfg(target_arch = "wasm32")]
 pub use self::wasm::*;

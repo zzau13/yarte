@@ -37,6 +37,7 @@ futures = { version = "0.3", optional = true }
 [target.'cfg(target_arch="wasm32")'.dependencies]
 yarte_wasm_app = { version = "0.0", path = "../yarte_wasm_app" }
 serde_json = "1.0"
+wasm-bindgen = "0.2"
 [target.'cfg(target_arch="wasm32")'.dependencies.web-sys]
 version = "0.3"
 features = [
