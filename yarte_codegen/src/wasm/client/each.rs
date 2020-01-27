@@ -7,8 +7,7 @@ use syn::{parse2, Expr, FieldValue, Ident, Token};
 use yarte_dom::dom::{Each, ExprId};
 
 use super::{BlackBox, WASMCodeGen};
-use crate::wasm::client::component::get_component;
-use crate::wasm::client::{InsertPoint, Step};
+use crate::wasm::client::{component::get_component, InsertPoint, Step};
 use syn::punctuated::Punctuated;
 use yarte_dom::dom_fmt::to_wasmfmt;
 
