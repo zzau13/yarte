@@ -11,7 +11,7 @@ pub fn get_component(id: ExprId, doc: &Document, builder: &mut WASMCodeGen) -> I
     ComponentBuilder::new(id, builder).build(doc)
 }
 
-const HEAD: &str = "n__";
+const HEAD: &str = "__n__";
 
 struct ComponentBuilder<'a, 'b> {
     builder: &'a mut WASMCodeGen<'b>,
