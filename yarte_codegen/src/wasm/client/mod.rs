@@ -617,7 +617,13 @@ impl<'a> WASMCodeGen<'a> {
             buff.push((parent.clone(), ident, path));
         }
         for (ident, path) in iter {
-            buff.push((parent.clone(), ident, path));
+            let (i, _, last) = buff.last().unwrap();
+            if path.starts_with(last) {
+                buff.push((i.clone(), ident, path[last.len()..].to_vec()));
+            } else {
+                // TODO: shared nodes in paths
+                buff.push((parent.clone(), ident, path));
+            }
         }
 
         let mut tokens = TokenStream::new();
