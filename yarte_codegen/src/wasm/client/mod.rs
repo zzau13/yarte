@@ -1,7 +1,9 @@
 #![allow(warnings)]
 
-use std::collections::HashSet;
-use std::{collections::HashMap, mem};
+use std::{
+    collections::{HashMap, HashSet},
+    mem,
+};
 
 use markup5ever::local_name;
 use proc_macro2::TokenStream;
@@ -617,7 +619,7 @@ impl<'a> WASMCodeGen<'a> {
             buff.push((parent.clone(), ident, path));
         }
         for (ident, path) in iter {
-            let (i, _, last) = buff.last().unwrap();
+            let (_, i, last) = buff.last().unwrap();
             if path.starts_with(last) {
                 buff.push((i.clone(), ident, path[last.len()..].to_vec()));
             } else {
