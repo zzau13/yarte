@@ -8,7 +8,7 @@ use yarte_dom::dom::{Each, ExprId};
 
 use super::{BlackBox, WASMCodeGen};
 use crate::wasm::client::component::get_component;
-use crate::wasm::client::InsertPoint;
+use crate::wasm::client::{InsertPoint, Step};
 use syn::punctuated::Punctuated;
 use yarte_dom::dom_fmt::to_wasmfmt;
 
@@ -58,9 +58,27 @@ impl<'a> WASMCodeGen<'a> {
         let table = quote!(#c_bb.#name);
         let elem = quote!(#c_bb.#name_elem);
 
+        // Remove marker
+        for (_, i) in self.path_nodes.iter_mut() {
+            match i.first() {
+                Some(Step::FirstChild) => (),
+                _ => todo!(),
+            }
+            i.remove(0);
+        }
         let new = self.write_steps(dom.clone());
+
         self.build_each(&new, &name, &dom, &name_elem, &ty, &fields, &insert_point);
-        let new = self.new_each(&new, &component, &fields, &ty, &c_bb, &dom, &insert_point);
+        let new = self.new_each(
+            &new,
+            &component,
+            &fields,
+            &ty,
+            &c_bb,
+            &dom,
+            &elem,
+            &insert_point,
+        );
         old_buff.push((
             vars.clone(),
             self.render_each(table, args, expr, elem, dom, new, fragment),
@@ -82,7 +100,6 @@ impl<'a> WASMCodeGen<'a> {
 
         self.buff_render = old_buff;
         self.path_nodes.push((name_elem, path));
-        self.buff_render.clear();
     }
 
     fn new_each(
@@ -93,8 +110,14 @@ impl<'a> WASMCodeGen<'a> {
         c_name: &Ident,
         bb: &TokenStream,
         root: &Ident,
+        parent: &TokenStream,
         insert_point: &InsertPoint,
     ) -> TokenStream {
+        // TODO: fragments
+        let insert_point = match insert_point {
+            InsertPoint::Append => quote!(#parent.append_child(&#root.root).unwrap_throw();),
+            InsertPoint::LastBefore(_) => todo!(),
+        };
         let render = self.buff_render.iter().map(|(_, x)| x);
         quote! {
              let #root = yarte::JsCast::unchecked_into::<yarte::web::Element>(#bb.#component
@@ -103,6 +126,7 @@ impl<'a> WASMCodeGen<'a> {
              #new
              let #root = #c_name { #fields };
              #(#render)*
+             #insert_point
              #root
         }
     }
