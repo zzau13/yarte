@@ -19,7 +19,8 @@ impl<'a> ResolveEach<'a> {
         ResolveEach { builder, id }
     }
 
-    fn resolve(mut self, expr: &'a Each) -> VarId {
+    fn resolve(mut self, Each { args, body, expr }: &'a Each) -> VarId {
+        self.visit_expr(args);
         0
     }
 }

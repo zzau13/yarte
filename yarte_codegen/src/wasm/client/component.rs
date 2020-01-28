@@ -1,3 +1,5 @@
+use std::mem;
+
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::Ident;
@@ -5,7 +7,6 @@ use syn::Ident;
 use yarte_dom::dom::{Attribute, DOMBuilder, Document, Element, ExprId, ExprOrText, Node};
 
 use super::{BlackBox, WASMCodeGen};
-use std::mem;
 
 pub fn get_component(id: ExprId, doc: &Document, builder: &mut WASMCodeGen) -> Ident {
     ComponentBuilder::new(id, builder).build(doc)
@@ -104,7 +105,7 @@ impl<'a, 'b> ComponentBuilder<'a, 'b> {
                             #p_id.set_text_content(Some(#s));
                         })
                     } else {
-                        todo!()
+                        todo!("text +1")
                     }
                 }
                 _ => (),

@@ -14,6 +14,11 @@
             <td class="col-id">{{id}}</td>
             <td class="col-msg">{{super::head}} {{message}}</td>
             <td class="another"><a class="button">Delete</a></td>
+            {{# each foo }}
+                <td>{{ this }}</td>
+            {{/each }}
+            <td class="another"><a class="button">Foo</a></td>
+            <td class="another"><a class="button">Bar</a></td>
         </tr>
     {{/each }}
 </table>

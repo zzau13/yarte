@@ -61,7 +61,9 @@ impl<'a> Visit<'a> for ResolveExpr<'a> {
     fn visit_expr_path(&mut self, ExprPath { path, .. }: &'a ExprPath) {
         if path.segments.len() == 1 {
             let name = quote!(#path).to_string();
-            self.add(name);
+            if !name.chars().next().unwrap().is_uppercase() {
+                self.add(name);
+            }
         }
     }
 }

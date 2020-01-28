@@ -25,6 +25,8 @@ async fn index() -> impl Responder {
         fortunes: vec![Fortune {
             id: 0,
             message: "foo".to_string(),
+            foo: (0..10).iter().collect(),
+            bar: (0..5).iter().map(|x| Item { fol: x }).collect()
         }],
         head: "bar".to_string(),
     }
