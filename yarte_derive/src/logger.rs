@@ -32,7 +32,7 @@ fn logger(s: &str, path: String, option: &PrintOption) {
     // Ignore any errors.
     let _status = Command::new(rustfmt)
         .arg("--config")
-        .arg("format_strings=true")
+        .arg("format_strings=true,max_width=120")
         .args(&["--edition", "2018"])
         .arg(&outfile_path)
         .stderr(Stdio::null())

@@ -3,6 +3,7 @@
 use std::{
     collections::{HashMap, HashSet},
     mem,
+    slice::Iter,
 };
 
 use markup5ever::local_name;
@@ -58,7 +59,30 @@ pub enum Parent {
 #[derive(Clone, Debug)]
 pub enum InsertPoint {
     Append,
-    LastBefore(Vec<InsertPath>),
+    LastBefore(Vec<InsertPath>, Vec<InsertPath>),
+}
+
+pub struct Len {
+    base: usize,
+    expr: Vec<ExprId>,
+}
+
+impl From<Vec<InsertPath>> for Len {
+    fn from(i: Vec<InsertPath>) -> Self {
+        use InsertPath::*;
+        let base = i.iter().fold(0, |acc, x| match x {
+            Before => acc + 1,
+            _ => acc,
+        });
+        let expr = i.into_iter().fold(vec![], |mut acc, x| {
+            if let Expr(i) = x {
+                acc.push(i);
+            }
+            acc
+        });
+
+        Len { base, expr }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -74,6 +98,7 @@ pub struct WASMCodeGen<'a> {
     hydrate: TokenStream,
     helpers: TokenStream,
     buff_render: Vec<(HashSet<VarId>, TokenStream)>,
+    buff_new: Vec<TokenStream>,
     buff_component: Vec<(Ident, TokenStream)>,
     buff_build: TokenStream,
     black_box: Vec<BlackBox>,
@@ -149,10 +174,27 @@ impl<'a> WASMCodeGen<'a> {
             tree_map: HashMap::new(),
             var_map: HashMap::new(),
             path_nodes: vec![],
+            buff_new: vec![],
         }
     }
 
-    fn initial_state(&self) -> TokenStream {
+    fn add_black_box_t_root(&mut self) {
+        let len = self.bit_array.len();
+        let base = match len {
+            0..=8 => 8,
+            9..=16 => 16,
+            17..=32 => 32,
+            _ => todo!(),
+        };
+        self.black_box.push(BlackBox {
+            doc: "Difference tree".to_string(),
+            name: format_ident!("t_root"),
+            ty: parse_str(&format!("u{}", base)).unwrap(),
+        });
+    }
+
+    // Getters
+    fn get_initial_state(&self) -> TokenStream {
         let attr: PAttr = parse2(quote!(#[serde(default)])).unwrap();
         let fields = self
             .s
@@ -178,36 +220,52 @@ impl<'a> WASMCodeGen<'a> {
         }
     }
 
-    fn black_box(&mut self, name: &Ident) -> TokenStream {
-        let fields = self.black_box.drain(..).map(Into::into).fold(
-            Punctuated::<Field, Token![,]>::new(),
-            |mut acc, x| {
-                acc.push(x);
-                acc
-            },
-        );
-
-        quote! {
-            #[doc = "Internal elements and difference tree"]
-            pub struct #name {
-                #fields
+    fn get_insert_point<'b, F: Iterator<Item = &'b Node>>(
+        &self,
+        pos: (usize, usize),
+        o: F,
+    ) -> InsertPoint {
+        if pos.0 + 1 == pos.1 {
+            InsertPoint::Append
+        } else {
+            let mut head = Vec::with_capacity(pos.0 + 1);
+            let mut tail = Vec::with_capacity(pos.1 - 1 - pos.0);
+            let mut o = o.enumerate();
+            loop {
+                match o.next() {
+                    Some((i, e)) => match e {
+                        Node::Elem(Element::Node { .. }) => {
+                            if i > pos.0 {
+                                tail.push(InsertPath::Before);
+                            } else {
+                                head.push(InsertPath::Before);
+                            }
+                        }
+                        Node::Expr(Expression::Each(id, _))
+                        | Node::Expr(Expression::IfElse(id, _)) => {
+                            if i > pos.0 {
+                                tail.push(InsertPath::Expr(*id));
+                            } else {
+                                head.push(InsertPath::Expr(*id));
+                            }
+                        }
+                        _ => (),
+                    },
+                    None => break,
+                }
             }
+            InsertPoint::LastBefore(head, tail)
         }
     }
 
-    fn add_black_box_t_root(&mut self) {
-        let len = self.bit_array.len();
-        let base = match len {
-            0..=8 => 8,
-            9..=16 => 16,
-            17..=32 => 32,
-            _ => todo!(),
-        };
-        self.black_box.push(BlackBox {
-            doc: "Difference tree".to_string(),
-            name: format_ident!("t_root"),
-            ty: parse_str(&format!("u{}", base)).unwrap(),
-        });
+    fn get_parent_node(&mut self) -> usize {
+        self.steps
+            .iter()
+            .rposition(|x| match x {
+                Step::FirstChild => true,
+                _ => false,
+            })
+            .unwrap_or_default()
     }
 
     fn get_black_box_fields(&mut self, dom: &Ident) -> Punctuated<FieldValue, Token![,]> {
@@ -299,7 +357,50 @@ impl<'a> WASMCodeGen<'a> {
         )
     }
 
-    fn get_black_box_ident(&self) -> Ident {
+    fn get_current_black_box(&self) -> TokenStream {
+        match self.on.as_ref().expect("Some parent") {
+            Parent::Expr(id) => {
+                let ident = Self::get_vdom_ident(id);
+                quote!(#ident)
+            }
+            _ => {
+                let ident = self.get_global_bbox_ident();
+                quote!(self.#ident)
+            }
+        }
+    }
+
+    #[inline]
+    fn get_table_dom_ident(id: &ExprId) -> Ident {
+        const TABLE_DOM: &str = "ytable_dom__";
+        format_ident!("{}{}", TABLE_DOM, id)
+    }
+
+    #[inline]
+    fn get_table_ident(id: &ExprId) -> Ident {
+        const TABLE: &str = "ytable__";
+        format_ident!("{}{}", TABLE, id)
+    }
+
+    #[inline]
+    fn get_vdom_ident(id: &ExprId) -> Ident {
+        const ELEM: &str = "dom__";
+        format_ident!("{}{}", ELEM, id)
+    }
+
+    #[inline]
+    fn get_field_root_ident() -> Ident {
+        const ROOT: &str = "root";
+        format_ident!("{}", ROOT)
+    }
+
+    #[inline]
+    fn get_component_ty_ident(id: &ExprId) -> Ident {
+        const TY: &str = "Component";
+        format_ident!("{}{}", TY, id)
+    }
+
+    fn get_global_bbox_ident(&self) -> Ident {
         self.s
             .fields
             .iter()
@@ -313,6 +414,7 @@ impl<'a> WASMCodeGen<'a> {
             .expect("Black box field")
     }
 
+    // Inits
     fn build_init(&mut self) {
         let ident = format_ident!("{}InitialState", self.s.ident);
         let args = self.get_state_fields();
@@ -331,7 +433,7 @@ impl<'a> WASMCodeGen<'a> {
     }
 
     fn render_init(&mut self) {
-        let name = self.get_black_box_ident();
+        let name = self.get_global_bbox_ident();
         self.render.extend(quote! {
             if self.#name.t_root == 0 {
                 return;
@@ -368,30 +470,32 @@ impl<'a> WASMCodeGen<'a> {
                     _ => acc,
                 });
                 if let Some(head) = head {
-                    self.on = Some(Parent::Head);
+                    let on = self.on.replace(Parent::Head);
                     self.step(head);
                     if !self.path_nodes.is_empty() {
                         let ident = format_ident!("__yhead");
                         self.build
                             .extend(quote!(let #ident = doc.head().unwrap_throw();));
-                        let tokens = self.write_steps(ident);
+                        let tokens = self.write_steps(quote!(#ident));
                         self.build.extend(tokens);
                         self.build.extend(mem::take(&mut self.buff_build));
+                        self.path_nodes.clear();
                     }
-                    self.on.take().unwrap();
+                    self.on = on;
                 }
                 if let Some(body) = body {
-                    self.on = Some(Parent::Body);
+                    let on = self.on.replace(Parent::Body);
                     self.step(body);
                     if !self.path_nodes.is_empty() {
                         let ident = format_ident!("__ybody");
                         self.build
                             .extend(quote!(let #ident = doc.body().unwrap_throw();));
-                        let tokens = self.write_steps(ident);
+                        let tokens = self.write_steps(quote!(#ident));
                         self.build.extend(tokens);
-                        self.build.extend(mem::take(&mut self.buff_build));
+                        //                        self.build.extend(mem::take(&mut self.buff_build));
+                        self.path_nodes.clear();
                     }
-                    self.on.take().unwrap();
+                    self.on = on;
                 } else {
                     panic!("Need <body> tag")
                 }
@@ -403,6 +507,7 @@ impl<'a> WASMCodeGen<'a> {
         self.render.extend(tokens);
     }
 
+    // Main recursive loop
     fn step(&mut self, doc: &Document) {
         let last_node = self.steps.len();
         let len = doc.iter().fold(0, |acc, x| match x {
@@ -442,24 +547,7 @@ impl<'a> WASMCodeGen<'a> {
         }
     }
 
-    fn parent_node(&mut self) -> usize {
-        self.steps
-            .iter()
-            .rposition(|x| match x {
-                Step::FirstChild => true,
-                _ => false,
-            })
-            .unwrap_or_default()
-    }
-
-    fn do_step(&mut self, body: &Document, id: ExprId) {
-        let on = self.on.replace(Parent::Expr(id));
-        let steps = mem::take(&mut self.steps);
-        self.step(body);
-        self.on = on;
-        self.steps = steps;
-    }
-
+    // Resolve
     #[inline]
     fn resolve_node<'b, F: Iterator<Item = &'b Node> + Clone>(
         &mut self,
@@ -482,7 +570,7 @@ impl<'a> WASMCodeGen<'a> {
                     }
                 }
                 if all_children_text(children) {
-                    self.get_leaf_text(children, step.expect("Some step"));
+                    self.write_leaf_text(children, step.expect("Some step"));
                 } else {
                     self.steps.push(step.expect("Some step"));
                     self.step(children);
@@ -497,69 +585,30 @@ impl<'a> WASMCodeGen<'a> {
         for (i, attr) in buff {
             match i {
                 Expression::Each(id, each) => {
-                    let insert_point = self.insert_point(pos, o.clone());
+                    let insert_point = self.get_insert_point(pos, o.clone());
                     self.gen_each(*id, each, pos.1 != 1, insert_point)
                 }
-                Expression::Safe(id, _) | Expression::Unsafe(id, _) => {
-                    let node = self.on.unwrap();
-                    let vars = self.tree_map.get(id).cloned().unwrap_or_default();
-                }
+                Expression::Safe(id, _) | Expression::Unsafe(id, _) => todo!("resolve expressions"),
                 Expression::IfElse(id, if_else) => {
-                    todo!();
+                    todo!("resolve if else block expresion");
                     let IfElse { ifs, if_else, els } = &**if_else;
 
-                    self.if_block(ifs, *id);
+                    self.resolve_if_block(ifs, *id);
                     for b in if_else {
-                        self.if_block(b, *id);
+                        self.resolve_if_block(b, *id);
                     }
                     if let Some(body) = els {
-                        self.do_step(body, *id);
+                        todo!()
                     }
                 }
-                Expression::Local(..) => todo!(),
+                Expression::Local(..) => todo!("resolve local expression"),
             }
         }
     }
 
     #[inline]
-    fn if_block(&mut self, IfBlock { block, .. }: &IfBlock, id: ExprId) {
-        self.do_step(block, id);
-    }
-
-    fn insert_point<'b, F: Iterator<Item = &'b Node>>(
-        &self,
-        pos: (usize, usize),
-        o: F,
-    ) -> InsertPoint {
-        if pos.0 + 1 == pos.1 {
-            InsertPoint::Append
-        } else {
-            let mut buff = Vec::with_capacity(pos.1 - 1 - pos.0);
-            let o: Vec<&Node> = o.collect();
-            for i in o.iter().skip(pos.0 + 1).rev() {
-                match i {
-                    Node::Elem(Element::Node { .. }) => {
-                        buff.push(InsertPath::Before);
-                    }
-                    Node::Expr(Expression::Each(id, _)) | Node::Expr(Expression::IfElse(id, _)) => {
-                        buff.push(InsertPath::Expr(*id));
-                    }
-                    _ => (),
-                }
-            }
-
-            InsertPoint::LastBefore(buff)
-        }
-    }
-
-    // TODO: checks
-    fn write_render(&self) -> TokenStream {
-        let mut tokens = TokenStream::new();
-        for (_i, t) in &self.buff_render {
-            tokens.extend(quote!(if true { #t }));
-        }
-
-        tokens
+    fn resolve_if_block(&mut self, IfBlock { block, .. }: &IfBlock, id: ExprId) {
+        todo!()
     }
 
     fn resolve_tree_var(&mut self, tree_map: TreeMap, var_map: VarMap) {
@@ -571,7 +620,25 @@ impl<'a> WASMCodeGen<'a> {
         self.var_map = var_map;
     }
 
-    fn get_components(&mut self) -> TokenStream {
+    // Clear buffer and return it
+    fn empty_black_box(&mut self, name: &Ident) -> TokenStream {
+        let fields = self.black_box.drain(..).map(Into::into).fold(
+            Punctuated::<Field, Token![,]>::new(),
+            |mut acc, x| {
+                acc.push(x);
+                acc
+            },
+        );
+
+        quote! {
+            #[doc = "Internal elements and difference tree"]
+            pub struct #name {
+                #fields
+            }
+        }
+    }
+
+    fn empty_components(&mut self) -> TokenStream {
         self.buff_component
             .drain(..)
             .fold(
@@ -590,14 +657,25 @@ impl<'a> WASMCodeGen<'a> {
             .into_token_stream()
     }
 
-    fn get_leaf_text(&mut self, children: &Document, step: Step) {
+    // Writes current state
+    // TODO: checks
+    fn write_render(&self) -> TokenStream {
+        let mut tokens = TokenStream::new();
+        for (_i, t) in &self.buff_render {
+            tokens.extend(quote!(if true { #t }));
+        }
+
+        tokens
+    }
+
+    fn write_leaf_text(&mut self, children: &Document, step: Step) {
         let (t, e) = get_leaf_text(children, &self.tree_map, &self.var_map);
         let name = format_ident!("ynode__{}", self.count);
-        let black_box_name = self.get_black_box_ident();
+        let black_box_name = self.get_global_bbox_ident();
         self.count += 1;
-        let dom = match self.on.expect("Some parent") {
-            Parent::Body => self.get_black_box_ident(),
-            Parent::Expr(i) => format_ident!("dom__{}", i),
+        let dom = match self.on.as_ref().expect("Some parent") {
+            Parent::Body => self.get_global_bbox_ident(),
+            Parent::Expr(i) => Self::get_vdom_ident(i),
             Parent::Head => panic!(""),
         };
         self.buff_render
@@ -612,20 +690,27 @@ impl<'a> WASMCodeGen<'a> {
         });
     }
 
-    fn write_steps(&mut self, parent: Ident) -> TokenStream {
+    fn write_steps(&mut self, parent: TokenStream) -> TokenStream {
         let mut buff = vec![];
-        let mut iter = self.path_nodes.drain(..);
+        let mut stack = vec![];
+        let mut iter = self.path_nodes.iter();
         if let Some((ident, path)) = iter.next() {
-            buff.push((parent.clone(), ident, path));
+            buff.push((parent.clone(), ident.clone(), path.clone()));
+            stack.push((ident, path))
         }
         for (ident, path) in iter {
-            let (_, i, last) = buff.last().unwrap();
-            if path.starts_with(last) {
-                buff.push((i.clone(), ident, path[last.len()..].to_vec()));
-            } else {
-                // TODO: shared nodes in paths
-                buff.push((parent.clone(), ident, path));
+            let mut check = true;
+            for (i, last) in stack.iter().rev() {
+                if path.starts_with(last) {
+                    buff.push((quote!(#i), ident.clone(), path[last.len()..].to_vec()));
+                    check = false;
+                    break;
+                }
             }
+            if check {
+                buff.push((parent.clone(), ident.clone(), path.clone()));
+            }
+            stack.push((ident, path))
         }
 
         let mut tokens = TokenStream::new();
@@ -643,7 +728,7 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
     fn gen(&mut self, ir: Vec<HIR>) -> TokenStream {
         self.init(ir.into());
 
-        let initial_state = self.initial_state();
+        let initial_state = self.get_initial_state();
         let black_box_name = format_ident!("{}BlackBox", self.s.ident);
         let bb_fields = self.get_black_box_fields(&format_ident!("root"));
         let ty_component: Type = parse2(quote!(yarte::web::Element)).unwrap();
@@ -654,14 +739,14 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
                 ty: ty_component.clone(),
             })
         }
-        let components = self.get_components();
-        let black_box = self.black_box(&black_box_name);
+        let components = self.empty_components();
+        let black_box = self.empty_black_box(&black_box_name);
         let args = self.get_state_fields();
-        let bb_ident = self.get_black_box_ident();
+        let bb_ident = self.get_global_bbox_ident();
         let inner = self.get_inner();
-        let build = &self.build;
+        // TODO
+        //        let build = &self.build;
         let build = quote! {
-            #build
             Self {
                 #args,
                 #inner,
