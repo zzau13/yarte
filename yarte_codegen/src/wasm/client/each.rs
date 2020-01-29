@@ -124,19 +124,19 @@ impl<'a> WASMCodeGen<'a> {
 
         self.buff_new.push(if let Some(cached) = cached {
             quote! {
-            let __cached__ = #cached;
-            let mut #table: Vec<#component_ty> = vec![];
-            for #expr in #args.skip(dom_len) {
-                #table.push({ #new });
+                let __cached__ = #cached;
+                let mut #table: Vec<#component_ty> = vec![];
+                for #expr in #args.skip(dom_len) {
+                    #table.push({ #new });
+                }
             }
-        }
         } else {
             quote! {
-            let mut #table: Vec<#component_ty> = vec![];
-            for #expr in #args.skip(dom_len) {
-                    #table.push({ #new });
+                let mut #table: Vec<#component_ty> = vec![];
+                for #expr in #args.skip(dom_len) {
+                        #table.push({ #new });
+                }
             }
-        }
         });
         self.helpers.extend(black_box);
 
@@ -173,10 +173,11 @@ impl<'a> WASMCodeGen<'a> {
         let steps = self.get_steps(quote!(#tmp));
         let fields = self.get_black_box_fields(&tmp);
 
-        let (insert_point, cached)= match insert_point {
-            InsertPoint::Append(_) => {
-                (quote!(#table_dom.append_child(&#vdom.#froot).unwrap_throw();), None)
-            }
+        let (insert_point, cached) = match insert_point {
+            InsertPoint::Append(_) => (
+                quote!(#table_dom.append_child(&#vdom.#froot).unwrap_throw();),
+                None,
+            ),
             InsertPoint::LastBefore(head, _tail) => {
                 let len: Len = head.to_vec().into();
                 let base = len.base as u32 + 1;
@@ -192,22 +193,27 @@ impl<'a> WASMCodeGen<'a> {
 
                 (
                     quote!(#table_dom.insert_before(&#vdom.#froot, __cached__.as_ref()).unwrap_throw();),
-                    Some(quote!(#table_dom.children().item(#tokens).map(yarte::JsCast::unchecked_into::<yarte::web::Node>)))
+                    Some(
+                        quote!(#table_dom.children().item(#tokens).map(yarte::JsCast::unchecked_into::<yarte::web::Node>)),
+                    ),
                 )
             }
         };
 
         let build = &self.buff_new;
-        (quote! {
-             let #tmp = yarte::JsCast::unchecked_into::<yarte::web::Element>(self.#bb.#component
-                 .clone_node_with_deep(true)
-                 .unwrap_throw());
-             #steps
-             #(#build)*
-             let #vdom = #component_ty { #fields };
-             #insert_point
-             #vdom
-        }, cached)
+        (
+            quote! {
+                 let #tmp = yarte::JsCast::unchecked_into::<yarte::web::Element>(self.#bb.#component
+                     .clone_node_with_deep(true)
+                     .unwrap_throw());
+                 #steps
+                 #(#build)*
+                 let #vdom = #component_ty { #fields };
+                 #insert_point
+                 #vdom
+            },
+            cached,
+        )
     }
 
     fn build_each(
@@ -272,17 +278,17 @@ impl<'a> WASMCodeGen<'a> {
         // TODO: remove component method
         let new_block = if let Some(cached) = &cached {
             quote! {
-            let __cached__ = #cached;
-            for #expr in #args.skip(dom_len) {
-                #table.push({ #new });
+                let __cached__ = #cached;
+                for #expr in #args.skip(dom_len) {
+                    #table.push({ #new });
+                }
             }
-        }
         } else {
             quote! {
-            for #expr in #args.skip(dom_len) {
-                    #table.push({ #new });
+                for #expr in #args.skip(dom_len) {
+                        #table.push({ #new });
+                }
             }
-        }
         };
         let body = quote! {
             for (#vdom, #expr) in #table
