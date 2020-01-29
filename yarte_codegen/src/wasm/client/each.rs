@@ -1,7 +1,7 @@
 use std::mem;
 
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{format_ident, quote};
 use syn::{parse2, Expr, Ident};
 
 use yarte_dom::dom::{Each, ExprId};
@@ -64,15 +64,6 @@ impl<'a> WASMCodeGen<'a> {
             }
         }
 
-        let new_build = self.build_each(
-            quote!(#args),
-            expr,
-            &component_ty,
-            &insert_point,
-            &vdom,
-            &table,
-            &table_dom,
-        );
         // TODO: remove self
         let build_args: TokenStream = quote!(#args)
             .to_string()
@@ -102,7 +93,7 @@ impl<'a> WASMCodeGen<'a> {
             &insert_point,
             &vdom,
             quote!(#current_bb.#table_dom),
-            parent,
+            Some(parent),
         );
         let render = self.render_each(
             &new,
@@ -113,7 +104,14 @@ impl<'a> WASMCodeGen<'a> {
             quote!(#current_bb.#table),
             quote!(#current_bb.#table_dom),
         );
-
+        let new = self.new_each(
+            &component,
+            &component_ty,
+            &insert_point,
+            &vdom,
+            quote!(#table_dom),
+            None,
+        );
         // Pops
         self.buff_render = old_render;
         self.buff_render.push((vars.clone(), render));
@@ -122,7 +120,12 @@ impl<'a> WASMCodeGen<'a> {
         self.buff_build.push(build);
 
         self.buff_new = old_new;
-        self.buff_new.push(new_build);
+        self.buff_new.push(quote! {
+            let mut #table: Vec<#component_ty> = vec![];
+            for #expr in #args {
+                #table.push({ #new });
+            }
+        });
 
         self.helpers.extend(black_box);
 
@@ -151,12 +154,13 @@ impl<'a> WASMCodeGen<'a> {
         insert_point: &InsertPoint,
         vdom: &Ident,
         table_dom: TokenStream,
-        parent: TokenStream,
+        parent: Option<TokenStream>,
     ) -> TokenStream {
         let bb = self.get_global_bbox_ident();
+        let tmp = format_ident!("__tmp__");
         let froot = Self::get_field_root_ident();
-        let steps = self.get_steps(quote!(#vdom));
-        let fields = self.get_black_box_fields(vdom);
+        let steps = self.get_steps(quote!(#tmp));
+        let fields = self.get_black_box_fields(&tmp);
 
         let insert_point = match insert_point {
             InsertPoint::Append(_) => {
@@ -168,7 +172,11 @@ impl<'a> WASMCodeGen<'a> {
                 let mut tokens = quote!(#base);
                 for i in &len.expr {
                     let ident = Self::get_table_ident(i);
-                    tokens.extend(quote!(+ #parent.#ident.len() as u32))
+                    if let Some(parent) = &parent {
+                        tokens.extend(quote!(+ #parent.#ident.len() as u32))
+                    } else {
+                        tokens.extend(quote!(+ #ident.len() as u32))
+                    }
                 }
 
                 quote!(#table_dom.insert_before(&#vdom.#froot, #table_dom.children().item(#tokens).map(yarte::JsCast::unchecked_into::<yarte::web::Node>).as_ref()).unwrap_throw();)
@@ -177,7 +185,7 @@ impl<'a> WASMCodeGen<'a> {
 
         let build = &self.buff_new;
         quote! {
-             let #vdom = yarte::JsCast::unchecked_into::<yarte::web::Element>(self.#bb.#component
+             let #tmp = yarte::JsCast::unchecked_into::<yarte::web::Element>(self.#bb.#component
                  .clone_node_with_deep(true)
                  .unwrap_throw());
              #steps
