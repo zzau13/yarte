@@ -193,13 +193,11 @@ impl<'a> WASMCodeGen<'a> {
 
                 (
                     quote!(#table_dom.insert_before(&#vdom.#froot, __cached__.as_ref()).unwrap_throw();),
-                    Some(
-                        if parent.is_some() {
-                            quote!(#table_dom.children().item(#tokens + __dom_len__ as u32).map(yarte::JsCast::unchecked_into::<yarte::web::Node>))
-                        } else {
-                            quote!(#table_dom.children().item(#tokens).map(yarte::JsCast::unchecked_into::<yarte::web::Node>))
-                        }
-                    ),
+                    Some(if parent.is_some() {
+                        quote!(#table_dom.children().item(#tokens + __dom_len__ as u32).map(yarte::JsCast::unchecked_into::<yarte::web::Node>))
+                    } else {
+                        quote!(#table_dom.children().item(#tokens).map(yarte::JsCast::unchecked_into::<yarte::web::Node>))
+                    }),
                 )
             }
         };
