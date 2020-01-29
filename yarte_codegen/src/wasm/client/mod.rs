@@ -241,21 +241,21 @@ impl<'a> WASMCodeGen<'a> {
 
             InsertPoint::Append(head)
         } else {
-            let mut head = Vec::with_capacity(pos.0 + 1);
+            let mut head = Vec::with_capacity(pos.0);
             let mut tail = Vec::with_capacity(pos.1 - 1 - pos.0);
             for (i, e) in o.enumerate() {
                 match e {
                     Node::Elem(Element::Node { .. }) => {
                         if i > pos.0 {
                             tail.push(InsertPath::Before);
-                        } else {
+                        } else if i < pos.0 {
                             head.push(InsertPath::Before);
                         }
                     }
                     Node::Expr(Expression::Each(id, _)) | Node::Expr(Expression::IfElse(id, _)) => {
                         if i > pos.0 {
                             tail.push(InsertPath::Expr(*id));
-                        } else {
+                        } else if i < pos.0 {
                             head.push(InsertPath::Expr(*id));
                         }
                     }

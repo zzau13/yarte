@@ -87,7 +87,7 @@ impl<'a> WASMCodeGen<'a> {
             }
             Parent::Body | Parent::Head => quote!(#current_bb.#table_dom),
         };
-        let new = self.new_each(
+        let (new, cached) = self.new_each(
             &component,
             &component_ty,
             &insert_point,
@@ -96,7 +96,8 @@ impl<'a> WASMCodeGen<'a> {
             Some(parent),
         );
         let render = self.render_each(
-            &new,
+            new,
+            cached,
             args,
             expr,
             fragment,
@@ -104,7 +105,7 @@ impl<'a> WASMCodeGen<'a> {
             quote!(#current_bb.#table),
             quote!(#current_bb.#table_dom),
         );
-        let new = self.new_each(
+        let (new, cached) = self.new_each(
             &component,
             &component_ty,
             &insert_point,
@@ -120,13 +121,23 @@ impl<'a> WASMCodeGen<'a> {
         self.buff_build.push(build);
 
         self.buff_new = old_new;
-        self.buff_new.push(quote! {
+
+        self.buff_new.push(if let Some(cached) = cached {
+            quote! {
+            let __cached__ = #cached;
             let mut #table: Vec<#component_ty> = vec![];
-            for #expr in #args {
+            for #expr in #args.skip(dom_len) {
                 #table.push({ #new });
             }
+        }
+        } else {
+            quote! {
+            let mut #table: Vec<#component_ty> = vec![];
+            for #expr in #args.skip(dom_len) {
+                    #table.push({ #new });
+            }
+        }
         });
-
         self.helpers.extend(black_box);
 
         self.black_box = old_bb;
@@ -155,16 +166,16 @@ impl<'a> WASMCodeGen<'a> {
         vdom: &Ident,
         table_dom: TokenStream,
         parent: Option<TokenStream>,
-    ) -> TokenStream {
+    ) -> (TokenStream, Option<TokenStream>) {
         let bb = self.get_global_bbox_ident();
         let tmp = format_ident!("__tmp__");
         let froot = Self::get_field_root_ident();
         let steps = self.get_steps(quote!(#tmp));
         let fields = self.get_black_box_fields(&tmp);
 
-        let insert_point = match insert_point {
+        let (insert_point, cached)= match insert_point {
             InsertPoint::Append(_) => {
-                quote!(#table_dom.append_child(&#vdom.#froot).unwrap_throw();)
+                (quote!(#table_dom.append_child(&#vdom.#froot).unwrap_throw();), None)
             }
             InsertPoint::LastBefore(head, _tail) => {
                 let len: Len = head.to_vec().into();
@@ -179,12 +190,15 @@ impl<'a> WASMCodeGen<'a> {
                     }
                 }
 
-                quote!(#table_dom.insert_before(&#vdom.#froot, #table_dom.children().item(#tokens).map(yarte::JsCast::unchecked_into::<yarte::web::Node>).as_ref()).unwrap_throw();)
+                (
+                    quote!(#table_dom.insert_before(&#vdom.#froot, __cached__.as_ref()).unwrap_throw();),
+                    Some(quote!(#table_dom.children().item(#tokens).map(yarte::JsCast::unchecked_into::<yarte::web::Node>)))
+                )
             }
         };
 
         let build = &self.buff_new;
-        quote! {
+        (quote! {
              let #tmp = yarte::JsCast::unchecked_into::<yarte::web::Element>(self.#bb.#component
                  .clone_node_with_deep(true)
                  .unwrap_throw());
@@ -193,7 +207,7 @@ impl<'a> WASMCodeGen<'a> {
              let #vdom = #component_ty { #fields };
              #insert_point
              #vdom
-        }
+        }, cached)
     }
 
     fn build_each(
@@ -210,9 +224,10 @@ impl<'a> WASMCodeGen<'a> {
         let steps = self.get_steps(quote!(#vdom));
         let fields = self.get_black_box_fields(vdom);
         let build = &self.buff_build;
+        // TODO: simplify
         let head = match insert_point {
             InsertPoint::Append(head) => head,
-            InsertPoint::LastBefore(head, _) => &head[..head.len() - 1],
+            InsertPoint::LastBefore(head, _) => head,
         };
         let insert_point = {
             let len: Len = head.to_vec().into();
@@ -239,7 +254,8 @@ impl<'a> WASMCodeGen<'a> {
 
     fn render_each(
         &self,
-        new: &TokenStream,
+        new: TokenStream,
+        cached: Option<TokenStream>,
         args: &Expr,
         expr: &Expr,
         fragment: bool,
@@ -254,6 +270,20 @@ impl<'a> WASMCodeGen<'a> {
         // TODO: remove for fragments
         // TODO: remove on drop
         // TODO: remove component method
+        let new_block = if let Some(cached) = &cached {
+            quote! {
+            let __cached__ = #cached;
+            for #expr in #args.skip(dom_len) {
+                #table.push({ #new });
+            }
+        }
+        } else {
+            quote! {
+            for #expr in #args.skip(dom_len) {
+                    #table.push({ #new });
+            }
+        }
+        };
         let body = quote! {
             for (#vdom, #expr) in #table
                 .iter_mut()
@@ -261,11 +291,7 @@ impl<'a> WASMCodeGen<'a> {
                 .filter(|(d, _)| #check)
                 { #render }
 
-            if dom_len < data_len {
-                for #expr in #args.skip(dom_len) {
-                    #table.push({ #new });
-                }
-            } else {
+            if dom_len < data_len { #new_block } else {
                 for d in #table.drain(data_len..) {
                     d.root.remove()
                 }
