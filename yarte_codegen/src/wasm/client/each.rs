@@ -220,12 +220,8 @@ impl<'a> WASMCodeGen<'a> {
 
         quote! {
             let mut #table: Vec<#component_ty> = vec![];
-            for (__i__, #expr) in #args.enumerate() {
-                let #vdom = if __i__ == 0 {
-                    #insert_point
-                } else {
-                    #table.last().unwrap().#froot.next_element_sibling().unwrap_throw()
-                };
+            for #expr in #args {
+                let #vdom = #table.last().map(|__x__| __x__.#froot.next_element_sibling().unwrap_throw()).unwrap_or_else(|| #insert_point);
                 #steps
                 #(#build)*
                 #table.push(#component_ty { #fields });
@@ -272,7 +268,7 @@ impl<'a> WASMCodeGen<'a> {
         let data_len = if true {
             quote!(let data_len = #args.size_hint().0;)
         } else {
-            quote!(let data_len = #args.fold(0. |acc, _| acc + 1);)
+            quote!(let data_len = #args.fold(0, |acc, _| acc + 1);)
         };
         if fragment {
             quote! {
