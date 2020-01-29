@@ -1,12 +1,10 @@
-use std::mem;
-
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::Ident;
 
-use yarte_dom::dom::{Attribute, DOMBuilder, Document, Element, ExprId, ExprOrText, Node};
+use yarte_dom::dom::{Attribute, Document, Element, ExprId, ExprOrText, Node};
 
-use super::{BlackBox, WASMCodeGen};
+use super::WASMCodeGen;
 
 pub fn get_component(id: ExprId, doc: &Document, builder: &mut WASMCodeGen) -> Ident {
     ComponentBuilder::new(id, builder).build(doc)
@@ -60,21 +58,13 @@ impl<'a, 'b> ComponentBuilder<'a, 'b> {
             todo!("len +1")
         }
 
-        self.builder
-            .buff_component
-            .push((ident.clone(), self.tokens));
+        self.builder.component.push((ident.clone(), self.tokens));
         ident
     }
 
     fn filter(doc: &Document) -> impl Iterator<Item = &Node> {
-        doc.into_iter().filter(|x| match x {
-            Node::Elem(Element::Text(t)) => {
-                if t.chars().all(|x| x.is_whitespace()) {
-                    false
-                } else {
-                    true
-                }
-            }
+        doc.iter().filter(|x| match x {
+            Node::Elem(Element::Text(t)) => !t.chars().all(|x| x.is_whitespace()),
             _ => true,
         })
     }
@@ -116,7 +106,7 @@ impl<'a, 'b> ComponentBuilder<'a, 'b> {
     fn set_attrs(&mut self, id: &Ident, attrs: &[Attribute]) {
         for attr in attrs {
             if attr.value.iter().all(|x| {
-                if let ExprOrText::Text(t) = x {
+                if let ExprOrText::Text(_) = x {
                     true
                 } else {
                     false

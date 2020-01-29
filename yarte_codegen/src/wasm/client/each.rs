@@ -1,12 +1,12 @@
 use std::mem;
 
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote};
-use syn::{parse2, punctuated::Punctuated, Expr, ExprField, FieldValue, Ident, Token};
+use quote::quote;
+use syn::{parse2, Expr, Ident};
 
 use yarte_dom::dom::{Each, ExprId};
 
-use crate::wasm::client::{component::get_component, InsertPath, InsertPoint, Len, Parent, Step};
+use crate::wasm::client::{component::get_component, InsertPoint, Len, Parent, Step};
 
 use super::{BlackBox, WASMCodeGen};
 
@@ -15,210 +15,243 @@ impl<'a> WASMCodeGen<'a> {
         &mut self,
         id: ExprId,
         Each {
-            args,
-            body,
-            expr,
-            var,
+            args, body, expr, ..
         }: &Each,
         fragment: bool,
         insert_point: InsertPoint,
     ) {
+        // Get current state
         // TODO: add Each to tree map
         let vars = self.tree_map.get(&id).cloned().unwrap_or_default();
-        let parent = self.get_parent_node();
         let current_bb = self.get_current_black_box();
-        let froot = Self::get_field_root_ident();
 
-        let on = self.on.replace(Parent::Expr(id));
-        let path = self.steps[..parent].to_vec();
+        // Push
+        let old_bb = mem::take(&mut self.black_box);
+        let old_build = mem::take(&mut self.buff_build);
+        let old_new = mem::take(&mut self.buff_new);
+        let old_on = self.on.replace(Parent::Expr(id));
+        let old_paths = mem::take(&mut self.path_nodes);
+        let old_render = mem::take(&mut self.buff_render);
         let old_steps = mem::take(&mut self.steps);
-        let old_b = mem::take(&mut self.black_box);
-        let mut old_buff = mem::take(&mut self.buff_render);
 
+        // Init new black box
         self.add_black_box_t_root();
         self.black_box.push(BlackBox {
             doc: "root dom element".to_string(),
-            name: froot.clone(),
+            name: Self::get_field_root_ident(),
             ty: parse2(quote!(yarte::web::Element)).unwrap(),
         });
 
+        // Do steps
         self.step(body);
+
+        // Update state
         let component = get_component(id, body, self);
+        let component_ty = Self::get_component_ty_ident(&id);
 
-        let ty = Self::get_component_ty_ident(&id);
-        let name = Self::get_table_ident(&id);
-        let name_elem = Self::get_table_dom_ident(&id);
-        let dom = Self::get_vdom_ident(&id);
-        let bb_name = self.get_global_bbox_ident();
-        let fields = self.get_black_box_fields(&dom);
-        let tmp = format_ident!("__tmp__");
-        let fields_new = self.get_black_box_fields(&tmp);
+        let vdom = Self::get_vdom_ident(&id);
+        let table = Self::get_table_ident(&id);
+        let table_dom = Self::get_table_dom_ident(&id);
 
-        let black_box = self.empty_black_box(&ty);
+        let black_box = self.get_black_box(&component_ty);
 
-        // TODO get current black_box
-        let table = quote!(#current_bb.#name);
-        let elem = quote!(#current_bb.#name_elem);
+        for (_, path) in self.path_nodes.iter_mut() {
+            if path.starts_with(&[Step::FirstChild, Step::FirstChild]) {
+                // Remove marker
+                path.remove(0);
+            } else {
+                // TODO: multi node expressions
+            }
+        }
 
-        // Remove marker
-        eprintln!("{:?}", self.path_nodes);
-
-        let new_build = self.write_steps(quote!(#current_bb.#froot));
-        let new = self.write_steps(quote!(#tmp));
-
-        self.build_each(args, new_build, &name, &dom, &name_elem, &ty, &fields);
-        let new = self.new_each(
-            new,
-            &component,
-            fields_new,
-            tmp,
-            &dom,
-            &ty,
-            &current_bb,
-            &elem,
-            insert_point,
+        let new_build = self.build_each(
+            quote!(#args),
+            expr,
+            &component_ty,
+            &insert_point,
+            &vdom,
+            &table,
+            &table_dom,
+        );
+        // TODO: remove self
+        let build_args: TokenStream = quote!(#args)
+            .to_string()
+            .replace("self .", "")
+            .parse()
+            .unwrap();
+        let build = self.build_each(
+            build_args,
+            expr,
+            &component_ty,
+            &insert_point,
+            &vdom,
+            &table,
+            &table_dom,
         );
 
-        old_buff.push((
-            vars.clone(),
-            self.render_each(table, args, expr, elem, dom, new, fragment),
-        ));
+        let parent = match old_on.unwrap() {
+            Parent::Expr(id) => {
+                let ident = Self::get_vdom_ident(&id);
+                quote!(#ident)
+            }
+            Parent::Body | Parent::Head => quote!(#current_bb.#table_dom),
+        };
+        let new = self.new_each(
+            &component,
+            &component_ty,
+            &insert_point,
+            &vdom,
+            quote!(#current_bb.#table_dom),
+            parent,
+        );
+        let render = self.render_each(
+            &new,
+            args,
+            expr,
+            fragment,
+            &vdom,
+            quote!(#current_bb.#table),
+            quote!(#current_bb.#table_dom),
+        );
+
+        // Pops
+        self.buff_render = old_render;
+        self.buff_render.push((vars.clone(), render));
+
+        self.buff_build = old_build;
+        self.buff_build.push(build);
+
+        self.buff_new = old_new;
+        self.buff_new.push(new_build);
+
         self.helpers.extend(black_box);
 
-        self.black_box = old_b;
+        self.black_box = old_bb;
         self.black_box.push(BlackBox {
-            doc: "Each root dom element".to_string(),
-            name,
-            ty: parse2(quote!(Vec<#ty>)).unwrap(),
+            doc: "Each Virtual DOM node".to_string(),
+            name: table,
+            ty: parse2(quote!(Vec<#component_ty>)).unwrap(),
         });
         self.black_box.push(BlackBox {
-            doc: "Each dom elements".to_string(),
-            name: name_elem.clone(),
+            doc: "Each DOM Element".to_string(),
+            name: table_dom.clone(),
             ty: parse2(quote!(yarte::web::Element)).unwrap(),
         });
 
-        self.buff_render = old_buff;
-        self.path_nodes.push((name_elem, path));
-        self.on = on;
+        self.on = old_on;
         self.steps = old_steps;
+        self.path_nodes = old_paths;
+        self.path_nodes.push((table_dom, self.steps.clone()));
     }
 
     fn new_each(
         &self,
-        new: TokenStream,
         component: &Ident,
-        fields: Punctuated<FieldValue, Token![,]>,
-        tmp: Ident,
-        elem: &Ident,
-        c_name: &Ident,
-        vdom: &TokenStream,
-        parent: &TokenStream,
-        insert_point: InsertPoint,
+        component_ty: &Ident,
+        insert_point: &InsertPoint,
+        vdom: &Ident,
+        table_dom: TokenStream,
+        parent: TokenStream,
     ) -> TokenStream {
         let bb = self.get_global_bbox_ident();
         let froot = Self::get_field_root_ident();
+        let steps = self.get_steps(quote!(#vdom));
+        let fields = self.get_black_box_fields(vdom);
+
         let insert_point = match insert_point {
-            InsertPoint::Append => quote!(#parent.append_child(&#elem.#froot).unwrap_throw();),
-            InsertPoint::LastBefore(head, tail) => {
-                let mut tokens = TokenStream::new();
-                let h_len: Len = head.into();
-                let t_len: Len = tail.into();
-                if t_len.base == 0 {
-                    let mut len = quote!(0);
-                    for i in &h_len.expr {
-                        let ident = Self::get_table_ident(i);
-                        len.extend(quote!(+ #vdom.#ident.len() as u32))
-                    }
-                    let base = h_len.base as u32 + 1;
-                    let mut tokens = quote!(#base);
-                    for i in &h_len.expr {
-                        let ident = Self::get_table_ident(i);
-                        tokens.extend(quote!(+ #vdom.#ident.len() as u32))
-                    }
-                    quote! {
-                        let __len = #len;
-                        if __len == 0 {
-                            #parent.append_child(&#elem.#froot).unwrap_throw();
-                        } else {
-                            #parent.insert_before(&#elem.#froot, Some(&#parent.children().item(#tokens).unwrap_throw()));
-                        }
-                    }
-                } else {
-                    let base = h_len.base as u32 + 1;
-                    let mut tokens = quote!(#base);
-                    for i in &h_len.expr {
-                        let ident = Self::get_table_ident(i);
-                        tokens.extend(quote!(+ #vdom.#ident.len() as u32))
-                    }
-                    quote!(#parent.insert_before(&#elem.#froot, Some(&#parent.children().item(#tokens).unwrap_throw()));)
+            InsertPoint::Append(_) => {
+                quote!(#table_dom.append_child(&#vdom.#froot).unwrap_throw();)
+            }
+            InsertPoint::LastBefore(head, _tail) => {
+                let len: Len = head.to_vec().into();
+                let base = len.base as u32 + 1;
+                let mut tokens = quote!(#base);
+                for i in &len.expr {
+                    let ident = Self::get_table_ident(i);
+                    tokens.extend(quote!(+ #parent.#ident.len() as u32))
                 }
+
+                quote!(#table_dom.insert_before(&#vdom.#froot, #table_dom.children().item(#tokens).map(yarte::JsCast::unchecked_into::<yarte::web::Node>).as_ref()).unwrap_throw();)
             }
         };
-        let render = self.buff_render.iter().map(|(_, x)| x);
+
+        let build = &self.buff_new;
         quote! {
-             let #tmp = yarte::JsCast::unchecked_into::<yarte::web::Element>(self.#bb.#component
+             let #vdom = yarte::JsCast::unchecked_into::<yarte::web::Element>(self.#bb.#component
                  .clone_node_with_deep(true)
                  .unwrap_throw());
-             #new
-             let #elem = #c_name { #fields };
-             #(#render)*
+             #steps
+             #(#build)*
+             let #vdom = #component_ty { #fields };
              #insert_point
-             #elem
+             #vdom
         }
     }
 
     fn build_each(
         &mut self,
-        args: &Expr,
-        new: TokenStream,
+        args: TokenStream,
+        expr: &Expr,
+        component_ty: &Ident,
+        insert_point: &InsertPoint,
+        vdom: &Ident,
         table: &Ident,
-        dom: &Ident,
-        elem: &Ident,
-        c_name: &Ident,
-        fields: &Punctuated<FieldValue, Token![,]>,
-    ) {
-        return;
-        // TODO: init element
-        // TODO
-        let args: TokenStream = quote!(#args)
-            .to_string()
-            .replace("self .", "")
-            .parse()
-            .unwrap();
-        let init = quote!(first_element_child().unwrap_throw());
-        self.buff_build.extend(quote! {
-            let mut #table = vec![];
-            let mut _iter = #args;
-            if let Some(_) = _iter.next() {
-                let #dom = #elem.#init;
-                #new
-                #table.push(#c_name { #fields });
+        table_dom: &Ident,
+    ) -> TokenStream {
+        let froot = Self::get_field_root_ident();
+        let steps = self.get_steps(quote!(#vdom));
+        let fields = self.get_black_box_fields(vdom);
+        let build = &self.buff_build;
+        let head = match insert_point {
+            InsertPoint::Append(head) => head,
+            InsertPoint::LastBefore(head, _) => &head[..head.len() - 1],
+        };
+        let insert_point = {
+            let len: Len = head.to_vec().into();
+            let base = len.base as u32 + 1;
+            let mut tokens = quote!(#base);
+            for i in &len.expr {
+                let ident = Self::get_table_ident(i);
+                tokens.extend(quote!(+ #ident.len() as u32))
             }
-            for _ in _iter {
-                let #dom = #table.last().unwrap().root.next_element_sibling().unwrap_throw();
-                #new
-                #table.push(#c_name { #fields });
+
+            quote!(#table_dom.children().item(#tokens).unwrap_throw())
+        };
+
+        quote! {
+            let mut #table: Vec<#component_ty> = vec![];
+            for (__i__, #expr) in #args.enumerate() {
+                let #vdom = if __i__ == 0 {
+                    #insert_point
+                } else {
+                    #table.last().unwrap().#froot.next_element_sibling().unwrap_throw()
+                };
+                #steps
+                #(#build)*
+                #table.push(#component_ty { #fields });
             }
-        });
+        }
     }
 
     fn render_each(
-        &mut self,
-        table: TokenStream,
+        &self,
+        new: &TokenStream,
         args: &Expr,
         expr: &Expr,
-        elem: TokenStream,
-        dom: Ident,
-        new: TokenStream,
         fragment: bool,
+        vdom: &Ident,
+        table: TokenStream,
+        table_dom: TokenStream,
     ) -> TokenStream {
-        let render = self.write_render();
+        let render = self.get_render();
         // TODO get parents dependency
         let check = quote!(d.t_root != 0);
 
         // TODO: remove for fragments
+        // TODO: remove on drop
+        // TODO: remove component method
         let body = quote! {
-            for (#dom, #expr) in #table
+            for (#vdom, #expr) in #table
                 .iter_mut()
                 .zip(#args)
                 .filter(|(d, _)| #check)
@@ -252,7 +285,7 @@ impl<'a> WASMCodeGen<'a> {
             let dom_len = #table.len();
             #data_len;
             if data_len == 0 {
-                #elem.set_text_content(None);
+                #table_dom.set_text_content(None);
                 #table.clear()
             } else { #body }
             }
