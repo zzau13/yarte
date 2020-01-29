@@ -126,14 +126,14 @@ impl<'a> WASMCodeGen<'a> {
             quote! {
                 let __cached__ = #cached;
                 let mut #table: Vec<#component_ty> = vec![];
-                for #expr in #args.skip(dom_len) {
+                for #expr in #args.skip(__dom_len__) {
                     #table.push({ #new });
                 }
             }
         } else {
             quote! {
                 let mut #table: Vec<#component_ty> = vec![];
-                for #expr in #args.skip(dom_len) {
+                for #expr in #args.skip(__dom_len__) {
                         #table.push({ #new });
                 }
             }
@@ -194,7 +194,11 @@ impl<'a> WASMCodeGen<'a> {
                 (
                     quote!(#table_dom.insert_before(&#vdom.#froot, __cached__.as_ref()).unwrap_throw();),
                     Some(
-                        quote!(#table_dom.children().item(#tokens).map(yarte::JsCast::unchecked_into::<yarte::web::Node>)),
+                        if parent.is_some() {
+                            quote!(#table_dom.children().item(#tokens + __dom_len__ as u32).map(yarte::JsCast::unchecked_into::<yarte::web::Node>))
+                        } else {
+                            quote!(#table_dom.children().item(#tokens).map(yarte::JsCast::unchecked_into::<yarte::web::Node>))
+                        }
                     ),
                 )
             }
@@ -270,6 +274,7 @@ impl<'a> WASMCodeGen<'a> {
         table_dom: TokenStream,
     ) -> TokenStream {
         let render = self.get_render();
+        let froot = Self::get_field_root_ident();
         // TODO get parents dependency
         let check = quote!(d.t_root != 0);
 
@@ -279,13 +284,13 @@ impl<'a> WASMCodeGen<'a> {
         let new_block = if let Some(cached) = &cached {
             quote! {
                 let __cached__ = #cached;
-                for #expr in #args.skip(dom_len) {
+                for #expr in #args.skip(__dom_len__) {
                     #table.push({ #new });
                 }
             }
         } else {
             quote! {
-                for #expr in #args.skip(dom_len) {
+                for #expr in #args.skip(__dom_len__) {
                         #table.push({ #new });
                 }
             }
@@ -297,33 +302,33 @@ impl<'a> WASMCodeGen<'a> {
                 .filter(|(d, _)| #check)
                 { #render }
 
-            if dom_len < data_len { #new_block } else {
-                for d in #table.drain(data_len..) {
-                    d.root.remove()
+            if __dom_len__ < __data_len__ { #new_block } else {
+                for __d__ in #table.drain(__data_len__..) {
+                    __d__.#froot.remove()
                 }
             }
         };
 
         // TODO: #[filter] or child is `if`
         let data_len = if true {
-            quote!(let data_len = #args.size_hint().0;)
+            quote!(let __data_len__ = #args.size_hint().0;)
         } else {
-            quote!(let data_len = #args.fold(0, |acc, _| acc + 1);)
+            quote!(let __data_len__ = #args.fold(0, |acc, _| acc + 1);)
         };
         if fragment {
             quote! {
-                let dom_len = #table.len();
+                let __dom_len__ = #table.len();
                 #data_len
                 #body
             }
         } else {
             quote! {
-            let dom_len = #table.len();
-            #data_len;
-            if data_len == 0 {
-                #table_dom.set_text_content(None);
-                #table.clear()
-            } else { #body }
+                let __dom_len__ = #table.len();
+                #data_len;
+                if __data_len__ == 0 {
+                    #table_dom.set_text_content(None);
+                    #table.clear()
+                } else { #body }
             }
         }
     }

@@ -279,7 +279,7 @@ impl<'a> WASMCodeGen<'a> {
 
     fn get_black_box_fields(&self, dom: &Ident) -> Punctuated<FieldValue, Token![,]> {
         let t_root = format_ident!("t_root");
-        let root = format_ident!("root");
+        let root = Self::get_field_root_ident();
         self.black_box
             .iter()
             .fold(<Punctuated<FieldValue, Token![,]>>::new(), |mut acc, x| {
@@ -377,31 +377,31 @@ impl<'a> WASMCodeGen<'a> {
 
     #[inline]
     fn get_table_dom_ident(id: &ExprId) -> Ident {
-        const TABLE_DOM: &str = "ytable_dom__";
+        const TABLE_DOM: &str = "__ytable_dom__";
         format_ident!("{}{}", TABLE_DOM, id)
     }
 
     #[inline]
     fn get_table_ident(id: &ExprId) -> Ident {
-        const TABLE: &str = "ytable__";
+        const TABLE: &str = "__ytable__";
         format_ident!("{}{}", TABLE, id)
     }
 
     #[inline]
     fn get_vdom_ident(id: &ExprId) -> Ident {
-        const ELEM: &str = "dom__";
+        const ELEM: &str = "__dom__";
         format_ident!("{}{}", ELEM, id)
     }
 
     #[inline]
     fn get_field_root_ident() -> Ident {
-        const ROOT: &str = "root";
+        const ROOT: &str = "__root";
         format_ident!("{}", ROOT)
     }
 
     #[inline]
     fn get_component_ty_ident(id: &ExprId) -> Ident {
-        const TY: &str = "Component";
+        const TY: &str = "YComponent";
         format_ident!("{}{}", TY, id)
     }
 
@@ -709,7 +709,7 @@ impl<'a> WASMCodeGen<'a> {
     // Writes current state
     fn write_leaf_text(&mut self, children: &Document, step: Step) {
         let (t, e) = get_leaf_text(children, &self.tree_map, &self.var_map);
-        let name = format_ident!("ynode__{}", self.count);
+        let name = format_ident!("__ynode__{}", self.count);
         self.count += 1;
         let dom = match self.on.as_ref().expect("Some parent") {
             Parent::Body => self.get_global_bbox_ident(),
@@ -745,7 +745,7 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
 
         let initial_state = self.get_initial_state();
         let black_box_name = format_ident!("{}BlackBox", self.s.ident);
-        let bb_fields = self.get_black_box_fields(&format_ident!("root"));
+        let bb_fields = self.get_black_box_fields(&Self::get_field_root_ident());
         let ty_component: Type = parse2(quote!(yarte::web::Element)).unwrap();
         for (i, _) in &self.component {
             self.black_box.push(BlackBox {
@@ -811,11 +811,11 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
                 fn get_state() -> String;
             }
 
+            #default
+            #app
+            #enu
             #initial_state
             #black_box
-            #default
-            #enu
-            #app
             #helpers
         }
     }
