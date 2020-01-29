@@ -16,5 +16,5 @@ pub struct Fortune {
 #[cfg_attr(target_arch = "wasm32", derive(Default, Deserialize))]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Serialize))]
 pub struct Item {
-   fol: usize,
+   pub fol: usize,
 }

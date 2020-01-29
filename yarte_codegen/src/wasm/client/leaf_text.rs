@@ -1,10 +1,10 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{punctuated::Punctuated, Expr, Token};
 
-use yarte_dom::dom::{Document, Element, ExprId, Expression, Node, TreeMap, Var, VarId, VarMap};
+use yarte_dom::dom::{Document, Element, Expression, Node, TreeMap, VarId, VarMap};
 
 pub fn get_leaf_text(
     children: &Document,
@@ -22,6 +22,7 @@ struct LeafTextBuilder<'a> {
     buff_args: Punctuated<Expr, Token![,]>,
 }
 
+// TODO: #[str] alone expression for no reallocate string
 impl<'a> LeafTextBuilder<'a> {
     fn new<'n>(tree_map: &'n TreeMap, var_map: &'n VarMap) -> LeafTextBuilder<'n> {
         LeafTextBuilder {
@@ -54,8 +55,8 @@ impl<'a> LeafTextBuilder<'a> {
                         self.buff_expr.push_str("{}");
                         self.buff_args.push(*e.clone());
                     }
-                    Expression::Each(id, e) => todo!(),
-                    Expression::IfElse(id, e) => todo!(),
+                    Expression::Each(_id, _e) => todo!(),
+                    Expression::IfElse(_id, _e) => todo!(),
                     Expression::Local(..) => todo!(),
                 },
                 _ => unreachable!(),

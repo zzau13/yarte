@@ -57,11 +57,9 @@ fn fields_to_args(f: &Fields, i: &Ident) -> (Punctuated<Ident, Token![,]>, Token
             (pun, quote!(#i { #buff }))
         }
         Fields::Unnamed(FieldsUnnamed { unnamed, .. }) => {
-            let mut count = 0usize;
             let mut buff: Punctuated<Ident, Token![,]> = Punctuated::new();
-            for _ in unnamed {
-                let ident = format_ident!("_{}", count);
-                count += 1;
+            for (c, _) in unnamed.into_iter().enumerate() {
+                let ident = format_ident!("_{}", c);
                 buff.push(ident.clone());
                 pun.push(ident);
             }
