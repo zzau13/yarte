@@ -1,6 +1,9 @@
 #![allow(warnings)]
 
-use std::{collections::{HashSet, HashMap}, mem};
+use std::{
+    collections::{HashMap, HashSet},
+    mem,
+};
 
 use markup5ever::local_name;
 use proc_macro2::TokenStream;
@@ -28,6 +31,7 @@ mod leaf_text;
 mod messages;
 
 use self::leaf_text::get_leaf_text;
+use crate::wasm::client::component::clean;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Step {
@@ -797,6 +801,9 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
         };
         let app = self.s.implement_head(quote!(yarte::Template), &app);
         let helpers = &self.helpers;
+
+        // Multi app compilation
+        clean();
 
         quote! {
             #[wasm_bindgen]

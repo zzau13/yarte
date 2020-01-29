@@ -1,3 +1,5 @@
+use std::{cell::RefCell, collections::HashMap};
+
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::Ident;
@@ -5,6 +7,14 @@ use syn::Ident;
 use yarte_dom::dom::{Attribute, Document, Element, ExprId, ExprOrText, Node};
 
 use super::WASMCodeGen;
+
+thread_local!(
+    static CACHE: RefCell<HashMap<String, Ident>> = RefCell::new(HashMap::new());
+);
+
+pub fn clean() {
+    CACHE.with(|c| c.borrow_mut().clear())
+}
 
 pub fn get_component(id: ExprId, doc: &Document, builder: &mut WASMCodeGen) -> Ident {
     ComponentBuilder::new(id, builder).build(doc)
@@ -58,8 +68,19 @@ impl<'a, 'b> ComponentBuilder<'a, 'b> {
             todo!("len +1")
         }
 
-        self.builder.component.push((ident.clone(), self.tokens));
-        ident
+        let tokens = self.tokens.to_string();
+        let cached = CACHE.with(|c| {
+            if !c.borrow().contains_key(&tokens) {
+                c.borrow_mut().insert(tokens, ident.clone());
+                return None;
+            }
+            c.borrow().get(&tokens).cloned()
+        });
+
+        cached.unwrap_or_else(|| {
+            self.builder.component.push((ident.clone(), self.tokens));
+            ident
+        })
     }
 
     fn filter(doc: &Document) -> impl Iterator<Item = &Node> {
