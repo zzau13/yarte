@@ -33,10 +33,12 @@ mod messages;
 use self::leaf_text::get_leaf_text;
 use crate::wasm::client::component::clean;
 
+// TODO:
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Step {
     FirstChild,
     NextSibling,
+    Each(usize),
 }
 
 impl ToTokens for Step {
@@ -45,6 +47,7 @@ impl ToTokens for Step {
         tokens.extend(match self {
             FirstChild => quote!(.first_element_child().unwrap_throw()),
             NextSibling => quote!(.next_element_sibling().unwrap_throw()),
+            Each(_) => quote!(),
         })
     }
 }
@@ -446,10 +449,14 @@ impl<'a> WASMCodeGen<'a> {
         }
     }
 
+    // TODO: Fix me!!
     fn get_steps(&self, parent: TokenStream) -> TokenStream {
         let mut buff = vec![];
         let mut stack = vec![];
         let mut iter = self.path_nodes.iter();
+        for (i, path) in &self.path_nodes {
+            eprintln!("{} -> {:?}", i, path);
+        }
         if let Some((ident, path)) = iter.next() {
             buff.push((parent.clone(), ident.clone(), path.clone()));
             stack.push((ident, path))
@@ -471,9 +478,16 @@ impl<'a> WASMCodeGen<'a> {
 
         let mut tokens = TokenStream::new();
         for (p, i, path) in buff.drain(..) {
-            tokens.extend(quote! {
-                let #i = #p#(#path)*;
-            })
+            // TODO: reduce number
+            if path.is_empty() {
+                tokens.extend(quote! {
+                    let #i = #p.clone();
+                })
+            } else {
+                tokens.extend(quote! {
+                    let #i = #p#(#path)*;
+                })
+            }
         }
 
         tokens
@@ -677,6 +691,7 @@ impl<'a> WASMCodeGen<'a> {
         todo!("resolve if else block expresion");
     }
 
+    // TODO
     fn resolve_tree_var(&mut self, tree_map: TreeMap, var_map: VarMap) {
         for expr in tree_map.values() {
             for _var_id in expr {}
@@ -712,9 +727,15 @@ impl<'a> WASMCodeGen<'a> {
         let name = format_ident!("__ynode__{}", self.count);
         self.count += 1;
         let dom = match self.on.as_ref().expect("Some parent") {
-            Parent::Body => self.get_global_bbox_ident(),
-            Parent::Expr(i) => Self::get_vdom_ident(i),
-            Parent::Head => panic!(""),
+            Parent::Body => {
+                let ident = self.get_global_bbox_ident();
+                quote!(self.#ident)
+            }
+            Parent::Expr(i) => {
+                let ident = Self::get_vdom_ident(i);
+                quote!(#ident)
+            }
+            Parent::Head => todo!(),
         };
         self.buff_render
             .push((t, quote! { #dom.#name.set_text_content(Some(&#e)); }));
@@ -760,22 +781,37 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
         let bb_ident = self.get_global_bbox_ident();
         let inner = self.get_inner();
         let build = &self.build;
+        let mut bb = vec![];
+        if !bb_fields.is_empty() {
+            bb.push(bb_fields.to_token_stream());
+        }
+        if !components.is_empty() {
+            bb.push(components);
+        }
+        let mut fields = vec![];
+        if !args.is_empty() {
+            fields.push(args);
+        }
+        if !inner.is_empty() {
+            fields.push(inner.to_token_stream())
+        }
+        fields.push(quote! {
+            #bb_ident: #black_box_name { #(#bb),* }
+        });
+
         let build = quote! {
             #build
-            Self {
-                #args,
-                #inner,
-                #bb_ident: #black_box_name {
-                    #bb_fields,
-                    #components
-                }
-            }
+            Self { #(#fields),* }
         };
         let default = self.s.implement_head(
             quote!(std::default::Default),
             &quote!(fn default() -> Self { #build }),
         );
         let render = &self.render;
+        let render = quote! {
+            #render
+            self.#bb_ident.t_root = 0;
+        };
         let hydrate = &self.hydrate;
         let msgs = self
             .s
@@ -811,12 +847,12 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
                 fn get_state() -> String;
             }
 
-            #default
             #app
             #enu
             #initial_state
             #black_box
             #helpers
+            #default
         }
     }
 }

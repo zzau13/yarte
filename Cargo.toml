@@ -8,5 +8,6 @@ members = [
     "yarte_helpers",
     "yarte_hir",
     "yarte_parser",
+    "yarte_template",
     "yarte_wasm_app"
 ]

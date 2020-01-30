@@ -4,7 +4,12 @@
     <title>Fortunes</title>
 </head>
 <body>
+<div>
+    <h1>Foo</h1>
+    <h2>{{ head }}</h2>
+</div>
 <table>
+    <tbody>
     <tr>
         <th>id</th>
         <th>message</th>
@@ -14,17 +19,11 @@
             <td class="col-id">{{id}}</td>
             <td class="col-msg">{{super::head}} {{message}}</td>
             <td class="another"><a class="button">Delete</a></td>
-            {{# each foo }}
-                <td>{{ this }}</td>
-            {{/each }}
-            <td class="another"><a class="button">Foo</a></td>
-            <td class="another"><a class="button">Bar</a></td>
-            {{# each bar }}
-                <td>{{ fol }}</td>
-            {{/each }}
+            <td class="col-msg">{{super::head}} {{message}}</td>
             <td class="another"><a class="button">Fol</a></td>
         </tr>
     {{/each }}
+    </tbody>
 </table>
 </body>
 </html>

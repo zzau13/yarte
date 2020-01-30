@@ -1,6 +1,5 @@
 [main]
 dir = "../templates"
-debug = "code"
 
 [debug]
 short = false

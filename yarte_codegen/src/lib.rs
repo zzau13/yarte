@@ -50,7 +50,7 @@ impl<'a, T: CodeGen> FmtCodeGen<'a, T> {
             body.extend(quote!(fn mime() -> &'static str { #mime }))
         }
 
-        tokens.extend(self.s.implement_head(quote!(::yarte::Template), &body));
+        tokens.extend(self.s.implement_head(quote!(Template), &body));
     }
 
     fn display(&mut self, nodes: Vec<HIR>, tokens: &mut TokenStream) -> usize {

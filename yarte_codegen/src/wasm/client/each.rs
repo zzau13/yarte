@@ -55,12 +55,13 @@ impl<'a> WASMCodeGen<'a> {
 
         let black_box = self.get_black_box(&component_ty);
 
+        // TODO:
         for (_, path) in self.path_nodes.iter_mut() {
             if path.starts_with(&[Step::FirstChild, Step::FirstChild]) {
                 // Remove marker
                 path.remove(0);
             } else {
-                // TODO: multi node expressions
+                todo!("multi node expressions");
             }
         }
 
@@ -155,7 +156,9 @@ impl<'a> WASMCodeGen<'a> {
         self.on = old_on;
         self.steps = old_steps;
         self.path_nodes = old_paths;
-        self.path_nodes.push((table_dom, self.steps.clone()));
+        let parent = self.get_parent_node();
+        self.path_nodes
+            .push((table_dom, self.steps[..parent].to_vec()));
     }
 
     fn new_each(
@@ -239,7 +242,7 @@ impl<'a> WASMCodeGen<'a> {
         };
         let insert_point = {
             let len: Len = head.to_vec().into();
-            let base = len.base as u32 + 1;
+            let base = len.base as u32;
             let mut tokens = quote!(#base);
             for i in &len.expr {
                 let ident = Self::get_table_ident(i);
