@@ -277,7 +277,7 @@ impl<'a> WASMCodeGen<'a> {
         let render = self.get_render();
         let froot = Self::get_field_root_ident();
         // TODO get parents dependency
-        let check = quote!(d.t_root != 0);
+        let check = quote!(|(d, _)| d.t_root != 0);
 
         // TODO: remove for fragments
         // TODO: remove on drop
@@ -300,8 +300,11 @@ impl<'a> WASMCodeGen<'a> {
             for (#vdom, #expr) in #table
                 .iter_mut()
                 .zip(#args)
-                .filter(|(d, _)| #check)
-                { #render }
+                .filter(#check)
+                {
+                    #render
+                    #vdom.t_root = 0;
+                }
 
             if __dom_len__ < __data_len__ { #new_block } else {
                 for __d__ in #table.drain(__data_len__..) {
