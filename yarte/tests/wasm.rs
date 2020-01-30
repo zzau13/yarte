@@ -35,7 +35,7 @@ fn wasm_server() {
         t.call().unwrap(),
         "<!DOCTYPE html><html><head><title>Fortunes</title>\
          <script>function get_state(){return JSON.stringify({\"fortunes\":[{\"id\":0,\"message\":\"foo\"},{\"id\":1,\"message\":\"bar\"}]});}</script>\
-         <script type=\"module\">import init from \'./pkg/example.js\';async function run(){await init()}</script>\
+         <script type=\"module\">import init from \'./pkg/example.js\';async function run(){await init()}run()</script>\
          </head><body><table><tr><th>id</th><th>message</th></tr><tr><td>0</td><td>foo</td>\
          </tr><tr><td>1</td><td>bar</td></tr></table></body></html>"
     )

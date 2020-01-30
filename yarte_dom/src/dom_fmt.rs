@@ -93,7 +93,7 @@ fn add_scripts(s: &Struct, sink: &mut Sink) {
     last += 1;
 
     let init_s = format!(
-        "import init from '{}';async function run(){{await init()}}",
+        "import init from '{}';async function run(){{await init()}}run()",
         s.script.as_ref().expect("Need `script` attribute")
     );
     let init = Node {

@@ -1,18 +1,16 @@
-#![allow(clippy::into_iter_on_ref)]
-
+use actix_web::{get, middleware::Logger, App, HttpServer, Responder};
+use actix_files as fs;
 use serde::Serialize;
+
 use yarte::Template;
 
-use actix_web::{get, middleware::Logger, App, HttpServer, Responder};
-
-use model::Fortune;
+use model::{Fortune, Item};
 
 #[derive(Template, Serialize)]
 #[template(
     path = "fortune.hbs",
-    print = "code",
     mode = "iso",
-    script = "./client.js"
+    script = "./pkg/client.js"
 )]
 pub struct Test {
     fortunes: Vec<Fortune>,
@@ -25,8 +23,8 @@ async fn index() -> impl Responder {
         fortunes: vec![Fortune {
             id: 0,
             message: "foo".to_string(),
-            foo: (0..10).iter().collect(),
-            bar: (0..5).iter().map(|x| Item { fol: x }).collect()
+            foo: (0..10).collect(),
+            bar: (0..5).map(|x| Item { fol: x }).collect()
         }],
         head: "bar".to_string(),
     }
@@ -39,7 +37,10 @@ async fn main() -> std::io::Result<()> {
     env_logger::init();
 
     // start http server
-    HttpServer::new(move || App::new().wrap(Logger::default()).service(index))
+    HttpServer::new(move || App::new().wrap(Logger::default())
+        .service(index)
+        .service(fs::Files::new("/pkg", "../client/pkg"))
+    )
         .bind("127.0.0.1:8080")?
         .run()
         .await
