@@ -34,14 +34,6 @@ impl<'a> WASMCodeGen<'a> {
         let old_render = mem::take(&mut self.buff_render);
         let old_steps = mem::take(&mut self.steps);
 
-        // Init new black box
-        self.add_black_box_t_root();
-        self.black_box.push(BlackBox {
-            doc: "root dom element".to_string(),
-            name: Self::get_field_root_ident(),
-            ty: parse2(quote!(yarte::web::Element)).unwrap(),
-        });
-
         // Do steps
         self.step(body);
 
@@ -52,6 +44,13 @@ impl<'a> WASMCodeGen<'a> {
         let vdom = Self::get_vdom_ident(&id);
         let table = Self::get_table_ident(&id);
         let table_dom = Self::get_table_dom_ident(&id);
+        self.add_black_box_t_root();
+        // TODO: Multiple root
+        self.black_box.push(BlackBox {
+            doc: "root dom element".to_string(),
+            name: Self::get_field_root_ident(),
+            ty: parse2(quote!(yarte::web::Element)).unwrap(),
+        });
 
         let black_box = self.get_black_box(&component_ty);
 
