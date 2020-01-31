@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use yarte_dom::dom_fmt::{to_wasmfmt, MARK_SCRIPT};
+use yarte_dom::dom_fmt::to_wasmfmt;
 use yarte_hir::{Struct, HIR};
 
 use crate::{CodeGen, EachCodeGen, IfElseCodeGen};
@@ -27,20 +27,7 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
             use HIR::*;
             tokens.extend(match i {
                 Local(a) => quote!(#a),
-                Lit(a) => {
-                    let mut tokens = TokenStream::new();
-                    let mut chunks = a.split(MARK_SCRIPT);
-                    let head = chunks.next().unwrap();
-                    tokens.extend(quote!(_fmt.write_str(#head)?;));
-                    if let Some(tail) = chunks.next() {
-                        tokens.extend(quote!(::std::fmt::Display::fmt(
-                            &::yarte::serde_json::to_string(&self).map_err(|_| ::yarte::Error)?, _fmt)?;
-                        ));
-                        tokens.extend(quote!(_fmt.write_str(#tail)?;));
-                    }
-                    assert!(chunks.next().is_none());
-                    tokens
-                }
+                Lit(a) => quote!(_fmt.write_str(#a)?;),
                 Safe(a) => quote!(::std::fmt::Display::fmt(&(#a), _fmt)?;),
                 Expr(a) => quote!(::yarte::Render::render(&(#a), _fmt)?;),
                 Each(a) => self.gen_each(*a),

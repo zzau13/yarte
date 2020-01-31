@@ -1,3 +1,5 @@
+use quote::quote;
+
 use yarte_hir::{Each as HEach, IfElse as HIfElse, Struct, HIR};
 
 use crate::{
@@ -8,6 +10,7 @@ use crate::{
     },
 };
 use markup5ever::{local_name, namespace_url, ns, QualName};
+use syn::parse2;
 
 pub struct DOMFmt(pub Vec<HIR>);
 
@@ -36,11 +39,11 @@ fn get_html(ir: &[HIR]) -> String {
     html
 }
 
-pub fn to_wasmfmt(ir: Vec<HIR>, s: &Struct) -> ParseResult<Vec<HIR>> {
+pub fn to_wasmfmt(mut ir: Vec<HIR>, s: &Struct) -> ParseResult<Vec<HIR>> {
     let html = get_html(&ir);
     let sink = match parse_document(&html) {
         Ok(mut sink) => {
-            add_scripts(s, &mut sink);
+            add_scripts(s, &mut sink, &mut ir);
             sink
         }
         Err(_) => parse_fragment(&html)?,
@@ -49,9 +52,7 @@ pub fn to_wasmfmt(ir: Vec<HIR>, s: &Struct) -> ParseResult<Vec<HIR>> {
     serialize_domfmt(sink, ir, SerializerOpt { wasm: true })
 }
 
-pub const MARK_SCRIPT: &str = "__YARTE_MARKER__";
-
-fn add_scripts(s: &Struct, sink: &mut Sink) {
+fn add_scripts(s: &Struct, sink: &mut Sink, ir: &mut Vec<HIR>) {
     let mut head: Option<usize> = None;
     use ParseElement::*;
     match sink.nodes.values().next() {
@@ -73,9 +74,21 @@ fn add_scripts(s: &Struct, sink: &mut Sink) {
 
     let mut last = *sink.nodes.keys().last().unwrap() + 1;
     let get_state = format!(
-        "function get_state(){{return JSON.stringify({});}}",
-        MARK_SCRIPT
+        "function get_state(){{return JSON.stringify({}{}{});}}",
+        HEAD, HASH, TAIL
     );
+
+    let mut buf = vec![HIR::Safe(Box::new(
+        parse2(quote!(
+            yarte::serde_json::to_string(&self).map_err(|_| yarte::Error)?
+        ))
+        .unwrap(),
+    ))];
+    for i in ir.drain(..) {
+        buf.push(i);
+    }
+    *ir = buf;
+
     let state = Node {
         name: QualName {
             prefix: None,
@@ -120,8 +133,9 @@ fn add_scripts(s: &Struct, sink: &mut Sink) {
     if let Some(head) = head {
         match sink.nodes.get_mut(&head).unwrap() {
             Node { children, .. } => {
-                children.push(state);
-                children.push(init);
+                let mut n = vec![state, init];
+                n.extend_from_slice(children);
+                *children = n;
             }
             _ => unreachable!(),
         }
@@ -176,26 +190,28 @@ fn serialize_domfmt(sink: Sink, mut ir: Vec<HIR>, opts: SerializerOpt) -> ParseR
             chunks.next();
         }
     }
+    let mut ir = ir.drain(..).filter(|x| match x {
+        HIR::Lit(_) => false,
+        _ => true,
+    });
 
     let mut buff = vec![];
     for chunk in chunks {
         if chunk.is_empty() {
             panic!("chunk empty")
         } else if chunk.starts_with(HASH) {
-            resolve_node(ir.remove(0), &mut buff, opts)?;
+            resolve_node(ir.next().expect("Some HIR expression"), &mut buff, opts)?;
             let cut = &chunk[HASH.len() + TAIL.len()..];
             if !cut.is_empty() {
                 buff.push(HIR::Lit(cut.into()));
-                ir.remove(0);
             }
         } else {
             buff.push(HIR::Lit(chunk.into()));
-            ir.remove(0);
         }
     }
 
     // Standard or empty case (with only comments,...)
-    assert!(ir.is_empty() || (ir.len() == 1 && ir[0] == HIR::Lit("".into())));
+    assert!(ir.next().is_none());
 
     Ok(buff)
 }

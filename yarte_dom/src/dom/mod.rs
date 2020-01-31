@@ -348,6 +348,7 @@ impl DOMBuilder {
         }
     }
 
+    #[inline]
     fn resolve_text(&mut self, s: &str) -> Node {
         Node::Elem(Element::Text(s.to_owned()))
     }
@@ -360,17 +361,20 @@ impl DOMBuilder {
     ) -> ParseResult<Document> {
         let mut buff = vec![];
         for child in children.iter().map(|x| sink.nodes.get(x).unwrap()) {
-            buff.push(match child {
-                ParseElement::Text(s) => self.resolve_text(s),
-                ParseElement::Mark(s) => self.resolve_mark(s, ir)?,
+            match child {
+                ParseElement::Text(s) => match buff.last_mut() {
+                    Some(Node::Elem(Element::Text(last))) => last.push_str(s),
+                    _ => buff.push(self.resolve_text(s)),
+                },
+                ParseElement::Mark(s) => buff.push(self.resolve_mark(s, ir)?),
                 ParseElement::Node {
                     name,
                     attrs,
                     children,
                     ..
-                } => self.resolve_node(name, attrs, children, sink, ir)?,
+                } => buff.push(self.resolve_node(name, attrs, children, sink, ir)?),
                 ParseElement::Document(_) => unreachable!(),
-            })
+            }
         }
 
         Ok(buff)
