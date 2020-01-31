@@ -656,27 +656,25 @@ impl<'a> WASMCodeGen<'a> {
                     self.step(children);
                 }
             }
-            Node::Expr(e) => {
-                match e {
-                    Expression::Each(id, each) => {
-                        let insert_point = self.get_insert_point(pos, o.clone());
-                        self.gen_each(*id, each, pos.1 != 1, insert_point)
-                    }
-                    Expression::IfElse(id, if_else) => {
-                        let IfElse { ifs, if_else, els } = &**if_else;
-
-                        self.resolve_if_block(ifs, *id);
-                        for b in if_else {
-                            self.resolve_if_block(b, *id);
-                        }
-                        if let Some(body) = els {
-                            todo!("resolve if else block expresion");
-                        }
-                    }
-                    Expression::Local(..) => todo!("resolve local expression"),
-                    Expression::Safe(id, _) | Expression::Unsafe(id, _) => unreachable!(),
+            Node::Expr(e) => match e {
+                Expression::Each(id, each) => {
+                    let insert_point = self.get_insert_point(pos, o.clone());
+                    self.gen_each(*id, each, pos.1 != 1, insert_point)
                 }
-            }
+                Expression::IfElse(id, if_else) => {
+                    let IfElse { ifs, if_else, els } = &**if_else;
+
+                    self.resolve_if_block(ifs, *id);
+                    for b in if_else {
+                        self.resolve_if_block(b, *id);
+                    }
+                    if let Some(body) = els {
+                        todo!("resolve if else block expresion");
+                    }
+                }
+                Expression::Local(..) => todo!("resolve local expression"),
+                Expression::Safe(id, _) | Expression::Unsafe(id, _) => unreachable!(),
+            },
             Node::Elem(Element::Text(_)) => (),
         }
     }
