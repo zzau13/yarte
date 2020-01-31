@@ -637,19 +637,18 @@ impl<'a> WASMCodeGen<'a> {
         pos: (usize, usize),
         o: F,
     ) {
-        let mut buff = vec![];
         match node {
             Node::Elem(Element::Node {
                 children, attrs, ..
             }) => {
-                // TODO
                 for attr in attrs {
                     for e in &attr.value {
                         if let ExprOrText::Expr(e) = e {
-                            buff.push((e, Some(attr.name.clone())));
+                            todo!()
                         }
                     }
                 }
+
                 if all_children_text(children) {
                     self.write_leaf_text(children, step.expect("Some step"));
                 } else {
@@ -658,31 +657,27 @@ impl<'a> WASMCodeGen<'a> {
                 }
             }
             Node::Expr(e) => {
-                buff.push((e, None));
+                match e {
+                    Expression::Each(id, each) => {
+                        let insert_point = self.get_insert_point(pos, o.clone());
+                        self.gen_each(*id, each, pos.1 != 1, insert_point)
+                    }
+                    Expression::IfElse(id, if_else) => {
+                        let IfElse { ifs, if_else, els } = &**if_else;
+
+                        self.resolve_if_block(ifs, *id);
+                        for b in if_else {
+                            self.resolve_if_block(b, *id);
+                        }
+                        if let Some(body) = els {
+                            todo!("resolve if else block expresion");
+                        }
+                    }
+                    Expression::Local(..) => todo!("resolve local expression"),
+                    Expression::Safe(id, _) | Expression::Unsafe(id, _) => unreachable!(),
+                }
             }
             Node::Elem(Element::Text(_)) => (),
-        }
-
-        for (i, attr) in buff {
-            match i {
-                Expression::Each(id, each) => {
-                    let insert_point = self.get_insert_point(pos, o.clone());
-                    self.gen_each(*id, each, pos.1 != 1, insert_point)
-                }
-                Expression::Safe(id, _) | Expression::Unsafe(id, _) => todo!("resolve expressions"),
-                Expression::IfElse(id, if_else) => {
-                    let IfElse { ifs, if_else, els } = &**if_else;
-
-                    self.resolve_if_block(ifs, *id);
-                    for b in if_else {
-                        self.resolve_if_block(b, *id);
-                    }
-                    if let Some(body) = els {
-                        todo!("resolve if else block expresion");
-                    }
-                }
-                Expression::Local(..) => todo!("resolve local expression"),
-            }
         }
     }
 
@@ -726,6 +721,7 @@ impl<'a> WASMCodeGen<'a> {
         let (t, e) = get_leaf_text(children, &self.tree_map, &self.var_map);
         let name = format_ident!("__ynode__{}", self.count);
         self.count += 1;
+
         let dom = match self.on.as_ref().expect("Some parent") {
             Parent::Body => {
                 let ident = self.get_global_bbox_ident();
@@ -752,8 +748,9 @@ impl<'a> WASMCodeGen<'a> {
 
         self.steps.push(step);
         self.path_nodes.push((name.clone(), self.steps.clone()));
+
         self.black_box.push(BlackBox {
-            doc: "Yarte Node element".to_string(),
+            doc: format!("Yarte Node element\n\n```\n{}\n```", e),
             name,
             ty: parse2(quote!(yarte::web::Element)).unwrap(),
         });
