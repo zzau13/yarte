@@ -8,6 +8,9 @@ license = "MIT/Apache-2.0"
 repository = "https://github.com/botika/yarte"
 workspace = ".."
 
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+
 [dependencies]
 yarte = { version = "0.5", path = "../../yarte" }
 wasm-bindgen = "0.2"
