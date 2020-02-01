@@ -13,6 +13,7 @@ use yarte_html::{
         QualName, TreeSink,
     },
     tree_builder::{get_marquee, is_marquee},
+    utils::MARK,
 };
 
 pub type ParseNodeId = usize;
@@ -139,7 +140,6 @@ pub struct ParseError(Cow<'static, str>);
 
 pub type ParseResult<T> = Result<T, Vec<ParseError>>;
 
-pub const MARK: &str = "yarteHashHTMLExpressionsATTT";
 pub const HEAD: &str = "<!--yarteHashHTMLExpressionsATTT";
 pub const TAIL: &str = "-->";
 

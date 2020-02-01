@@ -38,6 +38,18 @@ pub fn is_ascii_whitespace(c: char) -> bool {
     matches!(c, '\t' | '\r' | '\n' | '\x0C' | ' ')
 }
 
+pub const MARK: &str = "yarteHashHTMLExpressionsATTT";
+const MARK_LEN: usize = MARK.len();
+const S: &str = "0x";
+const S_LEN: usize = 2;
+const HASH_LEN: usize = 8;
+pub fn is_mark(s: &str) -> bool {
+    s.len() == MARK_LEN + S_LEN + HASH_LEN
+        && &s[..MARK_LEN] == MARK
+        && &s[MARK_LEN..MARK_LEN + S_LEN] == S
+        && s[MARK_LEN + S_LEN..].chars().all(|x| x.is_ascii_hexdigit())
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod test {

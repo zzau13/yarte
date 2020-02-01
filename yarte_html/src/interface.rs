@@ -19,11 +19,23 @@ use markup5ever::{
 pub use self::NodeOrText::{AppendNode, AppendText};
 
 /// Bypass LocalName composing with expressions
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[derive(Eq, PartialOrd, Ord, Clone)]
 pub enum YName {
     Local(LocalName),
     Expr(StrTendril),
 }
+
+impl PartialEq for YName {
+    fn eq(&self, other: &Self) -> bool {
+        use YName::*;
+        match (self, other) {
+            (Local(a), Local(b)) => a == b,
+            (Expr(_), Expr(_)) => true,
+            _ => false,
+        }
+    }
+}
+
 impl Deref for YName {
     type Target = str;
 
@@ -62,7 +74,7 @@ pub struct Attribute {
     pub value: StrTendril,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
 pub struct QualName {
     pub prefix: Option<Prefix>,
     pub ns: Namespace,
@@ -84,7 +96,7 @@ impl QualName {
     }
 }
 
-#[derive(Copy, Clone, Eq, Hash)]
+#[derive(Copy, Clone, Eq)]
 pub struct ExpandedName<'a> {
     pub ns: &'a Namespace,
     pub local: &'a YName,
@@ -134,7 +146,7 @@ pub enum NodeOrText<Handle> {
 /// Whether to interrupt further parsing of the current input until
 /// the next explicit resumption of the tokenizer, or continue without
 /// any interruption.
-#[derive(PartialEq, Eq, Copy, Clone, Hash, Debug)]
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum NextParserState {
     /// Stop further parsing.
     Suspend,
