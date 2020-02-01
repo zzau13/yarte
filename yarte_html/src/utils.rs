@@ -38,7 +38,7 @@ pub fn is_ascii_whitespace(c: char) -> bool {
     matches!(c, '\t' | '\r' | '\n' | '\x0C' | ' ')
 }
 
-pub const MARK: &str = "yarteHashHTMLExpressionsATTT";
+pub const MARK: &str = "yartehashhtmlexpressionsattt";
 const MARK_LEN: usize = MARK.len();
 const S: &str = "0x";
 const S_LEN: usize = 2;
