@@ -1,14 +1,18 @@
 use std::io::{self, Write};
 
 use log::warn;
-pub use markup5ever::serialize::AttrRef;
-use markup5ever::{local_name, namespace_url, ns, LocalName, QualName};
+
+use markup5ever::{local_name, namespace_url, ns};
 
 use yarte_parser::trim;
 
+use crate::interface::{QualName, YName};
+
+pub type AttrRef<'a> = (&'a QualName, &'a str);
+
 #[derive(Default)]
 pub struct ElemInfo {
-    html_name: Option<LocalName>,
+    html_name: Option<YName>,
     ignore_children: bool,
 }
 
@@ -30,7 +34,7 @@ pub struct HtmlSerializer<Wr: Write> {
     opts: SerializerOpt,
 }
 
-fn tagname(name: &QualName) -> LocalName {
+fn tagname(name: &QualName) -> YName {
     match name.ns {
         ns!(html) | ns!(mathml) | ns!(svg) => (),
         ref ns => {
@@ -108,7 +112,7 @@ impl<Wr: Write> HtmlSerializer<Wr> {
                 ns!() => (),
                 ns!(xml) => self.writer.write_all(b"xml:")?,
                 ns!(xmlns) => {
-                    if name.local != local_name!("xmlns") {
+                    if name.local != y_name!("xmlns") {
                         self.writer.write_all(b"xmlns:")?;
                     }
                 }
@@ -131,24 +135,24 @@ impl<Wr: Write> HtmlSerializer<Wr> {
 
         let ignore_children = name.ns == ns!(html)
             && match name.local {
-                local_name!("area")
-                | local_name!("base")
-                | local_name!("basefont")
-                | local_name!("bgsound")
-                | local_name!("br")
-                | local_name!("col")
-                | local_name!("embed")
-                | local_name!("frame")
-                | local_name!("hr")
-                | local_name!("img")
-                | local_name!("input")
-                | local_name!("keygen")
-                | local_name!("link")
-                | local_name!("meta")
-                | local_name!("param")
-                | local_name!("source")
-                | local_name!("track")
-                | local_name!("wbr") => true,
+                y_name!("area")
+                | y_name!("base")
+                | y_name!("basefont")
+                | y_name!("bgsound")
+                | y_name!("br")
+                | y_name!("col")
+                | y_name!("embed")
+                | y_name!("frame")
+                | y_name!("hr")
+                | y_name!("img")
+                | y_name!("input")
+                | y_name!("keygen")
+                | y_name!("link")
+                | y_name!("meta")
+                | y_name!("param")
+                | y_name!("source")
+                | y_name!("track")
+                | y_name!("wbr") => true,
                 _ => false,
             };
 
@@ -179,19 +183,19 @@ impl<Wr: Write> HtmlSerializer<Wr> {
     pub fn write_text(&mut self, text: &str) -> io::Result<()> {
         assert!(self.next_ws.is_none(), "{:?} at \n{:?}", self.next_ws, text);
         let escape = match self.parent().html_name {
-            Some(local_name!("style"))
-            | Some(local_name!("script"))
-            | Some(local_name!("xmp"))
-            | Some(local_name!("iframe"))
-            | Some(local_name!("noembed"))
-            | Some(local_name!("noframes"))
-            | Some(local_name!("plaintext")) => false,
+            Some(y_name!("style"))
+            | Some(y_name!("script"))
+            | Some(y_name!("xmp"))
+            | Some(y_name!("iframe"))
+            | Some(y_name!("noembed"))
+            | Some(y_name!("noframes"))
+            | Some(y_name!("plaintext")) => false,
 
             _ => true,
         };
 
         let v = match self.parent().html_name {
-            Some(local_name!("pre")) | Some(local_name!("listing")) => {
+            Some(y_name!("pre")) | Some(y_name!("listing")) => {
                 self.skip_ws = None;
                 self.next_ws = None;
                 text
@@ -261,38 +265,38 @@ impl<Wr: Write> HtmlSerializer<Wr> {
 
     fn tag_whitespace(&mut self, name: &QualName) -> io::Result<()> {
         match name.local {
-            local_name!("a")
-            | local_name!("abbr")
-            | local_name!("b")
-            | local_name!("bdi")
-            | local_name!("bdo")
-            | local_name!("br")
-            | local_name!("cite")
-            | local_name!("code")
-            | local_name!("data")
-            | local_name!("del")
-            | local_name!("dfn")
-            | local_name!("em")
-            | local_name!("i")
-            | local_name!("input")
-            | local_name!("ins")
-            | local_name!("kbd")
-            | local_name!("mark")
-            | local_name!("q")
-            | local_name!("rp")
-            | local_name!("rt")
-            | local_name!("ruby")
-            | local_name!("s")
-            | local_name!("samp")
-            | local_name!("small")
-            | local_name!("span")
-            | local_name!("strong")
-            | local_name!("sub")
-            | local_name!("sup")
-            | local_name!("time")
-            | local_name!("u")
-            | local_name!("var")
-            | local_name!("wbr") => {
+            y_name!("a")
+            | y_name!("abbr")
+            | y_name!("b")
+            | y_name!("bdi")
+            | y_name!("bdo")
+            | y_name!("br")
+            | y_name!("cite")
+            | y_name!("code")
+            | y_name!("data")
+            | y_name!("del")
+            | y_name!("dfn")
+            | y_name!("em")
+            | y_name!("i")
+            | y_name!("input")
+            | y_name!("ins")
+            | y_name!("kbd")
+            | y_name!("mark")
+            | y_name!("q")
+            | y_name!("rp")
+            | y_name!("rt")
+            | y_name!("ruby")
+            | y_name!("s")
+            | y_name!("samp")
+            | y_name!("small")
+            | y_name!("span")
+            | y_name!("strong")
+            | y_name!("sub")
+            | y_name!("sup")
+            | y_name!("time")
+            | y_name!("u")
+            | y_name!("var")
+            | y_name!("wbr") => {
                 if let Some(text) = self.next_ws.take() {
                     match self.skip_ws {
                         Some(Ws::C) | None if !text.is_empty() => self.writer.write_all(b" ")?,

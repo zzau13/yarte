@@ -10,51 +10,39 @@
 //! The HTML5 tree builder.
 
 #![allow(
-    clippy::cognitive_complexity,
-    clippy::redundant_static_lifetimes,
-    clippy::suspicious_else_formatting,
-    clippy::unused_unit,
-    clippy::wrong_self_convention
+clippy::cognitive_complexity,
+clippy::redundant_static_lifetimes,
+clippy::suspicious_else_formatting,
+clippy::unused_unit,
+clippy::wrong_self_convention
 )]
 
 use std::{
-    borrow::Cow::Borrowed,
+    borrow::Cow::{Borrowed, Owned},
     collections::VecDeque,
     fmt,
     iter::{Enumerate, Rev},
     slice,
 };
 
-use self::types::*;
+use log::{debug, log_enabled, Level};
+use mac::{_tt_as_expr_hack, matches};
 
-use html5ever::{
-    interface::{create_element, AppendNode, AppendText, Attribute, NodeOrText, TreeSink},
-    tendril::StrTendril,
-    tokenizer::{self, Doctype, EndTag, StartTag, Tag, TokenSink, TokenSinkResult},
-    ExpandedName, LocalName, Namespace, QualName,
+use markup5ever::{tendril::StrTendril, Namespace};
+
+use crate::{
+    interface::{
+        create_element, AppendNode, AppendText, Attribute, ExpandedName, NodeOrText, QualName,
+        TreeSink, YName,
+    },
+    tokenizer::{
+        self, states::RawKind, Doctype, EndTag, StartTag, Tag, TokenSink, TokenSinkResult,
+    },
+    utils::{is_ascii_whitespace, to_escaped_string},
 };
 
-use self::tag_sets::*;
-use html5ever::tokenizer::states::RawKind;
-use log::{debug, log_enabled, Level};
-use mac::{_tt_as_expr_hack, format_if, matches};
-
-use lazy_static::lazy_static;
-
-/// ASCII whitespace characters, as defined by
-/// tree construction modes that treat them specially.
-pub fn is_ascii_whitespace(c: char) -> bool {
-    matches!(c, '\t' | '\r' | '\n' | '\x0C' | ' ')
-}
-
-pub fn to_escaped_string<T: fmt::Debug>(x: &T) -> String {
-    // FIXME: don't allocate twice
-    let string = format!("{:?}", x);
-    string.chars().flat_map(|c| c.escape_default()).collect()
-}
-
 pub use self::PushFlag::*;
-use html5ever::tree_builder::TreeBuilderOpts;
+use self::{tag_sets::*, types::*};
 
 #[macro_use]
 mod tag_sets;
@@ -66,9 +54,6 @@ include!(concat!(env!("OUT_DIR"), "/rules.rs"));
 
 /// The HTML tree builder.
 pub struct TreeBuilder<Handle, Sink> {
-    /// Options controlling the behavior of the tree builder.
-    opts: TreeBuilderOpts,
-
     /// Consumer of tree modifications.
     pub sink: Sink,
 
@@ -92,8 +77,16 @@ pub struct TreeBuilder<Handle, Sink> {
     context_elem: Option<Handle>,
 }
 
-lazy_static! {
-    pub static ref YARTE_TAG: QualName = QualName::new(None, ns!(html), LocalName::from("marquee"));
+thread_local! {
+    static YARTE_TAG: QualName = QualName::new(None, ns!(html), y_name!("marquee"));
+}
+
+pub fn is_marquee(name: &QualName) -> bool {
+    YARTE_TAG.with(|x| *x.local == *name.local)
+}
+
+pub fn get_marquee() -> QualName {
+    YARTE_TAG.with(|x| x.clone())
 }
 
 impl<Handle, Sink> TreeBuilder<Handle, Sink>
@@ -104,10 +97,9 @@ where
     /// Create a new tree builder which sends tree modifications to a particular `TreeSink`.
     ///
     /// The tree builder is also a `TokenSink`.
-    pub fn new(mut sink: Sink, opts: TreeBuilderOpts) -> TreeBuilder<Handle, Sink> {
+    pub fn new(mut sink: Sink) -> TreeBuilder<Handle, Sink> {
         let doc_handle = sink.get_document();
         TreeBuilder {
-            opts,
             sink,
             mode: Initial,
             orig_mode: None,
@@ -122,14 +114,9 @@ where
     /// This is for parsing fragments.
     ///
     /// The tree builder is also a `TokenSink`.
-    pub fn new_for_fragment(
-        mut sink: Sink,
-        context_elem: Handle,
-        opts: TreeBuilderOpts,
-    ) -> TreeBuilder<Handle, Sink> {
+    pub fn new_for_fragment(mut sink: Sink, context_elem: Handle) -> TreeBuilder<Handle, Sink> {
         let doc_handle = sink.get_document();
         let mut tb = TreeBuilder {
-            opts,
             sink,
             mode: InHtml,
             orig_mode: None,
@@ -261,12 +248,8 @@ where
             tokenizer::DoctypeToken(dt) => {
                 if self.mode == Initial {
                     if data::doctype_error(&dt) {
-                        self.sink.parse_error(format_if!(
-                            self.opts.exact_errors,
-                            "Bad DOCTYPE",
-                            "Bad DOCTYPE: {:?}",
-                            dt
-                        ));
+                        self.sink
+                            .parse_error(Owned(format!("Bad DOCTYPE: {:?}", dt)));
                     }
                     let Doctype {
                         name,
@@ -274,23 +257,17 @@ where
                         system_id,
                         ..
                     } = dt;
-                    if !self.opts.drop_doctype {
-                        self.sink.append_doctype_to_document(
-                            name.unwrap_or_default(),
-                            public_id.unwrap_or_default(),
-                            system_id.unwrap_or_default(),
-                        );
-                    }
+                    self.sink.append_doctype_to_document(
+                        name.unwrap_or_default(),
+                        public_id.unwrap_or_default(),
+                        system_id.unwrap_or_default(),
+                    );
 
                     self.mode = BeforeHtml;
                     return tokenizer::TokenSinkResult::Continue;
                 } else {
-                    self.sink.parse_error(format_if!(
-                        self.opts.exact_errors,
-                        "DOCTYPE in body",
-                        "DOCTYPE in insertion mode {:?}",
-                        self.mode
-                    ));
+                    self.sink
+                        .parse_error(Owned(format!("DOCTYPE in insertion mode {:?}", self.mode)));
                     return tokenizer::TokenSinkResult::Continue;
                 }
             }
@@ -347,14 +324,14 @@ macro_rules! qualname {
         QualName {
             prefix: None,
             ns: ns!(),
-            local: local_name!($local),
+            local: y_name!($local),
         }
     };
     ($prefix: tt $ns:tt $local:tt) => {
         QualName {
             prefix: Some(namespace_prefix!($prefix)),
             ns: ns!($ns),
-            local: local_name!($local),
+            local: y_name!($local),
         }
     };
 }
@@ -366,13 +343,11 @@ where
     Sink: TreeSink<Handle = Handle>,
 {
     fn unexpected<T: fmt::Debug>(&mut self, _thing: &T) -> ProcessResult<Handle> {
-        self.sink.parse_error(format_if!(
-            self.opts.exact_errors,
-            "Unexpected token",
+        self.sink.parse_error(Owned(format!(
             "Unexpected token {} in insertion mode {:?}",
             to_escaped_string(_thing),
             self.mode
-        ));
+        )));
         Done
     }
 
@@ -439,8 +414,9 @@ where
         self.insert_at(insertion_point, child);
     }
 
-    fn adoption_agency(&mut self, subject: LocalName) {
+    fn adoption_agency(&mut self, subject: YName) {
         // 1.
+        // TODO: simplify
         if self.current_node_named(subject.clone())
             && self
                 .position_in_active_formatting(self.current_node())
@@ -581,12 +557,7 @@ where
                 if body_end_ok(name) {
                     continue;
                 }
-                error = format_if!(
-                    self.opts.exact_errors,
-                    "Unexpected open tag at end of body",
-                    "Unexpected open tag {:?} at end of body",
-                    name
-                );
+                error = Owned(format!("Unexpected open tag {:?} at end of body", name));
             }
             self.sink.parse_error(error);
             // FIXME: Do we keep checking after finding one bad tag?
@@ -621,16 +592,16 @@ where
         set(self.sink.elem_name(elem))
     }
 
-    fn html_elem_named(&self, elem: &Handle, name: LocalName) -> bool {
+    fn html_elem_named(&self, elem: &Handle, name: YName) -> bool {
         let expanded = self.sink.elem_name(elem);
         *expanded.ns == ns!(html) && *expanded.local == name
     }
 
-    fn current_node_named(&self, name: LocalName) -> bool {
+    fn current_node_named(&self, name: YName) -> bool {
         self.html_elem_named(self.current_node(), name)
     }
 
-    fn in_scope_named<TagSet>(&self, scope: TagSet, name: LocalName) -> bool
+    fn in_scope_named<TagSet>(&self, scope: TagSet, name: YName) -> bool
     where
         TagSet: Fn(ExpandedName) -> bool,
     {
@@ -654,7 +625,7 @@ where
         }
     }
 
-    fn generate_implied_end_except(&mut self, except: LocalName) {
+    fn generate_implied_end_except(&mut self, except: YName) {
         self.generate_implied_end(|p| {
             if *p.ns == ns!(html) && *p.local == except {
                 false
@@ -686,27 +657,25 @@ where
         n
     }
 
-    fn pop_until_named(&mut self, name: LocalName) -> usize {
+    fn pop_until_named(&mut self, name: YName) -> usize {
         self.pop_until(|p| *p.ns == ns!(html) && *p.local == name)
     }
 
     // Pop elements until one with the specified name has been popped.
     // Signal an error if it was not the first one.
-    fn expect_to_close(&mut self, name: LocalName) {
+    fn expect_to_close(&mut self, name: YName) {
         if self.pop_until_named(name.clone()) != 1 {
-            self.sink.parse_error(format_if!(
-                self.opts.exact_errors,
-                "Unexpected open element",
+            self.sink.parse_error(Owned(format!(
                 "Unexpected open element while closing {:?}",
                 name
-            ));
+            )));
         }
     }
 
     fn close_p_element(&mut self) {
         declare_tag_set!(implied = [cursory_implied_end] - "p");
         self.generate_implied_end(implied);
-        self.expect_to_close(local_name!("p"));
+        self.expect_to_close(y_name!("p"));
     }
 
     fn append_text(&mut self, text: StrTendril) -> ProcessResult<Handle> {
@@ -724,7 +693,7 @@ where
     fn create_root(&mut self, attrs: Vec<Attribute>) {
         let elem = create_element(
             &mut self.sink,
-            QualName::new(None, ns!(html), local_name!("html")),
+            QualName::new(None, ns!(html), y_name!("html")),
             attrs,
         );
         self.push(&elem);
@@ -736,7 +705,7 @@ where
         &mut self,
         push: PushFlag,
         ns: Namespace,
-        name: LocalName,
+        name: YName,
         attrs: Vec<Attribute>,
     ) -> Handle {
         // Step 7.
@@ -762,7 +731,7 @@ where
         self.insert_element(NoPush, ns!(html), tag.name, tag.attrs)
     }
 
-    fn insert_phantom(&mut self, name: LocalName) -> Handle {
+    fn insert_phantom(&mut self, name: YName) -> Handle {
         self.insert_element(Push, ns!(html), name, vec![])
     }
     //§ END
@@ -827,13 +796,13 @@ where
     fn handle_misnested_a_tags(&mut self, tag: &Tag) {
         let node = unwrap_or_return!(
             self.active_formatting_end_to_marker()
-                .find(|&(_, n, _)| self.html_elem_named(n, local_name!("a")))
+                .find(|&(_, n, _)| self.html_elem_named(n, y_name!("a")))
                 .map(|(_, n, _)| n.clone()),
             ()
         );
 
         self.unexpected(tag);
-        self.adoption_agency(local_name!("a"));
+        self.adoption_agency(y_name!("a"));
         self.position_in_active_formatting(&node)
             .map(|index| self.active_formatting.remove(index));
         self.remove_from_stack(&node);
@@ -861,7 +830,7 @@ where
                     kind: StartTag,
                     ref name,
                     ..
-                }) if !matches!(*name, local_name!("mglyph") | local_name!("malignmark")) => {
+                }) if !matches!(*name, y_name!("mglyph") | y_name!("malignmark")) => {
                     return false;
                 }
                 _ => (),
@@ -880,7 +849,7 @@ where
             match *token {
                 TagToken(Tag {
                     kind: StartTag,
-                    name: local_name!("svg"),
+                    name: y_name!("svg"),
                     ..
                 }) => return false,
                 CharacterTokens(..) | NullCharacterToken | TagToken(Tag { kind: StartTag, .. }) => {
@@ -916,50 +885,50 @@ where
     fn adjust_svg_tag_name(&mut self, tag: &mut Tag) {
         let Tag { ref mut name, .. } = *tag;
         match *name {
-            local_name!("altglyph") => *name = local_name!("altGlyph"),
-            local_name!("altglyphdef") => *name = local_name!("altGlyphDef"),
-            local_name!("altglyphitem") => *name = local_name!("altGlyphItem"),
-            local_name!("animatecolor") => *name = local_name!("animateColor"),
-            local_name!("animatemotion") => *name = local_name!("animateMotion"),
-            local_name!("animatetransform") => *name = local_name!("animateTransform"),
-            local_name!("clippath") => *name = local_name!("clipPath"),
-            local_name!("feblend") => *name = local_name!("feBlend"),
-            local_name!("fecolormatrix") => *name = local_name!("feColorMatrix"),
-            local_name!("fecomponenttransfer") => *name = local_name!("feComponentTransfer"),
-            local_name!("fecomposite") => *name = local_name!("feComposite"),
-            local_name!("feconvolvematrix") => *name = local_name!("feConvolveMatrix"),
-            local_name!("fediffuselighting") => *name = local_name!("feDiffuseLighting"),
-            local_name!("fedisplacementmap") => *name = local_name!("feDisplacementMap"),
-            local_name!("fedistantlight") => *name = local_name!("feDistantLight"),
-            local_name!("fedropshadow") => *name = local_name!("feDropShadow"),
-            local_name!("feflood") => *name = local_name!("feFlood"),
-            local_name!("fefunca") => *name = local_name!("feFuncA"),
-            local_name!("fefuncb") => *name = local_name!("feFuncB"),
-            local_name!("fefuncg") => *name = local_name!("feFuncG"),
-            local_name!("fefuncr") => *name = local_name!("feFuncR"),
-            local_name!("fegaussianblur") => *name = local_name!("feGaussianBlur"),
-            local_name!("feimage") => *name = local_name!("feImage"),
-            local_name!("femerge") => *name = local_name!("feMerge"),
-            local_name!("femergenode") => *name = local_name!("feMergeNode"),
-            local_name!("femorphology") => *name = local_name!("feMorphology"),
-            local_name!("feoffset") => *name = local_name!("feOffset"),
-            local_name!("fepointlight") => *name = local_name!("fePointLight"),
-            local_name!("fespecularlighting") => *name = local_name!("feSpecularLighting"),
-            local_name!("fespotlight") => *name = local_name!("feSpotLight"),
-            local_name!("fetile") => *name = local_name!("feTile"),
-            local_name!("feturbulence") => *name = local_name!("feTurbulence"),
-            local_name!("foreignobject") => *name = local_name!("foreignObject"),
-            local_name!("glyphref") => *name = local_name!("glyphRef"),
-            local_name!("lineargradient") => *name = local_name!("linearGradient"),
-            local_name!("radialgradient") => *name = local_name!("radialGradient"),
-            local_name!("textpath") => *name = local_name!("textPath"),
+            y_name!("altglyph") => *name = y_name!("altGlyph"),
+            y_name!("altglyphdef") => *name = y_name!("altGlyphDef"),
+            y_name!("altglyphitem") => *name = y_name!("altGlyphItem"),
+            y_name!("animatecolor") => *name = y_name!("animateColor"),
+            y_name!("animatemotion") => *name = y_name!("animateMotion"),
+            y_name!("animatetransform") => *name = y_name!("animateTransform"),
+            y_name!("clippath") => *name = y_name!("clipPath"),
+            y_name!("feblend") => *name = y_name!("feBlend"),
+            y_name!("fecolormatrix") => *name = y_name!("feColorMatrix"),
+            y_name!("fecomponenttransfer") => *name = y_name!("feComponentTransfer"),
+            y_name!("fecomposite") => *name = y_name!("feComposite"),
+            y_name!("feconvolvematrix") => *name = y_name!("feConvolveMatrix"),
+            y_name!("fediffuselighting") => *name = y_name!("feDiffuseLighting"),
+            y_name!("fedisplacementmap") => *name = y_name!("feDisplacementMap"),
+            y_name!("fedistantlight") => *name = y_name!("feDistantLight"),
+            y_name!("fedropshadow") => *name = y_name!("feDropShadow"),
+            y_name!("feflood") => *name = y_name!("feFlood"),
+            y_name!("fefunca") => *name = y_name!("feFuncA"),
+            y_name!("fefuncb") => *name = y_name!("feFuncB"),
+            y_name!("fefuncg") => *name = y_name!("feFuncG"),
+            y_name!("fefuncr") => *name = y_name!("feFuncR"),
+            y_name!("fegaussianblur") => *name = y_name!("feGaussianBlur"),
+            y_name!("feimage") => *name = y_name!("feImage"),
+            y_name!("femerge") => *name = y_name!("feMerge"),
+            y_name!("femergenode") => *name = y_name!("feMergeNode"),
+            y_name!("femorphology") => *name = y_name!("feMorphology"),
+            y_name!("feoffset") => *name = y_name!("feOffset"),
+            y_name!("fepointlight") => *name = y_name!("fePointLight"),
+            y_name!("fespecularlighting") => *name = y_name!("feSpecularLighting"),
+            y_name!("fespotlight") => *name = y_name!("feSpotLight"),
+            y_name!("fetile") => *name = y_name!("feTile"),
+            y_name!("feturbulence") => *name = y_name!("feTurbulence"),
+            y_name!("foreignobject") => *name = y_name!("foreignObject"),
+            y_name!("glyphref") => *name = y_name!("glyphRef"),
+            y_name!("lineargradient") => *name = y_name!("linearGradient"),
+            y_name!("radialgradient") => *name = y_name!("radialGradient"),
+            y_name!("textpath") => *name = y_name!("textPath"),
             _ => (),
         }
     }
 
     fn adjust_attributes<F>(&mut self, tag: &mut Tag, mut map: F)
     where
-        F: FnMut(LocalName) -> Option<QualName>,
+        F: FnMut(YName) -> Option<QualName>,
     {
         for &mut Attribute { ref mut name, .. } in &mut tag.attrs {
             if let Some(replacement) = map(name.local.clone()) {
@@ -970,89 +939,89 @@ where
 
     fn adjust_svg_attributes(&mut self, tag: &mut Tag) {
         self.adjust_attributes(tag, |k| match k {
-            local_name!("attributename") => Some(qualname!("", "attributeName")),
-            local_name!("attributetype") => Some(qualname!("", "attributeType")),
-            local_name!("basefrequency") => Some(qualname!("", "baseFrequency")),
-            local_name!("baseprofile") => Some(qualname!("", "baseProfile")),
-            local_name!("calcmode") => Some(qualname!("", "calcMode")),
-            local_name!("clippathunits") => Some(qualname!("", "clipPathUnits")),
-            local_name!("diffuseconstant") => Some(qualname!("", "diffuseConstant")),
-            local_name!("edgemode") => Some(qualname!("", "edgeMode")),
-            local_name!("filterunits") => Some(qualname!("", "filterUnits")),
-            local_name!("glyphref") => Some(qualname!("", "glyphRef")),
-            local_name!("gradienttransform") => Some(qualname!("", "gradientTransform")),
-            local_name!("gradientunits") => Some(qualname!("", "gradientUnits")),
-            local_name!("kernelmatrix") => Some(qualname!("", "kernelMatrix")),
-            local_name!("kernelunitlength") => Some(qualname!("", "kernelUnitLength")),
-            local_name!("keypoints") => Some(qualname!("", "keyPoints")),
-            local_name!("keysplines") => Some(qualname!("", "keySplines")),
-            local_name!("keytimes") => Some(qualname!("", "keyTimes")),
-            local_name!("lengthadjust") => Some(qualname!("", "lengthAdjust")),
-            local_name!("limitingconeangle") => Some(qualname!("", "limitingConeAngle")),
-            local_name!("markerheight") => Some(qualname!("", "markerHeight")),
-            local_name!("markerunits") => Some(qualname!("", "markerUnits")),
-            local_name!("markerwidth") => Some(qualname!("", "markerWidth")),
-            local_name!("maskcontentunits") => Some(qualname!("", "maskContentUnits")),
-            local_name!("maskunits") => Some(qualname!("", "maskUnits")),
-            local_name!("numoctaves") => Some(qualname!("", "numOctaves")),
-            local_name!("pathlength") => Some(qualname!("", "pathLength")),
-            local_name!("patterncontentunits") => Some(qualname!("", "patternContentUnits")),
-            local_name!("patterntransform") => Some(qualname!("", "patternTransform")),
-            local_name!("patternunits") => Some(qualname!("", "patternUnits")),
-            local_name!("pointsatx") => Some(qualname!("", "pointsAtX")),
-            local_name!("pointsaty") => Some(qualname!("", "pointsAtY")),
-            local_name!("pointsatz") => Some(qualname!("", "pointsAtZ")),
-            local_name!("preservealpha") => Some(qualname!("", "preserveAlpha")),
-            local_name!("preserveaspectratio") => Some(qualname!("", "preserveAspectRatio")),
-            local_name!("primitiveunits") => Some(qualname!("", "primitiveUnits")),
-            local_name!("refx") => Some(qualname!("", "refX")),
-            local_name!("refy") => Some(qualname!("", "refY")),
-            local_name!("repeatcount") => Some(qualname!("", "repeatCount")),
-            local_name!("repeatdur") => Some(qualname!("", "repeatDur")),
-            local_name!("requiredextensions") => Some(qualname!("", "requiredExtensions")),
-            local_name!("requiredfeatures") => Some(qualname!("", "requiredFeatures")),
-            local_name!("specularconstant") => Some(qualname!("", "specularConstant")),
-            local_name!("specularexponent") => Some(qualname!("", "specularExponent")),
-            local_name!("spreadmethod") => Some(qualname!("", "spreadMethod")),
-            local_name!("startoffset") => Some(qualname!("", "startOffset")),
-            local_name!("stddeviation") => Some(qualname!("", "stdDeviation")),
-            local_name!("stitchtiles") => Some(qualname!("", "stitchTiles")),
-            local_name!("surfacescale") => Some(qualname!("", "surfaceScale")),
-            local_name!("systemlanguage") => Some(qualname!("", "systemLanguage")),
-            local_name!("tablevalues") => Some(qualname!("", "tableValues")),
-            local_name!("targetx") => Some(qualname!("", "targetX")),
-            local_name!("targety") => Some(qualname!("", "targetY")),
-            local_name!("textlength") => Some(qualname!("", "textLength")),
-            local_name!("viewbox") => Some(qualname!("", "viewBox")),
-            local_name!("viewtarget") => Some(qualname!("", "viewTarget")),
-            local_name!("xchannelselector") => Some(qualname!("", "xChannelSelector")),
-            local_name!("ychannelselector") => Some(qualname!("", "yChannelSelector")),
-            local_name!("zoomandpan") => Some(qualname!("", "zoomAndPan")),
+            y_name!("attributename") => Some(qualname!("", "attributeName")),
+            y_name!("attributetype") => Some(qualname!("", "attributeType")),
+            y_name!("basefrequency") => Some(qualname!("", "baseFrequency")),
+            y_name!("baseprofile") => Some(qualname!("", "baseProfile")),
+            y_name!("calcmode") => Some(qualname!("", "calcMode")),
+            y_name!("clippathunits") => Some(qualname!("", "clipPathUnits")),
+            y_name!("diffuseconstant") => Some(qualname!("", "diffuseConstant")),
+            y_name!("edgemode") => Some(qualname!("", "edgeMode")),
+            y_name!("filterunits") => Some(qualname!("", "filterUnits")),
+            y_name!("glyphref") => Some(qualname!("", "glyphRef")),
+            y_name!("gradienttransform") => Some(qualname!("", "gradientTransform")),
+            y_name!("gradientunits") => Some(qualname!("", "gradientUnits")),
+            y_name!("kernelmatrix") => Some(qualname!("", "kernelMatrix")),
+            y_name!("kernelunitlength") => Some(qualname!("", "kernelUnitLength")),
+            y_name!("keypoints") => Some(qualname!("", "keyPoints")),
+            y_name!("keysplines") => Some(qualname!("", "keySplines")),
+            y_name!("keytimes") => Some(qualname!("", "keyTimes")),
+            y_name!("lengthadjust") => Some(qualname!("", "lengthAdjust")),
+            y_name!("limitingconeangle") => Some(qualname!("", "limitingConeAngle")),
+            y_name!("markerheight") => Some(qualname!("", "markerHeight")),
+            y_name!("markerunits") => Some(qualname!("", "markerUnits")),
+            y_name!("markerwidth") => Some(qualname!("", "markerWidth")),
+            y_name!("maskcontentunits") => Some(qualname!("", "maskContentUnits")),
+            y_name!("maskunits") => Some(qualname!("", "maskUnits")),
+            y_name!("numoctaves") => Some(qualname!("", "numOctaves")),
+            y_name!("pathlength") => Some(qualname!("", "pathLength")),
+            y_name!("patterncontentunits") => Some(qualname!("", "patternContentUnits")),
+            y_name!("patterntransform") => Some(qualname!("", "patternTransform")),
+            y_name!("patternunits") => Some(qualname!("", "patternUnits")),
+            y_name!("pointsatx") => Some(qualname!("", "pointsAtX")),
+            y_name!("pointsaty") => Some(qualname!("", "pointsAtY")),
+            y_name!("pointsatz") => Some(qualname!("", "pointsAtZ")),
+            y_name!("preservealpha") => Some(qualname!("", "preserveAlpha")),
+            y_name!("preserveaspectratio") => Some(qualname!("", "preserveAspectRatio")),
+            y_name!("primitiveunits") => Some(qualname!("", "primitiveUnits")),
+            y_name!("refx") => Some(qualname!("", "refX")),
+            y_name!("refy") => Some(qualname!("", "refY")),
+            y_name!("repeatcount") => Some(qualname!("", "repeatCount")),
+            y_name!("repeatdur") => Some(qualname!("", "repeatDur")),
+            y_name!("requiredextensions") => Some(qualname!("", "requiredExtensions")),
+            y_name!("requiredfeatures") => Some(qualname!("", "requiredFeatures")),
+            y_name!("specularconstant") => Some(qualname!("", "specularConstant")),
+            y_name!("specularexponent") => Some(qualname!("", "specularExponent")),
+            y_name!("spreadmethod") => Some(qualname!("", "spreadMethod")),
+            y_name!("startoffset") => Some(qualname!("", "startOffset")),
+            y_name!("stddeviation") => Some(qualname!("", "stdDeviation")),
+            y_name!("stitchtiles") => Some(qualname!("", "stitchTiles")),
+            y_name!("surfacescale") => Some(qualname!("", "surfaceScale")),
+            y_name!("systemlanguage") => Some(qualname!("", "systemLanguage")),
+            y_name!("tablevalues") => Some(qualname!("", "tableValues")),
+            y_name!("targetx") => Some(qualname!("", "targetX")),
+            y_name!("targety") => Some(qualname!("", "targetY")),
+            y_name!("textlength") => Some(qualname!("", "textLength")),
+            y_name!("viewbox") => Some(qualname!("", "viewBox")),
+            y_name!("viewtarget") => Some(qualname!("", "viewTarget")),
+            y_name!("xchannelselector") => Some(qualname!("", "xChannelSelector")),
+            y_name!("ychannelselector") => Some(qualname!("", "yChannelSelector")),
+            y_name!("zoomandpan") => Some(qualname!("", "zoomAndPan")),
             _ => None,
         });
     }
 
     fn adjust_mathml_attributes(&mut self, tag: &mut Tag) {
         self.adjust_attributes(tag, |k| match k {
-            local_name!("definitionurl") => Some(qualname!("", "definitionURL")),
+            y_name!("definitionurl") => Some(qualname!("", "definitionURL")),
             _ => None,
         });
     }
 
     fn adjust_foreign_attributes(&mut self, tag: &mut Tag) {
         self.adjust_attributes(tag, |k| match k {
-            local_name!("xlink:actuate") => Some(qualname!("xlink" xlink "actuate")),
-            local_name!("xlink:arcrole") => Some(qualname!("xlink" xlink "arcrole")),
-            local_name!("xlink:href") => Some(qualname!("xlink" xlink "href")),
-            local_name!("xlink:role") => Some(qualname!("xlink" xlink "role")),
-            local_name!("xlink:show") => Some(qualname!("xlink" xlink "show")),
-            local_name!("xlink:title") => Some(qualname!("xlink" xlink "title")),
-            local_name!("xlink:type") => Some(qualname!("xlink" xlink "type")),
-            local_name!("xml:base") => Some(qualname!("xml" xml "base")),
-            local_name!("xml:lang") => Some(qualname!("xml" xml "lang")),
-            local_name!("xml:space") => Some(qualname!("xml" xml "space")),
-            local_name!("xmlns") => Some(qualname!("" xmlns "xmlns")),
-            local_name!("xmlns:xlink") => Some(qualname!("xmlns" xmlns "xlink")),
+            y_name!("xlink:actuate") => Some(qualname!("xlink" xlink "actuate")),
+            y_name!("xlink:arcrole") => Some(qualname!("xlink" xlink "arcrole")),
+            y_name!("xlink:href") => Some(qualname!("xlink" xlink "href")),
+            y_name!("xlink:role") => Some(qualname!("xlink" xlink "role")),
+            y_name!("xlink:show") => Some(qualname!("xlink" xlink "show")),
+            y_name!("xlink:title") => Some(qualname!("xlink" xlink "title")),
+            y_name!("xlink:type") => Some(qualname!("xlink" xlink "type")),
+            y_name!("xml:base") => Some(qualname!("xml" xml "base")),
+            y_name!("xml:lang") => Some(qualname!("xml" xml "lang")),
+            y_name!("xml:space") => Some(qualname!("xml" xml "space")),
+            y_name!("xmlns") => Some(qualname!("" xmlns "xmlns")),
+            y_name!("xmlns:xlink") => Some(qualname!("xmlns" xmlns "xlink")),
             _ => None,
         });
     }

@@ -1,16 +1,20 @@
+use markup5ever::{local_name, namespace_url, ns};
 use quote::quote;
+use syn::parse2;
 
 use yarte_hir::{Each as HEach, IfElse as HIfElse, Struct, HIR};
+use yarte_html::{
+    interface::{QualName, YName},
+    serializer::SerializerOpt,
+    y_name,
+};
 
 use crate::{
     serialize::serialize,
-    serializer::SerializerOpt,
     sink::{
         parse_document, parse_fragment, ParseAttribute, ParseElement, ParseResult, Sink, HEAD, TAIL,
     },
 };
-use markup5ever::{local_name, namespace_url, ns, QualName};
-use syn::parse2;
 
 pub struct DOMFmt(pub Vec<HIR>);
 
@@ -58,10 +62,10 @@ fn add_scripts(s: &Struct, sink: &mut Sink, ir: &mut Vec<HIR>) {
     match sink.nodes.values().next() {
         Some(Document(children)) => {
             if let Some(Node { name, children, .. }) = sink.nodes.get(&children[0]) {
-                if let local_name!("html") = name.local {
+                if let y_name!("html") = name.local {
                     for i in children {
                         if let Some(Node { name, .. }) = sink.nodes.get(i) {
-                            if let local_name!("head") = name.local {
+                            if let y_name!("head") = name.local {
                                 head = Some(*i);
                             }
                         }
@@ -93,7 +97,7 @@ fn add_scripts(s: &Struct, sink: &mut Sink, ir: &mut Vec<HIR>) {
         name: QualName {
             prefix: None,
             ns: ns!(html),
-            local: local_name!("script"),
+            local: y_name!("script"),
         },
         attrs: vec![],
         children: vec![last],
@@ -113,13 +117,13 @@ fn add_scripts(s: &Struct, sink: &mut Sink, ir: &mut Vec<HIR>) {
         name: QualName {
             prefix: None,
             ns: ns!(html),
-            local: local_name!("script"),
+            local: y_name!("script"),
         },
         attrs: vec![ParseAttribute {
             name: QualName {
                 prefix: None,
                 ns: ns!(),
-                local: local_name!("type"),
+                local: y_name!("type"),
             },
             value: "module".to_string(),
         }],
@@ -144,7 +148,7 @@ fn add_scripts(s: &Struct, sink: &mut Sink, ir: &mut Vec<HIR>) {
             name: QualName {
                 prefix: None,
                 ns: ns!(html),
-                local: local_name!("head"),
+                local: y_name!("head"),
             },
             attrs: vec![],
             children: vec![state, init],

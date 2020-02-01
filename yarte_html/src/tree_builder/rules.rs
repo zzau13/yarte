@@ -9,10 +9,10 @@
 
 // The tree builder rules, as a single, enormous nested match expression.
 
-use html5ever::tokenizer::states::{Rawtext, Rcdata};
-use markup5ever::{expanded_name, local_name, namespace_prefix, namespace_url, ns};
+use markup5ever::{namespace_prefix, namespace_url, ns, tendril::SliceExt, local_name};
 
-use html5ever::tendril::SliceExt;
+use crate::tokenizer::states::{Rawtext, Rcdata};
+use crate::{expanded_name, y_name};
 
 fn current_node<Handle>(open_elems: &[Handle]) -> &Handle {
     open_elems.last().expect("no current element")
@@ -57,7 +57,7 @@ where
                     self.stop_parsing()
                 }
                 </body> => {
-                    if self.in_scope_named(default_scope, local_name!("body")) {
+                    if self.in_scope_named(default_scope, y_name!("body")) {
                         self.check_body_end();
                         self.mode = AfterBody;
                     } else {
@@ -67,7 +67,7 @@ where
                 }
 
                 </html> => {
-                    if self.in_scope_named(default_scope, local_name!("body")) {
+                    if self.in_scope_named(default_scope, y_name!("body")) {
                         self.check_body_end();
                         Reprocess(AfterBody, token)
                     } else {
@@ -118,10 +118,10 @@ where
                 }
 
                 tag @ <button> => {
-                    if self.in_scope_named(default_scope, local_name!("button")) {
+                    if self.in_scope_named(default_scope, y_name!("button")) {
                         self.sink.parse_error(Borrowed("nested buttons"));
                         self.generate_implied_end(cursory_implied_end);
-                        self.pop_until_named(local_name!("button"));
+                        self.pop_until_named(y_name!("button"));
                     }
                     self.reconstruct_formatting();
                     self.insert_element_for(tag);
@@ -144,16 +144,16 @@ where
                 }
 
                 </p> => {
-                    if !self.in_scope_named(button_scope, local_name!("p")) {
+                    if !self.in_scope_named(button_scope, y_name!("p")) {
                         self.sink.parse_error(Borrowed("No <p> tag to close"));
-                        self.insert_phantom(local_name!("p"));
+                        self.insert_phantom(y_name!("p"));
                     }
                     self.close_p_element();
                     Done
                 }
 
                 tag @ </li> </dd> </dt> => {
-                    let in_scope = if tag.name == local_name!("li") {
+                    let in_scope = if tag.name == y_name!("li") {
                         self.in_scope_named(list_item_scope, tag.name.clone())
                     } else {
                         self.in_scope_named(default_scope, tag.name.clone())
@@ -195,9 +195,9 @@ where
 
                 tag @ <nobr> => {
                     self.reconstruct_formatting();
-                    if self.in_scope_named(default_scope, local_name!("nobr")) {
+                    if self.in_scope_named(default_scope, y_name!("nobr")) {
                         self.sink.parse_error(Borrowed("Nested <>obr>"));
-                        self.adoption_agency(local_name!("nobr"));
+                        self.adoption_agency(y_name!("nobr"));
                         self.reconstruct_formatting();
                     }
                     self.create_formatting_element_for(tag);
@@ -232,7 +232,7 @@ where
                 tag @ <image> => {
                     self.unexpected(&tag);
                     self.step(InHtml, TagToken(Tag {
-                        name: local_name!("img"),
+                        name: y_name!("img"),
                         ..tag
                     }))
                 }
@@ -255,10 +255,10 @@ where
                 }
 
                 tag @ <rb> <rtc> => {
-                    if self.in_scope_named(default_scope, local_name!("ruby")) {
+                    if self.in_scope_named(default_scope, y_name!("ruby")) {
                         self.generate_implied_end(cursory_implied_end);
                     }
-                    if !self.current_node_named(local_name!("ruby")) {
+                    if !self.current_node_named(y_name!("ruby")) {
                         self.unexpected(&tag);
                     }
                     self.insert_element_for(tag);
@@ -266,10 +266,10 @@ where
                 }
 
                 tag @ <rp> <rt> => {
-                    if self.in_scope_named(default_scope, local_name!("ruby")) {
-                        self.generate_implied_end_except(local_name!("rtc"));
+                    if self.in_scope_named(default_scope, y_name!("ruby")) {
+                        self.generate_implied_end_except(y_name!("rtc"));
                     }
-                    if !self.current_node_named(local_name!("rtc")) && !self.current_node_named(local_name!("ruby")) {
+                    if !self.current_node_named(y_name!("rtc")) && !self.current_node_named(y_name!("ruby")) {
                         self.unexpected(&tag);
                     }
                     self.insert_element_for(tag);
@@ -277,7 +277,7 @@ where
                 }
 
                 tag @ <option> => {
-                    if self.current_node_named(local_name!("option")) {
+                    if self.current_node_named(y_name!("option")) {
                         self.pop();
                     }
                     self.insert_element_for(tag);
@@ -285,10 +285,10 @@ where
                 }
 
                 tag @ <optgroup> => {
-                    if self.current_node_named(local_name!("option")) {
+                    if self.current_node_named(y_name!("option")) {
                         self.pop();
                     }
-                    if self.current_node_named(local_name!("optgroup")) {
+                    if self.current_node_named(y_name!("optgroup")) {
                         self.pop();
                     }
                     self.insert_element_for(tag);
@@ -297,12 +297,12 @@ where
 
                 </optgroup> => {
                     if self.open_elems.len() >= 2
-                        && self.current_node_named(local_name!("option"))
+                        && self.current_node_named(y_name!("option"))
                         && self.html_elem_named(&self.open_elems[self.open_elems.len() - 2],
-                            local_name!("optgroup")) {
+                            y_name!("optgroup")) {
                         self.pop();
                     }
-                    if self.current_node_named(local_name!("optgroup")) {
+                    if self.current_node_named(y_name!("optgroup")) {
                         self.pop();
                     } else {
                         self.unexpected(&token);
@@ -311,7 +311,7 @@ where
                 }
 
                 </option> => {
-                    if self.current_node_named(local_name!("option")) {
+                    if self.current_node_named(y_name!("option")) {
                         self.pop();
                     } else {
                         self.unexpected(&token);
@@ -379,7 +379,7 @@ where
 
                 EOFToken => {
                     self.unexpected(&token);
-                    if self.current_node_named(local_name!("script")) {
+                    if self.current_node_named(y_name!("script")) {
                         let current = current_node(&self.open_elems);
                         self.sink.mark_script_already_started(current);
                     }
@@ -390,7 +390,7 @@ where
                 tag @ </_> => {
                     let node = self.pop();
                     self.mode = self.orig_mode.take().unwrap();
-                    if tag.name == local_name!("script") {
+                    if tag.name == y_name!("script") {
                         return Script(node);
                     }
                     Done

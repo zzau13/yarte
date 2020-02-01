@@ -9,9 +9,9 @@
 
 //! Types used within the tree builder code.  Not exported to users.
 
-use html5ever::tokenizer::{states::RawKind, Tag};
+use markup5ever::tendril::StrTendril;
 
-use html5ever::tendril::StrTendril;
+use crate::tokenizer::{states::RawKind, Tag};
 
 pub use self::{FormatEntry::*, InsertionMode::*, ProcessResult::*, SplitStatus::*, Token::*};
 

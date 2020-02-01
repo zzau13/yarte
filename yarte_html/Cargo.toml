@@ -1,10 +1,10 @@
 [package]
-name = "yarte_dom"
+name = "yarte_html"
 version = "0.5.3"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "Markup parser"
 categories = ["template-engine", "web-programming", "gui"]
-documentation = "https://docs.rs/yarte_dom"
+documentation = "https://docs.rs/yarte_html"
 edition = "2018"
 keywords = ["markup", "template", "handlebars", "html"]
 license = "MIT/Apache-2.0"
@@ -16,14 +16,14 @@ workspace = ".."
 travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
 
-[features]
-actix-web = ["yarte_hir/actix-web"]
-
 [dependencies]
-yarte_hir = { version = "0.5", path = "../yarte_hir" }
-yarte_helpers = { version = "0.5", path = "../yarte_helpers" }
-yarte_html = { version = "0.5", path = "../yarte_html" }
+yarte_parser = { version = "0.5", path = "../yarte_parser" }
 
+mac = "0.1"
+log = "0.4"
 markup5ever = "0.10"
-syn = { version = "1.0", features = ["extra-traits", "full", "visit"] }
+
+[build-dependencies]
 quote = "1.0"
+syn = { version = "1.0", features = ["extra-traits", "full", "fold"] }
+proc-macro2 = "1.0"

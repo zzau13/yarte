@@ -20,9 +20,9 @@ maintenance = { status = "actively-developed" }
 actix-web = ["yarte_dom/actix-web", "yarte_hir/actix-web"]
 
 [dependencies]
-yarte_config = { version = "0.5", path = "../yarte_config" }
 yarte_dom = { version = "0.5", path = "../yarte_dom" }
 yarte_hir = { version = "0.5", path = "../yarte_hir" }
+yarte_html = { version = "0.5", path = "../yarte_html" }
 
 markup5ever = "0.10"
 mime_guess = "2.0"

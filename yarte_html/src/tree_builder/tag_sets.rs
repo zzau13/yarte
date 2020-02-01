@@ -9,9 +9,10 @@
 
 //! Various sets of HTML tag names, and macros for declaring them.
 
-use html5ever::ExpandedName;
 use mac::{_tt_as_expr_hack, matches};
-use markup5ever::{expanded_name, local_name, namespace_url, ns};
+use markup5ever::{local_name, namespace_url, ns};
+
+use crate::{expanded_name, interface::ExpandedName};
 
 macro_rules! declare_tag_set_impl ( ($param:ident, $b:ident, $supr:ident, $($tag:tt)+) => (
     match $param {
@@ -33,13 +34,13 @@ macro_rules! declare_tag_set_body (
 
 macro_rules! declare_tag_set (
     (pub $name:ident = $($toks:tt)+) => (
-        pub fn $name(p: html5ever::ExpandedName) -> bool {
+        pub fn $name(p: $crate::interface::ExpandedName) -> bool {
             declare_tag_set_body!(p = $($toks)+)
         }
     );
 
     ($name:ident = $($toks:tt)+) => (
-        fn $name(p: html5ever::ExpandedName) -> bool {
+        fn $name(p: $crate::interface::ExpandedName) -> bool {
             declare_tag_set_body!(p = $($toks)+)
         }
     );
