@@ -13,7 +13,7 @@
 use std::{
     borrow::Cow::{self, Borrowed, Owned},
     mem,
-    mem::replace,
+    mem::replace
 };
 
 use log::debug;
@@ -322,7 +322,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
             kind: self.current_tag_kind,
             name,
             self_closing: self.current_tag_self_closing,
-            attrs: replace(&mut self.current_tag_attrs, vec![]),
+            attrs: mem::take(&mut self.current_tag_attrs),
         });
 
         match self.process_token(token) {
@@ -420,7 +420,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
     }
 
     fn emit_current_doctype(&mut self) {
-        let doctype = replace(&mut self.current_doctype, Doctype::default());
+        let doctype = mem::take(&mut self.current_doctype);
         self.process_token_and_continue(DoctypeToken(doctype));
     }
 
