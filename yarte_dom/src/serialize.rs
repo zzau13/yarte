@@ -4,9 +4,10 @@ use yarte_html::{
     interface::QualName,
     serializer::{HtmlSerializer, SerializerOpt},
     tree_builder::is_marquee,
+    utils::MARK,
 };
 
-use crate::sink::{ParseAttribute, ParseElement, ParseNodeId, Sink, MARK};
+use crate::sink::{ParseAttribute, ParseElement, ParseNodeId, Sink};
 
 pub fn serialize<Wr>(writer: Wr, node: &Tree, opts: SerializerOpt) -> io::Result<()>
 where

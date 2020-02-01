@@ -12,6 +12,7 @@
 
 use std::{
     borrow::Cow::{self, Borrowed, Owned},
+    mem,
     mem::replace,
 };
 
@@ -26,7 +27,7 @@ use markup5ever::{
 
 use crate::{
     interface::{Attribute, QualName, YName},
-    utils::lower_ascii_letter,
+    utils::{is_mark, lower_ascii_letter},
 };
 
 mod char_ref;
@@ -296,8 +297,12 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
     fn emit_current_tag(&mut self) -> ProcessResult<Sink::Handle> {
         self.finish_attribute();
 
-        let name = YName::Local(LocalName::from(&*self.current_tag_name));
-        self.current_tag_name.clear();
+        let name = mem::take(&mut self.current_tag_name);
+        let name = if is_mark(&*name) {
+            YName::Expr(name)
+        } else {
+            YName::Local(LocalName::from(&*name))
+        };
 
         match self.current_tag_kind {
             StartTag => {
@@ -398,8 +403,13 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
             self.current_attr_name.clear();
             self.current_attr_value.clear();
         } else {
-            let name = YName::Local(LocalName::from(&*self.current_attr_name));
-            self.current_attr_name.clear();
+            let name = mem::take(&mut self.current_attr_name);
+            let name = if is_mark(&*name) {
+                YName::Expr(name)
+            } else {
+                YName::Local(LocalName::from(&*name))
+            };
+
             self.current_tag_attrs.push(Attribute {
                 // The tree builder will adjust the namespace if necessary.
                 // This only happens in foreign elements.
