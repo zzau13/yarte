@@ -6,14 +6,13 @@ use yarte_hir::{Each as HEach, IfElse as HIfElse, Struct, HIR};
 use yarte_html::{
     interface::{QualName, YName},
     serializer::SerializerOpt,
+    utils::MARK,
     y_name,
 };
 
 use crate::{
     serialize::serialize,
-    sink::{
-        parse_document, parse_fragment, ParseAttribute, ParseElement, ParseResult, Sink, HEAD, TAIL,
-    },
+    sink::{parse_document, parse_fragment, ParseAttribute, ParseElement, ParseResult, Sink},
 };
 
 pub struct DOMFmt(pub Vec<HIR>);
@@ -33,9 +32,8 @@ fn get_html(ir: &[HIR]) -> String {
         match x {
             HIR::Lit(x) => html.push_str(x),
             _ => {
-                html.push_str(HEAD);
+                html.push_str(MARK);
                 html.push_str(HASH);
-                html.push_str(TAIL);
             }
         }
     }
@@ -78,8 +76,8 @@ fn add_scripts(s: &Struct, sink: &mut Sink, ir: &mut Vec<HIR>) {
 
     let mut last = *sink.nodes.keys().last().unwrap() + 1;
     let get_state = format!(
-        "function get_state(){{return JSON.stringify({}{}{});}}",
-        HEAD, HASH, TAIL
+        "function get_state(){{return JSON.stringify({}{});}}",
+        MARK, HASH
     );
 
     let mut buf = vec![HIR::Safe(Box::new(
@@ -187,7 +185,7 @@ fn serialize_domfmt(sink: Sink, mut ir: Vec<HIR>, opts: SerializerOpt) -> ParseR
     serialize(&mut writer, &sink.into(), opts).expect("some serialize node");
 
     let html = String::from_utf8(writer).expect("");
-    let mut chunks = html.split(HEAD).peekable();
+    let mut chunks = html.split(MARK).peekable();
 
     if let Some(first) = chunks.peek() {
         if first.is_empty() {
@@ -205,7 +203,7 @@ fn serialize_domfmt(sink: Sink, mut ir: Vec<HIR>, opts: SerializerOpt) -> ParseR
             panic!("chunk empty")
         } else if chunk.starts_with(HASH) {
             resolve_node(ir.next().expect("Some HIR expression"), &mut buff, opts)?;
-            let cut = &chunk[HASH.len() + TAIL.len()..];
+            let cut = &chunk[HASH.len()..];
             if !cut.is_empty() {
                 buff.push(HIR::Lit(cut.into()));
             }

@@ -31,8 +31,8 @@ mod test {
 
     #[test]
     fn test_table() {
-        let src = "<table><!--yarteHashHTMLExpressionsATTT0x00000000--></table>";
-        let expected = "<table><!--yarteHashHTMLExpressionsATTT0x00000000--></table>";
+        let src = "<table>yarteHashHTMLExpressionsATTT0x00000000</table>";
+        let expected = "<table>yarteHashHTMLExpressionsATTT0x00000000</table>";
 
         let a = parse_fragment(src).unwrap();
         let mut writer = Vec::new();
@@ -45,8 +45,8 @@ mod test {
 
     #[test]
     fn test_attributes() {
-        let src = "<div class=\"<!--yarteHashHTMLExpressionsATTT0x00000000-->\"></div>";
-        let expected = "<div class=\"<!--yarteHashHTMLExpressionsATTT0x00000000-->\"></div>";
+        let src = "<div class=\"yarteHashHTMLExpressionsATTT0x00000000\"></div>";
+        let expected = "<div class=\"yarteHashHTMLExpressionsATTT0x00000000\"></div>";
 
         let a = parse_fragment(src).unwrap();
         let mut writer = Vec::new();
@@ -59,7 +59,7 @@ mod test {
 
     #[test]
     fn test_document_err() {
-        let src = "<div class=\"<!--yarteHashHTMLExpressionsATTT0x00000000-->\"></div>";
+        let src = "<div class=\"yarteHashHTMLExpressionsATTT0x00000000\"></div>";
 
         assert!(parse_document(src).is_err());
     }
@@ -67,9 +67,9 @@ mod test {
     #[test]
     fn test_document_ok() {
         let src = "<html><body><div \
-                   class=\"<!--yarteHashHTMLExpressionsATTT0x00000000-->\"></div></body></html>";
+                   class=\"yarteHashHTMLExpressionsATTT0x00000000\"></div></body></html>";
         let expected = "<html><body><div \
-                        class=\"<!--yarteHashHTMLExpressionsATTT0x00000000-->\"></div></body></\
+                        class=\"yarteHashHTMLExpressionsATTT0x00000000\"></div></body></\
                         html>";
 
         let a = parse_document(src).unwrap();
@@ -84,9 +84,9 @@ mod test {
     #[test]
     fn test_document_ok_doctype() {
         let src = "<!DOCTYPE html><html><body><div \
-                   class=\"<!--yarteHashHTMLExpressionsATTT0x00000000-->\"></div></body></html>";
+                   class=\"yarteHashHTMLExpressionsATTT0x00000000\"></div></body></html>";
         let expected = "<!DOCTYPE html><html><body><div \
-                        class=\"<!--yarteHashHTMLExpressionsATTT0x00000000-->\"></div></body></\
+                        class=\"yarteHashHTMLExpressionsATTT0x00000000\"></div></body></\
                         html>";
 
         let a = parse_document(src).unwrap();
@@ -100,9 +100,9 @@ mod test {
 
     #[test]
     fn test_document_ok_table() {
-        let src = "<html><body><table><!--yarteHashHTMLExpressionsATTT0x00000000--></table></\
+        let src = "<html><body><table>yarteHashHTMLExpressionsATTT0x00000000</table></\
                    body></html>";
-        let expected = "<html><body><table><!--yarteHashHTMLExpressionsATTT0x00000000--></table></\
+        let expected = "<html><body><table>yarteHashHTMLExpressionsATTT0x00000000</table></\
                         body></html>";
 
         let a = parse_document(src).unwrap();
@@ -116,10 +116,10 @@ mod test {
 
     #[test]
     fn test_document_ok_head() {
-        let src = "<html><head><title><!--yarteHashHTMLExpressionsATTT0x00000000--></title></\
+        let src = "<html><head><title>yartehashhtmlexpressionsattt0x00000000</title></\
                    head><body><div attr=\"some\" \t class=\"any\"    \n>Hi!<br   /></div><div \
                    some7Na=\"hola\">hi</div></body></html>";
-        let expected = "<html><head><title><!--yarteHashHTMLExpressionsATTT0x00000000--></title></\
+        let expected = "<html><head><title>yartehashhtmlexpressionsattt0x00000000</title></\
                         head><body><div attr=\"some\" class=\"any\">Hi!<br></div><div \
                         some7na=\"hola\">hi</div></body></html>";
 

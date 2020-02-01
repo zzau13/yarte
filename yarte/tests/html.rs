@@ -175,3 +175,40 @@ fn test_noscript() {
         "<noscript><meta><style></style><link></noscript>"
     )
 }
+
+#[derive(Template)]
+#[template(src = "<{{ tag }}></{{ tag}}>")]
+struct TagExpr {
+    tag: String,
+}
+
+#[test]
+fn test_tag_expression() {
+    assert_eq!(TagExpr { tag: "div".into() }.call().unwrap(), "<div></div>")
+}
+
+struct Attr {
+    name: String,
+    value: String,
+}
+
+#[derive(Template)]
+#[template(src = "{{#with attr}}<div {{ name }}=\"{{ value }}\"></div>{{/with }}")]
+struct AttrExpr {
+    attr: Attr,
+}
+
+#[test]
+fn test_attr_expression() {
+    assert_eq!(
+        AttrExpr {
+            attr: Attr {
+                name: "class".to_string(),
+                value: "foo".to_string()
+            }
+        }
+        .call()
+        .unwrap(),
+        "<div class=\"foo\"></div>"
+    )
+}
