@@ -1,4 +1,4 @@
-// Copyright 2014-2017 The html5ever Project Developers. See the
+// Copyright 2014-2017 The crate Project Developers. See the
 // COPYRIGHT file at the top-level directory of this distribution.
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
@@ -455,16 +455,16 @@ impl Fold for MatchTokenParser {
 
 fn make_tag_pattern(binding: &TokenStream, tag: Tag) -> TokenStream {
     let kind = match tag.kind {
-        TagKind::StartTag => quote!(html5ever::tokenizer::StartTag),
-        TagKind::EndTag => quote!(html5ever::tokenizer::EndTag),
+        TagKind::StartTag => quote!(crate::tokenizer::StartTag),
+        TagKind::EndTag => quote!(crate::tokenizer::EndTag),
     };
     let name_field = if let Some(name) = tag.name {
         let name = name.to_string();
-        quote!(name: local_name!(#name),)
+        quote!(name: y_name!(#name),)
     } else {
         quote!()
     };
     quote! {
-        crate::tree_builder::types::TagToken(#binding html5ever::tokenizer::Tag { kind: #kind, #name_field .. })
+        crate::tree_builder::types::TagToken(#binding crate::tokenizer::Tag { kind: #kind, #name_field .. })
     }
 }

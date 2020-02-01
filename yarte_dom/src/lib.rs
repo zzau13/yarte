@@ -1,16 +1,10 @@
-/// Adapted from [`html5ever`](https://github.com/servo/html5ever)
-
 #[macro_use]
-mod macros;
 pub mod dom;
 pub mod dom_fmt;
-mod driver;
 mod serialize;
-mod serializer;
 mod sink;
-mod tree_builder;
 
-pub use self::{dom_fmt::DOMFmt, serializer::ElemInfo};
+pub use self::dom_fmt::DOMFmt;
 
 #[cfg(test)]
 mod test {

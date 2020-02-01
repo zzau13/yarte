@@ -13,29 +13,29 @@
 /// Adapted from [`html5ever`](https://github.com/servo/html5ever)
 use std::borrow::Cow;
 
-use html5ever::{
+use markup5ever::{
     buffer_queue::BufferQueue,
     tendril::{
         self,
         stream::{TendrilSink, Utf8LossyDecoder},
         StrTendril,
     },
-    tokenizer::{Tokenizer, TokenizerResult},
-    ParseOpts,
 };
-use markup5ever::interface::{create_element, TreeSink};
 
-use crate::tree_builder::TreeBuilder;
-use markup5ever::{Attribute, QualName};
+use crate::{
+    interface::{create_element, Attribute, QualName, TreeSink},
+    tokenizer::{Tokenizer, TokenizerResult},
+    tree_builder::TreeBuilder,
+};
 
 /// Like `parse_fragment`, but with an existing context element
 /// and optionally a form element.
-pub fn parse_document<Sink>(sink: Sink, opts: ParseOpts) -> Parser<Sink>
+pub fn parse_document<Sink>(sink: Sink) -> Parser<Sink>
 where
     Sink: TreeSink,
 {
-    let tb = TreeBuilder::new(sink, opts.tree_builder);
-    let tokenizer = Tokenizer::new(tb, opts.tokenizer);
+    let tb = TreeBuilder::new(sink);
+    let tokenizer = Tokenizer::new(tb);
     Parser {
         tokenizer,
         input_buffer: BufferQueue::new(),
@@ -51,7 +51,6 @@ where
 /// If your input is bytes, use `Parser::from_utf8`.
 pub fn parse_fragment<Sink>(
     mut sink: Sink,
-    opts: ParseOpts,
     context_name: QualName,
     context_attrs: Vec<Attribute>,
 ) -> Parser<Sink>
@@ -59,21 +58,17 @@ where
     Sink: TreeSink,
 {
     let context_elem = create_element(&mut sink, context_name, context_attrs);
-    parse_fragment_for_element(sink, opts, context_elem)
+    parse_fragment_for_element(sink, context_elem)
 }
 
 /// Like `parse_fragment`, but with an existing context element
 /// and optionally a form element.
-pub fn parse_fragment_for_element<Sink>(
-    sink: Sink,
-    opts: ParseOpts,
-    context_element: Sink::Handle,
-) -> Parser<Sink>
+pub fn parse_fragment_for_element<Sink>(sink: Sink, context_element: Sink::Handle) -> Parser<Sink>
 where
     Sink: TreeSink,
 {
-    let tb = TreeBuilder::new_for_fragment(sink, context_element, opts.tree_builder);
-    let tokenizer = Tokenizer::new(tb, opts.tokenizer);
+    let tb = TreeBuilder::new_for_fragment(sink, context_element);
+    let tokenizer = Tokenizer::new(tb);
     Parser {
         tokenizer,
         input_buffer: BufferQueue::new(),

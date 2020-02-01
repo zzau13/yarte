@@ -1,12 +1,12 @@
 use std::io::{self, Write};
 
-use markup5ever::QualName;
-
-use crate::{
+use yarte_html::{
+    interface::QualName,
     serializer::{HtmlSerializer, SerializerOpt},
-    sink::{ParseAttribute, ParseElement, ParseNodeId, Sink, MARK},
-    tree_builder::YARTE_TAG,
+    tree_builder::is_marquee,
 };
+
+use crate::sink::{ParseAttribute, ParseElement, ParseNodeId, Sink, MARK};
 
 pub fn serialize<Wr>(writer: Wr, node: &Tree, opts: SerializerOpt) -> io::Result<()>
 where
@@ -48,7 +48,7 @@ impl From<Sink> for Tree {
                 children,
                 ..
             }) => {
-                if name == &*YARTE_TAG {
+                if is_marquee(name) {
                     get_children(children, &sink)
                 } else {
                     vec![TreeElement::Node {

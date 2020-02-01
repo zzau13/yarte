@@ -4,16 +4,16 @@ use std::{
     fmt::{self, Debug, Formatter},
 };
 
-use html5ever::{
-    tendril::{StrTendril, TendrilSink},
-    tree_builder::{
-        Attribute as HtmlAttribute, ElementFlags, NodeOrText as HtmlNodeOrText, QuirksMode,
-        TreeBuilderOpts, TreeSink,
-    },
-    ExpandedName, ParseOpts, QualName,
-};
+use markup5ever::tendril::{StrTendril, TendrilSink};
 
-use crate::{driver, tree_builder::YARTE_TAG};
+use yarte_html::{
+    driver,
+    interface::{
+        Attribute as HtmlAttribute, ElementFlags, ExpandedName, NodeOrText as HtmlNodeOrText,
+        QualName, TreeSink,
+    },
+    tree_builder::{get_marquee, is_marquee},
+};
 
 pub type ParseNodeId = usize;
 
@@ -29,7 +29,7 @@ impl Debug for ParseNode {
             .field("id", &self.id)
             .field(
                 "name",
-                &self.qual_name.as_ref().map(|x| x.local.to_string()),
+                &self.qual_name.as_ref().map(|x| (*x.local).to_string()),
             )
             .finish()
     }
@@ -113,7 +113,7 @@ impl Sink {
                     .get_mut(&node.id)
                     .and_then(|x| match x {
                         ParseElement::Node { parent, name, .. } => {
-                            if name != &*YARTE_TAG {
+                            if is_marquee(name) {
                                 *parent = Some(p);
                             }
                             Some(())
@@ -221,11 +221,6 @@ impl TreeSink for Sink {
         node
     }
 
-    #[allow(unused_variables)]
-    fn create_pi(&mut self, target: StrTendril, data: StrTendril) -> Self::Handle {
-        unreachable!()
-    }
-
     fn append(&mut self, p: &Self::Handle, child: HtmlNodeOrText<Self::Handle>) {
         let id = self.append_child(p.id, child);
 
@@ -236,15 +231,6 @@ impl TreeSink for Sink {
             _ if p.id == 0 || self.fragment => (),
             _ => panic!("append without parent {:?}, {:?} {:?}", p, id, self.nodes),
         };
-    }
-
-    fn append_based_on_parent_node(
-        &mut self,
-        _: &Self::Handle,
-        _: &Self::Handle,
-        _: HtmlNodeOrText<Self::Handle>,
-    ) {
-        unreachable!()
     }
 
     fn append_doctype_to_document(&mut self, _: StrTendril, _: StrTendril, _: StrTendril) {
@@ -264,64 +250,22 @@ impl TreeSink for Sink {
     fn same_node(&self, x: &Self::Handle, y: &Self::Handle) -> bool {
         x.id == y.id
     }
-
-    fn set_quirks_mode(&mut self, _mode: QuirksMode) {
-        unreachable!()
-    }
-
-    fn append_before_sibling(&mut self, _: &Self::Handle, _: HtmlNodeOrText<Self::Handle>) {
-        unreachable!()
-    }
-
-    fn add_attrs_if_missing(&mut self, _: &Self::Handle, _: Vec<HtmlAttribute>) {
-        unreachable!()
-    }
-
-    fn remove_from_parent(&mut self, _target: &Self::Handle) {
-        unreachable!()
-    }
-
-    fn reparent_children(&mut self, _node: &Self::Handle, _new_parent: &Self::Handle) {
-        unreachable!()
-    }
 }
 
 pub fn parse_document(doc: &str) -> ParseResult<Sink> {
-    let parser = driver::parse_document(
-        Sink::default(),
-        ParseOpts {
-            tree_builder: TreeBuilderOpts {
-                exact_errors: cfg!(debug_assertions),
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-    )
-    .from_utf8();
+    let parser = driver::parse_document(Sink::default()).from_utf8();
 
     parser.one(doc.as_bytes())
 }
 
 pub fn parse_fragment(doc: &str) -> ParseResult<Sink> {
-    let parser = driver::parse_fragment(
-        Sink::default(),
-        ParseOpts {
-            tree_builder: TreeBuilderOpts {
-                exact_errors: cfg!(debug_assertions),
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-        YARTE_TAG.clone(),
-        vec![],
-    )
-    .from_utf8();
+    let parser = driver::parse_fragment(Sink::default(), get_marquee(), vec![]).from_utf8();
     parser.one(doc.as_bytes()).and_then(|mut a| {
         a.nodes
             .remove(&0)
             .and_then(|_| {
                 if let Some(ParseElement::Node { name, .. }) = a.nodes.get_mut(&2) {
-                    *name = YARTE_TAG.clone();
+                    *name = get_marquee();
                     Some(a)
                 } else {
                     None

@@ -1,28 +1,33 @@
 #![allow(warnings)]
 
-use std::{collections::HashMap, vec::Drain};
+use std::{
+    collections::{BTreeMap, HashMap, HashSet},
+    vec::Drain,
+};
 
-use markup5ever::{namespace_url, ns, LocalName, QualName};
+use markup5ever::{namespace_url, ns, LocalName};
+
 use yarte_hir::{Each as HEach, IfElse as HIfElse, HIR};
+use yarte_html::{
+    interface::QualName,
+    tree_builder::{get_marquee, is_marquee},
+};
+
+use crate::sink::{
+    parse_document, parse_fragment, ParseAttribute, ParseElement, ParseNodeId, ParseResult, Sink,
+    HEAD, TAIL,
+};
 
 mod visit_each;
 mod visit_expr;
 mod visit_if_else;
 mod visit_local;
 
-use crate::{
-    sink::{
-        parse_document, parse_fragment, ParseAttribute, ParseElement, ParseNodeId, ParseResult,
-        Sink, HEAD, TAIL,
-    },
-    tree_builder::YARTE_TAG,
-};
-
 use self::{
     visit_each::resolve_each, visit_expr::resolve_expr, visit_if_else::resolve_if_block,
     visit_local::resolve_local,
 };
-use std::collections::{BTreeMap, HashSet};
+use yarte_html::interface::YName;
 
 pub type Document = Vec<Node>;
 pub type ExprId = usize;
@@ -82,7 +87,7 @@ pub enum Ns {
 #[derive(Debug)]
 pub enum Element {
     Node {
-        name: (Ns, LocalName),
+        name: (Ns, YName),
         attrs: Vec<Attribute>,
         children: Document,
     },
@@ -185,9 +190,9 @@ impl DOMBuilder {
                 children,
                 ..
             }) => {
-                if name == &*YARTE_TAG {
+                if is_marquee(name) {
                     if self.inner {
-                        panic!("not use <{}> tag", &*YARTE_TAG.local);
+                        panic!("not use <{}> tag", &*get_marquee().local);
                     }
                     self.inner = true;
                     self.get_children(children, &sink, &mut ir)?

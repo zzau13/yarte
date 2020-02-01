@@ -7,7 +7,9 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use html5ever::{tendril::StrTendril, tokenizer::Doctype};
+use markup5ever::tendril::StrTendril;
+
+use crate::tokenizer::Doctype;
 
 pub fn doctype_error(doctype: &Doctype) -> bool {
     fn opt_tendril_as_slice(x: &Option<StrTendril>) -> Option<&str> {
