@@ -53,7 +53,7 @@ macro_rules! y_name {
         YName::Local(local_name!($local))
     };
     (e $local:tt) => {
-        YName::Expr(StrTrendril::from_str($local))
+        YName::Expr(StrTrendril::from($local))
     };
 }
 

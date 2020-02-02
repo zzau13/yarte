@@ -35,7 +35,9 @@ impl<'a> FindEach<'a> {
         for n in nodes {
             match n.t() {
                 Node::Local(expr) => self.visit_local(expr.t()),
-                Node::Expr(_, expr) | Node::Safe(_, expr) => self.visit_expr(expr.t()),
+                Node::Expr(_, expr) | Node::Safe(_, expr) | Node::RExpr(_, expr) => {
+                    self.visit_expr(expr.t())
+                }
                 Node::Helper(h) => {
                     let h: &Helper = &*h;
                     match h {
