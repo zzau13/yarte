@@ -3,12 +3,18 @@ use std::{mem, path::PathBuf};
 use syn::visit::Visit;
 
 use yarte_config::Config;
-use yarte_parser::{Helper, Node, Partial, SNode};
+use yarte_parser::{Helper, Node, Partial, PartialBlock, SNode};
 
 use super::{is_super, Context};
 
-pub(super) fn find_loop_var(c: &Config, ctx: Context, path: PathBuf, nodes: &[SNode]) -> bool {
-    FindEach::new(c, ctx, path).find(nodes)
+pub(super) fn find_loop_var(
+    c: &Config,
+    ctx: Context,
+    path: PathBuf,
+    block: Vec<&[SNode]>,
+    nodes: &[SNode],
+) -> bool {
+    FindEach::new(c, ctx, path, block).find(nodes)
 }
 
 // Find {{ index }} {{ index0 }} {{ first }} {{ _index_[0-9] }}
@@ -17,12 +23,19 @@ struct FindEach<'a> {
     c: &'a Config<'a>,
     ctx: Context<'a>,
     on_path: PathBuf,
+    block: Vec<&'a [SNode<'a>]>,
     on_: usize,
 }
 
 impl<'a> FindEach<'a> {
-    fn new<'n>(c: &'n Config<'n>, ctx: Context<'n>, on_path: PathBuf) -> FindEach<'n> {
+    fn new<'n>(
+        c: &'n Config<'n>,
+        ctx: Context<'n>,
+        on_path: PathBuf,
+        block: Vec<&'n [SNode<'n>]>,
+    ) -> FindEach<'n> {
         FindEach {
+            block,
             c,
             ctx,
             on_path,
@@ -120,6 +133,44 @@ impl<'a> FindEach<'a> {
                     self.find(nodes);
 
                     self.on_path = parent;
+                }
+                Node::PartialBlock(PartialBlock(_, path, expr, block)) => {
+                    let p = self.c.resolve_partial(&self.on_path, path.t());
+                    let nodes = self.ctx.get(&p).unwrap();
+                    let expr = expr.t();
+                    if !expr.is_empty() {
+                        let at = if let syn::Expr::Assign(_) = expr[0] {
+                            0
+                        } else {
+                            1
+                        };
+                        for e in &expr[at..] {
+                            self.visit_expr(e);
+                            if self.loop_var {
+                                break;
+                            }
+                        }
+                        if at == 1 {
+                            break;
+                        }
+                    }
+
+                    let parent = mem::replace(&mut self.on_path, p);
+                    self.block.push(block);
+                    self.find(nodes);
+
+                    self.on_path = parent;
+                    self.block.pop();
+                }
+                Node::Block(_) => {
+                    if let Some(block) = self.block.pop() {
+                        // TODO: define priority in whitespace
+                        self.find(block);
+                        self.block.push(block);
+                    } else {
+                        // TODO: to error message
+                        panic!("Use inside partial block");
+                    }
                 }
                 Node::Raw(..) | Node::Lit(..) | Node::Comment(_) => (),
             }

@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use std::{collections::BTreeMap, mem, path::PathBuf, str};
 
 use quote::quote;
@@ -12,7 +14,7 @@ use v_htmlescape::escape;
 
 use yarte_config::Config;
 use yarte_helpers::helpers::ErrorMessage;
-use yarte_parser::{Helper, Node, Partial, SExpr, SNode, SVExpr, Ws};
+use yarte_parser::{Helper, Node, Partial, PartialBlock, SExpr, SNode, SVExpr, Ws};
 
 #[macro_use]
 mod macros;
@@ -84,6 +86,7 @@ struct Generator<'a> {
     pub(self) on: Vec<On>,
     /// On partial scope
     pub(self) partial: Option<(BTreeMap<String, syn::Expr>, usize)>,
+    block: Vec<(Ws, &'a [SNode<'a>])>,
     /// buffer for writable
     buf_w: Vec<Writable<'a>>,
     /// Errors buffer
@@ -112,6 +115,7 @@ impl<'a> Generator<'a> {
             scp: Scope::new(parse_str("self").unwrap(), 0),
             skip_ws: false,
             errors: vec![],
+            block: vec![],
         }
     }
 
@@ -189,7 +193,7 @@ impl<'a> Generator<'a> {
                 Node::Lit(l, lit, r) => self.visit_lit(l, lit.t(), r),
                 Node::Helper(h) => self.visit_helper(buf, &h),
                 Node::Partial(Partial(ws, path, expr)) => {
-                    self.visit_partial(buf, *ws, path.t(), expr)
+                    self.visit_partial(buf, *ws, path.t(), expr, None)
                 }
                 // TODO
                 Node::Comment(_) => self.skip_ws(),
@@ -198,12 +202,34 @@ impl<'a> Generator<'a> {
                     self.visit_lit(l, v.t(), r);
                     self.handle_ws(ws.1);
                 }
+                Node::Block(ws) => {
+                    if let Some((i_ws, block)) = self.block.pop() {
+                        let ws = (i_ws.0 || ws.0, ws.1 || i_ws.1);
+                        self.handle_ws(ws);
+                        self.handle(block, buf);
+                        self.block.push((i_ws, block));
+                        if !self.skip_ws {
+                            self.flush_ws(ws);
+                        }
+                        self.prepare_ws(ws)
+                    } else {
+                        self.flush_ws(*ws);
+                        self.errors.push(ErrorMessage {
+                            message: "Use inside partial block".to_string(),
+                            span: *n.span(),
+                        });
+                        self.prepare_ws(*ws);
+                    }
+                }
+                Node::PartialBlock(PartialBlock(ws, path, expr, block)) => {
+                    self.visit_partial(buf, ws.0, path.t(), expr, Some((ws.1, block)))
+                }
             }
         }
     }
 
     fn visit_lit(&mut self, lws: &'a str, lit: &'a str, rws: &'a str) {
-        debug_assert!(self.next_ws.is_none());
+        debug_assert!(self.next_ws.is_none(), "{:?} {:?} ", self.next_ws, lit);
         if !lws.is_empty() {
             if self.skip_ws {
                 self.skip_ws = false;
@@ -304,7 +330,13 @@ impl<'a> Generator<'a> {
         sargs: &'a SExpr,
         nodes: &'a [SNode<'a>],
     ) {
-        let loop_var = find_loop_var(self.c, self.ctx, self.on_path.clone(), nodes);
+        let loop_var = find_loop_var(
+            self.c,
+            self.ctx,
+            self.on_path.clone(),
+            self.block.iter().map(|(_, x)| *x).collect(),
+            nodes,
+        );
         let mut args = *sargs.t().clone();
         self.visit_expr_mut(&mut args);
 
@@ -459,14 +491,27 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn visit_partial(&mut self, buf: &mut Vec<HIR>, ws: Ws, path: &str, exprs: &'a SVExpr) {
+    fn visit_partial(
+        &mut self,
+        buf: &mut Vec<HIR>,
+        a_ws: Ws,
+        path: &str,
+        exprs: &'a SVExpr,
+        block: Option<(Ws, &'a [SNode<'a>])>,
+    ) {
         let p = self.c.resolve_partial(&self.on_path, path);
         let nodes = self.ctx.get(&p).unwrap();
 
         let p = mem::replace(&mut self.on_path, p);
 
-        self.flush_ws(ws);
-
+        let block = if let Some((ws, block)) = block {
+            self.flush_ws((a_ws.0, ws.1));
+            self.block.push(((a_ws.1, ws.0), block));
+            true
+        } else {
+            self.flush_ws(a_ws);
+            false
+        };
         let exprs = exprs.t();
         if exprs.is_empty() {
             self.scp.push_scope(vec![]);
@@ -487,6 +532,7 @@ impl<'a> Generator<'a> {
                 let count = self.scp.count;
                 let mut parent = mem::replace(&mut self.scp, Scope::new(scope, count));
                 let last = mem::replace(&mut self.partial, Some((cur, 0)));
+
                 let on = mem::take(&mut self.on);
 
                 self.handle(nodes, buf);
@@ -505,8 +551,12 @@ impl<'a> Generator<'a> {
                 self.partial = last;
             }
         }
-
-        self.prepare_ws(ws);
+        if block {
+            let (ws, _) = self.block.pop().unwrap();
+            self.prepare_ws((a_ws.0, ws.1));
+        } else {
+            self.prepare_ws(a_ws)
+        }
         self.on_path = p;
     }
 

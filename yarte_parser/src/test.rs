@@ -1,7 +1,16 @@
-use super::{parse as _parse, Helper, Node::*, Partial, *};
+use super::{parse as _parse, Helper, Node::*, Partial, PartialBlock, *};
 use syn::{parse_str, Expr, Stmt};
 
 const WS: Ws = (false, false);
+
+macro_rules! bytes {
+    ($a:tt..$b:tt) => {
+        Span {
+            lo: $a as u32,
+            hi: $b as u32,
+        }
+    };
+}
 
 fn parse(rest: &str) -> Vec<SNode> {
     _parse(Cursor { rest, off: 0 })
@@ -916,6 +925,71 @@ fn test_expr_list() {
             parse_str::<Expr>("foo=\"bar\"").unwrap(),
             parse_str::<Expr>("fuu=1").unwrap(),
             parse_str::<Expr>("goo=true").unwrap(),
+        ]
+    );
+}
+
+#[test]
+fn test_partial_block() {
+    let rest = "{{> @partial-block }}";
+    assert_eq!(
+        parse(rest),
+        vec![S(
+            Node::Block((false, false)),
+            Span {
+                lo: 0,
+                hi: rest.len() as u32
+            }
+        )]
+    );
+}
+
+#[test]
+fn test_partial_block_1() {
+    let rest = "{{#> some }}foo{{/some }}";
+    assert_eq!(
+        parse(rest),
+        vec![S(
+            Node::PartialBlock(PartialBlock(
+                ((false, false), (false, false)),
+                S("some", bytes!(5..9)),
+                S(vec![], bytes!(10..10)),
+                vec![S(
+                    Node::Lit("", S("foo", bytes!(12..15)), ""),
+                    bytes!(12..15)
+                ),]
+            )),
+            bytes!(0..25)
+        )]
+    );
+}
+
+#[test]
+fn test_partial_block_ws() {
+    let rest = "{{~> @partial-block ~}}";
+    assert_eq!(
+        parse(rest),
+        vec![S(
+            Node::Block((true, true)),
+            Span {
+                lo: 0,
+                hi: rest.len() as u32
+            }
+        )]
+    );
+}
+
+#[test]
+fn test_partial_block_ws_1() {
+    let rest = r#"Foo
+    {{~> @partial-block ~}}
+    Bar"#;
+    assert_eq!(
+        parse(rest),
+        vec![
+            S(Lit("", S("Foo", bytes!(0..3)), "\n    "), bytes!(0..8)),
+            S(Block((true, true)), bytes!(8..31)),
+            S(Lit("\n    ", S("Bar", bytes!(36..39)), ""), bytes!(31..39))
         ]
     );
 }

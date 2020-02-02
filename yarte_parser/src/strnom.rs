@@ -53,6 +53,7 @@ pub enum LexError {
 
 pub type PResult<'a, O> = Result<(Cursor<'a>, O), LexError>;
 
+#[macro_export]
 macro_rules! do_parse {
     ($i:expr, ( $($rest:expr),* )) => {
         Ok(($i, ( $($rest),* )))
@@ -84,12 +85,14 @@ macro_rules! do_parse {
     };
 }
 
+#[macro_export]
 macro_rules! call {
     ($i:expr, $fun:expr $(, $args:expr)*) => {
         $fun($i $(, $args)*)
     };
 }
 
+#[macro_export]
 macro_rules! opt {
     ($i:expr, $submac:ident!($($args:tt)*)) => {
         match $submac!($i, $($args)*) {
@@ -105,6 +108,7 @@ macro_rules! opt {
     };
 }
 
+#[macro_export]
 macro_rules! take_while {
     ($i:expr, $f:expr) => {{
         if $i.len() == 0 {
@@ -118,6 +122,7 @@ macro_rules! take_while {
     }};
 }
 
+#[macro_export]
 macro_rules! tag {
     ($i:expr, $tag:expr) => {
         if $i.starts_with($tag) {
@@ -128,6 +133,7 @@ macro_rules! tag {
     };
 }
 
+#[macro_export]
 macro_rules! map_fail {
     ($($t:tt)*) => { ($($t)*).map_err(|_| LexError::Fail) };
 }

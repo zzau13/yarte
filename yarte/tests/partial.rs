@@ -273,3 +273,25 @@ fn test_with_partial_compile_cond() {
 
     assert_eq!(t.call().unwrap(), "foofoofoobarfalsefoobartruebar");
 }
+
+#[derive(Template)]
+#[template(src = "{{#> partial-block }}Foo{{/partial-block }}")]
+struct PartialBlock;
+
+#[test]
+fn test_partial_block() {
+    let t = PartialBlock;
+
+    assert_eq!(t.call().unwrap(), "BarFooFol");
+}
+
+#[derive(Template)]
+#[template(src = "{{#> with-partial-block }}Foo{{/with-partial-block }}")]
+struct WithPartialBlock;
+
+#[test]
+fn test_with_partial_block() {
+    let t = WithPartialBlock;
+
+    assert_eq!(t.call().unwrap(), "fooBarBalFooForFolbar");
+}
