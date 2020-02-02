@@ -4,7 +4,6 @@ use yarte_html::{
     interface::QualName,
     serializer::{HtmlSerializer, SerializerOpt},
     tree_builder::is_marquee,
-    utils::MARK,
 };
 
 use crate::sink::{ParseAttribute, ParseElement, ParseNodeId, Sink};
@@ -26,7 +25,6 @@ pub enum TreeElement {
     },
     Text(String),
     DocType,
-    Mark(String),
 }
 
 pub struct Tree {
@@ -60,7 +58,6 @@ impl From<Sink> for Tree {
                 }
             }
             Some(Text(s)) => vec![TreeElement::Text(s.clone())],
-            Some(Mark(s)) => vec![TreeElement::Mark(s.clone())],
             None => vec![],
         };
 
@@ -90,7 +87,6 @@ fn get_children(children: &[ParseNodeId], sink: &Sink) -> Vec<TreeElement> {
                 attrs: attrs.to_vec(),
                 children: get_children(children, sink),
             }),
-            Mark(s) => tree.push(TreeElement::Mark(s.clone())),
             _ => panic!("Expect document in root"),
         }
     }
@@ -126,7 +122,6 @@ fn _serialize<W: Write>(
             }
             Text(s) => serializer.write_text(s)?,
             DocType => serializer.write_doctype("html")?,
-            Mark(s) => serializer.write_comment(&format!("{}{}", MARK, s))?,
         }
     }
     serializer.end(parent)

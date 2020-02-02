@@ -11,11 +11,11 @@ use yarte_hir::{Each as HEach, IfElse as HIfElse, HIR};
 use yarte_html::{
     interface::QualName,
     tree_builder::{get_marquee, is_marquee},
+    utils::HASH_LEN,
 };
 
 use crate::sink::{
     parse_document, parse_fragment, ParseAttribute, ParseElement, ParseNodeId, ParseResult, Sink,
-    HEAD, TAIL,
 };
 
 mod visit_each;
@@ -27,25 +27,28 @@ use self::{
     visit_each::resolve_each, visit_expr::resolve_expr, visit_if_else::resolve_if_block,
     visit_local::resolve_local,
 };
-use yarte_html::interface::YName;
+use yarte_html::{
+    interface::YName,
+    utils::{get_mark_id, parse_id, MARK},
+};
 
 pub type Document = Vec<Node>;
 pub type ExprId = usize;
 pub type VarId = u64;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Var {
     This(String),
     Local(ExprId, String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Node {
     Elem(Element),
     Expr(Expression),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Expression {
     Unsafe(ExprId, Box<syn::Expr>),
     Safe(ExprId, Box<syn::Expr>),
@@ -54,14 +57,14 @@ pub enum Expression {
     Local(ExprId, VarId, Box<syn::Local>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct IfBlock {
     pub vars: Vec<VarId>,
     pub expr: syn::Expr,
     pub block: Document,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct IfElse {
     pub ifs: IfBlock,
     pub if_else: Vec<IfBlock>,
@@ -70,7 +73,7 @@ pub struct IfElse {
 
 /// `for expr in args `
 ///
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Each {
     pub var: VarId,
     pub args: syn::Expr,
@@ -78,29 +81,29 @@ pub struct Each {
     pub expr: syn::Expr,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Ns {
     Html,
     Svg,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Element {
     Node {
-        name: (Ns, YName),
+        name: (Ns, ExprOrText),
         attrs: Vec<Attribute>,
         children: Document,
     },
     Text(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Attribute {
-    pub name: String,
+    pub name: ExprOrText,
     pub value: Vec<ExprOrText>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ExprOrText {
     Text(String),
     Expr(Expression),
@@ -130,9 +133,6 @@ pub struct DOMBuilder {
     var_map: HashMap<VarId, Var>,
 }
 
-// 0x00_00_00_00
-const HASH_LEN: usize = 10;
-
 impl DOMBuilder {
     fn build(mut self, ir: Vec<HIR>) -> DOM {
         DOM {
@@ -152,11 +152,10 @@ impl DOMBuilder {
                     false
                 }
                 _ => {
-                    html.push_str(HEAD);
+                    html.push_str(MARK);
                     let id = self.count;
                     self.count += 1;
                     html.push_str(&format!("{:#010x?}", id));
-                    html.push_str(TAIL);
                     true
                 }
             })
@@ -201,7 +200,6 @@ impl DOMBuilder {
                 }
             }
             Some(ParseElement::Text(s)) => vec![self.resolve_text(s)],
-            Some(ParseElement::Mark(s)) => vec![self.resolve_mark(s, &mut ir)?],
             None => vec![],
         };
 
@@ -225,10 +223,20 @@ impl DOMBuilder {
         };
 
         Ok(Node::Elem(Element::Node {
-            name: (ns, name.local.clone()),
+            name: (ns, self.resolve_y_name(&name.local, ir)?),
             attrs: self.resolve_attrs(attrs, ir)?,
             children: self.get_children(children, sink, ir)?,
         }))
+    }
+
+    fn resolve_y_name(&mut self, name: &YName, ir: &mut Drain<HIR>) -> ParseResult<ExprOrText> {
+        Ok(match name {
+            YName::Expr(s) => {
+                let id = get_mark_id(&*s).expect("Valid mark") as usize;
+                ExprOrText::Expr(self.resolve_expr(id, ir)?)
+            }
+            YName::Local(s) => ExprOrText::Text((&*s).to_string()),
+        })
     }
 
     fn resolve_attrs(
@@ -249,8 +257,8 @@ impl DOMBuilder {
         attr: &ParseAttribute,
         ir: &mut Drain<HIR>,
     ) -> ParseResult<Attribute> {
-        let name = attr.name.local.to_string();
-        let mut chunks = attr.value.split(HEAD).peekable();
+        let name = self.resolve_y_name(&attr.name.local, ir)?;
+        let mut chunks = attr.value.split(MARK).peekable();
         if let Some(first) = chunks.peek() {
             if first.is_empty() {
                 chunks.next();
@@ -260,10 +268,10 @@ impl DOMBuilder {
         for chunk in chunks {
             if HASH_LEN < chunk.len() && &chunk[..2] == "0x" {
                 if let Ok(id) = u32::from_str_radix(&chunk[2..HASH_LEN], 16).map(|x| x as usize) {
-                    if self.tree_map.contains_key(&id) && chunk[HASH_LEN..].starts_with(TAIL) {
+                    if self.tree_map.contains_key(&id) {
                         value.push(ExprOrText::Expr(self.resolve_expr(id, ir)?));
-                        if !&chunk[HASH_LEN + TAIL.len()..].is_empty() {
-                            value.push(ExprOrText::Text(chunk[HASH_LEN + TAIL.len()..].into()))
+                        if !&chunk[HASH_LEN..].is_empty() {
+                            value.push(ExprOrText::Text(chunk[HASH_LEN..].into()))
                         }
 
                         continue;
@@ -277,11 +285,8 @@ impl DOMBuilder {
         Ok(Attribute { name, value })
     }
 
-    fn resolve_mark(&mut self, id: &str, ir: &mut Drain<HIR>) -> ParseResult<Node> {
-        assert_eq!(id.len(), 10, "{}", id);
-        assert_eq!(&id[..2], "0x");
-        let id = u32::from_str_radix(&id[2..], 16).unwrap() as usize;
-
+    #[inline]
+    fn resolve_mark(&mut self, id: usize, ir: &mut Drain<HIR>) -> ParseResult<Node> {
         Ok(Node::Expr(self.resolve_expr(id, ir)?))
     }
 
@@ -367,11 +372,32 @@ impl DOMBuilder {
         let mut buff = vec![];
         for child in children.iter().map(|x| sink.nodes.get(x).unwrap()) {
             match child {
-                ParseElement::Text(s) => match buff.last_mut() {
-                    Some(Node::Elem(Element::Text(last))) => last.push_str(s),
-                    _ => buff.push(self.resolve_text(s)),
-                },
-                ParseElement::Mark(s) => buff.push(self.resolve_mark(s, ir)?),
+                ParseElement::Text(s) => {
+                    let mut chunks = s.split(MARK).peekable();
+
+                    if let Some(first) = chunks.peek() {
+                        if first.is_empty() {
+                            chunks.next();
+                        }
+                    }
+                    for chunk in chunks {
+                        if chunk.is_empty() {
+                            panic!("chunk empty")
+                        } else if HASH_LEN <= chunk.len() {
+                            if let Some(id) = parse_id(&chunk[..HASH_LEN]) {
+                                buff.push(self.resolve_mark(id as usize, ir)?);
+                                let cut = &chunk[HASH_LEN..];
+                                if !cut.is_empty() {
+                                    buff.push(self.resolve_text(cut));
+                                }
+                            } else {
+                                buff.push(self.resolve_text(chunk));
+                            }
+                        } else {
+                            buff.push(self.resolve_text(chunk));
+                        }
+                    }
+                }
                 ParseElement::Node {
                     name,
                     attrs,

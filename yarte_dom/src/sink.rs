@@ -1,5 +1,5 @@
 use std::{
-    borrow::{Cow, Cow::Borrowed},
+    borrow::Cow,
     collections::BTreeMap,
     fmt::{self, Debug, Formatter},
 };
@@ -13,7 +13,6 @@ use yarte_html::{
         QualName, TreeSink,
     },
     tree_builder::{get_marquee, is_marquee},
-    utils::MARK,
 };
 
 pub type ParseNodeId = usize;
@@ -52,7 +51,6 @@ impl Debug for ParseAttribute {
 }
 
 pub enum ParseElement {
-    Mark(String),
     Node {
         name: QualName,
         attrs: Vec<ParseAttribute>,
@@ -78,7 +76,6 @@ impl Debug for ParseElement {
                 .field("children", children)
                 .field("parent", parent)
                 .finish(),
-            ParseElement::Mark(s) => f.debug_tuple("Mark").field(s).finish(),
             ParseElement::Text(s) => f.debug_tuple("Text").field(s).finish(),
             ParseElement::Document(s) => f.debug_tuple("Document").field(s).finish(),
         }
@@ -119,7 +116,6 @@ impl Sink {
                             }
                             Some(())
                         }
-                        ParseElement::Mark(_) => Some(()),
                         _ => None,
                     })
                     .expect("Get parent");
@@ -139,9 +135,6 @@ impl Sink {
 pub struct ParseError(Cow<'static, str>);
 
 pub type ParseResult<T> = Result<T, Vec<ParseError>>;
-
-pub const HEAD: &str = "<!--yarteHashHTMLExpressionsATTT";
-pub const TAIL: &str = "-->";
 
 impl TreeSink for Sink {
     type Handle = ParseNode;
@@ -200,25 +193,6 @@ impl TreeSink for Sink {
         );
 
         new_node
-    }
-
-    fn create_comment(&mut self, text: StrTendril) -> Self::Handle {
-        let node = self.new_parse_node();
-        if text.as_bytes().starts_with(MARK.as_bytes()) {
-            self.nodes.insert(
-                node.id,
-                ParseElement::Mark(
-                    text.to_string()
-                        .get(MARK.len()..)
-                        .expect("SOME")
-                        .to_string(),
-                ),
-            );
-        } else {
-            self.parse_error(Borrowed("No use html comment, use yarte comments instead"))
-        }
-
-        node
     }
 
     fn append(&mut self, p: &Self::Handle, child: HtmlNodeOrText<Self::Handle>) {

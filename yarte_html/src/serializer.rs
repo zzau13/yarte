@@ -229,20 +229,6 @@ impl<Wr: Write> HtmlSerializer<Wr> {
         }
     }
 
-    pub fn write_comment(&mut self, text: &str) -> io::Result<()> {
-        if let Some(text) = &self.next_ws.take() {
-            match self.skip_ws {
-                Some(Ws::C) => self.writer.write_all(b" ")?,
-                None => self.writer.write_all(text.as_bytes())?,
-                Some(Ws::Skip) => (),
-            }
-        }
-        self.skip_ws = None;
-        self.writer.write_all(b"<!--")?;
-        self.writer.write_all(text.as_bytes())?;
-        self.writer.write_all(b"-->")
-    }
-
     pub fn write_doctype(&mut self, name: &str) -> io::Result<()> {
         assert!(self.next_ws.is_none(), "text before doctype");
         self.writer.write_all(b"<!DOCTYPE ")?;
@@ -304,6 +290,16 @@ impl<Wr: Write> HtmlSerializer<Wr> {
                     }
                 }
                 self.skip_ws = Some(Ws::C);
+            }
+            YName::Expr(_) => {
+                if let Some(text) = self.next_ws.take() {
+                    match self.skip_ws {
+                        None if !text.is_empty() => self.writer.write_all(text.as_bytes())?,
+                        Some(Ws::C) => self.writer.write_all(b" ")?,
+                        _ => (),
+                    }
+                }
+                self.skip_ws = None;
             }
             _ => {
                 self.next_ws = None;

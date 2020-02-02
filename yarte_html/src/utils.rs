@@ -7,7 +7,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use std::fmt;
+use std::{fmt, u32};
 
 use mac::{_tt_as_expr_hack, matches};
 
@@ -41,13 +41,28 @@ pub fn is_ascii_whitespace(c: char) -> bool {
 pub const MARK: &str = "yartehashhtmlexpressionsattt";
 const MARK_LEN: usize = MARK.len();
 const S: &str = "0x";
-const S_LEN: usize = 2;
-const HASH_LEN: usize = 8;
+const S_LEN: usize = S.len();
+// 0x00_00_00_00
+pub const HASH_LEN: usize = 10;
+
 pub fn is_mark(s: &str) -> bool {
-    s.len() == MARK_LEN + S_LEN + HASH_LEN
-        && &s[..MARK_LEN] == MARK
-        && &s[MARK_LEN..MARK_LEN + S_LEN] == S
-        && s[MARK_LEN + S_LEN..].chars().all(|x| x.is_ascii_hexdigit())
+    s.len() == MARK_LEN + HASH_LEN && &s[..MARK_LEN] == MARK && parse_id(&s[MARK_LEN..]).is_some()
+}
+
+pub fn parse_id(s: &str) -> Option<u32> {
+    if &s[..S_LEN] == S && s[S_LEN..].chars().all(|x| x.is_ascii_hexdigit()) {
+        u32::from_str_radix(&s[S_LEN..], 16).ok()
+    } else {
+        None
+    }
+}
+
+pub fn get_mark_id(s: &str) -> Option<u32> {
+    if is_mark(s) {
+        u32::from_str_radix(&s[MARK_LEN + S_LEN..], 16).ok()
+    } else {
+        None
+    }
 }
 
 #[cfg(test)]

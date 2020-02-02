@@ -531,10 +531,10 @@ impl<'a> WASMCodeGen<'a> {
         assert_eq!(dom.doc.len(), 1);
         match &dom.doc[0] {
             Node::Elem(Element::Node { name, children, .. }) => {
-                assert_eq!(y_name!("html"), name.1);
+                assert_eq!(ExprOrText::Text("html".into()), name.1);
                 assert!(children.iter().all(|x| match x {
-                    Node::Elem(Element::Node { name, .. }) => match name.1 {
-                        y_name!("body") | y_name!("head") => true,
+                    Node::Elem(Element::Node { name, .. }) => match &name.1 {
+                        ExprOrText::Text(s) => s == "body" || s == "head",
                         _ => false,
                     },
                     Node::Elem(Element::Text(text)) => text.chars().all(|x| x.is_whitespace()),
@@ -542,9 +542,12 @@ impl<'a> WASMCodeGen<'a> {
                 }));
 
                 let (head, body) = children.iter().fold((None, None), |acc, x| match x {
-                    Node::Elem(Element::Node { name, children, .. }) => match name.1 {
-                        y_name!("body") => (acc.0, Some(children)),
-                        y_name!("head") => (Some(children), acc.1),
+                    Node::Elem(Element::Node { name, children, .. }) => match &name.1 {
+                        ExprOrText::Text(s) => match s.as_ref() {
+                            "body" => (acc.0, Some(children)),
+                            "head" => (Some(children), acc.1),
+                            _ => acc,
+                        },
                         _ => acc,
                     },
                     _ => acc,
