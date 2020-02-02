@@ -38,6 +38,7 @@ pub struct Partial<'a>(pub Ws, pub SStr<'a>, pub SVExpr);
 pub enum Node<'a> {
     Comment(&'a str),
     Expr(Ws, SExpr),
+    RExpr(Ws, SExpr),
     Helper(Box<Helper<'a>>),
     Lit(&'a str, SStr<'a>, &'a str),
     Local(SLocal),
@@ -115,6 +116,9 @@ macro_rules! make_eater {
                             match $n {
                                 b'{' => try_eat!(buf, i, at, j, safe(i.adv(at + j + 3 + $t), $ws)),
                                 b'!' => try_eat!(buf, i, at, j, comment(i.adv(at + j + 3 + $t))),
+                                b'?' => {
+                                    try_eat!(buf, i, at, j, resolve(i.adv(at + j + 3 + $t), $ws))
+                                }
                                 b'#' => try_eat!(buf, i, at, j, hel(i.adv(at + j + 3 + $t), $ws)),
                                 b'>' => try_eat!(buf, i, at, j, par(i.adv(at + j + 3 + $t), $ws)),
                                 b'R' => try_eat!(buf, i, at, j, raw(i.adv(at + j + 3 + $t), $ws)),
@@ -215,6 +219,13 @@ fn comment(c: Cursor) -> PResult<Node> {
             break Err(LexError::Next);
         }
     }
+}
+
+fn resolve(c: Cursor, lws: bool) -> PResult<Node> {
+    do_parse!(
+        c,
+        ws >> expr: arguments >> rws: end_expr >> (Node::RExpr((lws, rws), expr))
+    )
 }
 
 /// Wrap Partial into the Node

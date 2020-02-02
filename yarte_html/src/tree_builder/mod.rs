@@ -327,7 +327,7 @@ macro_rules! qualname {
             local: y_name!($local),
         }
     };
-    ($prefix: tt $ns:tt $local:tt) => {
+    ($prefix:tt $ns:tt $local:tt) => {
         QualName {
             prefix: Some(namespace_prefix!($prefix)),
             ns: ns!($ns),
@@ -336,6 +336,7 @@ macro_rules! qualname {
     };
 }
 
+// TODO: Simplify
 #[doc(hidden)]
 impl<Handle, Sink> TreeBuilder<Handle, Sink>
 where
@@ -415,7 +416,6 @@ where
     }
 
     fn adoption_agency(&mut self, subject: YName) {
-        // 1.
         // TODO: simplify
         if self.current_node_named(subject.clone())
             && self
@@ -698,7 +698,6 @@ where
         );
         self.push(&elem);
         self.sink.append(&self.doc_handle, AppendNode(elem));
-        // FIXME: application cache selection algorithm
     }
 
     fn insert_element(

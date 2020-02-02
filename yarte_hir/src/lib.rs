@@ -178,6 +178,14 @@ impl<'a> Generator<'a> {
                         self.buf_w.push(Writable::Expr(Box::new(expr), false));
                     }
                 }
+                Node::RExpr(ws, sexpr) => {
+                    let mut expr = *sexpr.t().clone();
+
+                    self.handle_ws(*ws);
+                    self.visit_expr_mut(&mut expr);
+
+                    self.buf_w.push(Writable::LitP(quote!(#expr).to_string()));
+                }
                 Node::Lit(l, lit, r) => self.visit_lit(l, lit.t(), r),
                 Node::Helper(h) => self.visit_helper(buf, &h),
                 Node::Partial(Partial(ws, path, expr)) => {
