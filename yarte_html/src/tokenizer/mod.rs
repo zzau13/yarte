@@ -13,7 +13,7 @@
 use std::{
     borrow::Cow::{self, Borrowed, Owned},
     mem,
-    mem::replace
+    mem::replace,
 };
 
 use log::debug;

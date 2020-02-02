@@ -252,9 +252,6 @@ pub trait TreeSink {
         flags: ElementFlags,
     ) -> Self::Handle;
 
-    /// Create a comment node.
-    fn create_comment(&mut self, text: StrTendril) -> Self::Handle;
-
     /// Append a node as the last child of the given node.  If this would
     /// produce adjacent sibling text nodes, it should concatenate the text
     /// instead.

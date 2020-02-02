@@ -683,9 +683,9 @@ where
         Done
     }
 
-    fn append_comment(&mut self, text: StrTendril) -> ProcessResult<Handle> {
-        let comment = self.sink.create_comment(text);
-        self.insert_appropriately(AppendNode(comment), None);
+    fn append_comment(&mut self, _text: StrTendril) -> ProcessResult<Handle> {
+        self.sink
+            .parse_error(Borrowed("No use html comment, use yarte comments instead"));
         Done
     }
 

@@ -52,7 +52,10 @@ impl<'a, 'b> ComponentBuilder<'a, 'b> {
                     children,
                 }) => {
                     let id = self.get_ident();
-                    let tag = name.1.to_string();
+                    let tag = match &name.1 {
+                        ExprOrText::Text(name) => name,
+                        _ => todo!("unsafe tag expression"),
+                    };
 
                     self.tokens.extend(quote! {
                         let #id = doc.create_element(#tag).unwrap_throw();
@@ -100,7 +103,10 @@ impl<'a, 'b> ComponentBuilder<'a, 'b> {
                     children,
                 }) => {
                     let id = self.get_ident();
-                    let tag = name.1.to_string();
+                    let tag = match &name.1 {
+                        ExprOrText::Text(name) => name,
+                        _ => todo!("unsafe tag expression"),
+                    };
 
                     self.tokens.extend(quote! {
                         let #id = doc.create_element(#tag).unwrap_throw();
@@ -140,7 +146,10 @@ impl<'a, 'b> ComponentBuilder<'a, 'b> {
 
                     acc
                 });
-                let name = &attr.name;
+                let name = match &attr.name {
+                    ExprOrText::Text(name) => name,
+                    _ => todo!("Attribute expression"),
+                };
                 self.tokens
                     .extend(quote!(#id.set_attribute(#name, #value).unwrap_throw();));
             }
