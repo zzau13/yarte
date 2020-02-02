@@ -35,6 +35,9 @@ pub type SVExpr = S<Vec<Expr>>;
 pub struct Partial<'a>(pub Ws, pub SStr<'a>, pub SVExpr);
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct PartialBlock<'a>(pub (Ws, Ws), pub SStr<'a>, pub SVExpr, pub Vec<SNode<'a>>);
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum Node<'a> {
     Comment(&'a str),
     Expr(Ws, SExpr),
@@ -43,6 +46,8 @@ pub enum Node<'a> {
     Lit(&'a str, SStr<'a>, &'a str),
     Local(SLocal),
     Partial(Partial<'a>),
+    PartialBlock(PartialBlock<'a>),
+    Block(Ws),
     Raw((Ws, Ws), &'a str, SStr<'a>, &'a str),
     Safe(Ws, SExpr),
 }
@@ -116,15 +121,13 @@ macro_rules! make_eater {
                             match $n {
                                 b'{' => try_eat!(buf, i, at, j, safe(i.adv(at + j + 3 + $t), $ws)),
                                 b'!' => try_eat!(buf, i, at, j, comment(i.adv(at + j + 3 + $t))),
-                                b'?' => {
-                                    try_eat!(buf, i, at, j, resolve(i.adv(at + j + 3 + $t), $ws))
-                                }
+                                b'?' => try_eat!(buf, i, at, j, res(i.adv(at + j + 3 + $t), $ws)),
                                 b'#' => try_eat!(buf, i, at, j, hel(i.adv(at + j + 3 + $t), $ws)),
                                 b'>' => try_eat!(buf, i, at, j, par(i.adv(at + j + 3 + $t), $ws)),
                                 b'R' => try_eat!(buf, i, at, j, raw(i.adv(at + j + 3 + $t), $ws)),
                                 b'/' => kill!(buf, i.adv(at + j + 2), i, at + j),
                                 _ => {
-                                    $callback!(buf, i, at, j, $t);
+                                    $callback!(buf, i, at, j, $t, $ws);
                                     try_eat!(buf, i, at, j, expr(i.adv(at + j + 2 + $t), $ws))
                                 }
                             }
@@ -167,15 +170,23 @@ const ELSE: &str = "else";
 
 // Test special expression `{{ else ..` and kill eater at next brackets
 macro_rules! is_else {
-    ($n:ident, $i:ident, $at:ident, $j:ident, $t:expr) => {
+    ($buf:ident, $i:ident, $at:ident, $j:ident, $t:expr, $ws:expr) => {
         if skip_ws($i.adv($at + $j + 2 + $t)).starts_with(ELSE) {
-            kill!($n, $i.adv($at + $j + 2), $i, $at + $j);
+            kill!($buf, $i.adv($at + $j + 2), $i, $at + $j);
         }
     };
 }
 
 // If else branch eater
 make_eater!(eat_if, is_else);
+
+const PARTIAL_BLOCK: &str = "@partial-block";
+fn expr_partial_block(c: Cursor, lws: bool) -> PResult<Node> {
+    do_parse!(
+        c,
+        ws >> tag!(PARTIAL_BLOCK) >> rws: end_expr >> (Node::Block((lws, rws)))
+    )
+}
 
 /// Push literal at cursor with length
 fn eat_lit<'a>(nodes: &mut Vec<SNode<'a>>, i: Cursor<'a>, len: usize) {
@@ -221,7 +232,7 @@ fn comment(c: Cursor) -> PResult<Node> {
     }
 }
 
-fn resolve(c: Cursor, lws: bool) -> PResult<Node> {
+fn res(c: Cursor, lws: bool) -> PResult<Node> {
     do_parse!(
         c,
         ws >> expr: arguments >> rws: end_expr >> (Node::RExpr((lws, rws), expr))
@@ -231,10 +242,14 @@ fn resolve(c: Cursor, lws: bool) -> PResult<Node> {
 /// Wrap Partial into the Node
 #[inline]
 fn par(i: Cursor, lws: bool) -> PResult<Node> {
-    partial(i, lws).map(|(c, p)| (c, Node::Partial(p)))
+    match expr_partial_block(i, lws) {
+        Ok(x) => Ok(x),
+        Err(_) => partial(i, lws).map(|(c, p)| (c, Node::Partial(p))),
+    }
 }
 
 /// Eat partial expression
+#[inline]
 fn partial(i: Cursor, lws: bool) -> PResult<Partial> {
     do_parse!(
         i,
@@ -245,8 +260,40 @@ fn partial(i: Cursor, lws: bool) -> PResult<Partial> {
     )
 }
 
+fn partial_block(i: Cursor, a_lws: bool) -> PResult<PartialBlock> {
+    let (i, (ws, ident, args, block, c_ident)) = do_parse!(
+        i,
+        ws >> ident: call!(spanned, path)
+            >> args: args_list
+            >> a_rws: end_expr
+            >> block: eat
+            >> lws: opt!(tag!("~"))
+            >> tag!("/")
+            >> ws
+            >> c_ident: call!(spanned, path)
+            >> rws: end_expr
+            >> (
+                ((a_lws, a_rws), (lws.is_some(), rws)),
+                ident,
+                args,
+                block,
+                c_ident
+            )
+    )?;
+
+    if ident.t() == c_ident.t() {
+        Ok((i, PartialBlock(ws, ident, args, block)))
+    } else {
+        Err(LexError::Fail)
+    }
+}
+
 /// Eat helper Node
 fn hel(i: Cursor, a_lws: bool) -> PResult<Node> {
+    if i.starts_with(">") {
+        return partial_block(i.adv(1), a_lws).map(|(c, x)| (c, Node::PartialBlock(x)));
+    }
+
     let (i, (above_ws, ident, args)) = do_parse!(
         i,
         ws >> ident: call!(spanned, identifier)

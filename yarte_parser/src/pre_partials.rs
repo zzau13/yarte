@@ -1,5 +1,5 @@
-use super::{
-    comment, partial, raw,
+use crate::{
+    comment, expr_partial_block, partial, raw,
     strnom::{Cursor, LexError, PResult},
     Partial,
 };
@@ -31,7 +31,7 @@ fn eat_partials(mut i: Cursor) -> PResult<Vec<Partial>> {
                     match $n {
                         b'>' => {
                             let i = i.adv(j + 3 + $t);
-                            match partial(i, $ws) {
+                            match partial_block(i, $ws) {
                                 Ok((i, n)) => {
                                     nodes.push(n);
                                     i
@@ -55,6 +55,16 @@ fn eat_partials(mut i: Cursor) -> PResult<Vec<Partial>> {
                                 Err(_) => i,
                             }
                         }
+                        b'#' if i.adv(j + 3 + $t).starts_with(">") => {
+                            match partial(i.adv(j + 4 + $t), $ws) {
+                                Ok((i, n)) => {
+                                    nodes.push(n);
+                                    i
+                                }
+                                Err(LexError::Fail) => break Err(LexError::Fail),
+                                Err(LexError::Next) => i.adv(j + 3 + $t),
+                            }
+                        }
                         _ => i.adv(j + 2 + $t),
                     }
                 };
@@ -76,9 +86,18 @@ fn eat_partials(mut i: Cursor) -> PResult<Vec<Partial>> {
     }
 }
 
+#[inline]
+fn partial_block(i: Cursor, lws: bool) -> PResult<Partial> {
+    match expr_partial_block(i, lws) {
+        Ok(_) => Err(LexError::Next),
+        Err(_) => partial(i, lws),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::source_map::{Span, S};
 
     #[test]
     fn test_empty() {
@@ -98,5 +117,18 @@ mod tests {
         assert_eq!(parse_partials(src), vec![]);
         let src = r#"{{R}} {{> foo }} {{/R}}"#;
         assert_eq!(parse_partials(src), vec![]);
+    }
+
+    #[test]
+    fn test_partial_block() {
+        let src = "{{#> foo }}bar{{/foo }}";
+        assert_eq!(
+            parse_partials(src),
+            vec![Partial(
+                (false, false),
+                S("foo", Span { lo: 5, hi: 8 }),
+                S(vec![], Span { lo: 9, hi: 9 })
+            )]
+        );
     }
 }
