@@ -308,3 +308,63 @@ fn test_partial_block_ctx() {
 
     assert_eq!(t.call().unwrap(), "FoobarBarFol0");
 }
+
+#[derive(Template)]
+#[template(src = "{{#> partial-block-ws }}
+ Foo {{/partial-block-ws }}")]
+struct PartialBlockWs;
+
+#[test]
+fn test_partial_block_ws() {
+    let t = PartialBlockWs;
+
+    assert_eq!(t.call().unwrap(), "foo   \n Foo \nbar");
+}
+
+#[derive(Template)]
+#[template(src = "{{#> partial-block-ws ~}}
+ Foo {{/partial-block-ws }}")]
+struct PartialBlockWs1;
+
+#[test]
+fn test_partial_block_ws_1() {
+    let t = PartialBlockWs1;
+
+    assert_eq!(t.call().unwrap(), "foo   Foo \nbar");
+}
+
+#[derive(Template)]
+#[template(src = "{{#> partial-block-ws }}
+ Foo {{~/partial-block-ws }}")]
+struct PartialBlockWs2;
+
+#[test]
+fn test_partial_block_ws_2() {
+    let t = PartialBlockWs2;
+
+    assert_eq!(t.call().unwrap(), "foo   \n Foo\nbar");
+}
+
+#[derive(Template)]
+#[template(src = "{{#> partial-block }}
+ Foo {{/partial-block }}")]
+struct PartialBlockWs3;
+
+#[test]
+fn test_partial_block_ws_3() {
+    let t = PartialBlockWs3;
+
+    assert_eq!(t.call().unwrap(), "Bar\n Foo Fol");
+}
+
+#[derive(Template)]
+#[template(src = "{{#> partial-block }}
+ Foo {{~/partial-block }}")]
+struct PartialBlockWs4;
+
+#[test]
+fn test_partial_block_ws_4() {
+    let t = PartialBlockWs4;
+
+    assert_eq!(t.call().unwrap(), "Bar\n FooFol");
+}

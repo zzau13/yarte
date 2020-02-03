@@ -225,32 +225,26 @@ impl<'a> Generator<'a> {
                 }
                 Node::Block(ws) => {
                     if let Some((i_ws, block, mut old)) = self.block.pop() {
-                        // TODO: Fix whitespaces control
-                        // TODO: coverage white space control
-                        let ws = (i_ws.0 || ws.0, ws.1 || i_ws.1);
-
-                        let old_next_ws = old.next_ws;
-                        let old_skip_ws = old.skip_ws;
+                        old.next_ws = self.next_ws.take();
+                        old.skip_ws = self.skip_ws;
                         old.scp.count = self.scp.count;
                         old.buf_w.extend(self.buf_w.drain(..));
 
-                        // TODO: Fix whitespaces control
-                        old.handle_ws(ws);
+                        old.flush_ws(*ws);
+                        old.prepare_ws((false, i_ws.0));
 
                         old.handle(block, buf);
-                        self.buf_w.extend(old.buf_w.drain(..));
-                        self.errors.extend(old.errors.drain(..));
-                        self.next_ws = mem::replace(&mut old.next_ws, old_next_ws);
-                        self.skip_ws = old.skip_ws;
-                        old.skip_ws = old_skip_ws;
-                        self.scp.count = old.scp.count;
-                        self.block.push((i_ws, block, old));
 
-                        // TODO: Fix whitespaces control
-                        if !self.skip_ws {
-                            self.flush_ws(ws);
-                        }
-                        self.prepare_ws(ws)
+                        self.errors.extend(old.errors.drain(..));
+                        self.buf_w.extend(old.buf_w.drain(..));
+
+                        self.scp.count = old.scp.count;
+                        self.next_ws = old.next_ws.take();
+                        self.skip_ws = old.skip_ws;
+
+                        self.flush_ws((i_ws.1, false));
+                        self.prepare_ws(*ws);
+                        self.block.push((i_ws, block, old));
                     } else {
                         self.flush_ws(*ws);
                         self.errors.push(ErrorMessage {
@@ -547,13 +541,12 @@ impl<'a> Generator<'a> {
         let p = mem::replace(&mut self.on_path, p);
 
         let block = if let Some((ws, block)) = block {
-            // TODO: Fix whitespaces control
-            self.flush_ws((a_ws.0, ws.1));
+            self.flush_ws((a_ws.0, false));
             self.block.push(((a_ws.1, ws.0), block, self.clone()));
-            true
+            Some(ws.1)
         } else {
             self.flush_ws(a_ws);
-            false
+            None
         };
         let exprs = exprs.t();
         if exprs.is_empty() {
@@ -594,10 +587,9 @@ impl<'a> Generator<'a> {
                 self.partial = last;
             }
         }
-        if block {
-            // TODO: Fix whitespaces control
-            let (ws, ..) = self.block.pop().unwrap();
-            self.prepare_ws((a_ws.0, ws.1));
+        if let Some(ws) = block {
+            self.block.pop();
+            self.prepare_ws((false, ws));
         } else {
             self.prepare_ws(a_ws)
         }
