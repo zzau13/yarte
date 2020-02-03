@@ -379,3 +379,35 @@ fn test_partial_recursion() {
 
     assert_eq!(t.call().unwrap(), "10 9 8 7 6 5 4 3 2 1 0");
 }
+
+#[derive(Template)]
+#[template(
+    src = "{{# each a }}{{#> partial-block-ctx a = \"b\" }}_{{ this }}a{{ index }}{{/partial-block-ctx }}{{/each}}"
+)]
+struct PartialBlockEachCtx {
+    a: Vec<usize>,
+}
+
+#[test]
+fn test_partial_block_each_ctx() {
+    let t = PartialBlockEachCtx {
+        a: (0..2).collect(),
+    };
+
+    assert_eq!(t.call().unwrap(), "FoobBar_0a1FoobBar_1a2");
+}
+
+#[derive(Template)]
+#[template(
+    src = "{{# with a }}{{#> partial-block-ctx a = \"b\" }}_{{ _0 }}a{{ _1 }}{{/partial-block-ctx }}{{/with}}"
+)]
+struct PartialBlockWithCtx {
+    a: (usize, usize),
+}
+
+#[test]
+fn test_partial_block_with_ctx() {
+    let t = PartialBlockWithCtx { a: (0, 1) };
+
+    assert_eq!(t.call().unwrap(), "FoobBar_0a1");
+}
