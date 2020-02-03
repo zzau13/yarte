@@ -1,3 +1,5 @@
+#![allow(clippy::cognitive_complexity)]
+
 use std::{mem, path::PathBuf};
 
 use syn::visit::Visit;
@@ -6,26 +8,23 @@ use yarte_config::Config;
 use yarte_parser::{Helper, Node, Partial, PartialBlock, SNode};
 
 use super::{is_super, Context, Generator};
+use crate::Struct;
 
-pub(super) fn find_loop_var(
-    c: &Config,
-    ctx: Context,
-    path: PathBuf,
-    block: Vec<(&[SNode], FindEach)>,
-    nodes: &[SNode],
-) -> bool {
-    FindEach::new(c, ctx, path, block).find(nodes)
+pub(super) fn find_loop_var(g: &Generator, nodes: &[SNode]) -> bool {
+    FindEach::from(g).find(nodes)
 }
 
 // Find {{ index }} {{ index0 }} {{ first }} {{ _index_[0-9] }}
 #[derive(Clone)]
 pub struct FindEach<'a> {
     loop_var: bool,
+    s: &'a Struct<'a>,
     c: &'a Config<'a>,
     ctx: Context<'a>,
     on_path: PathBuf,
     block: Vec<(&'a [SNode<'a>], FindEach<'a>)>,
     on_: usize,
+    recursion: usize,
 }
 
 impl<'a> From<&Generator<'a>> for FindEach<'a> {
@@ -33,31 +32,17 @@ impl<'a> From<&Generator<'a>> for FindEach<'a> {
         FindEach {
             loop_var: false,
             c: g.c,
+            s: g.s,
             ctx: g.ctx,
             on_path: g.on_path.clone(),
             block: g.block.iter().map(|(_, x, g)| (*x, g.into())).collect(),
             on_: 0,
+            recursion: g.recursion,
         }
     }
 }
 
 impl<'a> FindEach<'a> {
-    pub fn new<'n>(
-        c: &'n Config<'n>,
-        ctx: Context<'n>,
-        on_path: PathBuf,
-        block: Vec<(&'n [SNode<'n>], FindEach<'n>)>,
-    ) -> FindEach<'n> {
-        FindEach {
-            block,
-            c,
-            ctx,
-            on_path,
-            loop_var: false,
-            on_: 0,
-        }
-    }
-
     pub fn find(&mut self, nodes: &'a [SNode]) -> bool {
         for n in nodes {
             match n.t() {
@@ -122,6 +107,12 @@ impl<'a> FindEach<'a> {
                     }
                 }
                 Node::Partial(Partial(_, path, expr)) => {
+                    self.recursion += 1;
+                    if self.s.recursion_limit <= self.recursion {
+                        // TODO: to error message
+                        panic!("Recursion limit")
+                    }
+
                     let p = self.c.resolve_partial(&self.on_path, path.t());
                     let nodes = self.ctx.get(&p).unwrap();
                     let expr = expr.t();
@@ -147,8 +138,15 @@ impl<'a> FindEach<'a> {
                     self.find(nodes);
 
                     self.on_path = parent;
+                    self.recursion -= 1;
                 }
                 Node::PartialBlock(PartialBlock(_, path, expr, block)) => {
+                    self.recursion += 1;
+                    if self.s.recursion_limit <= self.recursion {
+                        // TODO: to error message
+                        panic!("Recursion limit")
+                    }
+
                     let p = self.c.resolve_partial(&self.on_path, path.t());
                     let nodes = self.ctx.get(&p).unwrap();
                     let expr = expr.t();
@@ -174,6 +172,7 @@ impl<'a> FindEach<'a> {
                     self.find(nodes);
                     self.on_path = parent;
                     self.block.pop();
+                    self.recursion -= 1;
                 }
                 Node::Block(_) => {
                     if let Some((block, mut old)) = self.block.pop() {

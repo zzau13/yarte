@@ -26,11 +26,7 @@ mod visit_partial;
 mod visits;
 
 pub use self::visit_derive::{visit_derive, Mode, Print, Struct};
-use self::{
-    scope::Scope,
-    visit_each::{find_loop_var, FindEach},
-    visit_partial::visit_partial,
-};
+use self::{scope::Scope, visit_each::find_loop_var, visit_partial::visit_partial};
 
 /// High level intermediate representation after lowering Ast
 #[derive(Debug, Clone, PartialEq)]
@@ -97,6 +93,7 @@ struct Generator<'a> {
     ctx: Context<'a>,
     /// current file path
     on_path: PathBuf,
+    recursion: usize,
     /// whitespace buffer adapted from [`askama`](https://github.com/djc/askama)
     next_ws: Option<&'a str>,
     /// whitespace flag adapted from [`askama`](https://github.com/djc/askama)
@@ -116,6 +113,7 @@ impl<'a> Clone for Generator<'a> {
             errors: vec![],
             ctx: self.ctx,
             on_path: self.on_path.clone(),
+            recursion: self.recursion,
             next_ws: self.next_ws,
             skip_ws: self.skip_ws,
         }
@@ -137,6 +135,7 @@ impl<'a> Generator<'a> {
             skip_ws: false,
             errors: vec![],
             block: vec![],
+            recursion: 0,
         }
     }
 
@@ -214,7 +213,12 @@ impl<'a> Generator<'a> {
                 Node::Lit(l, lit, r) => self.visit_lit(l, lit.t(), r),
                 Node::Helper(h) => self.visit_helper(buf, &h),
                 Node::Partial(Partial(ws, path, expr)) => {
-                    self.visit_partial(buf, *ws, path.t(), expr, None)
+                    if let Err(message) = self.visit_partial(buf, *ws, path.t(), expr, None) {
+                        self.errors.push(ErrorMessage {
+                            message,
+                            span: *n.span(),
+                        })
+                    }
                 }
                 // TODO
                 Node::Comment(_) => self.skip_ws(),
@@ -255,7 +259,14 @@ impl<'a> Generator<'a> {
                     }
                 }
                 Node::PartialBlock(PartialBlock(ws, path, expr, block)) => {
-                    self.visit_partial(buf, ws.0, path.t(), expr, Some((ws.1, block)))
+                    if let Err(message) =
+                        self.visit_partial(buf, ws.0, path.t(), expr, Some((ws.1, block)))
+                    {
+                        self.errors.push(ErrorMessage {
+                            message,
+                            span: *n.span(),
+                        })
+                    }
                 }
             }
         }
@@ -363,16 +374,8 @@ impl<'a> Generator<'a> {
         sargs: &'a SExpr,
         nodes: &'a [SNode<'a>],
     ) {
-        let loop_var = find_loop_var(
-            self.c,
-            self.ctx,
-            self.on_path.clone(),
-            self.block
-                .iter()
-                .map(|(_, x, g)| (*x, Into::<FindEach>::into(g)))
-                .collect(),
-            nodes,
-        );
+        let loop_var = find_loop_var(self, nodes);
+
         let mut args = *sargs.t().clone();
         self.visit_expr_mut(&mut args);
 
@@ -534,7 +537,12 @@ impl<'a> Generator<'a> {
         path: &str,
         exprs: &'a SVExpr,
         block: Option<(Ws, &'a [SNode<'a>])>,
-    ) {
+    ) -> Result<(), String> {
+        self.recursion += 1;
+        if self.s.recursion_limit <= self.recursion {
+            return Err("Recursion limit".into());
+        }
+
         let p = self.c.resolve_partial(&self.on_path, path);
         let nodes = self.ctx.get(&p).unwrap();
 
@@ -594,6 +602,8 @@ impl<'a> Generator<'a> {
             self.prepare_ws(a_ws)
         }
         self.on_path = p;
+        self.recursion -= 1;
+        Ok(())
     }
 
     fn const_eval(&mut self, expr: &syn::Expr, safe: bool) -> Option<()> {
