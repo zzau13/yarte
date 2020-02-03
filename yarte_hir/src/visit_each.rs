@@ -5,34 +5,48 @@ use syn::visit::Visit;
 use yarte_config::Config;
 use yarte_parser::{Helper, Node, Partial, PartialBlock, SNode};
 
-use super::{is_super, Context};
+use super::{is_super, Context, Generator};
 
 pub(super) fn find_loop_var(
     c: &Config,
     ctx: Context,
     path: PathBuf,
-    block: Vec<&[SNode]>,
+    block: Vec<(&[SNode], FindEach)>,
     nodes: &[SNode],
 ) -> bool {
     FindEach::new(c, ctx, path, block).find(nodes)
 }
 
 // Find {{ index }} {{ index0 }} {{ first }} {{ _index_[0-9] }}
-struct FindEach<'a> {
+#[derive(Clone)]
+pub struct FindEach<'a> {
     loop_var: bool,
     c: &'a Config<'a>,
     ctx: Context<'a>,
     on_path: PathBuf,
-    block: Vec<&'a [SNode<'a>]>,
+    block: Vec<(&'a [SNode<'a>], FindEach<'a>)>,
     on_: usize,
 }
 
+impl<'a> From<&Generator<'a>> for FindEach<'a> {
+    fn from(g: &Generator<'a>) -> FindEach<'a> {
+        FindEach {
+            loop_var: false,
+            c: g.c,
+            ctx: g.ctx,
+            on_path: g.on_path.clone(),
+            block: g.block.iter().map(|(_, x, g)| (*x, g.into())).collect(),
+            on_: 0,
+        }
+    }
+}
+
 impl<'a> FindEach<'a> {
-    fn new<'n>(
+    pub fn new<'n>(
         c: &'n Config<'n>,
         ctx: Context<'n>,
         on_path: PathBuf,
-        block: Vec<&'n [SNode<'n>]>,
+        block: Vec<(&'n [SNode<'n>], FindEach<'n>)>,
     ) -> FindEach<'n> {
         FindEach {
             block,
@@ -156,17 +170,18 @@ impl<'a> FindEach<'a> {
                     }
 
                     let parent = mem::replace(&mut self.on_path, p);
-                    self.block.push(block);
+                    self.block.push((block, self.clone()));
                     self.find(nodes);
-
                     self.on_path = parent;
                     self.block.pop();
                 }
                 Node::Block(_) => {
-                    if let Some(block) = self.block.pop() {
-                        // TODO: define priority in whitespace
-                        self.find(block);
-                        self.block.push(block);
+                    if let Some((block, mut old)) = self.block.pop() {
+                        // on_ is balanced and loop_var is unique
+                        // TODO: coverage each variable
+                        old.find(block);
+                        self.loop_var |= old.loop_var;
+                        self.block.push((block, old));
                     } else {
                         // TODO: to error message
                         panic!("Use inside partial block");

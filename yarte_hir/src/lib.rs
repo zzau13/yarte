@@ -25,6 +25,13 @@ mod visit_each;
 mod visit_partial;
 mod visits;
 
+pub use self::visit_derive::{visit_derive, Mode, Print, Struct};
+use self::{
+    scope::Scope,
+    visit_each::{find_loop_var, FindEach},
+    visit_partial::visit_partial,
+};
+
 /// High level intermediate representation after lowering Ast
 #[derive(Debug, Clone, PartialEq)]
 pub enum HIR {
@@ -50,18 +57,13 @@ pub struct Each {
     pub expr: syn::Expr,
 }
 
-pub use self::visit_derive::Struct;
-use self::{scope::Scope, visit_each::find_loop_var, visit_partial::visit_partial};
-
-pub use self::visit_derive::{visit_derive, Mode, Print};
-
 pub fn generate(c: &Config, s: &Struct, ctx: Context) -> Result<Vec<HIR>, Vec<ErrorMessage>> {
     Generator::new(c, s, ctx).build()
 }
 
 pub type Context<'a> = &'a BTreeMap<&'a PathBuf, Vec<SNode<'a>>>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 enum On {
     Each(usize),
     With(usize),
@@ -86,7 +88,7 @@ struct Generator<'a> {
     pub(self) on: Vec<On>,
     /// On partial scope
     pub(self) partial: Option<(BTreeMap<String, syn::Expr>, usize)>,
-    block: Vec<(Ws, &'a [SNode<'a>])>,
+    block: Vec<(Ws, &'a [SNode<'a>], Generator<'a>)>,
     /// buffer for writable
     buf_w: Vec<Writable<'a>>,
     /// Errors buffer
@@ -99,6 +101,25 @@ struct Generator<'a> {
     next_ws: Option<&'a str>,
     /// whitespace flag adapted from [`askama`](https://github.com/djc/askama)
     skip_ws: bool,
+}
+
+impl<'a> Clone for Generator<'a> {
+    fn clone(&self) -> Self {
+        Self {
+            c: self.c,
+            s: self.s,
+            scp: self.scp.clone(),
+            on: self.on.to_vec(),
+            partial: self.partial.clone(),
+            block: self.block.clone(),
+            buf_w: vec![],
+            errors: vec![],
+            ctx: self.ctx,
+            on_path: self.on_path.clone(),
+            next_ws: self.next_ws,
+            skip_ws: self.skip_ws,
+        }
+    }
 }
 
 impl<'a> Generator<'a> {
@@ -203,11 +224,29 @@ impl<'a> Generator<'a> {
                     self.handle_ws(ws.1);
                 }
                 Node::Block(ws) => {
-                    if let Some((i_ws, block)) = self.block.pop() {
+                    if let Some((i_ws, block, mut old)) = self.block.pop() {
+                        // TODO: Fix whitespaces control
+                        // TODO: coverage white space control
                         let ws = (i_ws.0 || ws.0, ws.1 || i_ws.1);
-                        self.handle_ws(ws);
-                        self.handle(block, buf);
-                        self.block.push((i_ws, block));
+
+                        let old_next_ws = old.next_ws;
+                        let old_skip_ws = old.skip_ws;
+                        old.scp.count = self.scp.count;
+                        old.buf_w.extend(self.buf_w.drain(..));
+
+                        // TODO: Fix whitespaces control
+                        old.handle_ws(ws);
+
+                        old.handle(block, buf);
+                        self.buf_w.extend(old.buf_w.drain(..));
+                        self.errors.extend(old.errors.drain(..));
+                        self.next_ws = mem::replace(&mut old.next_ws, old_next_ws);
+                        self.skip_ws = old.skip_ws;
+                        old.skip_ws = old_skip_ws;
+                        self.scp.count = old.scp.count;
+                        self.block.push((i_ws, block, old));
+
+                        // TODO: Fix whitespaces control
                         if !self.skip_ws {
                             self.flush_ws(ws);
                         }
@@ -334,7 +373,10 @@ impl<'a> Generator<'a> {
             self.c,
             self.ctx,
             self.on_path.clone(),
-            self.block.iter().map(|(_, x)| *x).collect(),
+            self.block
+                .iter()
+                .map(|(_, x, g)| (*x, Into::<FindEach>::into(g)))
+                .collect(),
             nodes,
         );
         let mut args = *sargs.t().clone();
@@ -505,8 +547,9 @@ impl<'a> Generator<'a> {
         let p = mem::replace(&mut self.on_path, p);
 
         let block = if let Some((ws, block)) = block {
+            // TODO: Fix whitespaces control
             self.flush_ws((a_ws.0, ws.1));
-            self.block.push(((a_ws.1, ws.0), block));
+            self.block.push(((a_ws.1, ws.0), block, self.clone()));
             true
         } else {
             self.flush_ws(a_ws);
@@ -552,7 +595,8 @@ impl<'a> Generator<'a> {
             }
         }
         if block {
-            let (ws, _) = self.block.pop().unwrap();
+            // TODO: Fix whitespaces control
+            let (ws, ..) = self.block.pop().unwrap();
             self.prepare_ws((a_ws.0, ws.1));
         } else {
             self.prepare_ws(a_ws)
