@@ -1,10 +1,12 @@
 # Changes
-## [0.6.0] (2020-XX-XX)
+## [0.6.0] (2020-02-03)
 ### Added
 - Html minifier 
 - [Partial Block](https://handlebarsjs.com/guide/partials.html#partial-blocks)
 - Recursion in partial and partial-block
 - `recursion-limit` attribute
+- Resolve expression `{{? expr }}`
+- Add `server` mode for wasm app server site
 
 ### Refactor 
 - Split `Template` trait
