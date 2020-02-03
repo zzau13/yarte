@@ -2,7 +2,7 @@ use std::ops::Index;
 
 use quote::{format_ident, quote};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(super) struct Scope {
     scope: Vec<syn::Expr>,
     level: Vec<usize>,

@@ -295,3 +295,16 @@ fn test_with_partial_block() {
 
     assert_eq!(t.call().unwrap(), "fooBarBalFooForFolbar");
 }
+
+#[derive(Template)]
+#[template(src = "{{#> partial-block-ctx a = \"bar\" }}Fol{{ a }}{{/partial-block-ctx }}")]
+struct PartialBlockCtx {
+    a: usize,
+}
+
+#[test]
+fn test_partial_block_ctx() {
+    let t = PartialBlockCtx { a: 0 };
+
+    assert_eq!(t.call().unwrap(), "FoobarBarFol0");
+}
