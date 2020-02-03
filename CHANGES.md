@@ -1,4 +1,14 @@
 # Changes
+## [0.6.0] (2020-XX-XX)
+### Added
+- Html minifier 
+- [Partial Block](https://handlebarsjs.com/guide/partials.html#partial-blocks)
+- Recursion in partial and partial-block
+- `recursion-limit` attribute
+
+### Refactor 
+- Split `Template` trait
+
 ## [0.5.0] (2019-12-30)
 ### Added
 - Annotate snippets error message

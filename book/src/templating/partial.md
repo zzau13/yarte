@@ -50,6 +50,42 @@ Literals are put inline and pre-escaped when specified (`{{ }}`).
 {{> partial expr_scope, var = bar, lit = "foo" }}
 ```
 
+## Partial Block
+This block syntax may also be used to pass templates to the partial, which 
+can be executed by the specially named partial, `@partial-block`. A template of
+
+```handlebars
+{{#> layout ~}}
+  My Content
+{{~/layout }}
+```
+
+with the layout partial containing
+
+```handlebars
+Site Content {{> @partial-block }}
+```
+
+Would render
+```
+Site Content My Content
+```
+
+When called in this manner, the block will execute under the context of the partial at the time of the call. 
+Depthed paths and block parameters operate relative to the partial block rather than the partial template.
+
+```handlebars
+{{#each children }}
+  {{#> childEntry }}
+    {{value}}
+  {{/childEntry }}
+{{/each }}
+```
+
+Will render `this.value` from this template, not the partial.
+
+## Recursion
+> TODO
 
 ## Aliasing
 Aliasing is used to make life easier to developers when referencing to a partial template. This is done in the 
