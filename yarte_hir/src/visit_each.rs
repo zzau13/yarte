@@ -176,8 +176,6 @@ impl<'a> FindEach<'a> {
                 }
                 Node::Block(_) => {
                     if let Some((block, mut old)) = self.block.pop() {
-                        // on_ is balanced and loop_var is unique
-                        // TODO: coverage each variable
                         old.find(block);
                         self.loop_var |= old.loop_var;
                         self.block.push((block, old));
