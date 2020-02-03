@@ -368,3 +368,14 @@ fn test_partial_block_ws_4() {
 
     assert_eq!(t.call().unwrap(), "Bar\n FooFol");
 }
+
+#[derive(Template)]
+#[template(src = "{{> partial-recursion a = 10 }}")]
+struct PartialRecursion;
+
+#[test]
+fn test_partial_recursion() {
+    let t = PartialRecursion;
+
+    assert_eq!(t.call().unwrap(), "10 9 8 7 6 5 4 3 2 1 0");
+}

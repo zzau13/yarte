@@ -80,7 +80,9 @@ pub(super) fn scope(e: &SExpr, out: &mut Vec<ErrorMessage>) {
 pub(super) fn partial_assign(e: &syn::Expr) {
     use syn::Expr::*;
     match e {
-        Path(..) | Field(..) | Index(..) | Lit(..) | Reference(..) | Array(..) | Range(..) => (),
+        Path(..) | Field(..) | Index(..) | Lit(..) | Reference(..) | Array(..) | Range(..)
+        | Binary(..) | Call(..) | MethodCall(..) | Paren(..) | Macro(..) | Try(..) | Unary(..)
+        | Unsafe(..) => (),
         _ => panic!(
             "Not available Rust expression in partial assign argument:\n{}",
             quote!(#e)

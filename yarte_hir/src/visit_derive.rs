@@ -8,6 +8,8 @@ use yarte_config::Config;
 use proc_macro2::TokenStream;
 use syn::{parse_str, ItemEnum};
 
+const RECURSION_LIMIT: usize = 2048;
+
 pub fn visit_derive<'a>(i: &'a syn::DeriveInput, config: &Config) -> Struct<'a> {
     StructBuilder::default().build(i, config)
 }
@@ -17,6 +19,7 @@ pub struct Struct<'a> {
     pub src: String,
     pub path: PathBuf,
     pub print: Print,
+    pub recursion_limit: usize,
     pub mode: Mode,
     pub err_msg: String,
     pub msgs: Option<ItemEnum>,
@@ -45,6 +48,7 @@ struct StructBuilder {
     path: Option<String>,
     print: Option<String>,
     script: Option<String>,
+    recursion_limit: Option<usize>,
     src: Option<String>,
 }
 
@@ -58,6 +62,7 @@ impl Default for StructBuilder {
             path: None,
             print: None,
             script: None,
+            recursion_limit: None,
             src: None,
         }
     }
@@ -115,6 +120,7 @@ impl StructBuilder {
             err_msg: self
                 .err_msg
                 .unwrap_or_else(|| "Template parsing error".into()),
+            recursion_limit: self.recursion_limit.unwrap_or(RECURSION_LIMIT),
             fields: self.fields,
             generics,
             ident,
@@ -186,6 +192,12 @@ impl<'a> Visit<'a> for StructBuilder {
         } else if path.is_ident("script") {
             if let syn::Lit::Str(ref s) = lit {
                 self.script = Some(s.value());
+            } else {
+                panic!("attribute 'script' must be string literal");
+            }
+        } else if path.is_ident("recursion-limit") {
+            if let syn::Lit::Int(s) = lit {
+                self.recursion_limit = Some(s.base10_parse().unwrap());
             } else {
                 panic!("attribute 'script' must be string literal");
             }
