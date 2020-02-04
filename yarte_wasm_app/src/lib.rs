@@ -1,5 +1,5 @@
 use std::{
-    cell::{Cell, RefCell},
+    cell::{Cell, UnsafeCell},
     default::Default,
     rc::Rc,
 };
@@ -74,22 +74,33 @@ impl<A: App> Addr<A> {
         if self.0.ready.get() {
             self.0.ready.replace(false);
             while let Some(msg) = self.0.q.pop() {
-                self.0.app.borrow_mut().__dispatch(msg, &self);
-                while let Some(msg) = self.0.q.pop() {
-                    self.0.app.borrow_mut().__dispatch(msg, &self);
+                // UB is checked by ready Cell
+                unsafe {
+                    self.0.app.get().as_mut().unwrap().__dispatch(msg, &self);
                 }
-                self.0.app.borrow_mut().__render(&self);
+                while let Some(msg) = self.0.q.pop() {
+                    unsafe {
+                        self.0.app.get().as_mut().unwrap().__dispatch(msg, &self);
+                    }
+                }
+                unsafe {
+                    self.0.app.get().as_mut().unwrap().__render(&self);
+                }
             }
             self.0.ready.replace(true);
         }
     }
 
     /// Hydrate app
+    /// Link events and save closures
     ///
-    /// Link events and get nodes
+    /// ## Warnings
+    /// Produce **unexpected behaviour** if launched more than one time
+    #[inline]
     pub fn hydrate(&self) {
-        assert!(!self.0.ready.get());
-        self.0.app.borrow_mut().__hydrate(&self);
+        debug_assert!(!self.0.ready.get());
+        // Only run one time
+        unsafe { self.0.app.get().as_mut().unwrap().__hydrate(&self) };
         self.0.ready.replace(true);
         self.update();
     }
@@ -103,7 +114,7 @@ impl<A: App> Clone for Addr<A> {
 
 /// Encapsulate inner context of the App
 pub struct Context<A: App> {
-    app: RefCell<A>,
+    app: UnsafeCell<A>,
     q: Queue<A::Message>,
     ready: Cell<bool>,
 }
@@ -111,7 +122,7 @@ pub struct Context<A: App> {
 impl<A: App> Context<A> {
     fn new(app: A) -> Self {
         Self {
-            app: RefCell::new(app),
+            app: UnsafeCell::new(app),
             q: Queue::new(),
             ready: Cell::new(false),
         }
