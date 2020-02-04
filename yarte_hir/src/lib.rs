@@ -234,8 +234,7 @@ impl<'a> Generator<'a> {
                         old.scp.count = self.scp.count;
                         old.buf_w.extend(self.buf_w.drain(..));
 
-                        old.flush_ws(*ws);
-                        old.prepare_ws((false, i_ws.0));
+                        old.handle_ws((ws.0, i_ws.0));
 
                         old.handle(block, buf);
 
@@ -246,8 +245,8 @@ impl<'a> Generator<'a> {
                         self.next_ws = old.next_ws.take();
                         self.skip_ws = old.skip_ws;
 
-                        self.flush_ws((i_ws.1, false));
-                        self.prepare_ws(*ws);
+                        self.handle_ws((i_ws.1, ws.1));
+
                         self.block.push((i_ws, block, old));
                     } else {
                         self.flush_ws(*ws);
