@@ -94,7 +94,7 @@ impl<A: App> Addr<A> {
     /// Hydrate app
     /// Link events and save closures
     ///
-    /// ## Warnings
+    /// # Safety
     /// Produce **unexpected behaviour** if launched more than one time
     #[inline]
     pub unsafe fn hydrate(&self) {
