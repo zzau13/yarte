@@ -58,9 +58,9 @@ impl App for NonKeyed {
                     .iter_mut()
                     .zip(self.data.iter())
                     .filter(|(dom, _)| dom.t_root != 0)
-                    {
-                        update_row!(dom, row, mb);
-                    }
+                {
+                    update_row!(dom, row, mb);
+                }
 
                 if dom_len < row_len {
                     // Add

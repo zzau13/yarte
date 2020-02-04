@@ -368,7 +368,9 @@ mod test {
             ..Default::default()
         };
         let addr = app.__start();
-        unsafe { addr.hydrate(); }
+        unsafe {
+            addr.hydrate();
+        }
         let addr2 = addr.clone();
         addr.send(Msg::Msg(2));
         assert_eq!(c2.get(), 2);
