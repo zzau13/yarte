@@ -212,3 +212,17 @@ fn test_attr_expression() {
         "<div class=\"foo\"></div>"
     )
 }
+
+#[derive(Template)]
+#[template(path = "html/raw/index.html")]
+struct RawHtml;
+
+#[test]
+fn test_raw_html() {
+    use yarte_config::{read_config_file, Config};
+    let config = read_config_file();
+    let config = Config::new(&config);
+    let (_, expected) = config.get_template("html/raw/expected.html");
+
+    assert_eq!(RawHtml.call().unwrap(), expected);
+}
