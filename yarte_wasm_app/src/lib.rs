@@ -97,10 +97,10 @@ impl<A: App> Addr<A> {
     /// ## Warnings
     /// Produce **unexpected behaviour** if launched more than one time
     #[inline]
-    pub fn hydrate(&self) {
+    pub unsafe fn hydrate(&self) {
         debug_assert!(!self.0.ready.get());
         // Only run one time
-        unsafe { self.0.app.get().as_mut().unwrap().__hydrate(&self) };
+        self.0.app.get().as_mut().unwrap().__hydrate(&self);
         self.0.ready.replace(true);
         self.update();
     }
@@ -368,7 +368,7 @@ mod test {
             ..Default::default()
         };
         let addr = app.__start();
-        addr.hydrate();
+        unsafe { addr.hydrate(); }
         let addr2 = addr.clone();
         addr.send(Msg::Msg(2));
         assert_eq!(c2.get(), 2);

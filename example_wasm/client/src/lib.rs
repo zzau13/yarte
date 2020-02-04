@@ -24,5 +24,5 @@ fn clear(app: &mut Test, _addr: &yarte::Addr<Test>) {
 pub fn start() {
     let app = Test::start_default();
     app.send(Msg::Clear);
-    app.hydrate();
+    unsafe { app.hydrate(); }
 }
