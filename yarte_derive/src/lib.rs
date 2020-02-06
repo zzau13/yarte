@@ -4,10 +4,7 @@ use std::collections::BTreeMap;
 
 use proc_macro::TokenStream;
 
-use yarte_codegen::{
-    wasm::{client, server},
-    CodeGen, FmtCodeGen, HTMLCodeGen, HTMLMinCodeGen, TextCodeGen,
-};
+use yarte_codegen::{wasm::server, CodeGen, FmtCodeGen, HTMLCodeGen, HTMLMinCodeGen, TextCodeGen};
 use yarte_config::{read_config_file, Config, PrintConfig};
 use yarte_helpers::helpers;
 use yarte_hir::{generate, visit_derive, Mode, Print, Struct, HIR};
@@ -73,7 +70,8 @@ fn hir_to_tokens(hir: Vec<HIR>, s: &Struct) -> proc_macro2::TokenStream {
         Mode::Text => FmtCodeGen::new(TextCodeGen, s).gen(hir),
         Mode::HTML => FmtCodeGen::new(HTMLCodeGen, s).gen(hir),
         Mode::HTMLMin => FmtCodeGen::new(HTMLMinCodeGen, s).gen(hir),
-        Mode::WASM => client::WASMCodeGen::new(s).gen(hir),
+        #[cfg(feature = "client")]
+        Mode::WASM => yarte_codegen::wasm::client::WASMCodeGen::new(s).gen(hir),
         Mode::WASMServer => FmtCodeGen::new(server::WASMCodeGen::new(s), s).gen(hir),
     }
 }

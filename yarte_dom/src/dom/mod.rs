@@ -1,7 +1,7 @@
 #![allow(warnings)]
 
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
     vec::Drain,
 };
 
@@ -9,37 +9,33 @@ use markup5ever::{namespace_url, ns, LocalName};
 
 use yarte_hir::{Each as HEach, IfElse as HIfElse, HIR};
 use yarte_html::{
-    interface::QualName,
+    interface::{QualName, YName},
     tree_builder::{get_marquee, is_marquee},
-    utils::HASH_LEN,
+    utils::{get_mark_id, parse_id, HASH_LEN, MARK},
 };
 
 use crate::sink::{
     parse_document, parse_fragment, ParseAttribute, ParseElement, ParseNodeId, ParseResult, Sink,
 };
 
-mod visit_each;
-mod visit_expr;
-mod visit_if_else;
-mod visit_local;
+mod resolve;
 
-use self::{
-    visit_each::resolve_each, visit_expr::resolve_expr, visit_if_else::resolve_if_block,
-    visit_local::resolve_local,
-};
-use yarte_html::{
-    interface::YName,
-    utils::{get_mark_id, parse_id, MARK},
-};
+use self::resolve::{resolve_each, resolve_expr, resolve_if_block, resolve_local};
 
 pub type Document = Vec<Node>;
 pub type ExprId = usize;
 pub type VarId = u64;
 
 #[derive(Debug, PartialEq)]
+pub struct VarInner {
+    pub base: VarId,
+    pub ident: String,
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Var {
-    This(String),
-    Local(ExprId, String),
+    This(VarInner),
+    Local(ExprId, VarInner),
 }
 
 #[derive(Debug, PartialEq)]
@@ -75,7 +71,7 @@ pub struct IfElse {
 ///
 #[derive(Debug, PartialEq)]
 pub struct Each {
-    pub var: VarId,
+    pub var: (VarId, Option<VarId>),
     pub args: syn::Expr,
     pub body: Document,
     pub expr: syn::Expr,
@@ -109,7 +105,7 @@ pub enum ExprOrText {
     Expr(Expression),
 }
 
-pub type TreeMap = HashMap<ExprId, HashSet<VarId>>;
+pub type TreeMap = BTreeMap<ExprId, HashSet<VarId>>;
 pub type VarMap = HashMap<VarId, Var>;
 
 #[derive(Debug)]
@@ -129,8 +125,8 @@ impl From<Vec<HIR>> for DOM {
 pub struct DOMBuilder {
     inner: bool,
     count: usize,
-    tree_map: HashMap<ExprId, HashSet<VarId>>,
-    var_map: HashMap<VarId, Var>,
+    tree_map: TreeMap,
+    var_map: VarMap,
 }
 
 impl DOMBuilder {
@@ -295,11 +291,13 @@ impl DOMBuilder {
 
         match ir {
             HIR::Expr(e) => {
-                resolve_expr(&e, id, self);
+                let var = resolve_expr(&e, self);
+                self.tree_map.insert(id, var.into_iter().collect());
                 Ok(Expression::Unsafe(id, e))
             }
             HIR::Safe(e) => {
-                resolve_expr(&e, id, self);
+                let var = resolve_expr(&e, self);
+                self.tree_map.insert(id, var.into_iter().collect());
                 Ok(Expression::Safe(id, e))
             }
             HIR::Local(e) => {

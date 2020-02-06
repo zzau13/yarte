@@ -18,6 +18,9 @@ pub use yarte_template::Template;
 #[cfg(target_arch = "wasm32")]
 pub use yarte_wasm_app::{Addr, App as Template};
 
+#[cfg(feature = "client")]
+pub use yarte_helpers::helpers::big_num::*;
+
 pub mod recompile;
 
 #[cfg(all(feature = "with-actix-web", not(target_arch = "wasm32")))]

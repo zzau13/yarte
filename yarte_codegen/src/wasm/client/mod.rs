@@ -1,7 +1,7 @@
 #![allow(warnings)]
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeSet, HashMap, HashSet},
     mem,
 };
 
@@ -18,8 +18,9 @@ use syn::{
 
 use yarte_dom::dom::{
     Attribute, Document, Each, Element, ExprId, ExprOrText, Expression, IfBlock, IfElse, Node,
-    TreeMap, VarId, VarMap, DOM,
+    TreeMap, Var, VarId, VarMap, DOM,
 };
+use yarte_helpers::helpers::calculate_hash;
 use yarte_hir::{Struct, HIR};
 use yarte_html::{interface::YName, y_name};
 
@@ -31,8 +32,7 @@ mod if_else;
 mod leaf_text;
 mod messages;
 
-use self::leaf_text::get_leaf_text;
-use crate::wasm::client::component::clean;
+use self::{component::clean, leaf_text::get_leaf_text};
 
 // TODO:
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -48,7 +48,7 @@ impl ToTokens for Step {
         tokens.extend(match self {
             FirstChild => quote!(.first_element_child().unwrap_throw()),
             NextSibling => quote!(.next_element_sibling().unwrap_throw()),
-            Each(_) => quote!(),
+            Each(_) => todo!(),
         })
     }
 }
@@ -96,21 +96,23 @@ pub enum InsertPath {
 }
 
 pub struct WASMCodeGen<'a> {
-    s: &'a Struct<'a>,
-    build: TokenStream,
-    render: TokenStream,
-    hydrate: TokenStream,
-    helpers: TokenStream,
+    bit_array: Vec<VarId>,
+    black_box: Vec<BlackBox>,
     buff_build: Vec<TokenStream>,
     buff_new: Vec<TokenStream>,
     buff_render: Vec<(HashSet<VarId>, TokenStream)>,
+    build: TokenStream,
     component: Vec<(Ident, TokenStream)>,
-    black_box: Vec<BlackBox>,
-    bit_array: Vec<VarId>,
-    steps: Vec<Step>,
-    path_nodes: Vec<(Ident, Vec<Step>)>,
-    on: Option<Parent>,
     count: usize,
+    grouped_map: HashMap<VarId, BTreeSet<VarId>>,
+    helpers: TokenStream,
+    hydrate: TokenStream,
+    on: Option<Parent>,
+    path_nodes: Vec<(Ident, Vec<Step>)>,
+    render: TokenStream,
+    s: &'a Struct<'a>,
+    self_id: VarId,
+    steps: Vec<Step>,
     tree_map: TreeMap,
     var_map: VarMap,
 }
@@ -162,38 +164,43 @@ impl Parse for PAttr {
 impl<'a> WASMCodeGen<'a> {
     pub fn new<'n>(s: &'n Struct<'n>) -> WASMCodeGen<'n> {
         WASMCodeGen {
-            bit_array: Vec::new(),
-            black_box: vec![],
-            component: vec![],
-            buff_render: vec![],
             build: TokenStream::new(),
             count: 0,
+            self_id: calculate_hash(&"self"),
+            grouped_map: Default::default(),
             helpers: TokenStream::new(),
+            buff_build: vec![],
+            buff_new: vec![],
+            buff_render: vec![],
+            component: vec![],
+            black_box: vec![],
+            bit_array: vec![],
+            steps: vec![],
             hydrate: TokenStream::new(),
             on: None,
             render: TokenStream::new(),
             s,
-            steps: vec![],
-            tree_map: HashMap::new(),
-            var_map: HashMap::new(),
+            tree_map: Default::default(),
             path_nodes: vec![],
-            buff_build: vec![],
-            buff_new: vec![],
+            var_map: Default::default(),
         }
     }
 
     fn add_black_box_t_root(&mut self) {
         let len = self.bit_array.len();
         let base = match len {
-            0..=8 => 8,
-            9..=16 => 16,
-            17..=32 => 32,
+            0..=8 => format!("u{}", 8),
+            9..=16 => format!("u{}", 16),
+            17..=32 => format!("u{}", 32),
+            33..=64 => format!("u{}", 64),
+            65..=128 => format!("u{}", 128),
+            129..=256 => "yarte::U256".to_string(),
             _ => todo!(),
         };
         self.black_box.push(BlackBox {
             doc: "Difference tree".to_string(),
             name: format_ident!("t_root"),
-            ty: parse_str(&format!("u{}", base)).unwrap(),
+            ty: parse_str(&base).unwrap(),
         });
     }
 
@@ -688,12 +695,30 @@ impl<'a> WASMCodeGen<'a> {
         todo!("resolve if else block expresion");
     }
 
-    // TODO
     fn resolve_tree_var(&mut self, tree_map: TreeMap, var_map: VarMap) {
-        for expr in tree_map.values() {
-            for _var_id in expr {}
+        let mut grouped = HashMap::new();
+        for (var_id, var) in &var_map {
+            if let Var::This(var) = var {
+                grouped
+                    .entry(var.base)
+                    .and_modify(|x: &mut BTreeSet<VarId>| {
+                        x.insert(*var_id);
+                    })
+                    .or_insert_with(|| {
+                        // Need Order
+                        let mut b = BTreeSet::new();
+                        b.insert(*var_id);
+                        b
+                    });
+            }
         }
 
+        if let Some(s) = grouped.get(&self.self_id) {
+            self.bit_array = s.iter().copied().collect();
+        } else {
+            panic!("need any field in struct of application")
+        }
+        self.grouped_map = grouped;
         self.tree_map = tree_map;
         self.var_map = var_map;
     }

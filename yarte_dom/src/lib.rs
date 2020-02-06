@@ -1,4 +1,5 @@
 #[macro_use]
+#[cfg(feature = "client")]
 pub mod dom;
 pub mod dom_fmt;
 mod serialize;
