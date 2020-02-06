@@ -18,6 +18,7 @@ maintenance = { status = "actively-developed" }
 
 [features]
 actix-web = []
+client = []
 
 [dependencies]
 yarte_config = { version = "0.6", path = "../yarte_config" }

@@ -12,7 +12,7 @@ workspace = ".."
 wasm-opt = false
 
 [dependencies]
-yarte = { version = "0.6", path = "../../yarte" }
+yarte = { version = "0.6", path = "../../yarte", features = ["client"] }
 wasm-bindgen = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 model = { version = "*", path = "../model" }

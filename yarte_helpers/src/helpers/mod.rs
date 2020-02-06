@@ -3,6 +3,8 @@ use std::{
     hash::{Hash, Hasher},
 };
 
+#[cfg(feature = "big_num")]
+pub mod big_num;
 mod error;
 mod markup;
 mod read;

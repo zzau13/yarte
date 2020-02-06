@@ -1,3 +1,4 @@
+#[cfg(feature = "client")]
 pub mod client;
 pub mod server {
     use proc_macro2::TokenStream;

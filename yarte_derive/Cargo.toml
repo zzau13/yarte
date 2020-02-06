@@ -20,6 +20,8 @@ maintenance = { status = "actively-developed" }
 proc-macro = true
 
 [features]
+mime = ["yarte_codegen/mime"]
+client = ["yarte_hir/client", "yarte_codegen/client", "yarte_helpers/big_num"]
 actix-web = ["yarte_hir/actix-web", "yarte_codegen/actix-web"]
 
 [dependencies]

@@ -1,8 +1,7 @@
-use mime_guess::from_ext;
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use yarte_hir::{Each, IfElse, Mode, Struct, HIR};
+use yarte_hir::{Each, IfElse, Struct, HIR};
 
 mod html;
 mod text;
@@ -27,7 +26,10 @@ impl<'a, T: CodeGen> FmtCodeGen<'a, T> {
         FmtCodeGen { codegen, s }
     }
 
+    #[cfg(any(feature = "mime", feature = "actix-web"))]
     fn get_mime(&self) -> String {
+        use mime_guess::from_ext;
+        use yarte_hir::Mode;
         let ext = match self.s.mode {
             Mode::Text => match self.s.path.extension() {
                 Some(s) => s.to_str().unwrap(),
@@ -40,12 +42,14 @@ impl<'a, T: CodeGen> FmtCodeGen<'a, T> {
     }
 
     fn template(&self, size_hint: usize, tokens: &mut TokenStream) {
+        #[allow(unused_mut)]
         let mut body = quote!(
             fn size_hint() -> usize {
                 #size_hint
             }
         );
-        if cfg!(feature = "actix-web") {
+        #[cfg(any(feature = "mime", feature = "actix-web"))]
+        {
             let mime = self.get_mime() + "; charset=utf-8";
             body.extend(quote!(fn mime() -> &'static str { #mime }))
         }

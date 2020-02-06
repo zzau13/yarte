@@ -240,6 +240,7 @@ pub enum Mode {
     Text,
     HTML,
     HTMLMin,
+    #[cfg(feature = "client")]
     WASM,
     WASMServer,
 }
@@ -250,6 +251,7 @@ impl From<String> for Mode {
             "text" => Mode::Text,
             "html" => Mode::HTML,
             "html-min" => Mode::HTMLMin,
+            #[cfg(feature = "client")]
             "wasm" | "client" | "front" => Mode::WASM,
             "wasm-server" | "iso" | "server" | "back" => Mode::WASMServer,
             v => panic!("invalid value for mode attribute: {}", v),
