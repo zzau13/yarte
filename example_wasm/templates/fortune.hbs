@@ -16,8 +16,9 @@
     </tr>
     {{# each fortunes }}
         <tr>
+            <td class="col-index">{{index}}</td>
             <td class="col-id">{{id}}</td>
-            <td class="col-msg">{{super::head}} {{message}}</td>
+            <td class="col-msg">{{super::head}} {{message}} {{index0}}</td>
             <td class="another"><a class="button">Delete</a></td>
             <td class="col-msg">{{super::head}} {{message}}</td>
             <td class="another"><a class="button">Fol</a></td>

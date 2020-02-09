@@ -42,8 +42,10 @@ impl<'a> WASMCodeGen<'a> {
 
         let (key, index) = var;
         let var_id = vec![*key];
+        let mut var_id_index = vec![*key];
         let mut bases = vec![Base::Add(*key)];
         if let Some(index) = index {
+            var_id_index.push(*index);
             bases.push(Base::Skip(*index));
         }
         self.parents.push((bases, id));
@@ -139,7 +141,7 @@ impl<'a> WASMCodeGen<'a> {
         for (i, _) in &self.buff_render {
             for j in i {
                 let VarInner { base, .. } = self.var_map.get(j).unwrap();
-                if !var_id.contains(base) {
+                if !var_id_index.contains(base) {
                     vars.insert(*j);
                 }
             }
@@ -338,7 +340,14 @@ impl<'a> WASMCodeGen<'a> {
             });
 
             let render = self.get_render();
-            assert!(!render.is_empty());
+            assert!(
+                !render.is_empty(),
+                "{:?}",
+                self.buff_render
+                    .iter()
+                    .map(|x| x.0.clone())
+                    .collect::<Vec<_>>()
+            );
             if parents {
                 quote! {
                     for (#vdom, #expr) in #table
