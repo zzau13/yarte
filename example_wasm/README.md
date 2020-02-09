@@ -20,7 +20,6 @@ cargo doc --target wasm32-unknown-unknown --open --no-deps
 extern "C" {
     fn get_state() -> String;
 }
-
 impl yarte::Template for Test {
     type BlackBox = TestBlackBox;
     type Message = Msg;
@@ -29,6 +28,11 @@ impl yarte::Template for Test {
     fn __render(&mut self, __addr: &yarte::Addr<Self>) {
         if self.black_box.t_root == <u8 as yarte::YNumber>::zero() {
             return;
+        }
+        if yarte::YNumber::neq_zero(self.black_box.t_root & 2u8) {
+            self.black_box
+                .__ynode__0
+                .set_text_content(Some(&format!("{}", self.head)));
         }
         if yarte::YNumber::neq_zero(self.black_box.t_root & 3u8) {
             let __dom_len__ = self.black_box.__ytable__1.len();
@@ -39,6 +43,11 @@ impl yarte::Template for Test {
                 .iter_mut()
                 .zip(((&(self.fortunes)).into_iter().enumerate()))
             {
+                if yarte::YNumber::neq_zero(__dom__1.t_root & 4u8) {
+                    __dom__1
+                        .__ynode__2
+                        .set_text_content(Some(&format!("{}", __key___0x00000000.id)));
+                }
                 if yarte::YNumber::neq_zero(self.black_box.t_root & 2u8)
                     || yarte::YNumber::neq_zero(__dom__1.t_root & 1u8)
                 {
@@ -49,11 +58,6 @@ impl yarte::Template for Test {
                     __dom__1
                         .__ynode__4
                         .set_text_content(Some(&format!("{} {}", self.head, __key___0x00000000.message)));
-                }
-                if yarte::YNumber::neq_zero(__dom__1.t_root & 4u8) {
-                    __dom__1
-                        .__ynode__2
-                        .set_text_content(Some(&format!("{}", __key___0x00000000.id)));
                 }
                 __dom__1.t_root = yarte::YNumber::zero();
             }
@@ -81,7 +85,6 @@ impl yarte::Template for Test {
                         )));
                         __ynode__4.set_text_content(Some(&format!("{} {}", self.head, __key___0x00000000.message)));
                         let __dom__1 = YComponent1 {
-                            __ynode__1: __ynode__1,
                             __ynode__2: __ynode__2,
                             __ynode__3: __ynode__3,
                             __ynode__4: __ynode__4,
@@ -100,11 +103,6 @@ impl yarte::Template for Test {
                     __d__.__root.remove()
                 }
             }
-        }
-        if yarte::YNumber::neq_zero(self.black_box.t_root & 2u8) {
-            self.black_box
-                .__ynode__0
-                .set_text_content(Some(&format!("{}", self.head)));
         }
         self.black_box.t_root = yarte::YNumber::zero();
     }
@@ -126,11 +124,9 @@ impl yarte::Template for Test {
         }
     }
 }
-
 pub enum Msg {
     Clear,
 }
-
 #[derive(Default, serde :: Deserialize)]
 struct TestInitialState {
     #[serde(default)]
@@ -138,7 +134,6 @@ struct TestInitialState {
     #[serde(default)]
     head: String,
 }
-
 #[doc = "Internal elements and difference tree"]
 pub struct TestBlackBox {
     #[doc = "Difference tree"]
@@ -152,11 +147,8 @@ pub struct TestBlackBox {
     #[doc = "Component"]
     pub component_1: yarte::web::Element,
 }
-
 #[doc = "Internal elements and difference tree"]
 pub struct YComponent1 {
-    #[doc = "Yarte Node element\n\n```\nformat ! (\"{}\", (__index___0x00000001 + 1))\n```"]
-    pub __ynode__1: yarte::web::Element,
     #[doc = "Yarte Node element\n\n```\nformat ! (\"{}\", __key___0x00000000 . id)\n```"]
     pub __ynode__2: yarte::web::Element,
     #[doc = "Yarte Node element\n\n```\nformat !\n(\"{} {} {}\", self . head, __key___0x00000000 . message, \
@@ -169,7 +161,6 @@ pub struct YComponent1 {
     #[doc = "root dom element"]
     pub __root: yarte::web::Element,
 }
-
 impl std::default::Default for Test {
     fn default() -> Self {
         let TestInitialState { fortunes, head } = yarte::from_str(&get_state()).unwrap_or_default();
@@ -204,7 +195,6 @@ impl std::default::Default for Test {
                 .next_element_sibling()
                 .unwrap_throw();
             __ytable__1.push(YComponent1 {
-                __ynode__1: __ynode__1,
                 __ynode__2: __ynode__2,
                 __ynode__3: __ynode__3,
                 __ynode__4: __ynode__4,

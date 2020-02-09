@@ -627,28 +627,31 @@ impl<'a> WASMCodeGen<'a> {
         self.buff_render.iter().fold(
             HashMap::new(),
             |mut acc: HashMap<Vec<u64>, TokenStream>, (i, x)| {
-                let entry = i
-                    .iter()
-                    .filter(|var_id| {
-                        let base = self.var_map.get(var_id).unwrap().base;
-                        base == self.self_id
-                            || self.parents.iter().rev().any(|(x, _)| {
-                                x.iter().any(|x| match x {
-                                    Base::Add(id) => *id == base,
-                                    _ => false,
-                                })
-                            })
-                    })
-                    .copied()
-                    .collect();
-                acc.entry(entry)
-                    .and_modify(|old| {
-                        old.extend(x.clone());
-                    })
-                    .or_insert_with(|| x.clone());
+                // TODO: priority when collapsed
+                acc.entry(
+                    i.iter()
+                        .filter(|x| self.get_will_render(**x))
+                        .copied()
+                        .collect(),
+                )
+                .and_modify(|old| {
+                    old.extend(x.clone());
+                })
+                .or_insert_with(|| x.clone());
                 acc
             },
         )
+    }
+
+    fn get_will_render(&self, var_id: VarId) -> bool {
+        let base = self.var_map.get(&var_id).unwrap().base;
+        base == self.self_id
+            || self.parents.iter().rev().any(|(x, _)| {
+                x.iter().any(|x| match x {
+                    Base::Add(id) => *id == base,
+                    _ => false,
+                })
+            })
     }
 
     fn get_black_box(&self, name: &Ident) -> TokenStream {
@@ -985,19 +988,20 @@ impl<'a> WASMCodeGen<'a> {
             }
             Parent::Head => todo!(),
         };
-        self.buff_render
-            .push((t, quote! { #dom.#name.set_text_content(Some(&#e)); }));
         self.buff_new
             .push(quote! { #name.set_text_content(Some(&#e)); });
 
         self.steps.push(step);
         self.path_nodes.push((name.clone(), self.steps.clone()));
-
-        self.black_box.push(BlackBox {
-            doc: format!("Yarte Node element\n\n```\n{}\n```", e),
-            name,
-            ty: parse2(quote!(yarte::web::Element)).unwrap(),
-        });
+        if t.iter().any(|x| self.get_will_render(*x)) {
+            self.buff_render
+                .push((t, quote! { #dom.#name.set_text_content(Some(&#e)); }));
+            self.black_box.push(BlackBox {
+                doc: format!("Yarte Node element\n\n```\n{}\n```", e),
+                name,
+                ty: parse2(quote!(yarte::web::Element)).unwrap(),
+            });
+        }
     }
 }
 
