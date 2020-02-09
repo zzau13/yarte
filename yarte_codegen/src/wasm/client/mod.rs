@@ -502,19 +502,17 @@ impl<'a> WASMCodeGen<'a> {
             .into_iter()
             .fold(
                 BTreeMap::new(),
-                |mut acc: BTreeMap<Option<&usize>, (Vec<usize>, usize)>,
+                |mut acc: BTreeMap<Option<usize>, (Vec<usize>, usize)>,
                  (base, (positions, len))| {
                     if let Some((b, x, id)) = self.parents.iter().rev().find_map(|(x, id)| {
-                        if let Some(base) = x.iter().find(|x| match x {
-                            Base::Skip(id) | Base::Add(id) => *id == base,
-                        }) {
-                            Some((base, x, id))
-                        } else {
-                            None
-                        }
+                        x.iter()
+                            .find(|x| match x {
+                                Base::Skip(id) | Base::Add(id) => *id == base,
+                            })
+                            .map(|base| (base, x, id))
                     }) {
                         if let Base::Add(_) = b {
-                            acc.entry(Some(id))
+                            acc.entry(Some(*id))
                                 .and_modify(|x| {
                                     let len = x.1;
                                     x.0.extend(positions.iter().copied().map(|i| len + i));
@@ -552,22 +550,22 @@ impl<'a> WASMCodeGen<'a> {
                         quote!(#number)
                     }
                     64 => {
-                        let number = Self::get_split_32(&bits);
-                        quote!(yarte::U64([#number]))
+                        let tokens = Self::get_split_32(&bits);
+                        quote!(yarte::U64([#tokens]))
                     }
                     128 => {
-                        let number = Self::get_split_32(&bits);
-                        quote!(yarte::U128([#number]))
+                        let tokens = Self::get_split_32(&bits);
+                        quote!(yarte::U128([#tokens]))
                     }
                     256 => {
-                        let number = Self::get_split_32(&bits);
-                        quote!(yarte::U256([#number]))
+                        let tokens = Self::get_split_32(&bits);
+                        quote!(yarte::U256([#tokens]))
                     }
                     _ => todo!("more than 256 variables per context"),
                 };
 
                 let vdom = if let Some(i) = i {
-                    let ident = Self::get_vdom_ident(*i);
+                    let ident = Self::get_vdom_ident(i);
                     quote!(#ident)
                 } else {
                     let bb = self.get_global_bbox_ident();
@@ -629,7 +627,21 @@ impl<'a> WASMCodeGen<'a> {
         self.buff_render.iter().fold(
             HashMap::new(),
             |mut acc: HashMap<Vec<u64>, TokenStream>, (i, x)| {
-                acc.entry(i.iter().copied().collect())
+                let entry = i
+                    .iter()
+                    .filter(|var_id| {
+                        let base = self.var_map.get(var_id).unwrap().base;
+                        base == self.self_id
+                            || self.parents.iter().rev().any(|(x, _)| {
+                                x.iter().any(|x| match x {
+                                    Base::Add(id) => *id == base,
+                                    _ => false,
+                                })
+                            })
+                    })
+                    .copied()
+                    .collect();
+                acc.entry(entry)
                     .and_modify(|old| {
                         old.extend(x.clone());
                     })
