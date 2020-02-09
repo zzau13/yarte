@@ -1,7 +1,7 @@
 #![allow(warnings)]
 
 use std::{
-    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet, HashMap},
     vec::Drain,
 };
 
@@ -105,7 +105,7 @@ pub enum ExprOrText {
     Expr(Expression),
 }
 
-pub type TreeMap = BTreeMap<ExprId, HashSet<VarId>>;
+pub type TreeMap = BTreeMap<ExprId, BTreeSet<VarId>>;
 pub type VarMap = HashMap<VarId, Var>;
 
 #[derive(Debug)]

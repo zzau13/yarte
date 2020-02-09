@@ -1,30 +1,33 @@
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashMap};
 
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{punctuated::Punctuated, Expr, Token};
 
-use yarte_dom::dom::{Document, Element, Expression, Node, TreeMap, VarId, VarMap};
+use yarte_dom::dom::{Document, Element, Expression, Node, TreeMap, VarId, VarInner};
 
 pub fn get_leaf_text(
     children: &Document,
     tree_map: &TreeMap,
-    var_map: &VarMap,
-) -> (HashSet<VarId>, TokenStream) {
+    var_map: &HashMap<VarId, VarInner>,
+) -> (BTreeSet<VarId>, TokenStream) {
     LeafTextBuilder::new(tree_map, var_map).build(children)
 }
 
 struct LeafTextBuilder<'a> {
     tree_map: &'a TreeMap,
-    var_map: &'a VarMap,
-    buff: HashSet<VarId>,
+    var_map: &'a HashMap<VarId, VarInner>,
+    buff: BTreeSet<VarId>,
     buff_expr: String,
     buff_args: Punctuated<Expr, Token![,]>,
 }
 
 // TODO: #[str] alone expression for no reallocate string
 impl<'a> LeafTextBuilder<'a> {
-    fn new<'n>(tree_map: &'n TreeMap, var_map: &'n VarMap) -> LeafTextBuilder<'n> {
+    fn new<'n>(
+        tree_map: &'n TreeMap,
+        var_map: &'n HashMap<VarId, VarInner>,
+    ) -> LeafTextBuilder<'n> {
         LeafTextBuilder {
             tree_map,
             var_map,
@@ -34,7 +37,7 @@ impl<'a> LeafTextBuilder<'a> {
         }
     }
 
-    fn build(mut self, children: &Document) -> (HashSet<VarId>, TokenStream) {
+    fn build(mut self, children: &Document) -> (BTreeSet<VarId>, TokenStream) {
         self.init(children);
 
         let args = self.buff_args;

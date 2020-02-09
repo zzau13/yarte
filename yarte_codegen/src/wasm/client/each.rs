@@ -4,9 +4,9 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{parse2, Expr, Ident};
 
-use yarte_dom::dom::{Each, ExprId};
+use yarte_dom::dom::{Each, ExprId, VarId, VarInner};
 
-use crate::wasm::client::{component::get_component, InsertPoint, Len, Parent, Step};
+use crate::wasm::client::{component::get_component, Base, InsertPoint, Len, Parent, Step};
 
 use super::{BlackBox, WASMCodeGen};
 
@@ -15,14 +15,15 @@ impl<'a> WASMCodeGen<'a> {
         &mut self,
         id: ExprId,
         Each {
-            args, body, expr, ..
+            args,
+            body,
+            expr,
+            var,
         }: &Each,
         fragment: bool,
         insert_point: InsertPoint,
     ) {
         // Get current state
-        // TODO: add Each to tree map
-        let vars = self.tree_map.get(&id).cloned().unwrap_or_default();
         let current_bb = self.get_current_black_box();
 
         // Push
@@ -34,17 +35,31 @@ impl<'a> WASMCodeGen<'a> {
         let old_render = mem::take(&mut self.buff_render);
         let old_steps = mem::take(&mut self.steps);
 
+        let vdom = Self::get_vdom_ident(id);
+        let component_ty = Self::get_component_ty_ident(id);
+        let table = Self::get_table_ident(id);
+        let table_dom = Self::get_table_dom_ident(id);
+
+        let (key, index) = var;
+        let var_id = vec![*key];
+        let mut bases = vec![Base::Add(*key)];
+        if let Some(index) = index {
+            bases.push(Base::Skip(*index));
+        }
+        self.parents.push((bases, id));
+
         // Do steps
         self.step(body);
 
         // Update state
         let component = get_component(id, body, self);
-        let component_ty = Self::get_component_ty_ident(&id);
+        let (base, _) = self.get_black_box_t_root(&var_id);
+        self.black_box.push(BlackBox {
+            doc: "Difference tree".to_string(),
+            name: format_ident!("t_root"),
+            ty: parse2(base).unwrap(),
+        });
 
-        let vdom = Self::get_vdom_ident(&id);
-        let table = Self::get_table_ident(&id);
-        let table_dom = Self::get_table_dom_ident(&id);
-        self.add_black_box_t_root();
         // TODO: Multiple root
         self.black_box.push(BlackBox {
             doc: "root dom element".to_string(),
@@ -82,7 +97,7 @@ impl<'a> WASMCodeGen<'a> {
 
         let parent = match old_on.unwrap() {
             Parent::Expr(id) => {
-                let ident = Self::get_vdom_ident(&id);
+                let ident = Self::get_vdom_ident(id);
                 quote!(#ident)
             }
             Parent::Body | Parent::Head => quote!(#current_bb.#table_dom),
@@ -104,6 +119,7 @@ impl<'a> WASMCodeGen<'a> {
             &vdom,
             quote!(#current_bb.#table),
             quote!(#current_bb.#table_dom),
+            *key,
         );
         let (new, cached) = self.new_each(
             &component,
@@ -114,8 +130,22 @@ impl<'a> WASMCodeGen<'a> {
             None,
         );
         // Pops
+        let mut vars = self
+            .tree_map
+            .get(&id)
+            .cloned()
+            .expect("expression registered in tree map");
+
+        for (i, _) in &self.buff_render {
+            for j in i {
+                let VarInner { base, .. } = self.var_map.get(j).unwrap();
+                if !var_id.contains(base) {
+                    vars.insert(*j);
+                }
+            }
+        }
         self.buff_render = old_render;
-        self.buff_render.push((vars.clone(), render));
+        self.buff_render.push((vars, render));
 
         self.buff_build = old_build;
         self.buff_build.push(build);
@@ -158,6 +188,7 @@ impl<'a> WASMCodeGen<'a> {
         let parent = self.get_parent_node();
         self.path_nodes
             .push((table_dom, self.steps[..parent].to_vec()));
+        self.parents.pop();
     }
 
     fn new_each(
@@ -185,7 +216,7 @@ impl<'a> WASMCodeGen<'a> {
                 let base = len.base as u32 + 1;
                 let mut tokens = quote!(#base);
                 for i in &len.expr {
-                    let ident = Self::get_table_ident(i);
+                    let ident = Self::get_table_ident(*i);
                     if let Some(parent) = &parent {
                         tokens.extend(quote!(+ #parent.#ident.len() as u32))
                     } else {
@@ -244,7 +275,7 @@ impl<'a> WASMCodeGen<'a> {
             let base = len.base as u32;
             let mut tokens = quote!(#base);
             for i in &len.expr {
-                let ident = Self::get_table_ident(i);
+                let ident = Self::get_table_ident(*i);
                 tokens.extend(quote!(+ #ident.len() as u32))
             }
 
@@ -272,11 +303,9 @@ impl<'a> WASMCodeGen<'a> {
         vdom: &Ident,
         table: TokenStream,
         table_dom: TokenStream,
+        each_base: VarId,
     ) -> TokenStream {
-        let render = self.get_render();
         let froot = Self::get_field_root_ident();
-        // TODO get parents dependency
-        let check = quote!(|(d, _)| d.t_root != 0);
 
         // TODO: remove for fragments
         // TODO: remove on drop
@@ -291,20 +320,50 @@ impl<'a> WASMCodeGen<'a> {
         } else {
             quote! {
                 for #expr in #args.skip(__dom_len__) {
-                        #table.push({ #new });
+                    #table.push({ #new });
+                }
+            }
+        };
+        let render = if self.buff_render.is_empty() {
+            quote!()
+        } else {
+            let parents = self.get_render_hash().into_iter().any(|(i, _)| {
+                for j in i {
+                    let base = self.var_map.get(&j).unwrap().base;
+                    if base != each_base {
+                        return true;
+                    }
+                }
+                false
+            });
+
+            let render = self.get_render();
+            assert!(!render.is_empty());
+            if parents {
+                quote! {
+                    for (#vdom, #expr) in #table
+                        .iter_mut()
+                        .zip(#args)
+                    {
+                        #render
+                        #vdom.t_root = yarte::YNumber::zero();
+                    }
+                }
+            } else {
+                quote! {
+                    for (#vdom, #expr) in #table
+                        .iter_mut()
+                        .zip(#args)
+                        .filter(|(__d__, _)| yarte::YNumber::neq_zero(__d__.t_root))
+                        {
+                            #render
+                            #vdom.t_root = yarte::YNumber::zero();
+                        }
                 }
             }
         };
         let body = quote! {
-            for (#vdom, #expr) in #table
-                .iter_mut()
-                .zip(#args)
-                .filter(#check)
-                {
-                    #render
-                    #vdom.t_root = 0;
-                }
-
+            #render
             if __dom_len__ < __data_len__ { #new_block } else {
                 for __d__ in #table.drain(__data_len__..) {
                     __d__.#froot.remove()
