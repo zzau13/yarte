@@ -31,18 +31,23 @@ impl<'a> ResolveExpr<'a> {
         self.buff
     }
 
-    fn add(&mut self, ident: String, base: VarId) {
-        let var_id = calculate_hash(&ident);
-        if !self.builder.var_map.contains_key(&var_id) {
+    fn add(&mut self, var_id: VarId, ident: String, base: VarId) {
+        let mut vars = vec![var_id];
+        if let Some(x) = self.builder.var_map.get(&var_id) {
+            if let Var::Local(id, _) = x {
+                vars.extend(self.builder.tree_map.get(id).unwrap());
+            }
+        } else {
             self.builder
                 .var_map
                 .insert(var_id, Var::This(VarInner { ident, base }));
         }
-        self.buff.push(var_id);
+        self.buff.extend(vars);
     }
 }
 
 impl<'a> Visit<'a> for ResolveExpr<'a> {
+    // TODO:
     fn visit_expr_call(&mut self, ExprCall { args, .. }: &'a ExprCall) {
         for el in Punctuated::pairs(args) {
             self.visit_expr(el.value());
@@ -60,14 +65,8 @@ impl<'a> Visit<'a> for ResolveExpr<'a> {
     ) {
         let ident = quote!(#base#dot_token#member).to_string();
         let base = calculate_hash(&quote!(#base).to_string());
-        self.add(ident, base);
-    }
-
-    // TODO
-    fn visit_expr_method_call(&mut self, ExprMethodCall { args, .. }: &'a ExprMethodCall) {
-        for el in Punctuated::pairs(args) {
-            self.visit_expr(el.value());
-        }
+        let var_id = calculate_hash(&ident);
+        self.add(var_id, ident, base);
     }
 
     fn visit_expr_path(&mut self, ExprPath { path, .. }: &'a ExprPath) {
@@ -75,7 +74,7 @@ impl<'a> Visit<'a> for ResolveExpr<'a> {
             let name = quote!(#path).to_string();
             if !name.chars().next().unwrap().is_uppercase() {
                 let base = calculate_hash(&name);
-                self.add(name, base);
+                self.add(base, name, base);
             }
         }
     }
@@ -184,7 +183,7 @@ impl<'a> ResolveLocal<'a> {
 impl<'a> Visit<'a> for ResolveLocal<'a> {
     fn visit_local(&mut self, Local { pat, init, .. }: &'a Local) {
         self.visit_pat(pat);
-        let vars = resolve_expr(&init.as_ref().expect("unreacheable").1, self.builder);
+        let vars = resolve_expr(&init.as_ref().expect("unreachable").1, self.builder);
         self.builder
             .tree_map
             .insert(self.id, vars.into_iter().collect());
