@@ -227,7 +227,7 @@ impl<'a> WASMCodeGen<'a> {
             33..=64 => (quote!(yarte::U64), 64),
             65..=128 => (quote!(yarte::U128), 128),
             129..=256 => (quote!(yarte::U256), 256),
-            _ => todo!(),
+            _ => todo!("more than 256 variables per context"),
         }
     }
 
@@ -454,20 +454,20 @@ impl<'a> WASMCodeGen<'a> {
             .expect("Black box field")
     }
 
-    fn get_number_u8(bits: &[bool]) -> u8 {
+    fn get_number_u8(bits: Vec<bool>) -> u8 {
         let mut n = 0;
-        for (i, b) in bits.iter().enumerate() {
-            if *b {
+        for (i, b) in bits.into_iter().enumerate() {
+            if b {
                 n += 1 << i as u8
             }
         }
         n
     }
 
-    fn get_number_u16(bits: &[bool]) -> u16 {
+    fn get_number_u16(bits: Vec<bool>) -> u16 {
         let mut n = 0;
-        for (i, b) in bits.iter().enumerate() {
-            if *b {
+        for (i, b) in bits.into_iter().enumerate() {
+            if b {
                 n += 1 << i as u16
             }
         }
@@ -482,6 +482,18 @@ impl<'a> WASMCodeGen<'a> {
             }
         }
         n
+    }
+
+    fn get_split_32(mut bits: &[bool]) -> Punctuated<syn::Expr, Token![,]> {
+        let mut buff = Punctuated::new();
+        while !bits.is_empty() {
+            let (current, next) = bits.split_at(32);
+            bits = next;
+            let current = Self::get_number_u32(current);
+            buff.push(parse2(quote!(#current)).unwrap());
+        }
+
+        buff
     }
 
     #[inline]
@@ -528,18 +540,30 @@ impl<'a> WASMCodeGen<'a> {
                 }
                 let number = match len {
                     8 => {
-                        let number = Self::get_number_u8(&bits);
+                        let number = Self::get_number_u8(bits);
                         quote!(#number)
                     }
                     16 => {
-                        let number = Self::get_number_u16(&bits);
+                        let number = Self::get_number_u16(bits);
                         quote!(#number)
                     }
                     32 => {
                         let number = Self::get_number_u32(&bits);
                         quote!(#number)
                     }
-                    _ => todo!("more than 32 variables per context"),
+                    64 => {
+                        let number = Self::get_split_32(&bits);
+                        quote!(yarte::U64([#number]))
+                    }
+                    128 => {
+                        let number = Self::get_split_32(&bits);
+                        quote!(yarte::U128([#number]))
+                    }
+                    256 => {
+                        let number = Self::get_split_32(&bits);
+                        quote!(yarte::U256([#number]))
+                    }
+                    _ => todo!("more than 256 variables per context"),
                 };
 
                 let vdom = if let Some(i) = i {
