@@ -1,21 +1,37 @@
-use wasm_bindgen::prelude::*;
-
-use yarte::Template;
+use wasm_bindgen::{prelude::*, JsCast};
+use web_sys::HtmlInputElement;
 
 use model::Fortune;
+use yarte::Template;
 
 #[derive(Template)]
 #[template(path = "fortune.hbs", mode = "wasm", print = "code")]
 #[msg(pub enum Msg {
     Clear,
     Add,
+    Add10,
+    Add20,
     Delete(u32),
 })]
 pub struct Test {
     fortunes: Vec<Fortune>,
     head: String,
     count: u32,
+    // TODO: in template with update function
+    #[inner("build_foo")]
+    foo: HtmlInputElement,
     black_box: <Self as Template>::BlackBox,
+}
+
+// TODO: in template with update function
+fn build_foo() -> HtmlInputElement {
+    yarte::web::window()
+        .unwrap()
+        .document()
+        .unwrap()
+        .get_element_by_id("foo")
+        .unwrap()
+        .unchecked_into()
 }
 
 fn clear(app: &mut Test, _addr: &yarte::Addr<Test>) {
@@ -33,10 +49,40 @@ fn delete(app: &mut Test, id: u32, _addr: &yarte::Addr<Test>) {
 }
 
 fn add(app: &mut Test, _addr: &yarte::Addr<Test>) {
+    let message = app.foo.value();
     let id = app.count;
     app.count += 1;
-    app.fortunes.push(Fortune {id, ..Default::default() } );
+    app.fortunes.push(Fortune {
+        id,
+        message,
+        ..Default::default()
+    });
     // TODO: macro
+    app.black_box.t_root |= 1u8;
+}
+
+fn add10(app: &mut Test, _addr: &yarte::Addr<Test>) {
+    for _ in 0..10 {
+        let id = app.count;
+        app.count += 1;
+        app.fortunes.push(Fortune {
+            id,
+            ..Default::default()
+        });
+    }
+    // TODO: macro
+    app.black_box.t_root |= 1u8;
+}
+
+fn add20(app: &mut Test, _addr: &yarte::Addr<Test>) {
+    for _ in 0..20 {
+        let id = app.count;
+        app.count += 1;
+        app.fortunes.push(Fortune {
+            id,
+            ..Default::default()
+        });
+    }
     app.black_box.t_root |= 1u8;
 }
 

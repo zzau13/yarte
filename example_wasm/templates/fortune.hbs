@@ -7,8 +7,12 @@
 <div>
     <h1>Foo</h1>
     <h2>{{ head }}</h2>
+    <input id="foo" type="text">
+    <br/>
     <button onclick="Msg::Add">Add</button>
     <button onclick="Msg::Clear">Clear</button>
+    <button onclick="Msg::Add10">Add10</button>
+    <button onclick="Msg::Add20">Add20</button>
 </div>
 <table>
     <tbody>
@@ -19,7 +23,7 @@
     {{# each fortunes }}
         <tr>
             <td class="col-id">{{id}}</td>
-            <td class="col-msg">{{super::head}} {{message}}</td>
+            <td class="col-msg">{{message}}</td>
             <td class="another"><a class="button" onclick="{{? Msg::Delete(id) }}">Delete</a></td>
         </tr>
     {{/each }}
