@@ -11,11 +11,13 @@ use model::{Fortune, Item};
 pub struct Test {
     fortunes: Vec<Fortune>,
     head: String,
+    count: u32,
 }
 
 #[get("/")]
 async fn index() -> impl Responder {
     Test {
+        count: 1,
         fortunes: vec![Fortune {
             id: 0,
             message: "foo".to_string(),

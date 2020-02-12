@@ -14,7 +14,7 @@ pub(super) fn find_loop_var(g: &Generator, nodes: &[SNode]) -> bool {
     FindEach::from(g).find(nodes)
 }
 
-// Find {{ index }} {{ index0 }} {{ first }} {{ _index_[0-9] }}
+// Find {{ index }} {{ index0 }} {{ first }}
 #[derive(Clone)]
 pub struct FindEach<'a> {
     loop_var: bool,
@@ -47,9 +47,9 @@ impl<'a> FindEach<'a> {
         for n in nodes {
             match n.t() {
                 Node::Local(expr) => self.visit_local(expr.t()),
-                Node::Expr(_, expr) | Node::Safe(_, expr) | Node::RExpr(_, expr) => {
-                    self.visit_expr(expr.t())
-                }
+                Node::Expr(_, expr) | Node::Safe(_, expr) => self.visit_expr(expr.t()),
+                #[cfg(feature = "client")]
+                Node::RExpr(_, expr) => self.visit_expr(expr.t()),
                 Node::Helper(h) => {
                     let h: &Helper = &*h;
                     match h {
@@ -107,6 +107,7 @@ impl<'a> FindEach<'a> {
                     }
                 }
                 Node::Partial(Partial(_, path, expr)) => {
+                    // TODO: Simplify
                     self.recursion += 1;
                     if self.s.recursion_limit <= self.recursion {
                         // TODO: to error message
@@ -141,6 +142,7 @@ impl<'a> FindEach<'a> {
                     self.recursion -= 1;
                 }
                 Node::PartialBlock(PartialBlock(_, path, expr, block)) => {
+                    // TODO: Simplify
                     self.recursion += 1;
                     if self.s.recursion_limit <= self.recursion {
                         // TODO: to error message
@@ -185,6 +187,8 @@ impl<'a> FindEach<'a> {
                     }
                 }
                 Node::Raw(..) | Node::Lit(..) | Node::Comment(_) => (),
+                #[allow(unreachable_patterns)]
+                _ => (),
             }
             if self.loop_var {
                 break;
@@ -200,15 +204,7 @@ impl<'a> Visit<'a> for FindEach<'a> {
             ($ident:expr) => {
                 match $ident.as_ref() {
                     "index" | "index0" | "first" => self.loop_var = true,
-                    ident => {
-                        let ident = ident.as_bytes();
-                        if 7 < ident.len()
-                            && &ident[0..7] == b"_index_"
-                            && ident[7].is_ascii_digit()
-                        {
-                            self.loop_var = true;
-                        }
-                    }
+                    _ => (),
                 }
             };
         }

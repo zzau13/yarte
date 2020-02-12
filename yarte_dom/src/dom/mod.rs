@@ -6,6 +6,7 @@ use std::{
 };
 
 use markup5ever::{namespace_url, ns, LocalName};
+use syn::parse_str;
 
 use yarte_hir::{Each as HEach, IfElse as HIfElse, HIR};
 use yarte_html::{
@@ -254,6 +255,22 @@ impl DOMBuilder {
         ir: &mut Drain<HIR>,
     ) -> ParseResult<Attribute> {
         let name = self.resolve_y_name(&attr.name.local, ir)?;
+        // Event
+        if let ExprOrText::Text(s) = &name {
+            if s.starts_with("on") {
+                let msg: syn::Expr = parse_str(&attr.value).expect("expression in on attribute");
+                let var = resolve_expr(&msg, self);
+                let id = self.count;
+                self.count += 1;
+                self.tree_map.insert(id, var.into_iter().collect());
+
+                return Ok(Attribute {
+                    name,
+                    value: vec![ExprOrText::Expr(Expression::Safe(id, Box::new(msg)))],
+                });
+            }
+        }
+        // Attribute
         let mut chunks = attr.value.split(MARK).peekable();
         if let Some(first) = chunks.peek() {
             if first.is_empty() {
