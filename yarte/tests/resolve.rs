@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-
+#![cfg(feature = "client")]
 use yarte::Template;
 
 struct Foo {

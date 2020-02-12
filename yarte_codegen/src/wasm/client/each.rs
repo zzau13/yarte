@@ -1,12 +1,10 @@
-use std::mem;
-
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{parse2, Expr, Ident};
 
 use yarte_dom::dom::{Each, ExprId, VarId, VarInner};
 
-use crate::wasm::client::{component::get_component, Base, InsertPoint, Len, Parent, Step};
+use crate::wasm::client::{component::get_component, Base, InsertPoint, Len, Parent, State, Step};
 
 use super::{BlackBox, WASMCodeGen};
 
@@ -25,21 +23,9 @@ impl<'a> WASMCodeGen<'a> {
     ) {
         // Get current state
         let current_bb = self.get_current_black_box();
+        let old_on = self.stack.last().unwrap().id;
 
-        // Push
-        let old_bb = mem::take(&mut self.black_box);
-        let old_build = mem::take(&mut self.buff_build);
-        let old_new = mem::take(&mut self.buff_new);
-        let old_on = self.on.replace(Parent::Expr(id));
-        let old_paths = mem::take(&mut self.path_nodes);
-        let old_render = mem::take(&mut self.buff_render);
-        let old_steps = mem::take(&mut self.steps);
-
-        let vdom = Self::get_vdom_ident(id);
-        let component_ty = Self::get_component_ty_ident(id);
-        let table = Self::get_table_ident(id);
-        let table_dom = Self::get_table_dom_ident(id);
-
+        // Get bases
         let (key, index) = var;
         let var_id = vec![*key];
         let mut var_id_index = vec![*key];
@@ -48,39 +34,59 @@ impl<'a> WASMCodeGen<'a> {
             var_id_index.push(*index);
             bases.push(Base::Skip(*index));
         }
-        self.parents.push((bases, id));
+
+        // Push
+        self.stack.push(State {
+            id: Parent::Expr(id),
+            bases,
+            ..Default::default()
+        });
+
+        let vdom = Self::get_vdom_ident(id);
+        let component_ty = Self::get_component_ty_ident(id);
+        let table = Self::get_table_ident(id);
+        let table_dom = Self::get_table_dom_ident(id);
 
         // Do steps
         self.step(body);
 
         // Update state
         let component = get_component(id, body, self);
-        let (base, _) = self.get_black_box_t_root(&var_id);
-        self.black_box.push(BlackBox {
+        let (base, _) = self.get_black_box_t_root(var_id.into_iter());
+        self.stack.last_mut().unwrap().black_box.push(BlackBox {
             doc: "Difference tree".to_string(),
             name: format_ident!("t_root"),
             ty: parse2(base).unwrap(),
         });
 
         // TODO: Multiple root
-        self.black_box.push(BlackBox {
+        let roots = vec![Self::get_field_root_ident()];
+        self.stack.last_mut().unwrap().black_box.push(BlackBox {
             doc: "root dom element".to_string(),
             name: Self::get_field_root_ident(),
             ty: parse2(quote!(yarte::web::Element)).unwrap(),
         });
 
-        let black_box = self.get_black_box(&component_ty);
+        // Write component
+        self.helpers.extend(self.get_black_box(&component_ty));
+        self.helpers.extend(Self::get_drop(&component_ty, &roots));
 
         // TODO:
-        for (_, path) in self.path_nodes.iter_mut() {
-            if path.starts_with(&[Step::FirstChild, Step::FirstChild]) {
-                // Remove marker
-                path.remove(0);
-            } else {
-                todo!("multi node expressions");
+        {
+            let current = self.stack.last_mut().unwrap();
+            for (_, path) in current
+                .path_nodes
+                .iter_mut()
+                .chain(current.path_events.iter_mut())
+            {
+                if path.starts_with(&[Step::FirstChild, Step::FirstChild]) {
+                    // Remove marker
+                    path.remove(0);
+                } else {
+                    todo!("multi node expressions");
+                }
             }
         }
-
         // TODO: remove self
         let build_args: TokenStream = quote!(#args)
             .to_string()
@@ -97,7 +103,7 @@ impl<'a> WASMCodeGen<'a> {
             &table_dom,
         );
 
-        let parent = match old_on.unwrap() {
+        let parent = match old_on {
             Parent::Expr(id) => {
                 let ident = Self::get_vdom_ident(id);
                 quote!(#ident)
@@ -132,13 +138,14 @@ impl<'a> WASMCodeGen<'a> {
             None,
         );
         // Pops
+        let current = self.stack.pop().unwrap();
         let mut vars = self
             .tree_map
             .get(&id)
             .cloned()
             .expect("expression registered in tree map");
 
-        for (i, _) in &self.buff_render {
+        for (i, _) in &current.buff_render {
             for j in i {
                 let VarInner { base, .. } = self.var_map.get(j).unwrap();
                 if !var_id_index.contains(base) {
@@ -146,15 +153,12 @@ impl<'a> WASMCodeGen<'a> {
                 }
             }
         }
-        self.buff_render = old_render;
-        self.buff_render.push((vars, render));
 
-        self.buff_build = old_build;
-        self.buff_build.push(build);
-
-        self.buff_new = old_new;
-
-        self.buff_new.push(if let Some(cached) = cached {
+        let parent = self.get_parent_node();
+        let last = self.stack.last_mut().unwrap();
+        last.buff_render.push((vars, render));
+        last.buff_build.push(build);
+        last.buff_new.push(if let Some(cached) = cached {
             quote! {
                 let __cached__ = #cached;
                 let mut #table: Vec<#component_ty> = vec![];
@@ -170,27 +174,33 @@ impl<'a> WASMCodeGen<'a> {
                 }
             }
         });
-        self.helpers.extend(black_box);
-
-        self.black_box = old_bb;
-        self.black_box.push(BlackBox {
+        if !current.path_events.is_empty() {
+            let root = Self::get_field_root_ident();
+            let steps = Self::get_steps(current.path_events.iter(), quote!(#vdom.#root));
+            let hydrate = current.buff_hydrate;
+            let hydrate = quote! {
+                for (#vdom, #expr) in #current_bb.#table
+                        .iter_mut()
+                        .zip(#args)
+                    {
+                        #steps
+                        #(#hydrate)*
+                    }
+            };
+            last.buff_hydrate.push(hydrate);
+        }
+        last.path_nodes
+            .push((table_dom.clone(), last.steps[..parent].to_vec()));
+        last.black_box.push(BlackBox {
             doc: "Each Virtual DOM node".to_string(),
             name: table,
             ty: parse2(quote!(Vec<#component_ty>)).unwrap(),
         });
-        self.black_box.push(BlackBox {
+        last.black_box.push(BlackBox {
             doc: "Each DOM Element".to_string(),
-            name: table_dom.clone(),
+            name: table_dom,
             ty: parse2(quote!(yarte::web::Element)).unwrap(),
         });
-
-        self.on = old_on;
-        self.steps = old_steps;
-        self.path_nodes = old_paths;
-        let parent = self.get_parent_node();
-        self.path_nodes
-            .push((table_dom, self.steps[..parent].to_vec()));
-        self.parents.pop();
     }
 
     fn new_each(
@@ -205,8 +215,15 @@ impl<'a> WASMCodeGen<'a> {
         let bb = self.get_global_bbox_ident();
         let tmp = format_ident!("__tmp__");
         let froot = Self::get_field_root_ident();
-        let steps = self.get_steps(quote!(#tmp));
-        let fields = self.get_black_box_fields(&tmp);
+        // TODO: path events
+        let steps = {
+            let current = self.stack.last().unwrap();
+            Self::get_steps(
+                current.path_nodes.iter().chain(current.path_events.iter()),
+                quote!(#tmp),
+            )
+        };
+        let fields = self.get_black_box_fields(&tmp, false);
 
         let (insert_point, cached) = match insert_point {
             InsertPoint::Append(_) => (
@@ -237,7 +254,7 @@ impl<'a> WASMCodeGen<'a> {
             }
         };
 
-        let build = &self.buff_new;
+        let build = &self.stack.last().unwrap().buff_new;
         (
             quote! {
                  let #tmp = yarte::JsCast::unchecked_into::<yarte::web::Element>(self.#bb.#component
@@ -264,9 +281,10 @@ impl<'a> WASMCodeGen<'a> {
         table_dom: &Ident,
     ) -> TokenStream {
         let froot = Self::get_field_root_ident();
-        let steps = self.get_steps(quote!(#vdom));
-        let fields = self.get_black_box_fields(vdom);
-        let build = &self.buff_build;
+        // TODO: path events
+        let steps = Self::get_steps(self.stack.last().unwrap().path_nodes.iter(), quote!(#vdom));
+        let fields = self.get_black_box_fields(vdom, true);
+        let build = &self.stack.last().unwrap().buff_build;
         // TODO: simplify
         let head = match insert_point {
             InsertPoint::Append(head) => head,
@@ -326,7 +344,7 @@ impl<'a> WASMCodeGen<'a> {
                 }
             }
         };
-        let render = if self.buff_render.is_empty() {
+        let render = if self.stack.last().unwrap().buff_render.is_empty() {
             quote!()
         } else {
             let parents = self.get_render_hash().into_iter().any(|(i, _)| {
@@ -340,14 +358,7 @@ impl<'a> WASMCodeGen<'a> {
             });
 
             let render = self.get_render();
-            assert!(
-                !render.is_empty(),
-                "{:?}",
-                self.buff_render
-                    .iter()
-                    .map(|x| x.0.clone())
-                    .collect::<Vec<_>>()
-            );
+            assert!(!render.is_empty());
             if parents {
                 quote! {
                     for (#vdom, #expr) in #table
@@ -374,9 +385,7 @@ impl<'a> WASMCodeGen<'a> {
         let body = quote! {
             #render
             if __dom_len__ < __data_len__ { #new_block } else {
-                for __d__ in #table.drain(__data_len__..) {
-                    __d__.#froot.remove()
-                }
+                #table.drain(__data_len__..);
             }
         };
 
@@ -384,7 +393,7 @@ impl<'a> WASMCodeGen<'a> {
         let data_len = if true {
             quote!(let __data_len__ = #args.size_hint().0;)
         } else {
-            quote!(let __data_len__ = #args.fold(0, |acc, _| acc + 1);)
+            quote!(let __data_len__ = #args.count();)
         };
         if fragment {
             quote! {
