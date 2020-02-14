@@ -24,6 +24,7 @@ pub struct Test {
 }
 
 // TODO: in template with update function
+#[inline]
 fn build_foo() -> HtmlInputElement {
     yarte::web::window()
         .unwrap()
@@ -34,12 +35,14 @@ fn build_foo() -> HtmlInputElement {
         .unchecked_into()
 }
 
+#[inline]
 fn clear(app: &mut Test, _addr: &yarte::Addr<Test>) {
     app.fortunes.clear();
     // TODO: macro
     app.black_box.t_root |= 1u8;
 }
 
+#[inline]
 fn delete(app: &mut Test, id: u32, _addr: &yarte::Addr<Test>) {
     let index = app.fortunes.iter().position(|x| x.id == id).unwrap();
     app.fortunes.remove(index);
@@ -48,6 +51,7 @@ fn delete(app: &mut Test, id: u32, _addr: &yarte::Addr<Test>) {
     app.black_box.__ytable__1.remove(index);
 }
 
+#[inline]
 fn add(app: &mut Test, _addr: &yarte::Addr<Test>) {
     let message = app.foo.value();
     let id = app.count;
@@ -61,6 +65,7 @@ fn add(app: &mut Test, _addr: &yarte::Addr<Test>) {
     app.black_box.t_root |= 1u8;
 }
 
+#[inline]
 fn add10(app: &mut Test, _addr: &yarte::Addr<Test>) {
     for _ in 0..10 {
         let id = app.count;
@@ -74,6 +79,7 @@ fn add10(app: &mut Test, _addr: &yarte::Addr<Test>) {
     app.black_box.t_root |= 1u8;
 }
 
+#[inline]
 fn add20(app: &mut Test, _addr: &yarte::Addr<Test>) {
     for _ in 0..20 {
         let id = app.count;
@@ -83,6 +89,7 @@ fn add20(app: &mut Test, _addr: &yarte::Addr<Test>) {
             ..Default::default()
         });
     }
+    // TODO: macro
     app.black_box.t_root |= 1u8;
 }
 
