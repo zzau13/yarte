@@ -1,8 +1,6 @@
 /// Adapted from [`cargo-expand`](https://github.com/dtolnay/cargo-expand)
 use std::{
-    env,
-    ffi::OsString,
-    fs,
+    env, fs,
     path::PathBuf,
     process::{Command, Stdio},
 };
@@ -10,6 +8,7 @@ use std::{
 use prettyprint::{PagingMode, PrettyPrinter};
 
 use yarte_config::PrintOption;
+use yarte_helpers::helpers::definitely_not_nightly;
 
 pub fn log(s: &str, path: String, option: &PrintOption) {
     if definitely_not_nightly() {
@@ -79,27 +78,6 @@ fn logger(s: &str, path: String, option: &PrintOption) {
 
     // Ignore any errors.
     let _ = printer.string_with_header(s, path);
-}
-
-fn cargo_binary() -> OsString {
-    env::var_os("CARGO").unwrap_or_else(|| "cargo".to_owned().into())
-}
-
-fn definitely_not_nightly() -> bool {
-    let mut cmd = Command::new(cargo_binary());
-    cmd.arg("--version");
-
-    let output = match cmd.output() {
-        Ok(output) => output,
-        Err(_) => return false,
-    };
-
-    let version = match String::from_utf8(output.stdout) {
-        Ok(version) => version,
-        Err(_) => return false,
-    };
-
-    version.starts_with("cargo 1") && !version.contains("nightly")
 }
 
 fn which_rustfmt() -> Option<PathBuf> {

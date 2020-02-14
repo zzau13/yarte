@@ -2,12 +2,12 @@
 
 use std::{collections::BTreeMap, mem, path::PathBuf, str};
 
-use quote::quote;
+use quote::{format_ident, quote};
 use syn::{
-    export::Span, parse_str, punctuated::Punctuated, visit_mut::VisitMut, ExprArray, ExprBinary,
-    ExprBlock, ExprCall, ExprCast, ExprClosure, ExprField, ExprGroup, ExprIf, ExprIndex, ExprLoop,
-    ExprMacro, ExprMatch, ExprMethodCall, ExprParen, ExprPath, ExprRange, ExprReference,
-    ExprRepeat, ExprTuple, ExprUnary, ExprUnsafe, PathSegment, Token,
+    parse_str, punctuated::Punctuated, visit_mut::VisitMut, ExprArray, ExprBinary, ExprBlock,
+    ExprCall, ExprCast, ExprClosure, ExprField, ExprGroup, ExprIf, ExprIndex, ExprLoop, ExprMacro,
+    ExprMatch, ExprMethodCall, ExprParen, ExprPath, ExprRange, ExprReference, ExprRepeat,
+    ExprTuple, ExprUnary, ExprUnsafe, PathSegment, Token,
 };
 
 use v_eval::{eval, Value};
@@ -38,6 +38,7 @@ pub use self::{
     hir::*,
     visit_derive::{visit_derive, Mode, Print, Struct},
 };
+use yarte_parser::source_map::Span;
 
 pub fn generate(
     c: &Config,
@@ -77,6 +78,9 @@ struct Generator<'a> {
     block: Vec<(Ws, &'a [SNode<'a>], Generator<'a>)>,
     /// buffer for writable
     buf_w: Vec<Writable<'a>>,
+    // TODO: on Span
+    // buffer for GError
+    buf_err: Vec<GError>,
     /// Errors buffer
     errors: Vec<ErrorMessage<GError>>,
     /// path - nodes
@@ -100,6 +104,7 @@ impl<'a> Clone for Generator<'a> {
             partial: self.partial.clone(),
             block: self.block.clone(),
             buf_w: vec![],
+            buf_err: vec![],
             errors: vec![],
             ctx: self.ctx,
             on_path: self.on_path.clone(),
@@ -126,6 +131,7 @@ impl<'a> Generator<'a> {
             errors: vec![],
             block: vec![],
             recursion: 0,
+            buf_err: vec![],
         }
     }
 
@@ -173,6 +179,7 @@ impl<'a> Generator<'a> {
 
                     self.handle_ws(*ws);
                     self.visit_expr_mut(&mut expr);
+                    self.write_errors(*sexpr.span());
 
                     if self.read_attributes(&mut expr).is_none()
                         && self.const_eval(&expr, true).is_none()
@@ -186,6 +193,7 @@ impl<'a> Generator<'a> {
 
                     self.handle_ws(*ws);
                     self.visit_expr_mut(&mut expr);
+                    self.write_errors(*sexpr.span());
 
                     if self.const_eval(&expr, false).is_none() {
                         validator::expression(sexpr, &mut self.errors);
@@ -198,6 +206,7 @@ impl<'a> Generator<'a> {
 
                     self.handle_ws(*ws);
                     self.visit_expr_mut(&mut expr);
+                    self.write_errors(*sexpr.span());
 
                     self.buf_w.push(Writable::LitP(quote!(#expr).to_string()));
                 }
@@ -307,6 +316,7 @@ impl<'a> Generator<'a> {
         let mut cond = *scond.t().clone();
         self.handle_ws(ws.0);
         self.visit_expr_mut(&mut cond);
+        self.write_errors(*scond.span());
 
         if let Some(val) = self.eval_bool(&cond) {
             if !val {
@@ -329,11 +339,11 @@ impl<'a> Generator<'a> {
             let cond = syn::Expr::Unary(syn::ExprUnary {
                 expr: Box::new(syn::Expr::Paren(syn::ExprParen {
                     attrs: vec![],
-                    paren_token: syn::token::Paren(Span::call_site()),
+                    paren_token: syn::token::Paren(syn::export::Span::call_site()),
                     expr: Box::new(cond),
                 })),
                 attrs: vec![],
-                op: syn::UnOp::Not(Token![!](Span::call_site())),
+                op: syn::UnOp::Not(<Token![!]>::default()),
             });
             buf.push(HIR::IfElse(Box::new(IfElse {
                 ifs: (cond, buf_t),
@@ -347,10 +357,11 @@ impl<'a> Generator<'a> {
         validator::scope(args, &mut self.errors);
 
         self.handle_ws(ws.0);
-        let mut args = *args.t().clone();
-        self.visit_expr_mut(&mut args);
+        let mut arg = *args.t().clone();
+        self.visit_expr_mut(&mut arg);
+        self.write_errors(*args.span());
         self.on.push(On::With(self.scp.len()));
-        self.scp.push_scope(vec![args]);
+        self.scp.push_scope(vec![arg]);
 
         self.handle(nodes, buf);
 
@@ -366,10 +377,17 @@ impl<'a> Generator<'a> {
         sargs: &'a SExpr,
         nodes: &'a [SNode<'a>],
     ) {
-        let loop_var = find_loop_var(self, nodes);
+        let loop_var = find_loop_var(self, nodes).unwrap_or_else(|message| {
+            self.errors.push(ErrorMessage {
+                message,
+                span: *sargs.span(),
+            });
+            false
+        });
 
         let mut args = *sargs.t().clone();
         self.visit_expr_mut(&mut args);
+        self.write_errors(*sargs.span());
 
         if let Some(args) = self.eval_iter(&args) {
             self.const_iter(buf, ws, args, nodes, loop_var);
@@ -423,6 +441,7 @@ impl<'a> Generator<'a> {
         self.scp.push_scope(vec![]);
         let mut cond = *scond.t().clone();
         self.visit_expr_mut(&mut cond);
+        self.write_errors(*scond.span());
         self.handle_ws(pws.0);
         let (mut last, mut o_ifs) = if let Some(val) = self.eval_bool(&cond) {
             if val {
@@ -456,6 +475,7 @@ impl<'a> Generator<'a> {
             self.scp.push_scope(vec![]);
             let mut cond = *scond.t().clone();
             self.visit_expr_mut(&mut cond);
+            self.write_errors(*scond.span());
 
             if let Some(val) = self.eval_bool(&cond) {
                 if val {
@@ -548,23 +568,24 @@ impl<'a> Generator<'a> {
             self.flush_ws(a_ws);
             None
         };
-        let exprs = exprs.t();
-        if exprs.is_empty() {
+        if exprs.t().is_empty() {
             self.scp.push_scope(vec![]);
             self.handle(nodes, buf);
             self.scp.pop();
         } else {
-            let (no_visited, scope) = visit_partial(&exprs);
+            let (no_visited, scope) = visit_partial(exprs, &mut self.errors);
             let mut cur = BTreeMap::new();
             for (k, expr) in no_visited {
                 let mut expr = expr.clone();
                 self.visit_expr_mut(&mut expr);
+                self.write_errors(*exprs.span());
                 cur.insert(k, expr);
             }
 
             if let Some(scope) = scope {
                 let mut scope = scope.clone();
                 self.visit_expr_mut(&mut scope);
+                self.write_errors(*exprs.span());
                 let count = self.scp.count;
                 let mut parent = mem::replace(&mut self.scp, Scope::new(scope, count));
                 let last = mem::replace(&mut self.partial, Some((cur, 0)));
@@ -716,15 +737,14 @@ impl<'a> Generator<'a> {
     fn resolve_path(
         &self,
         syn::ExprPath { attrs, qself, path }: &syn::ExprPath,
-    ) -> Result<syn::Expr, ()> {
+    ) -> GResult<syn::Expr> {
         if qself.is_some() || !attrs.is_empty() {
-            //        panic!("Not available QSelf in a template expression");
-            return Err(());
+            return Err(GError::NotAvailable);
         }
 
         macro_rules! writes {
         ($($t:tt)*) => {
-            return syn::parse2(quote!($($t)*)).map_err(|_| ());
+            return syn::parse2(quote!($($t)*)).map_err(|_| GError::Internal);
         };
     }
 
@@ -732,7 +752,7 @@ impl<'a> Generator<'a> {
             ($ident:expr, $j:expr) => {{
                 let ident = $ident.as_bytes();
                 if is_tuple_index(ident) {
-                    let field = syn::Index{ index: u32::from_str_radix(str::from_utf8(&ident[1..]).unwrap(), 10).unwrap(), span: Span::call_site() };
+                    let field = syn::Index{ index: u32::from_str_radix(str::from_utf8(&ident[1..]).unwrap(), 10).unwrap(), span: syn::export::Span::call_site() };
                     let ident = &self.scp[$j][0];
                     writes!(#ident.#field)
                 }
@@ -756,7 +776,7 @@ impl<'a> Generator<'a> {
                     "this" => return Ok(self.scp[$j][0].clone()),
                     ident => {
                         index_var!(ident, $j);
-                        let field = syn::Ident::new(ident, Span::call_site());
+                        let field = format_ident!("{}", ident);
                         let ident = &self.scp[$j][0];
                         writes!(#ident.#field)
                     },
@@ -770,7 +790,7 @@ impl<'a> Generator<'a> {
                 debug_assert!(!self.scp[$j].is_empty());
                 index_var!($ident, $j);
                 let ident = &self.scp[$j][0];
-                let field = syn::Ident::new($ident, Span::call_site());
+                let field = format_ident!("{}", $ident);
                 writes!(#ident.#field)
             }};
         }
@@ -779,7 +799,7 @@ impl<'a> Generator<'a> {
             ($ident:ident) => {{
                 index_var!($ident, 0);
                 let ident = self.scp.root();
-                let field = syn::Ident::new($ident, Span::call_site());
+                let field = format_ident!("{}", $ident);
                 writes!(#ident.#field)
             }};
         }
@@ -829,7 +849,7 @@ impl<'a> Generator<'a> {
             }
         } else if let Some((j, ref ident)) = is_super(&path.segments) {
             if self.on.is_empty() {
-                panic!("use super at top");
+                Err(GError::SuperWithoutParent)
             } else if self.on.len() == j {
                 partial_var!(ident, j);
                 self_var!(ident);
@@ -840,7 +860,7 @@ impl<'a> Generator<'a> {
                     On::With(j) => with_var!(ident, j),
                 }
             } else {
-                panic!("use super without parent")
+                Err(GError::SuperWithoutParent)
             }
         } else {
             Ok(syn::Expr::Path(syn::ExprPath {
@@ -848,6 +868,12 @@ impl<'a> Generator<'a> {
                 qself: None,
                 path: path.clone(),
             }))
+        }
+    }
+
+    fn write_errors(&mut self, span: Span) {
+        for message in mem::take(&mut self.buf_err) {
+            self.errors.push(ErrorMessage { message, span })
         }
     }
 

@@ -2,8 +2,8 @@ use derive_more::Display;
 
 pub type GResult<T> = Result<T, GError>;
 
-// TODO: improve error messages
-#[derive(Display)]
+// TODO: #39 improve error messages
+#[derive(Display, Clone)]
 pub enum GError {
     #[display(fmt = "Recursion limit")]
     RecursionLimit,
@@ -19,6 +19,26 @@ pub enum GError {
     ValidatorUnless,
     #[display(fmt = "Not available Rust expression in partial scope argument")]
     ValidatorPartialScope,
+    #[display(fmt = "Not available Rust expression in partial assign argument")]
+    ValidatorPartialAssign,
     #[display(fmt = "Use inside partial block")]
     PartialBlockNoParent,
+    #[display(fmt = "Not available in a template expression")]
+    NotAvailable,
+    #[display(fmt = "Not available in partial argument")]
+    PartialArguments,
+    #[display(fmt = "Not available Rust expression in partial scope argument")]
+    PartialArgumentsScope,
+    #[display(fmt = "place scope argument at first position")]
+    PartialArgumentsScopeFirst,
+    #[display(fmt = "Use reserved word")]
+    ReservedWord,
+    #[display(fmt = "Not exist in current scope")]
+    NotExist,
+    #[display(fmt = "Unimplemented")]
+    Unimplemented,
+    #[display(fmt = "Internal")]
+    Internal,
+    #[display(fmt = "use super without any parent")]
+    SuperWithoutParent,
 }
