@@ -1,5 +1,4 @@
-use yarte_helpers::helpers::ErrorMessage;
-use yarte_parser::{source_map::Span, SExpr};
+use yarte_parser::{source_map::Span, ErrorMessage, SExpr};
 
 use crate::error::GError;
 

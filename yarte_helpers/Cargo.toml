@@ -21,6 +21,4 @@ maintenance = { status = "actively-developed" }
 
 [dependencies]
 yarte_config = { version = "0.6", path = "../yarte_config" }
-yarte_parser = { version = "0.6", path = "../yarte_parser" }
-annotate-snippets = { version = "0.6", features = ["ansi_term"] }
 v_htmlescape = "0.4"

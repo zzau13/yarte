@@ -8,6 +8,7 @@ use unicode_xid::UnicodeXID;
 #[cfg(test)]
 mod test;
 
+mod error;
 mod expr_list;
 mod pre_partials;
 pub mod source_map;
@@ -15,8 +16,12 @@ mod stmt_local;
 #[macro_use]
 mod strnom;
 
-pub use self::pre_partials::parse_partials;
+pub use self::{
+    error::{emitter, ErrorMessage},
+    pre_partials::parse_partials,
+};
 use crate::{
+    error::PError,
     expr_list::ExprList,
     source_map::{spanned, Span, S},
     stmt_local::StmtLocal,
@@ -66,15 +71,16 @@ pub enum Helper<'a> {
     Defined((Ws, Ws), &'a str, SExpr, Vec<SNode<'a>>),
 }
 
-pub fn parse(c: Cursor) -> Vec<SNode> {
-    match eat(c) {
-        Ok((l, res)) => {
-            if l.is_empty() {
-                return res;
-            }
-            panic!("problems parsing template source: {:?}", l.rest);
-        }
-        Err(LexError::Next) | Err(LexError::Fail) => panic!("problems parsing template source"),
+pub fn parse(i: Cursor) -> Result<Vec<SNode>, ErrorMessage<PError>> {
+    let (c, res) = eat(i)?;
+    if c.is_empty() {
+        Ok(res)
+    } else {
+        let end = (i.len() - c.len()) as u32;
+        Err(ErrorMessage {
+            message: PError::Uncompleted,
+            span: Span { lo: end, hi: end },
+        })
     }
 }
 
@@ -91,8 +97,8 @@ macro_rules! try_eat {
                 $i = c;
                 0
             },
-            Err(LexError::Fail) => break Err(LexError::Fail),
-            Err(LexError::Next) => $at + $j + 1,
+            Err(e @ LexError::Fail(..)) => break Err(e),
+            Err(LexError::Next(..)) => $at + $j + 1,
         }
     };
 }
@@ -206,11 +212,11 @@ fn eat_lit<'a>(nodes: &mut Vec<SNode<'a>>, i: Cursor<'a>, len: usize) {
 }
 
 /// Eat comment
-fn comment(c: Cursor) -> PResult<Node> {
-    let (c, expected) = if c.starts_with("--") {
-        (c.adv(2), "--!}}")
+fn comment(i: Cursor) -> PResult<Node> {
+    let (c, expected) = if i.starts_with("--") {
+        (i.adv(2), "--!}}")
     } else {
-        (c, "!}}")
+        (i, "!}}")
     };
 
     let ch = expected.chars().next().unwrap();
@@ -227,7 +233,7 @@ fn comment(c: Cursor) -> PResult<Node> {
                 at += j + 1;
             }
         } else {
-            break Err(LexError::Next);
+            break Err(LexError::Next(PError::Comment, Span::from_cursor(i, c)));
         }
     }
 }
@@ -261,7 +267,7 @@ fn partial(i: Cursor, lws: bool) -> PResult<Partial> {
 }
 
 fn partial_block(i: Cursor, a_lws: bool) -> PResult<PartialBlock> {
-    let (i, (ws, ident, args, block, c_ident)) = do_parse!(
+    let (c, (ws, ident, args, block, c_ident)) = do_parse!(
         i,
         ws >> ident: call!(spanned, path)
             >> args: args_list
@@ -282,9 +288,12 @@ fn partial_block(i: Cursor, a_lws: bool) -> PResult<PartialBlock> {
     )?;
 
     if ident.t() == c_ident.t() {
-        Ok((i, PartialBlock(ws, ident, args, block)))
+        Ok((c, PartialBlock(ws, ident, args, block)))
     } else {
-        Err(LexError::Fail)
+        Err(LexError::Fail(
+            PError::PartialBlock,
+            Span::from_cursor(i, c),
+        ))
     }
 }
 
@@ -330,7 +339,7 @@ fn hel(i: Cursor, a_lws: bool) -> PResult<Node> {
             })),
         ))
     } else {
-        Err(LexError::Fail)
+        Err(LexError::Fail(PError::Helpers, Span::from_cursor(i, c)))
     }
 }
 
@@ -380,7 +389,7 @@ fn if_else(abode_ws: Ws, i: Cursor, args: SExpr) -> PResult<Node> {
                 ))),
             ));
         } else {
-            break Err(LexError::Fail);
+            break Err(LexError::Fail(PError::IfElse, Span::from(i)));
         }
     }
 }
@@ -406,7 +415,7 @@ fn raw(i: Cursor, a_lws: bool) -> PResult<Node> {
                 at += j + 1;
             }
         } else {
-            return Err(LexError::Fail);
+            return Err(LexError::Fail(PError::Raw, Span::from(i)));
         }
     };
 
@@ -428,18 +437,26 @@ macro_rules! make_argument {
                 if let Some(j) = i.adv_find(at, '}') {
                     if 0 < j && i.adv_starts_with(at + j - 1, "~}}") {
                         let (_, s, _) = trim(&i.rest[..j - 1]);
-                        break $fun(s).map(|e| {
-                            (i.adv(at + j - 1), S(e, Span::from_len(skip_ws(i), s.len())))
-                        });
+                        break $fun(s)
+                            .map(|e| (i.adv(at + j - 1), S(e, Span::from_len(skip_ws(i), s.len()))))
+                            .map_err(|_| {
+                                LexError::Fail(PError::Argument, Span::from_cursor(i, i.adv(at)))
+                            });
                     } else if i.adv_starts_with(j + 1, "}") {
                         let (_, s, _) = trim(&i.rest[..j]);
                         break $fun(s)
-                            .map(|e| (i.adv(at + j), S(e, Span::from_len(skip_ws(i), s.len()))));
+                            .map(|e| (i.adv(at + j), S(e, Span::from_len(skip_ws(i), s.len()))))
+                            .map_err(|_| {
+                                LexError::Fail(PError::Argument, Span::from_cursor(i, i.adv(at)))
+                            });
                     }
 
                     at += j + 1;
                 } else {
-                    break Err(LexError::Next);
+                    break Err(LexError::Next(
+                        PError::Argument,
+                        Span::from_cursor(i, i.adv(at)),
+                    ));
                 }
             }
         }
@@ -466,17 +483,19 @@ fn safe(i: Cursor, lws: bool) -> PResult<Node> {
 
             at += j + 1;
         } else {
-            return Err(LexError::Next);
+            return Err(LexError::Next(PError::Safe, Span::from(i)));
         }
     };
 
     let (_, s, _) = trim(s);
-    eat_expr(s).map(|e| {
-        (
-            c,
-            Node::Safe((lws, rws), S(e, Span::from_len(skip_ws(i), s.len()))),
-        )
-    })
+    eat_expr(s)
+        .map(|e| {
+            (
+                c,
+                Node::Safe((lws, rws), S(e, Span::from_len(skip_ws(i), s.len()))),
+            )
+        })
+        .map_err(|_| LexError::Fail(PError::Safe, Span::from_cursor(i, c)))
 }
 
 /// Eat expression Node
@@ -492,50 +511,54 @@ fn expr(i: Cursor, lws: bool) -> PResult<Node> {
 
             at += j + 1;
         } else {
-            return Err(LexError::Next);
+            return Err(LexError::Next(PError::Expr, Span::from(i)));
         }
     };
 
     let (_, s, _) = trim(s);
     if s.starts_with("let ") {
-        eat_local(s).map(|e| (c, Node::Local(S(e, Span::from_len(skip_ws(i), s.len())))))
+        eat_local(s)
+            .map(|e| (c, Node::Local(S(e, Span::from_len(skip_ws(i), s.len())))))
+            .map_err(|_| LexError::Fail(PError::Local, Span::from_cursor(i, c)))
     } else {
-        Err(LexError::Next)
+        eat_expr(s)
+            .map(|e| {
+                (
+                    c,
+                    Node::Expr((lws, rws), S(e, Span::from_len(skip_ws(i), s.len()))),
+                )
+            })
+            .map_err(|_| LexError::Fail(PError::Expr, Span::from_cursor(i, c)))
     }
-    .or_else(|_| {
-        eat_expr(s).map(|e| {
-            (
-                c,
-                Node::Expr((lws, rws), S(e, Span::from_len(skip_ws(i), s.len()))),
-            )
-        })
-    })
 }
 
 /// Parse syn expression
-fn eat_expr(i: &str) -> Result<Box<Expr>, LexError> {
-    map_fail!(parse_str::<Expr>(i).map(Box::new))
+fn eat_expr(i: &str) -> Result<Box<Expr>, syn::Error> {
+    parse_str::<Expr>(i).map(Box::new)
 }
 
 /// Parse syn local
-fn eat_local(i: &str) -> Result<Box<Local>, LexError> {
-    map_fail!(parse_str::<StmtLocal>(i).map(Into::into).map(Box::new))
+fn eat_local(i: &str) -> Result<Box<Local>, syn::Error> {
+    parse_str::<StmtLocal>(i).map(Into::into).map(Box::new)
 }
 
 /// Parse syn expression comma separated list
-fn eat_expr_list(i: &str) -> Result<Vec<Expr>, LexError> {
-    map_fail!(parse_str::<ExprList>(i).map(Into::into))
+fn eat_expr_list(i: &str) -> Result<Vec<Expr>, syn::Error> {
+    parse_str::<ExprList>(i).map(Into::into)
 }
 
 /// Eat whitespace flag in end of expressions `.. }}` or `.. ~}}`
 fn end_expr(i: Cursor) -> PResult<bool> {
-    let i = skip_ws(i);
-    if i.starts_with("~}}") {
-        Ok((i.adv(3), true))
-    } else if i.starts_with("}}") {
-        Ok((i.adv(2), false))
+    let c = skip_ws(i);
+    if c.starts_with("~}}") {
+        Ok((c.adv(3), true))
+    } else if c.starts_with("}}") {
+        Ok((c.adv(2), false))
     } else {
-        Err(LexError::Fail)
+        Err(LexError::Fail(
+            PError::EndExpression,
+            Span::from_cursor(i, c),
+        ))
     }
 }
 
@@ -568,7 +591,7 @@ fn identifier(i: Cursor) -> PResult<&str> {
             Ok((i.adv(1), &i.rest[..1]))
         }
     } else {
-        Err(LexError::Next)
+        Err(LexError::Next(PError::Ident, Span::from(i)))
     }
 }
 
@@ -578,7 +601,7 @@ fn identifier(i: Cursor) -> PResult<&str> {
 fn path(i: Cursor) -> PResult<&str> {
     take_while!(i, |i| !is_ws(i)).and_then(|(c, s)| {
         if s.is_empty() {
-            Err(LexError::Fail)
+            Err(LexError::Fail(PError::PartialPath, Span::from(c)))
         } else {
             Ok((c, s))
         }

@@ -133,6 +133,7 @@ pub struct Span {
 
 impl Span {
     /// Assume a <= b
+    #[inline]
     pub fn from_cursor(a: Cursor, b: Cursor) -> Span {
         debug_assert!(a.off <= b.off);
         Span {
@@ -195,6 +196,12 @@ impl Span {
                 hi: cmp::max(self.hi, other.hi),
             })
         })
+    }
+}
+
+impl<'a> From<Cursor<'a>> for Span {
+    fn from(c: Cursor) -> Self {
+        Self::from_cursor(c, c)
     }
 }
 

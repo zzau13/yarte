@@ -13,7 +13,7 @@ macro_rules! bytes {
 }
 
 fn parse(rest: &str) -> Vec<SNode> {
-    _parse(Cursor { rest, off: 0 })
+    _parse(Cursor { rest, off: 0 }).unwrap()
 }
 
 #[test]

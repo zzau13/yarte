@@ -1,23 +1,22 @@
 use crate::{
-    comment, expr_partial_block, partial, raw,
+    comment,
+    error::PError,
+    expr_partial_block, partial, raw,
+    source_map::Span,
     strnom::{Cursor, LexError, PResult},
-    Partial,
+    ErrorMessage, Partial,
 };
 
-pub fn parse_partials(rest: &str) -> Vec<Partial> {
-    match eat_partials(Cursor { rest, off: 0 }) {
-        Ok((l, res)) => {
-            if l.is_empty() {
-                return res;
-            }
-            panic!(
-                "problems pre parsing partials at template source: {:?}",
-                l.rest
-            );
-        }
-        Err(LexError::Fail) | Err(LexError::Next) => {
-            panic!("problems pre parsing partials at template source")
-        }
+pub fn parse_partials(rest: &str) -> Result<Vec<Partial>, ErrorMessage<PError>> {
+    let (c, res) = eat_partials(Cursor { rest, off: 0 })?;
+    if c.is_empty() {
+        Ok(res)
+    } else {
+        let end = (rest.len() - c.len()) as u32;
+        Err(ErrorMessage {
+            message: PError::Uncompleted,
+            span: Span { lo: end, hi: end },
+        })
     }
 }
 
@@ -36,16 +35,16 @@ fn eat_partials(mut i: Cursor) -> PResult<Vec<Partial>> {
                                     nodes.push(n);
                                     i
                                 }
-                                Err(LexError::Fail) => break Err(LexError::Fail),
-                                Err(LexError::Next) => i,
+                                Err(e @ LexError::Fail(..)) => break Err(e),
+                                Err(LexError::Next(..)) => i,
                             }
                         }
                         b'R' => {
                             let i = i.adv(j + 3 + $t);
                             match raw(i, $ws) {
                                 Ok((i, _)) => i,
-                                Err(LexError::Fail) => break Err(LexError::Fail),
-                                Err(LexError::Next) => i,
+                                Err(e @ LexError::Fail(..)) => break Err(e),
+                                Err(LexError::Next(..)) => i,
                             }
                         }
                         b'!' => {
@@ -61,8 +60,8 @@ fn eat_partials(mut i: Cursor) -> PResult<Vec<Partial>> {
                                     nodes.push(n);
                                     i
                                 }
-                                Err(LexError::Fail) => break Err(LexError::Fail),
-                                Err(LexError::Next) => i.adv(j + 3 + $t),
+                                Err(e @ LexError::Fail(..)) => break Err(e),
+                                Err(LexError::Next(..)) => i.adv(j + 3 + $t),
                             }
                         }
                         _ => i.adv(j + 2 + $t),
@@ -89,7 +88,7 @@ fn eat_partials(mut i: Cursor) -> PResult<Vec<Partial>> {
 #[inline]
 fn partial_block(i: Cursor, lws: bool) -> PResult<Partial> {
     match expr_partial_block(i, lws) {
-        Ok(_) => Err(LexError::Next),
+        Ok(_) => Err(LexError::Next(PError::PartialBlock, Span::from(i))),
         Err(_) => partial(i, lws),
     }
 }
@@ -102,28 +101,28 @@ mod tests {
     #[test]
     fn test_empty() {
         let src = r#""#;
-        assert_eq!(parse_partials(src), vec![]);
+        assert_eq!(parse_partials(src).unwrap(), vec![]);
         let src = r#"{{/"#;
-        assert_eq!(parse_partials(src), vec![]);
+        assert_eq!(parse_partials(src).unwrap(), vec![]);
         let src = r#"{{"#;
-        assert_eq!(parse_partials(src), vec![]);
+        assert_eq!(parse_partials(src).unwrap(), vec![]);
         let src = r#"{"#;
-        assert_eq!(parse_partials(src), vec![]);
+        assert_eq!(parse_partials(src).unwrap(), vec![]);
         let src = r#"{{>"#;
-        assert_eq!(parse_partials(src), vec![]);
+        assert_eq!(parse_partials(src).unwrap(), vec![]);
         let src = r#"{{>}}"#;
-        assert_eq!(parse_partials(src), vec![]);
+        assert_eq!(parse_partials(src).unwrap(), vec![]);
         let src = r#"{{! {{> foo }} !}}"#;
-        assert_eq!(parse_partials(src), vec![]);
+        assert_eq!(parse_partials(src).unwrap(), vec![]);
         let src = r#"{{R}} {{> foo }} {{/R}}"#;
-        assert_eq!(parse_partials(src), vec![]);
+        assert_eq!(parse_partials(src).unwrap(), vec![]);
     }
 
     #[test]
     fn test_partial_block() {
         let src = "{{#> foo }}bar{{/foo }}";
         assert_eq!(
-            parse_partials(src),
+            parse_partials(src).unwrap(),
             vec![Partial(
                 (false, false),
                 S("foo", Span { lo: 5, hi: 8 }),

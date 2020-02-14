@@ -5,11 +5,59 @@ use annotate_snippets::{
     formatter::DisplayListFormatter,
     snippet::{Annotation, AnnotationType, Slice, Snippet, SourceAnnotation},
 };
+use derive_more::Display;
 
 use yarte_config::Config;
-use yarte_parser::source_map::Span;
 
-use crate::helpers::Sources;
+use crate::{source_map::Span, strnom::LexError};
+use std::{collections::BTreeMap, path::PathBuf};
+
+// TODO: #39 improve error messages
+#[derive(Debug, Display, Copy, Clone)]
+pub enum PError {
+    #[display(fmt = "problems parsing template source")]
+    Uncompleted,
+    #[display(fmt = "whitespace")]
+    Whitespace,
+    #[display(fmt = "tag")]
+    Tag,
+    #[display(fmt = "comment")]
+    Comment,
+    #[display(fmt = "expression")]
+    Expr,
+    #[display(fmt = "safe")]
+    Safe,
+    #[display(fmt = "local")]
+    Local,
+    #[display(fmt = "if else")]
+    IfElse,
+    #[display(fmt = "raw")]
+    Raw,
+    #[display(fmt = "helpers")]
+    Helpers,
+    #[display(fmt = "partial block")]
+    PartialBlock,
+    #[display(fmt = "partial path")]
+    PartialPath,
+    #[display(fmt = "identifier")]
+    Ident,
+    #[display(fmt = "end expression")]
+    EndExpression,
+    #[display(fmt = "argument")]
+    Argument,
+}
+
+impl From<LexError> for ErrorMessage<PError> {
+    fn from(e: LexError) -> Self {
+        use LexError::*;
+        match e {
+            Next(m, s) | Fail(m, s) => ErrorMessage {
+                message: m,
+                span: s,
+            },
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct ErrorMessage<T: Display> {
@@ -19,13 +67,14 @@ pub struct ErrorMessage<T: Display> {
 
 // TODO: #39 improve
 // - print all line with len limits
-pub fn emitter<T: Display>(
-    sources: Sources,
-    config: &Config,
-    mut errors: Vec<ErrorMessage<T>>,
-) -> ! {
+pub fn emitter<I, T>(sources: &BTreeMap<PathBuf, String>, config: &Config, errors: I) -> !
+where
+    I: Iterator<Item = ErrorMessage<T>>,
+    T: Display,
+{
     let mut prefix = config.get_dir().clone();
     prefix.pop();
+    let mut errors: Vec<ErrorMessage<T>> = errors.collect();
 
     errors.sort_unstable_by(|a, b| a.span.lo.cmp(&b.span.lo));
     let slices = errors
@@ -73,9 +122,5 @@ pub fn emitter<T: Display>(
     let dl = DisplayList::from(s);
     let dlf = DisplayListFormatter::new(true, false);
 
-    // TODO: decide when output is better
     panic!("{}", dlf.format(&dl))
-    //    eprintln!("{}", dlf.format(&dl))
-    //    struct Panickier;
-    //    resume_unwind(Box::new(Panickier))
 }
