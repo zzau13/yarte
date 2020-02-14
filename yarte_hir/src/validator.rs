@@ -1,8 +1,7 @@
-use quote::quote;
+use yarte_helpers::helpers::ErrorMessage;
+use yarte_parser::{source_map::Span, SExpr};
 
 use crate::error::GError;
-use yarte_helpers::helpers::ErrorMessage;
-use yarte_parser::SExpr;
 
 pub(super) fn expression(e: &SExpr, out: &mut Vec<ErrorMessage<GError>>) {
     use syn::Expr::*;
@@ -73,16 +72,16 @@ pub(super) fn scope(e: &SExpr, out: &mut Vec<ErrorMessage<GError>>) {
     }
 }
 
-// TODO: #39 remove panic
-pub(super) fn partial_assign(e: &syn::Expr) {
+#[allow(clippy::trivially_copy_pass_by_ref)]
+pub(super) fn partial_assign(e: &syn::Expr, span: &Span, out: &mut Vec<ErrorMessage<GError>>) {
     use syn::Expr::*;
     match e {
         Path(..) | Field(..) | Index(..) | Lit(..) | Reference(..) | Array(..) | Range(..)
         | Binary(..) | Call(..) | MethodCall(..) | Paren(..) | Macro(..) | Try(..) | Unary(..)
         | Unsafe(..) => (),
-        _ => panic!(
-            "Not available Rust expression in partial assign argument:\n{}",
-            quote!(#e)
-        ),
+        _ => out.push(ErrorMessage {
+            message: GError::ValidatorPartialAssign,
+            span: *span,
+        }),
     }
 }

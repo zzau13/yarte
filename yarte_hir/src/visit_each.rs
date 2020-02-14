@@ -8,9 +8,12 @@ use yarte_config::Config;
 use yarte_parser::{Helper, Node, Partial, PartialBlock, SNode};
 
 use super::{is_super, Context, Generator};
-use crate::Struct;
+use crate::{
+    error::{GError, GResult},
+    Struct,
+};
 
-pub(super) fn find_loop_var(g: &Generator, nodes: &[SNode]) -> bool {
+pub(super) fn find_loop_var(g: &Generator, nodes: &[SNode]) -> GResult<bool> {
     FindEach::from(g).find(nodes)
 }
 
@@ -25,6 +28,7 @@ pub struct FindEach<'a> {
     block: Vec<(&'a [SNode<'a>], FindEach<'a>)>,
     on_: usize,
     recursion: usize,
+    on_error: Option<GError>,
 }
 
 impl<'a> From<&Generator<'a>> for FindEach<'a> {
@@ -38,12 +42,50 @@ impl<'a> From<&Generator<'a>> for FindEach<'a> {
             block: g.block.iter().map(|(_, x, g)| (*x, g.into())).collect(),
             on_: 0,
             recursion: g.recursion,
+            on_error: None,
         }
     }
 }
 
+macro_rules! breaks {
+    ($_self:ident) => {
+        if $_self.loop_var || $_self.on_error.is_some() {
+            break;
+        }
+    };
+}
+
 impl<'a> FindEach<'a> {
-    pub fn find(&mut self, nodes: &'a [SNode]) -> bool {
+    pub fn find(&mut self, nodes: &'a [SNode]) -> GResult<bool> {
+        macro_rules! partial {
+            ($path:ident, $expr:ident) => {{
+                self.recursion += 1;
+                if self.s.recursion_limit <= self.recursion {
+                    self.on_error.replace(GError::RecursionLimit);
+                    break;
+                }
+
+                let p = self.c.resolve_partial(&self.on_path, $path.t());
+                let nodes = self.ctx.get(&p).unwrap();
+                let expr = $expr.t();
+                if !expr.is_empty() {
+                    let at = if let syn::Expr::Assign(_) = expr[0] {
+                        0
+                    } else {
+                        1
+                    };
+                    for e in &expr[at..] {
+                        self.visit_expr(e);
+                        breaks!(self);
+                    }
+                    if at == 1 {
+                        break;
+                    }
+                }
+                (mem::replace(&mut self.on_path, p), nodes)
+            }};
+        }
+
         for n in nodes {
             match n.t() {
                 Node::Local(expr) => self.visit_local(expr.t()),
@@ -55,146 +97,86 @@ impl<'a> FindEach<'a> {
                     match h {
                         Helper::If((_, first, block), else_if, els) => {
                             self.visit_expr(first.t());
-                            if self.loop_var {
-                                break;
-                            }
-                            self.find(block);
+                            breaks!(self);
+                            self.find(block)?;
                             for (_, e, b) in else_if {
-                                if self.loop_var {
-                                    break;
-                                }
+                                breaks!(self);
 
                                 self.visit_expr(e.t());
-                                if self.loop_var {
-                                    break;
-                                }
+                                breaks!(self);
 
-                                self.find(b);
+                                self.find(b)?;
                             }
-                            if self.loop_var {
-                                break;
-                            }
+                            breaks!(self);
+
                             if let Some((_, els)) = els {
-                                self.find(els);
+                                self.find(els)?;
                             }
                         }
                         Helper::With(_, e, b) => {
                             self.visit_expr(e.t());
-                            if self.loop_var {
-                                break;
-                            }
+                            breaks!(self);
+
                             self.on_ += 1;
-                            self.find(b);
+                            self.find(b)?;
                             self.on_ -= 1;
                         }
                         Helper::Unless(_, expr, block) => {
                             self.visit_expr(expr.t());
-                            if self.loop_var {
-                                break;
-                            }
-                            self.find(block);
+                            breaks!(self);
+
+                            self.find(block)?;
                         }
                         Helper::Each(_, expr, block) => {
                             self.visit_expr(expr.t());
-                            if self.loop_var {
-                                break;
-                            }
+                            breaks!(self);
+
                             self.on_ += 1;
-                            self.find(block);
+                            self.find(block)?;
                             self.on_ -= 1;
                         }
-                        Helper::Defined(..) => unimplemented!(),
+                        Helper::Defined(..) => {
+                            self.on_error.replace(GError::Unimplemented);
+                        }
                     }
                 }
                 Node::Partial(Partial(_, path, expr)) => {
-                    // TODO: Simplify
-                    self.recursion += 1;
-                    if self.s.recursion_limit <= self.recursion {
-                        // TODO: to error message
-                        panic!("Recursion limit")
-                    }
+                    let (parent, nodes) = partial!(path, expr);
 
-                    let p = self.c.resolve_partial(&self.on_path, path.t());
-                    let nodes = self.ctx.get(&p).unwrap();
-                    let expr = expr.t();
-                    if !expr.is_empty() {
-                        let at = if let syn::Expr::Assign(_) = expr[0] {
-                            0
-                        } else {
-                            1
-                        };
-                        for e in &expr[at..] {
-                            self.visit_expr(e);
-                            if self.loop_var {
-                                break;
-                            }
-                        }
-                        if at == 1 {
-                            break;
-                        }
-                    }
-
-                    let parent = mem::replace(&mut self.on_path, p);
-
-                    self.find(nodes);
+                    self.find(nodes)?;
 
                     self.on_path = parent;
                     self.recursion -= 1;
                 }
                 Node::PartialBlock(PartialBlock(_, path, expr, block)) => {
-                    // TODO: Simplify
-                    self.recursion += 1;
-                    if self.s.recursion_limit <= self.recursion {
-                        // TODO: to error message
-                        panic!("Recursion limit")
-                    }
+                    let (parent, nodes) = partial!(path, expr);
 
-                    let p = self.c.resolve_partial(&self.on_path, path.t());
-                    let nodes = self.ctx.get(&p).unwrap();
-                    let expr = expr.t();
-                    if !expr.is_empty() {
-                        let at = if let syn::Expr::Assign(_) = expr[0] {
-                            0
-                        } else {
-                            1
-                        };
-                        for e in &expr[at..] {
-                            self.visit_expr(e);
-                            if self.loop_var {
-                                break;
-                            }
-                        }
-                        if at == 1 {
-                            break;
-                        }
-                    }
-
-                    let parent = mem::replace(&mut self.on_path, p);
                     self.block.push((block, self.clone()));
-                    self.find(nodes);
+                    self.find(nodes)?;
                     self.on_path = parent;
                     self.block.pop();
                     self.recursion -= 1;
                 }
                 Node::Block(_) => {
                     if let Some((block, mut old)) = self.block.pop() {
-                        old.find(block);
+                        old.find(block)?;
                         self.loop_var |= old.loop_var;
                         self.block.push((block, old));
                     } else {
-                        // TODO: to error message
-                        panic!("Use inside partial block");
+                        self.on_error.replace(GError::PartialBlockNoParent);
                     }
                 }
                 Node::Raw(..) | Node::Lit(..) | Node::Comment(_) => (),
                 #[allow(unreachable_patterns)]
                 _ => (),
             }
-            if self.loop_var {
-                break;
-            }
+            breaks!(self);
         }
-        self.loop_var
+        if let Some(err) = self.on_error.take() {
+            Err(err)
+        } else {
+            Ok(self.loop_var)
+        }
     }
 }
 

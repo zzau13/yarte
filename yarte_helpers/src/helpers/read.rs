@@ -8,6 +8,7 @@ use yarte_parser::{parse_partials, Partial};
 
 pub type Sources<'a> = &'a BTreeMap<PathBuf, String>;
 
+// TODO: remove recursive in favor of stack
 pub fn read(path: PathBuf, src: String, config: &Config) -> BTreeMap<PathBuf, String> {
     fn _read(path: PathBuf, src: String, config: &Config, visited: &mut BTreeMap<PathBuf, String>) {
         let partials = parse_partials(&src)

@@ -16,6 +16,7 @@ pub struct IfElse {
     pub els: Option<Vec<HIR>>,
 }
 
+/// for expr in args { body }
 #[derive(Debug, Clone, PartialEq)]
 pub struct Each {
     pub args: syn::Expr,

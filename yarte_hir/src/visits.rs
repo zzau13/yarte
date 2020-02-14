@@ -5,6 +5,7 @@ use syn::{
 };
 
 use super::Generator;
+use crate::error::GError;
 
 impl<'a> VisitMut for Generator<'a> {
     fn visit_arm_mut(
@@ -33,9 +34,14 @@ impl<'a> VisitMut for Generator<'a> {
         match expr {
             Path(i) => {
                 debug_assert!(!self.scp.is_empty() && !self.scp[0].is_empty());
-                *expr = self
-                    .resolve_path(&i)
-                    .expect("Correct resolve path expression");
+                match self.resolve_path(&i) {
+                    Ok(e) => {
+                        *expr = e;
+                    }
+                    Err(e) => {
+                        self.buf_err.push(e);
+                    }
+                }
             }
             a => visit_mut::visit_expr_mut(self, a),
         };
@@ -46,7 +52,7 @@ impl<'a> VisitMut for Generator<'a> {
             *left = Box::new(ident.clone());
             self.visit_expr_mut(right);
         } else {
-            panic!("Not exist in current scope");
+            self.buf_err.push(GError::NotExist);
         };
     }
 
@@ -58,12 +64,12 @@ impl<'a> VisitMut for Generator<'a> {
             *left = Box::new(ident.clone());
             self.visit_expr_mut(right);
         } else {
-            panic!("Not exist in current scope");
+            self.buf_err.push(GError::NotExist);
         };
     }
 
     fn visit_expr_async_mut(&mut self, _i: &mut syn::ExprAsync) {
-        panic!("Not available async in a template expression");
+        self.buf_err.push(GError::NotAvailable);
     }
 
     fn visit_expr_call_mut(&mut self, syn::ExprCall { func, args, .. }: &mut syn::ExprCall) {
@@ -83,7 +89,7 @@ impl<'a> VisitMut for Generator<'a> {
         }: &mut syn::ExprClosure,
     ) {
         if let Some(..) = asyncness {
-            panic!("Not available async in template expression");
+            self.buf_err.push(GError::NotAvailable);
         };
 
         self.scp.push_scope(vec![]);
@@ -138,11 +144,11 @@ impl<'a> VisitMut for Generator<'a> {
     }
 
     fn visit_expr_try_block_mut(&mut self, _i: &mut syn::ExprTryBlock) {
-        panic!("Not allowed try block expression in a template expression");
+        self.buf_err.push(GError::NotAvailable);
     }
 
     fn visit_expr_yield_mut(&mut self, _i: &mut syn::ExprYield) {
-        panic!("Not allowed yield expression in a template expression");
+        self.buf_err.push(GError::NotAvailable);
     }
 
     fn visit_local_mut(&mut self, syn::Local { pat, init, .. }: &mut syn::Local) {
@@ -157,26 +163,26 @@ impl<'a> VisitMut for Generator<'a> {
 
     fn visit_pat_ident_mut(&mut self, syn::PatIdent { ident, subpat, .. }: &mut syn::PatIdent) {
         if subpat.is_some() {
-            panic!("Subpat is not allowed");
+            self.buf_err.push(GError::NotAvailable);
         }
 
         *ident = self.scp.push_ident(&ident.to_string());
     }
 
     fn visit_pat_lit_mut(&mut self, _i: &mut syn::PatLit) {
-        panic!("Not allowed pat lit");
+        self.buf_err.push(GError::NotAvailable);
     }
 
     fn visit_pat_macro_mut(&mut self, _i: &mut syn::PatMacro) {
-        panic!("Not allowed pat macro");
+        self.buf_err.push(GError::NotAvailable);
     }
 
     fn visit_pat_range_mut(&mut self, _i: &mut syn::PatRange) {
-        panic!("Not allowed pat range");
+        self.buf_err.push(GError::NotAvailable);
     }
 
     fn visit_pat_struct_mut(&mut self, _i: &mut syn::PatStruct) {
-        panic!("Not available let struct decompose, use `with` helper instead");
+        self.buf_err.push(GError::NotAvailable);
     }
 
     fn visit_stmt_mut(&mut self, i: &mut syn::Stmt) {
@@ -186,7 +192,7 @@ impl<'a> VisitMut for Generator<'a> {
                 self.visit_local_mut(i);
             }
             Item(_i) => {
-                unimplemented!();
+                self.buf_err.push(GError::Unimplemented);
             }
             Expr(i) => {
                 self.visit_expr_mut(i);
