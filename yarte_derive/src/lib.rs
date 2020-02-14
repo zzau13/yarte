@@ -10,7 +10,7 @@ use proc_macro::TokenStream;
 
 use yarte_codegen::{wasm::server, CodeGen, FmtCodeGen, HTMLCodeGen, HTMLMinCodeGen, TextCodeGen};
 use yarte_config::{get_source, read_config_file, Config, PrintConfig};
-use yarte_hir::{generate, visit_derive, Mode, Print, Struct, HIR};
+use yarte_hir::{generate, visit_derive, Mode, Print, Struct};
 use yarte_parser::{emitter, parse, parse_partials, source_map, Partial};
 
 mod logger;
@@ -57,7 +57,7 @@ fn sources_to_tokens(sources: Sources, config: &Config, s: &Struct) -> proc_macr
     // when multiple templates
     source_map::clean();
 
-    let tokens = hir_to_tokens(hir, s);
+    let tokens = get_codegen(s).gen(hir);
 
     if cfg!(debug_assertions) && config.print_override == PrintConfig::Code
         || config.print_override == PrintConfig::All
@@ -74,15 +74,17 @@ fn sources_to_tokens(sources: Sources, config: &Config, s: &Struct) -> proc_macr
     tokens
 }
 
-fn hir_to_tokens(hir: Vec<HIR>, s: &Struct) -> proc_macro2::TokenStream {
-    match s.mode {
-        Mode::Text => FmtCodeGen::new(TextCodeGen, s).gen(hir),
-        Mode::HTML => FmtCodeGen::new(HTMLCodeGen, s).gen(hir),
-        Mode::HTMLMin => FmtCodeGen::new(HTMLMinCodeGen, s).gen(hir),
+fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
+    let codegen: Box<dyn CodeGen> = match s.mode {
+        Mode::Text => Box::new(FmtCodeGen::new(TextCodeGen, s)),
+        Mode::HTML => Box::new(FmtCodeGen::new(HTMLCodeGen, s)),
+        Mode::HTMLMin => Box::new(FmtCodeGen::new(HTMLMinCodeGen, s)),
         #[cfg(feature = "client")]
-        Mode::WASM => yarte_codegen::wasm::client::WASMCodeGen::new(s).gen(hir),
-        Mode::WASMServer => FmtCodeGen::new(server::WASMCodeGen::new(s), s).gen(hir),
-    }
+        Mode::WASM => Box::new(yarte_codegen::wasm::client::WASMCodeGen::new(s)),
+        Mode::WASMServer => Box::new(FmtCodeGen::new(server::WASMCodeGen::new(s), s)),
+    };
+
+    codegen
 }
 
 fn read(path: PathBuf, src: String, config: &Config) -> BTreeMap<PathBuf, String> {

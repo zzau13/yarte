@@ -511,7 +511,10 @@ fn expr(i: Cursor, lws: bool) -> PResult<Node> {
 
             at += j + 1;
         } else {
-            return Err(LexError::Next(PError::Expr, Span::from_cursor(i, i.adv(at))));
+            return Err(LexError::Next(
+                PError::Expr,
+                Span::from_cursor(i, i.adv(at)),
+            ));
         }
     };
 
