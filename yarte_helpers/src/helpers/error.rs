@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use annotate_snippets::{
     display_list::DisplayList,
     formatter::DisplayListFormatter,
@@ -9,16 +11,19 @@ use yarte_parser::source_map::Span;
 
 use crate::helpers::Sources;
 
-// TODO: Display errors ?
 #[derive(Debug)]
-pub struct ErrorMessage {
-    pub message: String,
+pub struct ErrorMessage<T: Display> {
+    pub message: T,
     pub span: Span,
 }
 
 // TODO: improve
 // - print all line with len limits
-pub fn emitter(sources: Sources, config: &Config, mut errors: Vec<ErrorMessage>) -> ! {
+pub fn emitter<T: Display>(
+    sources: Sources,
+    config: &Config,
+    mut errors: Vec<ErrorMessage<T>>,
+) -> ! {
     let mut prefix = config.get_dir().clone();
     prefix.pop();
 
@@ -47,7 +52,7 @@ pub fn emitter(sources: Sources, config: &Config, mut errors: Vec<ErrorMessage>)
                 origin: Some(origin),
                 annotations: vec![SourceAnnotation {
                     range: (start.column, hi),
-                    label: err.message,
+                    label: err.message.to_string(),
                     annotation_type: AnnotationType::Error,
                 }],
                 fold: false,

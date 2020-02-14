@@ -9,6 +9,7 @@ use syn::{
     ExprMacro, ExprMatch, ExprMethodCall, ExprParen, ExprPath, ExprRange, ExprReference,
     ExprRepeat, ExprTuple, ExprUnary, ExprUnsafe, PathSegment, Token,
 };
+
 use v_eval::{eval, Value};
 use v_htmlescape::escape;
 
@@ -18,6 +19,8 @@ use yarte_parser::{Helper, Node, Partial, PartialBlock, SExpr, SNode, SVExpr, Ws
 
 #[macro_use]
 mod macros;
+mod error;
+mod hir;
 mod scope;
 mod validator;
 mod visit_derive;
@@ -25,35 +28,22 @@ mod visit_each;
 mod visit_partial;
 mod visits;
 
-pub use self::visit_derive::{visit_derive, Mode, Print, Struct};
-use self::{scope::Scope, visit_each::find_loop_var, visit_partial::visit_partial};
+use self::{
+    error::{GError, GResult},
+    scope::Scope,
+    visit_each::find_loop_var,
+    visit_partial::visit_partial,
+};
+pub use self::{
+    hir::*,
+    visit_derive::{visit_derive, Mode, Print, Struct},
+};
 
-/// High level intermediate representation after lowering Ast
-#[derive(Debug, Clone, PartialEq)]
-pub enum HIR {
-    Lit(String),
-    Expr(Box<syn::Expr>),
-    Safe(Box<syn::Expr>),
-    Each(Box<Each>),
-    IfElse(Box<IfElse>),
-    Local(Box<syn::Local>),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct IfElse {
-    pub ifs: (syn::Expr, Vec<HIR>),
-    pub if_else: Vec<(syn::Expr, Vec<HIR>)>,
-    pub els: Option<Vec<HIR>>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Each {
-    pub args: syn::Expr,
-    pub body: Vec<HIR>,
-    pub expr: syn::Expr,
-}
-
-pub fn generate(c: &Config, s: &Struct, ctx: Context) -> Result<Vec<HIR>, Vec<ErrorMessage>> {
+pub fn generate(
+    c: &Config,
+    s: &Struct,
+    ctx: Context,
+) -> Result<Vec<HIR>, Vec<ErrorMessage<GError>>> {
     Generator::new(c, s, ctx).build()
 }
 
@@ -88,7 +78,7 @@ struct Generator<'a> {
     /// buffer for writable
     buf_w: Vec<Writable<'a>>,
     /// Errors buffer
-    errors: Vec<ErrorMessage>,
+    errors: Vec<ErrorMessage<GError>>,
     /// path - nodes
     ctx: Context<'a>,
     /// current file path
@@ -139,7 +129,7 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn build(mut self) -> Result<Vec<HIR>, Vec<ErrorMessage>> {
+    fn build(mut self) -> Result<Vec<HIR>, Vec<ErrorMessage<GError>>> {
         let mut buf = vec![];
 
         let nodes: &[SNode] = self.ctx.get(&self.on_path).unwrap();
@@ -252,7 +242,7 @@ impl<'a> Generator<'a> {
                     } else {
                         self.flush_ws(*ws);
                         self.errors.push(ErrorMessage {
-                            message: "Use inside partial block".to_string(),
+                            message: GError::PartialBlockNoParent,
                             span: *n.span(),
                         });
                         self.prepare_ws(*ws);
@@ -539,10 +529,10 @@ impl<'a> Generator<'a> {
         path: &str,
         exprs: &'a SVExpr,
         block: Option<(Ws, &'a [SNode<'a>])>,
-    ) -> Result<(), String> {
+    ) -> GResult<()> {
         self.recursion += 1;
         if self.s.recursion_limit <= self.recursion {
-            return Err("Recursion limit".into());
+            return Err(GError::RecursionLimit);
         }
 
         let p = self.c.resolve_partial(&self.on_path, path);
