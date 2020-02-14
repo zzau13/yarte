@@ -17,6 +17,10 @@ travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]
+yarte_config = { version = "0.6", path = "../yarte_config" }
+
+annotate-snippets = { version = "0.6", features = ["ansi_term"] }
+derive_more = "0.99"
 quote = "1.0"
 syn = { version = "1.0", features = ["extra-traits", "full"] }
 unicode-xid = "0.2"

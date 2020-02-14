@@ -8,13 +8,9 @@ use std::{
 
 #[cfg(feature = "big_num")]
 pub mod big_num;
-mod error;
 mod markup;
-mod read;
 
-pub use error::{emitter, ErrorMessage};
 pub use markup::Render;
-pub use read::{read, Sources};
 
 pub fn calculate_hash<T: Hash>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();

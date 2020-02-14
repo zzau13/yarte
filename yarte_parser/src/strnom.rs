@@ -2,6 +2,8 @@
 
 use std::str::Chars;
 
+use crate::{error::PError, source_map::Span};
+
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Cursor<'a> {
     pub rest: &'a str,
@@ -47,8 +49,8 @@ impl<'a> Cursor<'a> {
 
 #[derive(Debug, Copy, Clone)]
 pub enum LexError {
-    Fail,
-    Next,
+    Fail(PError, Span),
+    Next(PError, Span),
 }
 
 pub type PResult<'a, O> = Result<(Cursor<'a>, O), LexError>;
@@ -128,19 +130,24 @@ macro_rules! tag {
         if $i.starts_with($tag) {
             Ok(($i.adv($tag.len()), &$i.rest[..$tag.len()]))
         } else {
-            Err(LexError::Next)
+            Err(LexError::Next(PError::Tag, Span::from($i)))
         }
     };
 }
 
 #[macro_export]
 macro_rules! map_fail {
-    ($($t:tt)*) => { ($($t)*).map_err(|_| LexError::Fail) };
+    ($($t:tt)*) => {
+        ($($t)*).map_err(|e| match e {
+            LexError::Next(m, s) => LexError::Fail(m, s),
+            e => e,
+        });
+    };
 }
 
 pub fn ws(input: Cursor) -> PResult<()> {
     if input.is_empty() {
-        return Err(LexError::Next);
+        return Err(LexError::Next(PError::Whitespace, Span::from(input)));
     }
 
     take_while!(input, is_ws).map(|(c, _)| (c, ()))

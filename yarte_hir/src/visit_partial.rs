@@ -2,8 +2,7 @@ use std::{collections::BTreeMap, mem};
 
 use syn::visit::Visit;
 
-use yarte_helpers::helpers::ErrorMessage;
-use yarte_parser::SVExpr;
+use yarte_parser::{ErrorMessage, SVExpr};
 
 use crate::{error::GError, is_tuple_index, validator};
 

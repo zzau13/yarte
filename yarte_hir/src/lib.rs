@@ -14,8 +14,7 @@ use v_eval::{eval, Value};
 use v_htmlescape::escape;
 
 use yarte_config::Config;
-use yarte_helpers::helpers::ErrorMessage;
-use yarte_parser::{Helper, Node, Partial, PartialBlock, SExpr, SNode, SVExpr, Ws};
+use yarte_parser::{ErrorMessage, Helper, Node, Partial, PartialBlock, SExpr, SNode, SVExpr, Ws};
 
 #[macro_use]
 mod macros;
