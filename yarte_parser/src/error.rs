@@ -66,6 +66,7 @@ pub struct ErrorMessage<T: Display> {
 }
 
 // TODO: #39 improve
+// TODO: label
 // - print all line with len limits
 pub fn emitter<I, T>(sources: &BTreeMap<PathBuf, String>, config: &Config, errors: I) -> !
 where
