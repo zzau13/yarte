@@ -23,7 +23,7 @@ impl<'a> WASMCodeGen<'a> {
             })
             .collect::<Vec<_>>();
 
-        let (forget, dom) = match &self.stack.last().unwrap().id {
+        let (forget, dom) = match &last!(self).id {
             Parent::Body => {
                 let ident = self.get_global_bbox_ident();
                 (vars.is_empty(), quote!(self.#ident))
@@ -39,7 +39,7 @@ impl<'a> WASMCodeGen<'a> {
         let (closure_expr, clones) = Self::get_closure(msg);
 
         if forget {
-            let current = self.stack.last_mut().unwrap();
+            let current = last_mut!(self);
             current.buff_hydrate.push(quote! {
                 #clones
                 let __cloned__ = __addr.clone();
@@ -101,7 +101,7 @@ impl<'a> WASMCodeGen<'a> {
                 .path_nodes
                 .push((name.clone(), current.steps.clone()));
 
-            // TODO: duplicated
+            // TODO: duplicated node
             current.black_box.push(BlackBox {
                 doc: "Yarte Node element".to_string(),
                 name,
