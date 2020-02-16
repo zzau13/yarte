@@ -2,8 +2,7 @@
 #![allow(clippy::ptr_arg, clippy::too_many_arguments)]
 
 use std::{
-    cmp::Ordering,
-    collections::{BTreeMap, BTreeSet, HashMap},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
     iter, mem,
 };
 
@@ -31,9 +30,10 @@ mod each;
 mod events;
 mod leaf_text;
 mod messages;
+#[cfg(test)]
+mod test;
 
 use self::{component::clean, leaf_text::get_leaf_text};
-use std::collections::HashSet;
 
 // TODO:
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -67,30 +67,26 @@ impl Default for Parent {
     }
 }
 
-#[derive(Clone, Debug)]
-pub enum InsertPoint {
-    Append(Vec<InsertPath>),
-    LastBefore(Vec<InsertPath>, Vec<InsertPath>),
-}
-
 pub struct Len {
     base: usize,
     expr: Vec<ExprId>,
 }
 
-impl From<Vec<InsertPath>> for Len {
-    fn from(i: Vec<InsertPath>) -> Self {
+impl From<&[InsertPath]> for Len {
+    fn from(i: &[InsertPath]) -> Self {
         use InsertPath::*;
-        let base = i.iter().fold(0, |acc, x| match x {
-            Before => acc + 1,
-            _ => acc,
-        });
-        let expr = i.into_iter().fold(vec![], |mut acc, x| {
-            if let Expr(i) = x {
-                acc.push(i);
+        let mut base = 0;
+        let mut expr = vec![];
+        for x in i {
+            match x {
+                Before => {
+                    base += 1;
+                }
+                Expr(i) => {
+                    expr.push(*i);
+                }
             }
-            acc
-        });
+        }
 
         Len { base, expr }
     }
@@ -273,48 +269,20 @@ impl<'a> WASMCodeGen<'a> {
         }
     }
 
-    fn get_insert_point<'b, F: Iterator<Item = &'b Node>>(
-        pos: (usize, usize),
-        o: F,
-    ) -> InsertPoint {
-        if pos.0 + 1 == pos.1 {
-            let mut head = Vec::with_capacity(pos.0);
-            for e in o.take(pos.0) {
-                match e {
-                    Node::Elem(Element::Node { .. }) => {
-                        head.push(InsertPath::Before);
-                    }
-                    Node::Expr(Expression::Each(id, _)) | Node::Expr(Expression::IfElse(id, _)) => {
-                        head.push(InsertPath::Expr(*id));
-                    }
-                    _ => (),
+    fn get_insert_point<'b, F: Iterator<Item = &'b Node>>(nodes: F) -> Vec<InsertPath> {
+        let mut insert = vec![];
+        // TODO: inline nodes, expressions, ...
+        for e in nodes {
+            match e {
+                Node::Elem(Element::Node { .. }) => insert.push(InsertPath::Before),
+                Node::Expr(Expression::Each(id, _)) | Node::Expr(Expression::IfElse(id, _)) => {
+                    insert.push(InsertPath::Expr(*id))
                 }
+                _ => (),
             }
-
-            InsertPoint::Append(head)
-        } else {
-            let mut head = Vec::with_capacity(pos.0);
-            let mut tail = Vec::with_capacity(pos.1 - 1 - pos.0);
-            for (i, e) in o.enumerate() {
-                match e {
-                    Node::Elem(Element::Node { .. }) => match i.cmp(&pos.0) {
-                        Ordering::Greater => tail.push(InsertPath::Before),
-                        Ordering::Less => head.push(InsertPath::Before),
-                        Ordering::Equal => (),
-                    },
-                    Node::Expr(Expression::Each(id, _)) | Node::Expr(Expression::IfElse(id, _)) => {
-                        match i.cmp(&pos.0) {
-                            Ordering::Greater => tail.push(InsertPath::Expr(*id)),
-                            Ordering::Less => head.push(InsertPath::Expr(*id)),
-                            Ordering::Equal => (),
-                        }
-                    }
-                    _ => (),
-                }
-            }
-
-            InsertPoint::LastBefore(head, tail)
         }
+
+        insert
     }
 
     fn get_parent_node(&self) -> usize {
@@ -796,11 +764,11 @@ impl<'a> WASMCodeGen<'a> {
     }
 
     #[inline]
-    fn init(&mut self, dom: DOM) {
+    fn init(&mut self, mut dom: DOM) {
         self.resolve_tree_var(dom.tree_map, dom.var_map);
 
         assert_eq!(dom.doc.len(), 1);
-        match &dom.doc[0] {
+        match dom.doc.remove(0) {
             Node::Elem(Element::Node { name, children, .. }) => {
                 assert_eq!(ExprOrText::Text("html".into()), name.1);
                 assert!(children.iter().all(|x| match x {
@@ -812,7 +780,7 @@ impl<'a> WASMCodeGen<'a> {
                     _ => false,
                 }));
 
-                let (head, body) = children.iter().fold((None, None), |acc, x| match x {
+                let (head, body) = children.into_iter().fold((None, None), |acc, x| match x {
                     Node::Elem(Element::Node { name, children, .. }) => match &name.1 {
                         ExprOrText::Text(s) => match s.as_ref() {
                             "body" => (acc.0, Some(children)),
@@ -826,16 +794,7 @@ impl<'a> WASMCodeGen<'a> {
                 if let Some(head) = head {
                     self.step(head);
                     if !self.stack.last().unwrap().path_nodes.is_empty() {
-                        let ident = format_ident!("__yhead");
-                        let current = self.stack.last_mut().unwrap();
-                        self.build
-                            .extend(quote!(let #ident = doc.head().unwrap_throw();));
-                        // TODO: path events
-                        let tokens = Self::get_steps(current.path_nodes.iter(), quote!(#ident));
-                        self.build.extend(tokens);
-                        self.build
-                            .extend(mem::take(&mut current.buff_build).into_iter().flatten());
-                        current.path_nodes.clear();
+                        todo!("in head expressions")
                     }
                 }
                 if let Some(body) = body {
@@ -846,7 +805,6 @@ impl<'a> WASMCodeGen<'a> {
                         let current = self.stack.last_mut().unwrap();
                         self.build
                             .extend(quote!(let #ident = doc.body().unwrap_throw();));
-                        // TODO: path events
                         let tokens = Self::get_steps(current.path_nodes.iter(), quote!(#ident));
                         self.build.extend(tokens);
                         self.build
@@ -862,14 +820,18 @@ impl<'a> WASMCodeGen<'a> {
     }
 
     // Main recursive loop
-    fn step(&mut self, doc: &Document) {
+    fn step(&mut self, doc: Document) {
         let last_node = self.stack.last_mut().unwrap().steps.len();
-        let len = doc.iter().fold(0, |acc, x| match x {
-            Node::Elem(Element::Text(_)) => acc,
-            _ => acc + 1,
+        // TODO: Inline nodes
+        let insert_points = doc.iter().filter(|x| match x {
+            Node::Elem(Element::Text(_)) => false,
+            _ => true,
         });
+        let len = insert_points.clone().count();
+        let insert_point = Self::get_insert_point(insert_points);
+
         let mut last = 0usize;
-        let nodes = doc.iter().map(|x| match x {
+        let nodes = doc.into_iter().map(|x| match x {
             Node::Elem(Element::Text(_)) => (last, x),
             _ => {
                 let l = last;
@@ -877,86 +839,58 @@ impl<'a> WASMCodeGen<'a> {
                 (l, x)
             }
         });
-        let children = doc.iter().filter(|x| match x {
-            Node::Elem(Element::Text(_)) => false,
-            _ => true,
-        });
-        let mut last = None;
+
+        // TODO: stack and remove recursion
         for (i, node) in nodes {
             match node {
-                Node::Elem(Element::Node { .. }) if last.is_none() => {
-                    last = Some(Step::FirstChild);
-                }
-                Node::Elem(Element::Node { .. }) => {
-                    last = Some(Step::NextSibling);
-                }
-                _ => (),
-            }
-
-            self.resolve_node(node, last, (i, len), children.clone());
-        }
-
-        if last.is_some() {
-            self.stack.last_mut().unwrap().steps.drain(last_node..);
-        }
-    }
-
-    // Resolve
-    #[inline]
-    fn resolve_node<'b, F: Iterator<Item = &'b Node> + Clone>(
-        &mut self,
-        node: &'b Node,
-        step: Option<Step>,
-        pos: (usize, usize),
-        o: F,
-    ) {
-        match node {
-            Node::Elem(Element::Node {
-                children, attrs, ..
-            }) => {
-                let old = self.on_node.take();
-                self.stack
-                    .last_mut()
-                    .unwrap()
-                    .steps
-                    .push(step.expect("Some step"));
-                for attr in attrs {
-                    self.resolve_attr(attr);
-                }
-
-                if all_children_text(children) {
-                    self.write_leaf_text(children);
-                } else {
-                    self.step(children);
-                }
-                self.on_node = old;
-            }
-            Node::Expr(e) => match e {
-                Expression::Each(id, each) => {
-                    let insert_point = Self::get_insert_point(pos, o);
-                    self.gen_each(*id, each, pos.1 != 1, insert_point)
-                }
-                Expression::IfElse(id, if_else) => {
-                    let IfElse { ifs, if_else, els } = &**if_else;
-
-                    self.resolve_if_block(ifs, *id);
-                    for b in if_else {
-                        self.resolve_if_block(b, *id);
+                Node::Elem(Element::Node {
+                    children, attrs, ..
+                }) => {
+                    let old = self.on_node.take();
+                    self.stack.last_mut().unwrap().steps.push(if i == 0 {
+                        Step::FirstChild
+                    } else {
+                        Step::NextSibling
+                    });
+                    for attr in attrs {
+                        self.resolve_attr(attr);
                     }
-                    if let Some(body) = els {
-                        todo!("resolve if else block expresion");
+
+                    if all_children_text(&children) {
+                        self.write_leaf_text(&children);
+                    } else {
+                        self.step(children);
                     }
+                    self.on_node = old;
                 }
-                Expression::Local(..) => todo!("resolve local expression"),
-                Expression::Safe(id, _) | Expression::Unsafe(id, _) => unreachable!(),
-            },
-            Node::Elem(Element::Text(_)) => (),
+                Node::Expr(e) => match e {
+                    Expression::Each(id, each) => {
+                        self.gen_each(id, *each, len != 1, i == len, insert_point.split_at(i).0)
+                    }
+                    Expression::IfElse(id, if_else) => {
+                        let IfElse { ifs, if_else, els } = *if_else;
+
+                        self.resolve_if_block(ifs, id);
+                        for b in if_else {
+                            self.resolve_if_block(b, id);
+                        }
+                        if let Some(body) = els {
+                            todo!("resolve if else block expresion");
+                        }
+                    }
+                    Expression::Local(..) => todo!("resolve local expression"),
+                    Expression::Safe(id, _) | Expression::Unsafe(id, _) => unreachable!(),
+                },
+                Node::Elem(Element::Text(_)) => (),
+            }
         }
+
+        self.stack.last_mut().unwrap().steps.drain(last_node..);
     }
 
     #[inline]
-    fn resolve_attr(&mut self, attr: &Attribute) {
-        if let Some(event) = is_on_attr(attr) {
+    fn resolve_attr(&mut self, attr: Attribute) {
+        if let Some(event) = is_on_attr(&attr) {
             let (id, msg) = match attr.value.as_slice() {
                 [ExprOrText::Expr(Expression::Safe(id, msg))] => (id, &**msg),
                 _ => panic!("only use resolve expressions `{{? .. }}` in on attributes"),
@@ -976,7 +910,7 @@ impl<'a> WASMCodeGen<'a> {
     }
 
     #[inline]
-    fn resolve_if_block(&mut self, IfBlock { block, .. }: &IfBlock, id: ExprId) {
+    fn resolve_if_block(&mut self, IfBlock { block, .. }: IfBlock, id: ExprId) {
         todo!("resolve if else block expresion");
     }
 
