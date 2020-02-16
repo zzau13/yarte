@@ -352,16 +352,14 @@ impl<'a> WASMCodeGen<'a> {
     }
 
     #[inline]
-    fn get_state_fields(&self) -> TokenStream {
-        self.s
-            .fields
-            .iter()
-            .filter(|x| is_state(x))
-            .fold(<Punctuated<&Ident, Token![,]>>::new(), |mut acc, x| {
+    fn get_state_fields(&self) -> Punctuated<&Ident, Token![,]> {
+        self.s.fields.iter().filter(|x| is_state(x)).fold(
+            <Punctuated<&Ident, Token![,]>>::new(),
+            |mut acc, x| {
                 acc.push(&x.ident.as_ref().expect("Named fields"));
                 acc
-            })
-            .into_token_stream()
+            },
+        )
     }
 
     #[inline]
@@ -949,23 +947,20 @@ impl<'a> WASMCodeGen<'a> {
 
     // Clear buffer and return it
     #[inline]
-    fn empty_components(&mut self) -> TokenStream {
-        self.component
-            .drain(..)
-            .fold(
-                <Punctuated<FieldValue, Token![,]>>::new(),
-                |mut acc, (i, t)| {
-                    acc.push(FieldValue {
-                        attrs: vec![],
-                        member: Member::Named(i),
-                        colon_token: Some(<Token![:]>::default()),
-                        expr: parse2(quote!({ #t })).unwrap(),
-                    });
+    fn empty_components(&mut self) -> Punctuated<FieldValue, Token![,]> {
+        self.component.drain(..).fold(
+            <Punctuated<FieldValue, Token![,]>>::new(),
+            |mut acc, (i, t)| {
+                acc.push(FieldValue {
+                    attrs: vec![],
+                    member: Member::Named(i),
+                    colon_token: Some(<Token![:]>::default()),
+                    expr: parse2(quote!({ #t })).unwrap(),
+                });
 
-                    acc
-                },
-            )
-            .into_token_stream()
+                acc
+            },
+        )
     }
 
     // Writes current state
@@ -1024,9 +1019,16 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
         render.extend(self.get_render());
 
         let initial_state = self.get_initial_state();
+
+        // Get black box type
         let black_box_name = format_ident!("{}BlackBox", self.s.ident);
-        let bb_fields = self.get_black_box_fields(&Self::get_field_root_ident(), true);
+        // Get components type
         let ty_component: Type = parse2(quote!(yarte::web::Element)).unwrap();
+
+        // Get global black box fields value less components
+        let mut bb = self.get_black_box_fields(&Self::get_field_root_ident(), true);
+
+        // Add components to black box
         for (i, _) in &self.component {
             last_mut!(self).black_box.push(BlackBox {
                 doc: "Component".to_string(),
@@ -1034,46 +1036,63 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
                 ty: ty_component.clone(),
             })
         }
-        let components = self.empty_components();
+
+        // Add components to black box fields value
+        bb.extend(self.empty_components());
+
+        // Get black box type
         let black_box = self.get_black_box(&black_box_name);
+
+        // Get initial state field value for App
         let args = self.get_state_fields();
+
+        // Get global black box name
         let bb_ident = self.get_global_bbox_ident();
+
+        // Get inner fields for App
         let inner = self.get_inner();
-        let mut bb = vec![];
-        if !bb_fields.is_empty() {
-            bb.push(bb_fields.to_token_stream());
-        }
-        if !components.is_empty() {
-            bb.push(components);
-        }
+
+        // Build fields value for Default return
         let mut fields = vec![];
         if !args.is_empty() {
-            fields.push(args);
+            fields.push(args.into_token_stream());
         }
         if !inner.is_empty() {
-            fields.push(inner.to_token_stream())
+            fields.push(inner.into_token_stream())
         }
         fields.push(quote! {
-            #bb_ident: #black_box_name { #(#bb),* }
+            #bb_ident: #black_box_name { #bb }
         });
 
+        // Add fields to 'build' buffer
         build.extend(quote! {
             Self { #(#fields),* }
         });
+
+        // Into Default::default implementation
+        // Ended 'build' buffer
         let build = self.s.implement_head(
             quote!(std::default::Default),
             &quote!(fn default() -> Self { #build }),
         );
+        // Ended 'render' buffer
         render.extend(quote! {
             self.#bb_ident.t_root = yarte::YNumber::zero();
         });
+        // Get current state
         let mut current = self.stack.pop().unwrap();
         let body = Self::get_body_ident();
+
+        // Get step for events
         let steps = Self::get_steps(current.path_events.iter(), quote!(#body));
+
+        // Ended 'hydrate' buffer
         hydrate.extend(quote! {
             #steps
         });
         hydrate.extend(current.buff_hydrate.drain(..).flatten());
+
+        // Make messages for `App::__dispatch` implementation
         let msgs = self
             .s
             .msgs
@@ -1081,6 +1100,8 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
             .expect("Need define messages for application");
         let (dispatch, enu) = messages::gen_messages(msgs);
         let type_msgs = &msgs.ident;
+
+        // Make App trait body
         let app = quote! {
             type BlackBox = #black_box_name;
             type Message = #type_msgs;
@@ -1096,12 +1117,14 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
             #[doc(hidden)]
             fn __dispatch(&mut self, __msg: Self::Message, __addr: &yarte::Addr<Self>) { #dispatch }
         };
+        // Implement App trait
         let app = self.s.implement_head(quote!(yarte::Template), &app);
         let helpers = &self.helpers;
 
         // Multi app compilation
         clean();
 
+        // Join buffers
         quote! {
             #[wasm_bindgen]
             extern "C" {
