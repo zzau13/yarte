@@ -130,8 +130,6 @@ struct State {
 pub struct WASMCodeGen<'a> {
     /// stack of PDA
     stack: Vec<State>,
-    /// Added current node
-    on_node: Option<usize>,
     /// Helpers buffer
     helpers: TokenStream,
     /// Build buffer
@@ -217,7 +215,6 @@ impl<'a> WASMCodeGen<'a> {
             grouped_map: Default::default(),
             helpers: TokenStream::new(),
             build: TokenStream::new(),
-            on_node: None,
             s,
             self_id,
             stack: vec![state],
@@ -844,7 +841,6 @@ impl<'a> WASMCodeGen<'a> {
                 Node::Elem(Element::Node {
                     children, attrs, ..
                 }) => {
-                    let old = self.on_node.take();
                     last_mut!(self).steps.push(if i == 0 {
                         Step::FirstChild
                     } else {
@@ -859,7 +855,6 @@ impl<'a> WASMCodeGen<'a> {
                     } else {
                         self.step(children);
                     }
-                    self.on_node = old;
                 }
                 Node::Expr(e) => match e {
                     Expression::Each(id, each) => {
@@ -967,7 +962,7 @@ impl<'a> WASMCodeGen<'a> {
     #[inline]
     fn write_leaf_text(&mut self, children: &Document) {
         let (t, e) = get_leaf_text(children, &self.tree_map, &self.var_map);
-        let name = self.current_node_ident();
+        let name = self.current_node_ident(0);
 
         let dom = match &last!(self).id {
             Parent::Body => {
@@ -999,13 +994,28 @@ impl<'a> WASMCodeGen<'a> {
     }
 
     // Registers
-    fn current_node_ident(&mut self) -> Ident {
-        Self::get_node_ident(self.on_node.unwrap_or_else(|| {
+    fn current_node_ident(&mut self, init: usize) -> Ident {
+        self.find_current_node(init).unwrap_or_else(|| {
             let id = self.count;
             self.count += 1;
-            self.on_node = Some(id);
-            id
-        }))
+            Self::get_node_ident(id)
+        })
+    }
+
+    fn find_current_node(&self, init: usize) -> Option<Ident> {
+        let current = last!(self);
+        let path = &current.steps[init..];
+        current
+            .path_nodes
+            .iter()
+            .chain(current.path_events.iter())
+            .find_map(|(i, x)| {
+                if path.eq(x.as_slice()) {
+                    Some(i.clone())
+                } else {
+                    None
+                }
+            })
     }
 }
 
