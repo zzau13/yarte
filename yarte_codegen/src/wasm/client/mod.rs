@@ -35,7 +35,8 @@ mod test;
 
 use self::{component::clean, leaf_text::get_leaf_text};
 
-// TODO:
+// TODO: Expressions in path
+// TODO: use HTMLCollection
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Step {
     FirstChild,
@@ -43,13 +44,15 @@ pub enum Step {
     Each(usize),
 }
 
+// TODO: Expressions in path
+// TODO: use HTMLCollection
 impl ToTokens for Step {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         use Step::*;
         tokens.extend(match self {
             FirstChild => quote!(.first_element_child().unwrap_throw()),
             NextSibling => quote!(.next_element_sibling().unwrap_throw()),
-            Each(_) => todo!(),
+            Each(_) => todo!("Expressions in path"),
         })
     }
 }
@@ -283,6 +286,18 @@ impl<'a> WASMCodeGen<'a> {
         }
 
         insert
+    }
+
+    // TODO: Expressions in path
+    fn get_parent_node(&self) -> usize {
+        last!(self)
+            .steps
+            .iter()
+            .rposition(|x| match x {
+                Step::FirstChild => true,
+                _ => false,
+            })
+            .unwrap_or_default()
     }
 
     fn get_black_box_fields(
@@ -847,7 +862,8 @@ impl<'a> WASMCodeGen<'a> {
                 }
                 Node::Expr(e) => match e {
                     Expression::Each(id, each) => {
-                        self.gen_each(id, *each, len != 1, i == len, insert_point.split_at(i).0)
+                        self.gen_each(id, *each, len != 1, i == len, insert_point.split_at(i).0);
+                        last_mut!(self).steps.push(Step::Each(id));
                     }
                     Expression::IfElse(id, if_else) => {
                         let IfElse { ifs, if_else, els } = *if_else;

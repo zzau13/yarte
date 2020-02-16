@@ -25,10 +25,6 @@ impl<'a> WASMCodeGen<'a> {
         last: bool,
         insert_point: &[InsertPath],
     ) {
-        if fragment || !last {
-            todo!("each with brothers")
-        }
-
         // Get current state
         let current_bb = self.get_current_black_box();
         let old_on = last!(self).id;
@@ -54,6 +50,7 @@ impl<'a> WASMCodeGen<'a> {
         let vdom = Self::get_vdom_ident(id);
         let component_ty = Self::get_component_ty_ident(id);
         let table = Self::get_table_ident(id);
+        // TODO: Path to Dom is registered, use old
         let table_dom = Self::get_table_dom_ident(id);
 
         // Do steps
@@ -165,7 +162,12 @@ impl<'a> WASMCodeGen<'a> {
             }
         }
 
-        //        let parent = self.get_parent_node();
+        // TODO: Expressions in path
+        let parent = if fragment {
+            self.get_parent_node()
+        } else {
+            last!(self).steps.len()
+        };
         let last = last_mut!(self);
         last.buff_render.push((vars, render));
         last.buff_build.push(build);
@@ -201,7 +203,7 @@ impl<'a> WASMCodeGen<'a> {
             last.buff_hydrate.push(hydrate);
         }
         last.path_nodes
-            .push((table_dom.clone(), last.steps.clone()));
+            .push((table_dom.clone(), last.steps[..parent].to_vec()));
         last.black_box.push(BlackBox {
             doc: "Each Virtual DOM node".to_string(),
             name: table,
