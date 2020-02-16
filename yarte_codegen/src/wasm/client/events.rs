@@ -8,7 +8,7 @@ use super::{BlackBox, Parent, WASMCodeGen};
 
 impl<'a> WASMCodeGen<'a> {
     pub(super) fn write_event(&mut self, id: ExprId, event: &str, msg: &syn::Expr) {
-        let name = self.current_node_ident();
+        let name = self.current_node_ident(0);
         assert_eq!(&event[..2], "on");
         let event = &event[2..];
         let vars = self.tree_map.get(&id).expect("registered expression");
