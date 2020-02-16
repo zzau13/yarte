@@ -920,31 +920,27 @@ impl<'a> WASMCodeGen<'a> {
         let mut grouped = HashMap::new();
         let var_map: HashMap<VarId, VarInner> = var_map
             .into_iter()
-            .filter(|(_, x)| match x {
-                Var::This(..) => true,
-                Var::Local(..) => false,
-            })
-            .map(|(i, x)| match x {
-                Var::This(x) => (i, x),
-                Var::Local(..) => unreachable!(),
-            })
-            .inspect(|(var_id, var)| {
-                grouped
-                    .entry(var.base)
-                    .and_modify(|x: &mut BTreeSet<VarId>| {
-                        x.insert(*var_id);
-                    })
-                    .or_insert_with(|| {
-                        // Need Order
-                        let mut b = BTreeSet::new();
-                        b.insert(*var_id);
-                        b
-                    });
+            .filter_map(|(i, x)| match x {
+                Var::This(x) => {
+                    grouped
+                        .entry(x.base)
+                        .and_modify(|x: &mut BTreeSet<VarId>| {
+                            x.insert(i);
+                        })
+                        .or_insert_with(|| {
+                            // Need Order
+                            let mut b = BTreeSet::new();
+                            b.insert(i);
+                            b
+                        });
+                    Some((i, x))
+                }
+                Var::Local(..) => None,
             })
             .collect();
 
         if grouped.get(&self.self_id).is_none() {
-            panic!("need any field in struct of application")
+            todo!("need any field in struct of application")
         }
         self.grouped_map = grouped;
         self.tree_map = tree_map;
