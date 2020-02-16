@@ -54,9 +54,8 @@ pub fn to_wasmfmt(mut ir: Vec<HIR>, s: &Struct) -> ParseResult<Vec<HIR>> {
     serialize_domfmt(sink, ir, SerializerOpt { wasm: true })
 }
 
-// TODO: end of the body
 fn add_scripts(s: &Struct, sink: &mut Sink, ir: &mut Vec<HIR>) {
-    let mut head: Option<usize> = None;
+    let mut body: Option<usize> = None;
     use ParseElement::*;
     match sink.nodes.values().next() {
         Some(Document(children)) => {
@@ -64,8 +63,8 @@ fn add_scripts(s: &Struct, sink: &mut Sink, ir: &mut Vec<HIR>) {
                 if let y_name!("html") = name.local {
                     for i in children {
                         if let Some(Node { name, .. }) = sink.nodes.get(i) {
-                            if let y_name!("head") = name.local {
-                                head = Some(*i);
+                            if let y_name!("body") = name.local {
+                                body = Some(*i);
                             }
                         }
                     }
@@ -81,16 +80,12 @@ fn add_scripts(s: &Struct, sink: &mut Sink, ir: &mut Vec<HIR>) {
         MARK, HASH
     );
 
-    let mut buf = vec![HIR::Safe(Box::new(
+    ir.push(HIR::Safe(Box::new(
         parse2(quote!(
             yarte::serde_json::to_string(&self).map_err(|_| yarte::Error)?
         ))
         .unwrap(),
-    ))];
-    for i in ir.drain(..) {
-        buf.push(i);
-    }
-    *ir = buf;
+    )));
 
     let state = Node {
         name: QualName {
@@ -132,37 +127,12 @@ fn add_scripts(s: &Struct, sink: &mut Sink, ir: &mut Vec<HIR>) {
     sink.nodes.insert(last, Text(init_s));
     last += 1;
     sink.nodes.insert(last, init);
-    let init = last;
-    if let Some(head) = head {
-        match sink.nodes.get_mut(&head).unwrap() {
-            Node { children, .. } => {
-                let mut n = vec![state, init];
-                n.extend_from_slice(children);
-                *children = n;
-            }
-            _ => unreachable!(),
+    match sink.nodes.get_mut(&body.expect("body defined")).unwrap() {
+        Node { children, .. } => {
+            children.push(state);
+            children.push(last);
         }
-    } else {
-        let head = Node {
-            name: QualName {
-                prefix: None,
-                ns: ns!(html),
-                local: y_name!("head"),
-            },
-            attrs: vec![],
-            children: vec![state, init],
-            parent: None,
-        };
-        last += 1;
-        sink.nodes.insert(last, head);
-        match sink.nodes.values_mut().next() {
-            Some(Document(children)) => {
-                let mut new = vec![last];
-                new.extend_from_slice(children);
-                *children = new;
-            }
-            _ => unreachable!(),
-        }
+        _ => unreachable!(),
     }
 }
 

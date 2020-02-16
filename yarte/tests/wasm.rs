@@ -33,11 +33,12 @@ fn wasm_server() {
 
     assert_eq!(
         t.call().unwrap(),
-        "<!DOCTYPE html><html><head>\
-         <script>function get_state(){return JSON.stringify({\"fortunes\":[{\"id\":0,\"message\":\"foo\"},{\"id\":1,\"message\":\"bar\"}]});}</script>\
-         <script type=\"module\">import init from \'./pkg/example.js\';async function run(){await init()}run()</script>\
-         <title>Fortunes</title>\
-         </head><body><table><tr><th>id</th><th>message</th></tr><tr><td>0</td><td>foo</td>\
-         </tr><tr><td>1</td><td>bar</td></tr></table></body></html>"
+        "<!DOCTYPE html><html><head><title>Fortunes</title></head><body><table>\
+        <thead><tr><th>id</th><th>message</th></tr></thead>\
+        <tbody><tr><td>0</td><td>foo</td></tr><tr><td>1</td><td>bar</td></tr></tbody>\
+        </table>\
+        <script>function get_state(){return JSON.stringify({\"fortunes\":[{\"id\":0,\"message\":\"foo\"},{\"id\":1,\"message\":\"bar\"}]});}</script>\
+        <script type=\"module\">import init from \'./pkg/example.js\';async function run(){await init()}run()</script>\
+        </body></html>"
     )
 }

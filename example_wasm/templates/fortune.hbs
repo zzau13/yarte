@@ -15,11 +15,13 @@
     <button onclick="Msg::Add20">Add20</button>
 </div>
 <table>
-    <tbody>
+    <thead>
     <tr>
         <th>id</th>
         <th>message</th>
     </tr>
+    </thead>
+    <tbody>
     {{# each fortunes }}
         <tr>
             <td class="col-id">{{id}}</td>
