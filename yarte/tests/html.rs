@@ -28,9 +28,10 @@ fn test_fortune() {
         ],
     };
     assert_eq!(
-        "<!DOCTYPE html><html><head><title>Fortunes</title></head><body><table><tr><th>id</\
-         th><th>message</th></tr><tr><td>0</td><td>foo</td></tr><tr><td>1</td><td>bar</td></tr></\
-         table></body></html>",
+        "<!DOCTYPE html><html><head><title>Fortunes</title></head><body><table>\
+        <thead><tr><th>id</th><th>message</th></tr></thead>\
+        <tbody><tr><td>0</td><td>foo</td></tr><tr><td>1</td><td>bar</td></tr></tbody>\
+        </table></body></html>",
         t.call().unwrap()
     );
 }

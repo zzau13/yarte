@@ -25,6 +25,10 @@ impl<'a> WASMCodeGen<'a> {
         last: bool,
         insert_point: &[InsertPath],
     ) {
+        if fragment || !last {
+            todo!("each with brothers")
+        }
+
         // Get current state
         let current_bb = self.get_current_black_box();
         let old_on = last!(self).id;
@@ -161,7 +165,7 @@ impl<'a> WASMCodeGen<'a> {
             }
         }
 
-        let parent = self.get_parent_node();
+        //        let parent = self.get_parent_node();
         let last = last_mut!(self);
         last.buff_render.push((vars, render));
         last.buff_build.push(build);
@@ -197,7 +201,7 @@ impl<'a> WASMCodeGen<'a> {
             last.buff_hydrate.push(hydrate);
         }
         last.path_nodes
-            .push((table_dom.clone(), last.steps[..parent].to_vec()));
+            .push((table_dom.clone(), last.steps.clone()));
         last.black_box.push(BlackBox {
             doc: "Each Virtual DOM node".to_string(),
             name: table,

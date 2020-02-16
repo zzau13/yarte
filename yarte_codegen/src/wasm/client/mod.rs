@@ -285,19 +285,6 @@ impl<'a> WASMCodeGen<'a> {
         insert
     }
 
-    fn get_parent_node(&self) -> usize {
-        self.stack
-            .last()
-            .unwrap()
-            .steps
-            .iter()
-            .rposition(|x| match x {
-                Step::FirstChild => true,
-                _ => false,
-            })
-            .unwrap_or_default()
-    }
-
     fn get_black_box_fields(
         &self,
         dom: &Ident,

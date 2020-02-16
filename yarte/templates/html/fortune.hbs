@@ -5,17 +5,21 @@
 </head>
 <body>
 <table>
+    <thead>
     <tr>
         <th>id</th>
         <th>message</th>
     </tr>
+    </thead>
+    <tbody>
     {{# each fortunes }}
         <tr>
             <td>{{id}}</td>
             <td>{{message}}</td>
         </tr>
     {{/each }}
-  </table>
+    </tbody>
+</table>
 </body>
 </html>
 
