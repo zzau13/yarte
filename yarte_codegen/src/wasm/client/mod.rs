@@ -33,6 +33,7 @@ mod leaf_text;
 mod messages;
 
 use self::{component::clean, leaf_text::get_leaf_text};
+use std::collections::HashSet;
 
 // TODO:
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -106,7 +107,7 @@ type PathNode = (Ident, Vec<Step>);
 #[derive(Debug, Default)]
 struct State {
     id: Parent,
-    bases: Vec<Base>,
+    bases: HashSet<VarId>,
     /// black box fields
     black_box: Vec<BlackBox>,
     /// Intermediate buffers
@@ -127,12 +128,10 @@ pub struct WASMCodeGen<'a> {
     stack: Vec<State>,
     /// Added current node
     on_node: Option<usize>,
-    // TODO: remove
-    /// Output buffer
-    build: TokenStream,
+    /// Helpers buffer
     helpers: TokenStream,
-    hydrate: TokenStream,
-    render: TokenStream,
+    /// Build buffer
+    build: TokenStream,
     /// Components buffer
     component: Vec<(Ident, TokenStream)>,
     /// Derive struct
@@ -172,15 +171,21 @@ impl Into<Field> for BlackBox {
     }
 }
 
-fn is_black_box(ty: &Type) -> bool {
-    let black: Type = parse2(quote!(<Self as Template>::BlackBox)).unwrap();
-    ty.eq(&black)
+thread_local! {
+    static BB_TYPE: Type = parse2(quote!(<Self as Template>::BlackBox)).unwrap();
 }
 
+#[inline]
+fn is_black_box(ty: &Type) -> bool {
+    BB_TYPE.with(|black| ty.eq(&black))
+}
+
+#[inline]
 fn is_inner(attrs: &[syn::Attribute]) -> bool {
     attrs.iter().any(|attr| attr.path.is_ident("inner"))
 }
 
+#[inline]
 fn is_state(Field { attrs, ty, .. }: &Field) -> bool {
     !(is_inner(attrs) || is_black_box(ty))
 }
@@ -193,28 +198,22 @@ impl Parse for PAttr {
     }
 }
 
-#[derive(Debug)]
-enum Base {
-    Add(VarId),
-    Skip(VarId),
-}
-
 impl<'a> WASMCodeGen<'a> {
     pub fn new<'n>(s: &'n Struct<'n>) -> WASMCodeGen<'n> {
         let self_id = calculate_hash(&"self");
+        let mut bases = HashSet::new();
+        bases.insert(self_id);
         let state = State {
-            bases: vec![Base::Add(self_id)],
+            bases,
             ..Default::default()
         };
         WASMCodeGen {
-            build: TokenStream::new(),
             component: vec![],
             count: 0,
             grouped_map: Default::default(),
             helpers: TokenStream::new(),
-            hydrate: TokenStream::new(),
+            build: TokenStream::new(),
             on_node: None,
-            render: TokenStream::new(),
             s,
             self_id,
             stack: vec![state],
@@ -377,6 +376,7 @@ impl<'a> WASMCodeGen<'a> {
         )
     }
 
+    #[inline]
     fn get_state_fields(&self) -> TokenStream {
         self.s
             .fields
@@ -389,6 +389,7 @@ impl<'a> WASMCodeGen<'a> {
             .into_token_stream()
     }
 
+    #[inline]
     fn get_inner(&self) -> Punctuated<FieldValue, Token![,]> {
         self.s.fields.iter().filter(|x| is_inner(&x.attrs)).fold(
             <Punctuated<FieldValue, Token![,]>>::new(),
@@ -428,6 +429,7 @@ impl<'a> WASMCodeGen<'a> {
         )
     }
 
+    #[inline]
     fn get_current_black_box(&self) -> TokenStream {
         match &self.stack.last().unwrap().id {
             Parent::Expr(id) => {
@@ -483,6 +485,7 @@ impl<'a> WASMCodeGen<'a> {
         format_ident!("__ybody")
     }
 
+    #[inline]
     fn get_global_bbox_ident(&self) -> Ident {
         self.s
             .fields
@@ -540,38 +543,23 @@ impl<'a> WASMCodeGen<'a> {
     }
 
     #[inline]
-    fn get_checks(&self, check: HashMap<u64, (Vec<usize>, usize)>) -> TokenStream {
+    fn get_checks(&self, check: BTreeMap<VarId, (Vec<usize>, usize)>) -> TokenStream {
         let mut buff: Vec<TokenStream> = check
             .into_iter()
             .fold(
                 BTreeMap::new(),
-                |mut acc: BTreeMap<Option<usize>, (Vec<usize>, usize)>,
+                |mut acc: BTreeMap<Option<ExprId>, (Vec<usize>, usize)>,
                  (base, (positions, len))| {
-                    if let Some((b, x, id)) = self.stack.iter().rev().find_map(|x| match &x.id {
-                        Parent::Head | Parent::Body => None,
-                        Parent::Expr(id) => x
-                            .bases
-                            .iter()
-                            .find(|x| match x {
-                                Base::Skip(id) | Base::Add(id) => *id == base,
-                            })
-                            .map(|base| (base, x, id)),
-                    }) {
-                        if let Base::Add(_) = b {
-                            acc.entry(Some(*id))
-                                .and_modify(|x| {
-                                    let len = x.1;
-                                    x.0.extend(positions.iter().copied().map(|i| len + i));
-                                    x.1 += len;
-                                })
-                                .or_insert((positions, len));
-                        }
-                    } else {
-                        // Self
-                        acc.entry(None)
-                            .and_modify(|x| panic!("expected one self group"))
-                            .or_insert((positions, len));
-                    }
+                    acc.entry(self.stack.iter().rev().find_map(|x| match &x.id {
+                        Parent::Expr(id) if x.bases.contains(&base) => Some(*id),
+                        _ => None,
+                    }))
+                    .and_modify(|x| {
+                        let len = x.1;
+                        x.0.extend(positions.iter().copied().map(|i| len + i));
+                        x.1 += len;
+                    })
+                    .or_insert((positions, len));
                     acc
                 },
             )
@@ -631,8 +619,8 @@ impl<'a> WASMCodeGen<'a> {
 
     fn get_check_hash(
         &self,
-        checks: HashMap<VarId, Vec<VarId>>,
-    ) -> HashMap<u64, (Vec<usize>, usize)> {
+        checks: BTreeMap<VarId, Vec<VarId>>,
+    ) -> BTreeMap<VarId, (Vec<usize>, usize)> {
         checks
             .into_iter()
             .map(|(i, deps)| {
@@ -650,7 +638,7 @@ impl<'a> WASMCodeGen<'a> {
     fn get_render(&self) -> TokenStream {
         let mut tokens = TokenStream::new();
         for (i, t) in self.get_render_hash() {
-            let mut checks: HashMap<VarId, Vec<VarId>> = HashMap::new();
+            let mut checks: BTreeMap<VarId, Vec<VarId>> = BTreeMap::new();
             for j in i {
                 let base = self.var_map.get(&j).unwrap().base;
                 checks
@@ -674,7 +662,7 @@ impl<'a> WASMCodeGen<'a> {
     fn get_render_hash(&self) -> HashMap<Vec<VarId>, TokenStream> {
         self.stack.last().unwrap().buff_render.iter().fold(
             HashMap::new(),
-            |mut acc: HashMap<Vec<u64>, TokenStream>, (i, x)| {
+            |mut acc: HashMap<Vec<VarId>, TokenStream>, (i, x)| {
                 // TODO: priority when collapsed
                 acc.entry(i.iter().copied().collect())
                     .and_modify(|old| {
@@ -751,6 +739,7 @@ impl<'a> WASMCodeGen<'a> {
         tokens
     }
 
+    #[inline]
     fn get_drop(component: &Ident, roots: &[Ident]) -> TokenStream {
         let mut tokens = TokenStream::new();
         for root in roots {
@@ -766,46 +755,49 @@ impl<'a> WASMCodeGen<'a> {
     }
 
     // Inits
-    fn init_build(&mut self) {
+    #[inline]
+    fn init_build(&mut self) -> TokenStream {
         let ident = format_ident!("{}InitialState", self.s.ident);
         let args = self.get_state_fields();
-        self.build.extend(quote! {
+        let build = &self.build;
+        quote! {
             let #ident { #args } = yarte::from_str(&get_state()).unwrap_or_default();
             let doc = yarte::web::window().unwrap_throw().document().unwrap_throw();
-        });
+            #build
+        }
     }
 
-    fn init_hydrate(&mut self) {
+    #[inline]
+    fn init_hydrate(&mut self) -> TokenStream {
         let body = Self::get_body_ident();
-        self.hydrate.extend(quote! {
+        quote! {
             let #body = yarte::web::window().unwrap_throw()
                 .document().unwrap_throw()
                 .body().unwrap_throw();
-        });
+        }
     }
 
-    fn init_render(&mut self) {
+    #[inline]
+    fn init_render(&mut self) -> TokenStream {
         let name = self.get_global_bbox_ident();
         let (ty, _) = self.get_black_box_t_root(iter::once(self.self_id));
-        self.render.extend(quote! {
-            if self.#name.t_root == <#ty as yarte::YNumber>::zero() {
-                return;
-            }
-        });
         let (base, _) = self.get_black_box_t_root(iter::once(self.self_id));
         self.stack.last_mut().unwrap().black_box.push(BlackBox {
             doc: "Difference tree".to_string(),
             name: format_ident!("t_root"),
             ty: parse2(base).unwrap(),
         });
+
+        quote! {
+            if self.#name.t_root == <#ty as yarte::YNumber>::zero() {
+                return;
+            }
+        }
     }
 
     #[inline]
     fn init(&mut self, dom: DOM) {
         self.resolve_tree_var(dom.tree_map, dom.var_map);
-        self.init_build();
-        self.init_hydrate();
-        self.init_render();
 
         assert_eq!(dom.doc.len(), 1);
         match &dom.doc[0] {
@@ -867,8 +859,6 @@ impl<'a> WASMCodeGen<'a> {
             }
             _ => panic!("Need html at root"),
         }
-        let tokens = self.get_render();
-        self.render.extend(tokens);
     }
 
     // Main recursive loop
@@ -1027,6 +1017,7 @@ impl<'a> WASMCodeGen<'a> {
     }
 
     // Clear buffer and return it
+    #[inline]
     fn empty_components(&mut self) -> TokenStream {
         self.component
             .drain(..)
@@ -1099,6 +1090,11 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
     fn gen(&mut self, ir: Vec<HIR>) -> TokenStream {
         self.init(ir.into());
 
+        let mut build = self.init_build();
+        let mut hydrate = self.init_hydrate();
+        let mut render = self.init_render();
+        render.extend(self.get_render());
+
         let initial_state = self.get_initial_state();
         let black_box_name = format_ident!("{}BlackBox", self.s.ident);
         let bb_fields = self.get_black_box_fields(&Self::get_field_root_ident(), true);
@@ -1115,7 +1111,6 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
         let args = self.get_state_fields();
         let bb_ident = self.get_global_bbox_ident();
         let inner = self.get_inner();
-        let build = &self.build;
         let mut bb = vec![];
         if !bb_fields.is_empty() {
             bb.push(bb_fields.to_token_stream());
@@ -1134,29 +1129,23 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
             #bb_ident: #black_box_name { #(#bb),* }
         });
 
-        let build = quote! {
-            #build
+        build.extend(quote! {
             Self { #(#fields),* }
-        };
-        let default = self.s.implement_head(
+        });
+        let build = self.s.implement_head(
             quote!(std::default::Default),
             &quote!(fn default() -> Self { #build }),
         );
-        let render = &self.render;
-        let render = quote! {
-            #render
+        render.extend(quote! {
             self.#bb_ident.t_root = yarte::YNumber::zero();
-        };
-        // TODO: Remove Output buffer
-        let current = self.stack.last().unwrap();
+        });
+        let mut current = self.stack.pop().unwrap();
         let body = Self::get_body_ident();
         let steps = Self::get_steps(current.path_events.iter(), quote!(#body));
-        let hydrate = &current.buff_hydrate;
-        self.hydrate.extend(quote! {
+        hydrate.extend(quote! {
             #steps
-            #(#hydrate)*
         });
-        let hydrate = &self.hydrate;
+        hydrate.extend(current.buff_hydrate.drain(..).flatten());
         let msgs = self
             .s
             .msgs
@@ -1196,7 +1185,7 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
             #initial_state
             #black_box
             #helpers
-            #default
+            #build
         }
     }
 }

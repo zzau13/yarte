@@ -1,10 +1,12 @@
+use std::collections::HashSet;
+
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{parse2, Expr, Ident};
 
 use yarte_dom::dom::{Each, ExprId, VarId, VarInner};
 
-use crate::wasm::client::{component::get_component, Base, InsertPoint, Len, Parent, State, Step};
+use crate::wasm::client::{component::get_component, InsertPoint, Len, Parent, State, Step};
 
 use super::{BlackBox, WASMCodeGen};
 
@@ -29,10 +31,11 @@ impl<'a> WASMCodeGen<'a> {
         let (key, index) = var;
         let var_id = vec![*key];
         let mut var_id_index = vec![*key];
-        let mut bases = vec![Base::Add(*key)];
+        let mut bases = HashSet::new();
+        bases.insert(*key);
         if let Some(index) = index {
             var_id_index.push(*index);
-            bases.push(Base::Skip(*index));
+            bases.insert(*index);
         }
 
         // Push
