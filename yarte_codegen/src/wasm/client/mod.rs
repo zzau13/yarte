@@ -305,7 +305,7 @@ impl<'a> WASMCodeGen<'a> {
     ) -> Punctuated<FieldValue, Token![,]> {
         let t_root = format_ident!("t_root");
         let root = Self::get_field_root_ident();
-        self.stack.last().unwrap().black_box.iter().fold(
+        last!(self).black_box.iter().fold(
             <Punctuated<FieldValue, Token![,]>>::new(),
             |mut acc, x| {
                 if x.name == t_root {
@@ -399,7 +399,7 @@ impl<'a> WASMCodeGen<'a> {
 
     #[inline]
     fn get_current_black_box(&self) -> TokenStream {
-        match &self.stack.last().unwrap().id {
+        match &last!(self).id {
             Parent::Expr(id) => {
                 let ident = Self::get_vdom_ident(*id);
                 quote!(#ident)
@@ -628,7 +628,7 @@ impl<'a> WASMCodeGen<'a> {
     }
 
     fn get_render_hash(&self) -> HashMap<Vec<VarId>, TokenStream> {
-        self.stack.last().unwrap().buff_render.iter().fold(
+        last!(self).buff_render.iter().fold(
             HashMap::new(),
             |mut acc: HashMap<Vec<VarId>, TokenStream>, (i, x)| {
                 // TODO: priority when collapsed
@@ -643,18 +643,13 @@ impl<'a> WASMCodeGen<'a> {
     }
 
     fn get_black_box(&self, name: &Ident) -> TokenStream {
-        let fields = self
-            .stack
-            .last()
-            .unwrap()
-            .black_box
-            .iter()
-            .cloned()
-            .map(Into::into)
-            .fold(Punctuated::<Field, Token![,]>::new(), |mut acc, x| {
+        let fields = last!(self).black_box.iter().cloned().map(Into::into).fold(
+            Punctuated::<Field, Token![,]>::new(),
+            |mut acc, x| {
                 acc.push(x);
                 acc
-            });
+            },
+        );
 
         quote! {
             #[doc = "Internal elements and difference tree"]
@@ -750,7 +745,8 @@ impl<'a> WASMCodeGen<'a> {
         let name = self.get_global_bbox_ident();
         let (ty, _) = self.get_black_box_t_root(iter::once(self.self_id));
         let (base, _) = self.get_black_box_t_root(iter::once(self.self_id));
-        self.stack.last_mut().unwrap().black_box.push(BlackBox {
+        // TODO: Duplicated
+        last_mut!(self).black_box.push(BlackBox {
             doc: "Difference tree".to_string(),
             name: format_ident!("t_root"),
             ty: parse2(base).unwrap(),
@@ -793,16 +789,16 @@ impl<'a> WASMCodeGen<'a> {
                 });
                 if let Some(head) = head {
                     self.step(head);
-                    if !self.stack.last().unwrap().path_nodes.is_empty() {
+                    if !last!(self).path_nodes.is_empty() {
                         todo!("in head expressions")
                     }
                 }
                 if let Some(body) = body {
-                    self.stack.last_mut().unwrap().id = Parent::Body;
+                    last_mut!(self).id = Parent::Body;
                     self.step(body);
-                    if !self.stack.last().unwrap().path_nodes.is_empty() {
+                    if !last!(self).path_nodes.is_empty() {
                         let ident = Self::get_body_ident();
-                        let current = self.stack.last_mut().unwrap();
+                        let current = last_mut!(self);
                         self.build
                             .extend(quote!(let #ident = doc.body().unwrap_throw();));
                         let tokens = Self::get_steps(current.path_nodes.iter(), quote!(#ident));
@@ -821,7 +817,7 @@ impl<'a> WASMCodeGen<'a> {
 
     // Main recursive loop
     fn step(&mut self, doc: Document) {
-        let last_node = self.stack.last_mut().unwrap().steps.len();
+        let last_node = last!(self).steps.len();
         // TODO: Inline nodes
         let insert_points = doc.iter().filter(|x| match x {
             Node::Elem(Element::Text(_)) => false,
@@ -840,14 +836,13 @@ impl<'a> WASMCodeGen<'a> {
             }
         });
 
-        // TODO: stack and remove recursion
         for (i, node) in nodes {
             match node {
                 Node::Elem(Element::Node {
                     children, attrs, ..
                 }) => {
                     let old = self.on_node.take();
-                    self.stack.last_mut().unwrap().steps.push(if i == 0 {
+                    last_mut!(self).steps.push(if i == 0 {
                         Step::FirstChild
                     } else {
                         Step::NextSibling
@@ -885,7 +880,7 @@ impl<'a> WASMCodeGen<'a> {
             }
         }
 
-        self.stack.last_mut().unwrap().steps.drain(last_node..);
+        last_mut!(self).steps.drain(last_node..);
     }
 
     #[inline]
@@ -977,7 +972,7 @@ impl<'a> WASMCodeGen<'a> {
         let (t, e) = get_leaf_text(children, &self.tree_map, &self.var_map);
         let name = self.current_node_ident();
 
-        let dom = match &self.stack.last().unwrap().id {
+        let dom = match &last!(self).id {
             Parent::Body => {
                 let ident = self.get_global_bbox_ident();
                 quote!(self.#ident)
@@ -988,17 +983,14 @@ impl<'a> WASMCodeGen<'a> {
             }
             Parent::Head => todo!(),
         };
-        {
-            let current = self.stack.last_mut().unwrap();
-            current
-                .buff_new
-                .push(quote! { #name.set_text_content(Some(&#e)); });
+        let current = last_mut!(self);
+        current
+            .buff_new
+            .push(quote! { #name.set_text_content(Some(&#e)); });
 
-            current
-                .path_nodes
-                .push((name.clone(), current.steps.clone()));
-        }
-        let current = self.stack.last_mut().unwrap();
+        current
+            .path_nodes
+            .push((name.clone(), current.steps.clone()));
         current
             .buff_render
             .push((t, quote! { #dom.#name.set_text_content(Some(&#e)); }));
@@ -1034,7 +1026,7 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
         let bb_fields = self.get_black_box_fields(&Self::get_field_root_ident(), true);
         let ty_component: Type = parse2(quote!(yarte::web::Element)).unwrap();
         for (i, _) in &self.component {
-            self.stack.last_mut().unwrap().black_box.push(BlackBox {
+            last_mut!(self).black_box.push(BlackBox {
                 doc: "Component".to_string(),
                 name: i.clone(),
                 ty: ty_component.clone(),

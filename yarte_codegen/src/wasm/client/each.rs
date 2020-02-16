@@ -27,7 +27,7 @@ impl<'a> WASMCodeGen<'a> {
     ) {
         // Get current state
         let current_bb = self.get_current_black_box();
-        let old_on = self.stack.last().unwrap().id;
+        let old_on = last!(self).id;
 
         // Get bases
         let (key, index) = var;
@@ -58,7 +58,7 @@ impl<'a> WASMCodeGen<'a> {
 
         // Update state
         let (base, _) = self.get_black_box_t_root(var_id.into_iter());
-        self.stack.last_mut().unwrap().black_box.push(BlackBox {
+        last_mut!(self).black_box.push(BlackBox {
             doc: "Difference tree".to_string(),
             name: format_ident!("t_root"),
             ty: parse2(base).unwrap(),
@@ -66,7 +66,7 @@ impl<'a> WASMCodeGen<'a> {
 
         // TODO: Multiple root
         let roots = vec![Self::get_field_root_ident()];
-        self.stack.last_mut().unwrap().black_box.push(BlackBox {
+        last_mut!(self).black_box.push(BlackBox {
             doc: "root dom element".to_string(),
             name: Self::get_field_root_ident(),
             ty: parse2(quote!(yarte::web::Element)).unwrap(),
@@ -78,7 +78,7 @@ impl<'a> WASMCodeGen<'a> {
 
         // TODO:
         {
-            let current = self.stack.last_mut().unwrap();
+            let current = last_mut!(self);
             for (_, path) in current
                 .path_nodes
                 .iter_mut()
@@ -162,7 +162,7 @@ impl<'a> WASMCodeGen<'a> {
         }
 
         let parent = self.get_parent_node();
-        let last = self.stack.last_mut().unwrap();
+        let last = last_mut!(self);
         last.buff_render.push((vars, render));
         last.buff_build.push(build);
         last.buff_new.push(if let Some(cached) = cached {
@@ -224,7 +224,7 @@ impl<'a> WASMCodeGen<'a> {
         let tmp = format_ident!("__tmp__");
         let froot = Self::get_field_root_ident();
         let steps = {
-            let current = self.stack.last().unwrap();
+            let current = last!(self);
             Self::get_steps(
                 current.path_nodes.iter().chain(current.path_events.iter()),
                 quote!(#tmp),
@@ -260,7 +260,7 @@ impl<'a> WASMCodeGen<'a> {
             )
         };
 
-        let build = &self.stack.last().unwrap().buff_new;
+        let build = &last!(self).buff_new;
         (
             quote! {
                  let #tmp = yarte::JsCast::unchecked_into::<yarte::web::Element>(self.#bb.#component
@@ -288,9 +288,9 @@ impl<'a> WASMCodeGen<'a> {
         table_dom: &Ident,
     ) -> TokenStream {
         let froot = Self::get_field_root_ident();
-        let steps = Self::get_steps(self.stack.last().unwrap().path_nodes.iter(), quote!(#vdom));
+        let steps = Self::get_steps(last!(self).path_nodes.iter(), quote!(#vdom));
         let fields = self.get_black_box_fields(vdom, true);
-        let build = &self.stack.last().unwrap().buff_build;
+        let build = &last!(self).buff_build;
 
         let insert_point = {
             let len: Len = insert_point.into();
@@ -347,7 +347,7 @@ impl<'a> WASMCodeGen<'a> {
                 }
             }
         };
-        let render = if self.stack.last().unwrap().buff_render.is_empty() {
+        let render = if last!(self).buff_render.is_empty() {
             quote!()
         } else {
             let parents = self.get_render_hash().into_iter().any(|(i, _)| {

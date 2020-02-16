@@ -3,6 +3,8 @@ use quote::quote;
 
 use yarte_hir::{Each, IfElse, Struct, HIR};
 
+#[macro_use]
+mod macros;
 mod html;
 mod text;
 pub mod wasm;
