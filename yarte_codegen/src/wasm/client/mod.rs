@@ -46,14 +46,18 @@ pub enum Step {
 
 // TODO: Expressions in path
 // TODO: use HTMLCollection
-impl ToTokens for Step {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        use Step::*;
-        tokens.extend(match self {
-            FirstChild => quote!(.first_element_child().unwrap_throw()),
-            NextSibling => quote!(.next_element_sibling().unwrap_throw()),
-            Each(_) => todo!("Expressions in path"),
-        })
+struct PathStep<'a, I: Iterator<Item = &'a Step>>(pub I);
+
+impl<'a, I: Iterator<Item = &'a Step>> PathStep<'a, I> {
+    fn into_tokens(self, tokens: &mut TokenStream) {
+        for i in self.0 {
+            use Step::*;
+            tokens.extend(match i {
+                FirstChild => quote!(.first_element_child().unwrap_throw()),
+                NextSibling => quote!(.next_element_sibling().unwrap_throw()),
+                Each(_) => todo!("Expressions in path"),
+            })
+        }
     }
 }
 
@@ -95,6 +99,7 @@ impl From<&[InsertPath]> for Len {
     }
 }
 
+// TODO: Inline elements
 #[derive(Clone, Debug)]
 pub enum InsertPath {
     Before,
@@ -669,36 +674,34 @@ impl<'a> WASMCodeGen<'a> {
         let mut buff = vec![];
         let mut stack = vec![];
         if let Some((ident, path)) = nodes.next() {
-            buff.push((parent.clone(), ident.clone(), path.clone()));
+            buff.push((parent.clone(), ident.clone(), PathStep(path.iter())));
             stack.push((ident, path))
         }
         for (ident, path) in nodes {
             let mut check = true;
             for (i, last) in stack.iter().rev() {
                 if path.starts_with(last) {
-                    buff.push((quote!(#i), ident.clone(), path[last.len()..].to_vec()));
+                    // TODO: assert_ne!(last.len(), path.len());
+                    buff.push((
+                        quote!(#i),
+                        ident.clone(),
+                        PathStep(path[last.len()..].iter()),
+                    ));
                     check = false;
                     break;
                 }
             }
             if check {
-                buff.push((parent.clone(), ident.clone(), path.clone()));
+                buff.push((parent.clone(), ident.clone(), PathStep(path.iter())));
             }
             stack.push((ident, path))
         }
 
         let mut tokens = TokenStream::new();
         for (p, i, path) in buff.drain(..) {
-            // TODO: remove clone
-            if path.is_empty() {
-                tokens.extend(quote! {
-                    let #i = #p.clone();
-                })
-            } else {
-                tokens.extend(quote! {
-                    let #i = #p#(#path)*;
-                })
-            }
+            tokens.extend(quote!(let #i = #p));
+            path.into_tokens(&mut tokens);
+            tokens.extend(quote!(;))
         }
 
         tokens
