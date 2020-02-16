@@ -6,11 +6,12 @@ use syn::{parse2, Expr, Ident};
 
 use yarte_dom::dom::{Each, ExprId, VarId, VarInner};
 
-use crate::wasm::client::{component::get_component, InsertPoint, Len, Parent, State, Step};
+use crate::wasm::client::{component::get_component, InsertPath, Len, Parent, State, Step};
 
 use super::{BlackBox, WASMCodeGen};
 
 impl<'a> WASMCodeGen<'a> {
+    #[inline]
     pub(super) fn gen_each(
         &mut self,
         id: ExprId,
@@ -19,9 +20,10 @@ impl<'a> WASMCodeGen<'a> {
             body,
             expr,
             var,
-        }: &Each,
+        }: Each,
         fragment: bool,
-        insert_point: InsertPoint,
+        last: bool,
+        insert_point: &[InsertPath],
     ) {
         // Get current state
         let current_bb = self.get_current_black_box();
@@ -29,13 +31,13 @@ impl<'a> WASMCodeGen<'a> {
 
         // Get bases
         let (key, index) = var;
-        let var_id = vec![*key];
-        let mut var_id_index = vec![*key];
+        let var_id = vec![key];
+        let mut var_id_index = vec![key];
         let mut bases = HashSet::new();
-        bases.insert(*key);
+        bases.insert(key);
         if let Some(index) = index {
-            var_id_index.push(*index);
-            bases.insert(*index);
+            var_id_index.push(index);
+            bases.insert(index);
         }
 
         // Push
@@ -51,10 +53,10 @@ impl<'a> WASMCodeGen<'a> {
         let table_dom = Self::get_table_dom_ident(id);
 
         // Do steps
+        let component = get_component(id, &body, self);
         self.step(body);
 
         // Update state
-        let component = get_component(id, body, self);
         let (base, _) = self.get_black_box_t_root(var_id.into_iter());
         self.stack.last_mut().unwrap().black_box.push(BlackBox {
             doc: "Difference tree".to_string(),
@@ -98,7 +100,7 @@ impl<'a> WASMCodeGen<'a> {
             .unwrap();
         let build = self.build_each(
             build_args,
-            expr,
+            &expr,
             &component_ty,
             &insert_point,
             &vdom,
@@ -116,7 +118,8 @@ impl<'a> WASMCodeGen<'a> {
         let (new, cached) = self.new_each(
             &component,
             &component_ty,
-            &insert_point,
+            last,
+            insert_point,
             &vdom,
             quote!(#current_bb.#table_dom),
             Some(parent),
@@ -124,17 +127,18 @@ impl<'a> WASMCodeGen<'a> {
         let render = self.render_each(
             new,
             cached,
-            args,
-            expr,
+            &args,
+            &expr,
             fragment,
             &vdom,
             quote!(#current_bb.#table),
             quote!(#current_bb.#table_dom),
-            *key,
+            key,
         );
         let (new, cached) = self.new_each(
             &component,
             &component_ty,
+            last,
             &insert_point,
             &vdom,
             quote!(#table_dom),
@@ -210,7 +214,8 @@ impl<'a> WASMCodeGen<'a> {
         &self,
         component: &Ident,
         component_ty: &Ident,
-        insert_point: &InsertPoint,
+        last: bool,
+        insert_point: &[InsertPath],
         vdom: &Ident,
         table_dom: TokenStream,
         parent: Option<TokenStream>,
@@ -218,7 +223,6 @@ impl<'a> WASMCodeGen<'a> {
         let bb = self.get_global_bbox_ident();
         let tmp = format_ident!("__tmp__");
         let froot = Self::get_field_root_ident();
-        // TODO: path events
         let steps = {
             let current = self.stack.last().unwrap();
             Self::get_steps(
@@ -228,33 +232,32 @@ impl<'a> WASMCodeGen<'a> {
         };
         let fields = self.get_black_box_fields(&tmp, false);
 
-        let (insert_point, cached) = match insert_point {
-            InsertPoint::Append(_) => (
+        let (insert_point, cached) = if last {
+            (
                 quote!(#table_dom.append_child(&#vdom.#froot).unwrap_throw();),
                 None,
-            ),
-            InsertPoint::LastBefore(head, _tail) => {
-                let len: Len = head.to_vec().into();
-                let base = len.base as u32 + 1;
-                let mut tokens = quote!(#base);
-                for i in &len.expr {
-                    let ident = Self::get_table_ident(*i);
-                    if let Some(parent) = &parent {
-                        tokens.extend(quote!(+ #parent.#ident.len() as u32))
-                    } else {
-                        tokens.extend(quote!(+ #ident.len() as u32))
-                    }
+            )
+        } else {
+            let len: Len = insert_point.into();
+            let base = len.base as u32 + 1;
+            let mut tokens = quote!(#base);
+            for i in &len.expr {
+                let ident = Self::get_table_ident(*i);
+                if let Some(parent) = &parent {
+                    tokens.extend(quote!(+ #parent.#ident.len() as u32))
+                } else {
+                    tokens.extend(quote!(+ #ident.len() as u32))
                 }
-
-                (
-                    quote!(#table_dom.insert_before(&#vdom.#froot, __cached__.as_ref()).unwrap_throw();),
-                    Some(if parent.is_some() {
-                        quote!(#table_dom.children().item(#tokens + __dom_len__ as u32).map(yarte::JsCast::unchecked_into::<yarte::web::Node>))
-                    } else {
-                        quote!(#table_dom.children().item(#tokens).map(yarte::JsCast::unchecked_into::<yarte::web::Node>))
-                    }),
-                )
             }
+
+            (
+                quote!(#table_dom.insert_before(&#vdom.#froot, __cached__.as_ref()).unwrap_throw();),
+                Some(if parent.is_some() {
+                    quote!(#table_dom.children().item(#tokens + __dom_len__ as u32).map(yarte::JsCast::unchecked_into::<yarte::web::Node>))
+                } else {
+                    quote!(#table_dom.children().item(#tokens).map(yarte::JsCast::unchecked_into::<yarte::web::Node>))
+                }),
+            )
         };
 
         let build = &self.stack.last().unwrap().buff_new;
@@ -273,28 +276,24 @@ impl<'a> WASMCodeGen<'a> {
         )
     }
 
+    #[inline]
     fn build_each(
         &mut self,
         args: TokenStream,
         expr: &Expr,
         component_ty: &Ident,
-        insert_point: &InsertPoint,
+        insert_point: &[InsertPath],
         vdom: &Ident,
         table: &Ident,
         table_dom: &Ident,
     ) -> TokenStream {
         let froot = Self::get_field_root_ident();
-        // TODO: path events
         let steps = Self::get_steps(self.stack.last().unwrap().path_nodes.iter(), quote!(#vdom));
         let fields = self.get_black_box_fields(vdom, true);
         let build = &self.stack.last().unwrap().buff_build;
-        // TODO: simplify
-        let head = match insert_point {
-            InsertPoint::Append(head) => head,
-            InsertPoint::LastBefore(head, _) => head,
-        };
+
         let insert_point = {
-            let len: Len = head.to_vec().into();
+            let len: Len = insert_point.into();
             let base = len.base as u32;
             let mut tokens = quote!(#base);
             for i in &len.expr {
@@ -316,6 +315,7 @@ impl<'a> WASMCodeGen<'a> {
         }
     }
 
+    #[inline]
     fn render_each(
         &self,
         new: TokenStream,

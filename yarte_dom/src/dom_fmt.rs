@@ -54,6 +54,7 @@ pub fn to_wasmfmt(mut ir: Vec<HIR>, s: &Struct) -> ParseResult<Vec<HIR>> {
     serialize_domfmt(sink, ir, SerializerOpt { wasm: true })
 }
 
+// TODO: end of the body
 fn add_scripts(s: &Struct, sink: &mut Sink, ir: &mut Vec<HIR>) {
     let mut head: Option<usize> = None;
     use ParseElement::*;
