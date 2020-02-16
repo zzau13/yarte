@@ -92,6 +92,10 @@ impl VisitMut for MsgBuilder {
             discriminant,
         }: &mut Variant,
     ) {
+        if discriminant.is_some() {
+            panic!("No use enum discriminants in `msg` attribute")
+        }
+
         let func = if attrs.len() == 1 {
             attrs.remove(0).path
         } else {
@@ -104,9 +108,5 @@ impl VisitMut for MsgBuilder {
             fields: fields.clone(),
             ident: ident.clone(),
         });
-
-        if discriminant.is_some() {
-            panic!("No use enum discriminants in `msg` attribute")
-        }
     }
 }
