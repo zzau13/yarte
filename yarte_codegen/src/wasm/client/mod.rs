@@ -6,6 +6,8 @@ use std::{
     iter, mem,
 };
 
+use indexmap::IndexMap;
+
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use syn::{
@@ -609,7 +611,7 @@ impl<'a> WASMCodeGen<'a> {
 
     fn get_render(&self) -> TokenStream {
         let mut tokens = TokenStream::new();
-        for (i, t) in self.get_render_hash() {
+        for (i, t) in self.get_render_hash().into_iter() {
             let mut checks: BTreeMap<VarId, Vec<VarId>> = BTreeMap::new();
             for j in i {
                 let base = self.var_map.get(&j).unwrap().base;
@@ -631,11 +633,10 @@ impl<'a> WASMCodeGen<'a> {
         tokens
     }
 
-    fn get_render_hash(&self) -> HashMap<Vec<VarId>, TokenStream> {
+    fn get_render_hash(&self) -> IndexMap<Vec<VarId>, TokenStream> {
         last!(self).buff_render.iter().fold(
-            HashMap::new(),
-            |mut acc: HashMap<Vec<VarId>, TokenStream>, (i, x)| {
-                // TODO: priority when collapsed
+            IndexMap::new(),
+            |mut acc: IndexMap<Vec<VarId>, TokenStream>, (i, x)| {
                 acc.entry(i.iter().copied().collect())
                     .and_modify(|old| {
                         old.extend(x.clone());
