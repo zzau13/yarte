@@ -31,7 +31,7 @@ mod events;
 mod leaf_text;
 mod messages;
 #[cfg(test)]
-mod test;
+mod tests;
 
 use self::{component::clean, leaf_text::get_leaf_text};
 
@@ -989,7 +989,7 @@ impl<'a> WASMCodeGen<'a> {
             .buff_render
             .push((t, quote! { #dom.#name.set_text_content(Some(&#e)); }));
         current.black_box.push(BlackBox {
-            doc: format!("Yarte Node element\n\n```\n{}\n```", e),
+            doc: "Yarte Node element".into(),
             name,
             ty: parse2(quote!(yarte::web::Element)).unwrap(),
         });
