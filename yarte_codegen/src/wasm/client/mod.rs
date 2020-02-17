@@ -138,8 +138,6 @@ pub struct WASMCodeGen<'a> {
     component: Vec<(Ident, TokenStream)>,
     /// Derive struct
     s: &'a Struct<'a>,
-    /// Hash of self
-    self_id: VarId,
     /// Variables grouped by base field
     grouped_map: HashMap<VarId, BTreeSet<VarId>>,
     /// Expresion -> Inner Variables
@@ -175,6 +173,12 @@ impl Into<Field> for BlackBox {
 
 thread_local! {
     static BB_TYPE: Type = parse2(quote!(<Self as Template>::BlackBox)).unwrap();
+    static SELF_ID: u64 = calculate_hash(&"self");
+}
+
+#[inline]
+fn get_self_id() -> u64 {
+    SELF_ID.with(|x| *x)
 }
 
 #[inline]
@@ -202,9 +206,8 @@ impl Parse for PAttr {
 
 impl<'a> WASMCodeGen<'a> {
     pub fn new<'n>(s: &'n Struct<'n>) -> WASMCodeGen<'n> {
-        let self_id = calculate_hash(&"self");
         let mut bases = HashSet::new();
-        bases.insert(self_id);
+        bases.insert(get_self_id());
         let state = State {
             bases,
             ..Default::default()
@@ -216,7 +219,6 @@ impl<'a> WASMCodeGen<'a> {
             helpers: TokenStream::new(),
             build: TokenStream::new(),
             s,
-            self_id,
             stack: vec![state],
             tree_map: Default::default(),
             var_map: Default::default(),
@@ -743,8 +745,8 @@ impl<'a> WASMCodeGen<'a> {
     #[inline]
     fn init_render(&mut self) -> TokenStream {
         let name = self.get_global_bbox_ident();
-        let (ty, _) = self.get_black_box_t_root(iter::once(self.self_id));
-        let (base, _) = self.get_black_box_t_root(iter::once(self.self_id));
+        let (ty, _) = self.get_black_box_t_root(iter::once(get_self_id()));
+        let (base, _) = self.get_black_box_t_root(iter::once(get_self_id()));
         // TODO: Duplicated
         last_mut!(self).black_box.push(BlackBox {
             doc: "Difference tree".to_string(),
@@ -932,7 +934,7 @@ impl<'a> WASMCodeGen<'a> {
             })
             .collect();
 
-        if grouped.get(&self.self_id).is_none() {
+        if grouped.get(&get_self_id()).is_none() {
             todo!("need any field in struct of application")
         }
         self.grouped_map = grouped;
