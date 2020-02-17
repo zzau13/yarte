@@ -9,6 +9,8 @@ use yarte_parser::{parse, source_map::get_cursor};
 
 use crate::CodeGen;
 
+mod tree_diff;
+
 use super::WASMCodeGen;
 
 fn tokens(src: &str) -> String {
@@ -97,7 +99,7 @@ fn test() {
 
         #[doc = "Internal elements and difference tree"]
         pub struct TestBlackBox {
-            #[doc = "Yarte Node element\n\n```\nformat ! ( \"{}\" , self . foo )\n```" ]
+            #[doc = "Yarte Node element" ]
             pub __ynode__0: yarte::web::Element,
             #[doc = "Difference tree"]
             pub t_root: u8
