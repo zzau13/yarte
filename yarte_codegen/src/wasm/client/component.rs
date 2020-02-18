@@ -4,7 +4,7 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::Ident;
 
-use yarte_dom::dom::{Attribute, Document, Element, ExprId, ExprOrText, Node};
+use yarte_dom::dom::{Attribute, Element, ExprId, ExprOrText, Node};
 
 use super::WASMCodeGen;
 
@@ -16,7 +16,11 @@ pub fn clean() {
     CACHE.with(|c| c.borrow_mut().clear())
 }
 
-pub fn get_component(id: ExprId, doc: &Document, builder: &mut WASMCodeGen) -> Ident {
+pub fn get_component<'a, I: Iterator<Item = &'a Node>>(
+    id: ExprId,
+    doc: I,
+    builder: &mut WASMCodeGen,
+) -> Ident {
     ComponentBuilder::new(id, builder).build(doc)
 }
 
@@ -39,7 +43,7 @@ impl<'a, 'b> ComponentBuilder<'a, 'b> {
         }
     }
 
-    fn build(mut self, doc: &Document) -> Ident {
+    fn build<'c, I: Iterator<Item = &'c Node>>(mut self, doc: I) -> Ident {
         let ident = format_ident!("component_{}", self.id);
 
         let doc: Vec<&Node> = Self::filter(doc).collect();
@@ -60,7 +64,7 @@ impl<'a, 'b> ComponentBuilder<'a, 'b> {
                     self.tokens.extend(quote! {
                         let #id = doc.create_element(#tag).unwrap_throw();
                     });
-                    self.step(children, &id);
+                    self.step(children.iter(), &id);
                     self.set_attrs(&id, attrs);
 
                     self.tokens.extend(quote!(#id))
@@ -86,14 +90,14 @@ impl<'a, 'b> ComponentBuilder<'a, 'b> {
         })
     }
 
-    fn filter(doc: &Document) -> impl Iterator<Item = &Node> {
-        doc.iter().filter(|x| match x {
+    fn filter<'c, I: Iterator<Item = &'c Node>>(doc: I) -> impl Iterator<Item = &'c Node> {
+        doc.filter(|x| match x {
             Node::Elem(Element::Text(t)) => !t.chars().all(|x| x.is_whitespace()),
             _ => true,
         })
     }
 
-    fn step(&mut self, doc: &Document, p_id: &Ident) {
+    fn step<'c, I: Iterator<Item = &'c Node>>(&mut self, doc: I, p_id: &Ident) {
         let doc: Vec<&Node> = Self::filter(doc).collect();
         for node in &doc {
             match node {
@@ -114,7 +118,7 @@ impl<'a, 'b> ComponentBuilder<'a, 'b> {
                     });
                     self.set_attrs(&id, attrs);
 
-                    self.step(children, &id);
+                    self.step(children.iter(), &id);
                 }
                 Node::Elem(Element::Text(s)) => {
                     if doc.len() == 1 {

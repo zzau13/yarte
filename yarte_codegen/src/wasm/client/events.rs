@@ -4,7 +4,46 @@ use syn::{parse2, punctuated::Punctuated, ExprCall, ExprPath, ExprStruct, Ident,
 
 use yarte_dom::dom::ExprId;
 
-use super::{BlackBox, Parent, WASMCodeGen};
+use super::{utils::get_vdom_ident, BlackBox, Parent, WASMCodeGen};
+
+// TODO: attribute prevent default, event and event type
+#[allow(unused_variables)]
+fn get_closure(msg: &syn::Expr) -> (TokenStream, TokenStream) {
+    use syn::Expr::*;
+    let (msg, cloned) = match msg {
+        Path(ExprPath { attrs, qself, path }) => (quote!(#msg), quote!()),
+        Call(ExprCall {
+            attrs, func, args, ..
+        }) => {
+            let mut new: Punctuated<Ident, Token![,]> = Punctuated::new();
+            let mut cloned = TokenStream::new();
+            for (count, arg) in args.iter().enumerate() {
+                let ident = format_ident!("__cloned__{}", count);
+                cloned.extend(quote!(let #ident = (#arg).clone();));
+                new.push(ident);
+            }
+            (quote!(#func(#new)), cloned)
+        }
+        Struct(ExprStruct {
+            attrs,
+            path,
+            fields,
+            dot2_token,
+            rest,
+            ..
+        }) => todo!("message struct"),
+        _ => panic!("no valid expression at `on` attribute"),
+    };
+    (
+        quote! {
+            Closure::wrap(Box::new(move |__event: yarte::web::Event| {
+                    __event.prevent_default();
+                    __cloned__.send(#msg);
+                }) as Box<dyn Fn(yarte::web::Event)>)
+        },
+        cloned,
+    )
+}
 
 impl<'a> WASMCodeGen<'a> {
     pub(super) fn write_event(&mut self, id: ExprId, event: &str, msg: &syn::Expr) {
@@ -29,14 +68,14 @@ impl<'a> WASMCodeGen<'a> {
                 (vars.is_empty(), quote!(self.#ident))
             }
             Parent::Expr(i) => {
-                let ident = Self::get_vdom_ident(*i);
+                let ident = get_vdom_ident(*i);
                 (false, quote!(#ident))
             }
             Parent::Head => todo!(),
         };
 
         // Make closure expression
-        let (closure_expr, clones) = Self::get_closure(msg);
+        let (closure_expr, clones) = get_closure(msg);
 
         if forget {
             let current = last_mut!(self);
@@ -108,44 +147,5 @@ impl<'a> WASMCodeGen<'a> {
                 ty: parse2(quote!(yarte::web::Element)).unwrap(),
             });
         };
-    }
-
-    // TODO: attribute prevent default, event and event type
-    #[allow(unused_variables)]
-    fn get_closure(msg: &syn::Expr) -> (TokenStream, TokenStream) {
-        use syn::Expr::*;
-        let (msg, cloned) = match msg {
-            Path(ExprPath { attrs, qself, path }) => (quote!(#msg), quote!()),
-            Call(ExprCall {
-                attrs, func, args, ..
-            }) => {
-                let mut new: Punctuated<Ident, Token![,]> = Punctuated::new();
-                let mut cloned = TokenStream::new();
-                for (count, arg) in args.iter().enumerate() {
-                    let ident = format_ident!("__cloned__{}", count);
-                    cloned.extend(quote!(let #ident = (#arg).clone();));
-                    new.push(ident);
-                }
-                (quote!(#func(#new)), cloned)
-            }
-            Struct(ExprStruct {
-                attrs,
-                path,
-                fields,
-                dot2_token,
-                rest,
-                ..
-            }) => todo!("message struct"),
-            _ => panic!("no valid expression at `on` attribute"),
-        };
-        (
-            quote! {
-                Closure::wrap(Box::new(move |__event: yarte::web::Event| {
-                        __event.prevent_default();
-                        __cloned__.send(#msg);
-                    }) as Box<dyn Fn(yarte::web::Event)>)
-            },
-            cloned,
-        )
     }
 }
