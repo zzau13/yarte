@@ -36,14 +36,7 @@ fn test_diff_u16() {
 
             #[doc(hidden)]
             #[inline]
-            fn __hydrate (&mut self, __addr: &yarte::Addr<Self>) {
-                let __ybody = yarte::web::window()
-                    .unwrap_throw()
-                    .document()
-                    .unwrap_throw()
-                    .body()
-                    .unwrap_throw();
-            }
+            fn __hydrate (&mut self, __addr: &yarte::Addr<Self>) { }
 
             #[doc(hidden)]
             fn __dispatch(&mut self, __msg: Self::Message, __addr: &yarte::Addr<Self>) {
@@ -130,14 +123,7 @@ fn test_diff_u16_1() {
 
             #[doc(hidden)]
             #[inline]
-            fn __hydrate (&mut self, __addr: &yarte::Addr<Self>) {
-                let __ybody = yarte::web::window()
-                    .unwrap_throw()
-                    .document()
-                    .unwrap_throw()
-                    .body()
-                    .unwrap_throw();
-            }
+            fn __hydrate (&mut self, __addr: &yarte::Addr<Self>) { }
 
             #[doc(hidden)]
             fn __dispatch(&mut self, __msg: Self::Message, __addr: &yarte::Addr<Self>) {

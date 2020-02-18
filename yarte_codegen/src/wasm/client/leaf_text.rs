@@ -7,7 +7,7 @@ use syn::{punctuated::Punctuated, Expr, Token};
 use yarte_dom::dom::{Document, Element, Expression, Node, TreeMap, VarId, VarInner};
 
 pub fn get_leaf_text(
-    children: &Document,
+    children: Document,
     tree_map: &TreeMap,
     var_map: &HashMap<VarId, VarInner>,
 ) -> (BTreeSet<VarId>, TokenStream) {
@@ -37,7 +37,7 @@ impl<'a> LeafTextBuilder<'a> {
         }
     }
 
-    fn build(mut self, children: &Document) -> (BTreeSet<VarId>, TokenStream) {
+    fn build(mut self, children: Document) -> (BTreeSet<VarId>, TokenStream) {
         self.init(children);
 
         let args = self.buff_args;
@@ -45,7 +45,7 @@ impl<'a> LeafTextBuilder<'a> {
         (self.buff, quote!(format!(#expr, #args)))
     }
 
-    fn init(&mut self, children: &Document) {
+    fn init(&mut self, children: Document) {
         for child in children {
             match child {
                 Node::Elem(Element::Text(t)) => self
@@ -54,10 +54,10 @@ impl<'a> LeafTextBuilder<'a> {
                 Node::Expr(e) => match e {
                     // TODO
                     Expression::Safe(id, e) | Expression::Unsafe(id, e) => {
-                        let vars = self.tree_map.get(id).expect("Expression to be defined");
+                        let vars = self.tree_map.get(&id).expect("Expression to be defined");
                         self.buff.extend(vars);
                         self.buff_expr.push_str("{}");
-                        self.buff_args.push(*e.clone());
+                        self.buff_args.push(*e);
                     }
                     Expression::Each(_id, _e) => todo!(),
                     Expression::IfElse(_id, _e) => todo!(),
