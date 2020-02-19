@@ -236,9 +236,9 @@ impl<Wr: Write> HtmlSerializer<Wr> {
         self.writer.write_all(b">")
     }
 
-    pub fn end(&mut self, parent: Option<QualName>) -> io::Result<()> {
+    pub fn end(&mut self, parent: Option<&QualName>) -> io::Result<()> {
         if let Some(name) = parent {
-            self.tag_whitespace(&name)?;
+            self.tag_whitespace(name)?;
         } else if let Some(text) = &self.next_ws.take() {
             match self.skip_ws {
                 Some(Ws::C) => self.writer.write_all(b" ")?,
