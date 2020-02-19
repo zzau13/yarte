@@ -64,7 +64,7 @@ impl<'a> WASMCodeGen<'a> {
 
         let (forget, dom) = match &last!(self).id {
             Parent::Body => {
-                let ident = self.get_global_bbox_ident();
+                let ident = self.get_global_bb_ident();
                 (vars.is_empty(), quote!(self.#ident))
             }
             Parent::Expr(i) => {

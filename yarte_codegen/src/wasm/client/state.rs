@@ -30,6 +30,7 @@ pub enum Step {
 // TODO: use HTMLCollection
 pub struct PathStep<'a, I: Iterator<Item = &'a Step>>(pub I);
 
+// TODO: to node and unchecked cast to node type
 impl<'a, I: Iterator<Item = &'a Step>> PathStep<'a, I> {
     pub fn into_tokens(self, tokens: &mut TokenStream) {
         for i in self.0 {

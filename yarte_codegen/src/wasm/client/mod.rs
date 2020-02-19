@@ -77,7 +77,7 @@ impl<'a> WASMCodeGen<'a> {
     }
 
     // Getters
-    fn get_black_box_t_root<I: Iterator<Item = VarId>>(&self, parents: I) -> (TokenStream, usize) {
+    fn get_bb_t_root<I: Iterator<Item = VarId>>(&self, parents: I) -> (TokenStream, usize) {
         let len = parents.fold(0, |acc, x| {
             acc + self
                 .grouped_map
@@ -87,6 +87,35 @@ impl<'a> WASMCodeGen<'a> {
         });
 
         get_t_root_type(len)
+    }
+
+    #[inline]
+    fn get_current_bb(&self) -> TokenStream {
+        match &last!(self).id {
+            Parent::Expr(id) => {
+                let ident = get_vdom_ident(*id);
+                quote!(#ident)
+            }
+            _ => {
+                let ident = self.get_global_bb_ident();
+                quote!(self.#ident)
+            }
+        }
+    }
+
+    #[inline]
+    fn get_global_bb_ident(&self) -> Ident {
+        self.s
+            .fields
+            .iter()
+            .find_map(|x| {
+                if is_black_box(&x.ty) {
+                    Some(x.ident.clone().unwrap())
+                } else {
+                    None
+                }
+            })
+            .expect("Black box field")
     }
 
     fn get_initial_state(&self) -> TokenStream {
@@ -179,35 +208,6 @@ impl<'a> WASMCodeGen<'a> {
     }
 
     #[inline]
-    fn get_current_black_box(&self) -> TokenStream {
-        match &last!(self).id {
-            Parent::Expr(id) => {
-                let ident = get_vdom_ident(*id);
-                quote!(#ident)
-            }
-            _ => {
-                let ident = self.get_global_bbox_ident();
-                quote!(self.#ident)
-            }
-        }
-    }
-
-    #[inline]
-    fn get_global_bbox_ident(&self) -> Ident {
-        self.s
-            .fields
-            .iter()
-            .find_map(|x| {
-                if is_black_box(&x.ty) {
-                    Some(x.ident.clone().unwrap())
-                } else {
-                    None
-                }
-            })
-            .expect("Black box field")
-    }
-
-    #[inline]
     fn get_checks(&self, check: BTreeMap<VarId, (Vec<usize>, usize)>) -> TokenStream {
         let mut buff: Vec<TokenStream> = check
             .into_iter()
@@ -267,7 +267,7 @@ impl<'a> WASMCodeGen<'a> {
                     let ident = get_vdom_ident(i);
                     quote!(#ident)
                 } else {
-                    let bb = self.get_global_bbox_ident();
+                    let bb = self.get_global_bb_ident();
                     quote!(self.#bb)
                 };
 
@@ -364,8 +364,8 @@ impl<'a> WASMCodeGen<'a> {
     #[inline]
     // TODO
     fn init_render(&self, curr: &mut State) -> TokenStream {
-        let name = self.get_global_bbox_ident();
-        let (base, _) = self.get_black_box_t_root(iter::once(get_self_id()));
+        let name = self.get_global_bb_ident();
+        let (base, _) = self.get_bb_t_root(iter::once(get_self_id()));
         let render = self.get_render(curr);
         let render = quote! {
             if self.#name.t_root == <#base as yarte::YNumber>::zero() {
@@ -588,7 +588,7 @@ impl<'a> WASMCodeGen<'a> {
 
         let dom = match &last!(self).id {
             Parent::Body => {
-                let ident = self.get_global_bbox_ident();
+                let ident = self.get_global_bb_ident();
                 quote!(self.#ident)
             }
             Parent::Expr(i) => {
@@ -651,7 +651,7 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
         let hydrate = Self::init_hydrate(&mut curr);
 
         // Black box ident and type
-        let bb_ident = self.get_global_bbox_ident();
+        let bb_ident = self.get_global_bb_ident();
         let bb_type = format_ident!("{}BlackBox", self.s.ident);
 
         let mut render = self.init_render(&mut curr);

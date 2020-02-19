@@ -153,7 +153,7 @@ fn to_domfmt(ir: Vec<HIR>, opts: SerializerOpt) -> ParseResult<Vec<HIR>> {
 
 fn serialize_domfmt(sink: Sink, mut ir: Vec<HIR>, opts: SerializerOpt) -> ParseResult<Vec<HIR>> {
     let mut writer = Vec::new();
-    serialize(&mut writer, &sink.into(), opts).expect("some serialize node");
+    serialize(&mut writer, sink.into(), opts).expect("some serialize node");
 
     let html = String::from_utf8(writer).expect("");
     let mut chunks = html.split(MARK).peekable();
