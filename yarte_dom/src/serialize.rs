@@ -32,13 +32,14 @@ pub struct Tree {
 }
 
 impl From<Sink> for Tree {
-    fn from(sink: Sink) -> Tree {
+    fn from(mut sink: Sink) -> Tree {
         use ParseElement::*;
 
-        let nodes = match sink.nodes.values().next() {
+        let first = *sink.nodes.keys().next().expect("One node");
+        let nodes = match sink.nodes.remove(&first) {
             Some(Document(children)) => {
                 let mut tree = vec![TreeElement::DocType];
-                tree.extend(get_children(children, &sink));
+                tree.extend(get_children(children.into_iter(), &mut sink));
                 tree
             }
             Some(Node {
@@ -47,17 +48,17 @@ impl From<Sink> for Tree {
                 children,
                 ..
             }) => {
-                if is_marquee(name) {
-                    get_children(children, &sink)
+                if is_marquee(&name) {
+                    get_children(children.into_iter(), &mut sink)
                 } else {
                     vec![TreeElement::Node {
-                        name: name.clone(),
-                        attrs: attrs.to_vec(),
-                        children: get_children(children, &sink),
+                        name,
+                        attrs,
+                        children: get_children(children.into_iter(), &mut sink),
                     }]
                 }
             }
-            Some(Text(s)) => vec![TreeElement::Text(s.clone())],
+            Some(Text(s)) => vec![TreeElement::Text(s)],
             None => vec![],
         };
 
@@ -65,16 +66,16 @@ impl From<Sink> for Tree {
     }
 }
 
-fn get_children(children: &[ParseNodeId], sink: &Sink) -> Vec<TreeElement> {
+fn get_children<I: Iterator<Item = ParseNodeId>>(children: I, sink: &mut Sink) -> Vec<TreeElement> {
     use ParseElement::*;
     let mut tree = vec![];
     for child in children {
-        match sink.nodes.get(child).expect("Child") {
-            Text(s) => {
+        match sink.nodes.remove(&child).expect("Child") {
+            Text(mut s) => {
                 if let Some(TreeElement::Text(last)) = tree.last_mut() {
-                    last.push_str(s);
+                    last.extend(s.drain(..));
                 } else {
-                    tree.push(TreeElement::Text(s.clone()))
+                    tree.push(TreeElement::Text(s))
                 }
             }
             Node {
@@ -83,9 +84,9 @@ fn get_children(children: &[ParseNodeId], sink: &Sink) -> Vec<TreeElement> {
                 children,
                 ..
             } => tree.push(TreeElement::Node {
-                name: name.clone(),
-                attrs: attrs.to_vec(),
-                children: get_children(children, sink),
+                name,
+                attrs,
+                children: get_children(children.into_iter(), sink),
             }),
             _ => panic!("Expect document in root"),
         }
@@ -103,7 +104,7 @@ impl Tree {
 fn _serialize<W: Write>(
     nodes: Vec<TreeElement>,
     serializer: &mut HtmlSerializer<W>,
-    parent: Option<QualName>,
+    parent: Option<&QualName>,
 ) -> io::Result<()> {
     use TreeElement::*;
     for node in nodes {
@@ -117,8 +118,8 @@ fn _serialize<W: Write>(
                     name.clone(),
                     attrs.iter().map(|x| (&x.name, x.value.as_str())),
                 )?;
-                _serialize(children, serializer, Some(name.clone()))?;
-                serializer.end_elem(name.clone())?
+                _serialize(children, serializer, Some(&name))?;
+                serializer.end_elem(name)?
             }
             Text(ref s) => serializer.write_text(s)?,
             DocType => serializer.write_doctype("html")?,
