@@ -29,7 +29,7 @@ impl<'a> WASMCodeGen<'a> {
         insert_point: &[InsertPath],
     ) {
         // Get current state
-        let current_bb = self.get_current_black_box();
+        let current_bb = self.get_current_bb();
         let old_on = last!(self).id;
 
         // Get bases
@@ -64,7 +64,7 @@ impl<'a> WASMCodeGen<'a> {
         let mut curr = self.stack.pop().expect("one state");
 
         // Update state
-        let (base, _) = self.get_black_box_t_root(var_id.into_iter());
+        let (base, _) = self.get_bb_t_root(var_id.into_iter());
         curr.add_t_root(base);
 
         // TODO: Multiple root
@@ -230,7 +230,7 @@ impl<'a> WASMCodeGen<'a> {
         table_dom: TokenStream,
         parent: Option<TokenStream>,
     ) -> (TokenStream, Option<TokenStream>) {
-        let bb = self.get_global_bbox_ident();
+        let bb = self.get_global_bb_ident();
         let tmp = format_ident!("__tmp__");
         let froot = get_field_root_ident();
         let steps = get_steps(

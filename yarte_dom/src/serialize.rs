@@ -8,7 +8,7 @@ use yarte_html::{
 
 use crate::sink::{ParseAttribute, ParseElement, ParseNodeId, Sink};
 
-pub fn serialize<Wr>(writer: Wr, node: &Tree, opts: SerializerOpt) -> io::Result<()>
+pub fn serialize<Wr>(writer: Wr, node: Tree, opts: SerializerOpt) -> io::Result<()>
 where
     Wr: Write,
 {
@@ -95,13 +95,13 @@ fn get_children(children: &[ParseNodeId], sink: &Sink) -> Vec<TreeElement> {
 }
 
 impl Tree {
-    pub fn serialize<W: Write>(&self, serializer: &mut HtmlSerializer<W>) -> io::Result<()> {
-        _serialize(&self.nodes, serializer, None)
+    pub fn serialize<W: Write>(self, serializer: &mut HtmlSerializer<W>) -> io::Result<()> {
+        _serialize(self.nodes, serializer, None)
     }
 }
 
 fn _serialize<W: Write>(
-    nodes: &[TreeElement],
+    nodes: Vec<TreeElement>,
     serializer: &mut HtmlSerializer<W>,
     parent: Option<QualName>,
 ) -> io::Result<()> {
@@ -120,7 +120,7 @@ fn _serialize<W: Write>(
                 _serialize(children, serializer, Some(name.clone()))?;
                 serializer.end_elem(name.clone())?
             }
-            Text(s) => serializer.write_text(s)?,
+            Text(ref s) => serializer.write_text(s)?,
             DocType => serializer.write_doctype("html")?,
         }
     }
