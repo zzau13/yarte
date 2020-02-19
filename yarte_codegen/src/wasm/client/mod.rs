@@ -40,6 +40,22 @@ use self::{
 };
 
 /// Stack automaton for parse DOM representation and generate TokenStream
+/// Theory: https://core.ac.uk/download/pdf/82195817.pdf
+///
+/// Abstract
+///
+/// > The stack automaton has a two-way input tape, a finite control and a stack.
+/// > The stack is similar to a push-down store, in that writing and erasing occur only at the top.
+/// > However, the stack head may also move up or down the stack in a read only mode.
+/// > Here, nonerasing stack automata only, are considered.
+/// > These are stack automata that never erase a symbol from their stack.
+/// > It is shown that the deterministic, nonerasing stack automaton is equivalent
+/// > to a deterministic, off-line Turing machine whose storage tape never
+/// > grows beyond n logz n cells where n is the length of the input.
+///
+///
+/// Deterministic it's equivalent n log n-bounded Turing Machine
+/// and that accepts context sensitive languages
 pub struct WASMCodeGen<'a> {
     /// State
     stack: Vec<State>,
