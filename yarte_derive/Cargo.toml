@@ -1,6 +1,6 @@
 [package]
 name = "yarte_derive"
-version = "0.6.1"
+version = "0.7.0"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "Procedural macro package for yarte"
 categories = ["template-engine", "web-programming", "gui"]
@@ -25,10 +25,10 @@ wasm-app = ["yarte_hir/wasm-app", "yarte_codegen/wasm-app", "yarte_helpers/big_n
 actix-web = ["yarte_hir/actix-web", "yarte_codegen/actix-web"]
 
 [dependencies]
-yarte_codegen = { version = "0.6", path = "../yarte_codegen" }
-yarte_helpers = { version = "0.6", path = "../yarte_helpers" }
-yarte_hir = { version = "0.6", path = "../yarte_hir" }
-yarte_parser = { version = "0.6", path = "../yarte_parser" }
+yarte_codegen = { version = "0.7.0", path = "../yarte_codegen" }
+yarte_helpers = { version = "0.7.0", path = "../yarte_helpers" }
+yarte_hir = { version = "0.7.0", path = "../yarte_hir" }
+yarte_parser = { version = "0.7.0", path = "../yarte_parser" }
 
 prettyprint = "0.7"
 proc-macro2 = { version = "1.0", features = ["span-locations"] }
