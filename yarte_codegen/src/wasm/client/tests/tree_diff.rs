@@ -8,6 +8,16 @@ fn test_diff_u16() {
     <!doctype html><html><body>
     <div>{{ foo }}{{f1}}{{f2}}{{f3}}{{f4}}{{f5}}{{f6}}{{f7}}{{f8}}</div>
     </body></html>"#;
+    let der = quote! {
+        #[derive(App)]
+        #[template(src = #src, mode = "wasm")]
+        #[msg(pub enum Msg {
+            Foo,
+        })]
+        pub struct Test {
+            black_box: <Self as App>::BlackBox,
+        }
+    };
 
     let diff = 0b0000_0001_1111_1111u16;
     let expected = quote! {
@@ -79,7 +89,7 @@ fn test_diff_u16() {
     }
         .to_string();
 
-    assert_eq!(tokens(src), expected)
+    assert_eq!(tokens(der), expected)
 }
 
 #[test]
@@ -89,6 +99,16 @@ fn test_diff_u16_1() {
     <div>{{ foo }}{{f1}}{{f2}}{{f3}}{{f4}}{{f5}}{{f6}}{{f7}}{{f8}}</div>
     <div>{{f9}}</div>
     </body></html>"#;
+    let der = quote! {
+        #[derive(App)]
+        #[template(src = #src, mode = "wasm")]
+        #[msg(pub enum Msg {
+            Foo,
+        })]
+        pub struct Test {
+            black_box: <Self as App>::BlackBox,
+        }
+    };
 
     let diff_0 = 959u16;
     let diff_1 = 64u16;
@@ -170,5 +190,5 @@ fn test_diff_u16_1() {
     }
         .to_string();
 
-    assert_eq!(tokens(src), expected)
+    assert_eq!(tokens(der), expected)
 }
