@@ -18,7 +18,7 @@ maintenance = { status = "actively-developed" }
 
 [features]
 mime = ["mime_guess"]
-client = ["indexmap", "heck", "yarte_hir/client", "yarte_dom/client", "yarte_helpers/big_num"]
+client = ["indexmap", "heck", "yarte_hir/client", "yarte_dom/client", "yarte_helpers/big_num_32"]
 actix-web = ["yarte_dom/actix-web", "yarte_hir/actix-web", "mime_guess"]
 
 [dependencies]

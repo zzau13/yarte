@@ -6,8 +6,8 @@ use std::{
     process::Command,
 };
 
-#[cfg(feature = "big_num")]
-pub mod big_num;
+#[cfg(feature = "big_num_32")]
+pub mod big_num_32;
 mod markup;
 
 pub use markup::Render;
