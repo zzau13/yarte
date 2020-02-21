@@ -3,7 +3,6 @@ members = [
     "example",
     "yarte",
     "yarte_codegen",
-    "yarte_config",
     "yarte_derive",
     "yarte_helpers",
     "yarte_hir",

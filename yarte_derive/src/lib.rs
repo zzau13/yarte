@@ -9,7 +9,7 @@ use std::{
 use proc_macro::TokenStream;
 
 use yarte_codegen::{wasm::server, CodeGen, FmtCodeGen, HTMLCodeGen, HTMLMinCodeGen, TextCodeGen};
-use yarte_config::{get_source, read_config_file, Config, PrintConfig};
+use yarte_helpers::config::{get_source, read_config_file, Config, PrintConfig};
 use yarte_hir::{generate, visit_derive, Mode, Print, Struct};
 use yarte_parser::{emitter, parse, parse_partials, source_map, Partial};
 

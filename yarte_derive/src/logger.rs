@@ -7,8 +7,7 @@ use std::{
 
 use prettyprint::{PagingMode, PrettyPrinter};
 
-use yarte_config::PrintOption;
-use yarte_helpers::helpers::definitely_not_nightly;
+use yarte_helpers::{config::PrintOption, helpers::definitely_not_nightly};
 
 pub fn log(s: &str, path: String, option: &PrintOption) {
     if definitely_not_nightly() {

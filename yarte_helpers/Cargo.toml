@@ -20,5 +20,7 @@ travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]
-yarte_config = { version = "0.6", path = "../yarte_config" }
 v_htmlescape = "0.4"
+
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.5"

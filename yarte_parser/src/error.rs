@@ -7,7 +7,7 @@ use annotate_snippets::{
 };
 use derive_more::Display;
 
-use yarte_config::Config;
+use yarte_helpers::config::Config;
 
 use crate::{source_map::Span, strnom::LexError};
 use std::{collections::BTreeMap, path::PathBuf};

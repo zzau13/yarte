@@ -4,7 +4,7 @@ use std::{mem, path::PathBuf};
 
 use syn::visit::Visit;
 
-use yarte_config::Config;
+use yarte_helpers::config::Config;
 use yarte_parser::{Helper, Node, Partial, PartialBlock, SNode};
 
 use super::{is_super, Context, Generator};

@@ -1,6 +1,4 @@
 //!
-//! `yarte_config` is the crate in charge of parsing the configure file, `yarte.toml`,
-//! to a rust object that will later be treated in the rest of the crates.
 //! Right now a Yarte configuration file can have the following:
 //!
 //! - **`main`** (general configuration - optional): with attribute
@@ -67,7 +65,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use serde_derive::Deserialize;
+use serde::Deserialize;
 
 #[derive(Debug)]
 pub struct Dir(PathBuf);
