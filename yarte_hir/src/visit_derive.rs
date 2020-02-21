@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use quote::quote;
 use syn::visit::Visit;
 
-use yarte_config::Config;
+use yarte_helpers::config::Config;
 
 use proc_macro2::TokenStream;
 use syn::{parse_str, ItemEnum};

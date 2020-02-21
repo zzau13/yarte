@@ -39,4 +39,3 @@ indexmap = { version = "1.3", optional = true }
 
 [dev-dependencies]
 yarte_parser = { version = "0.6", path = "../yarte_parser" }
-yarte_config = { version = "0.6", path = "../yarte_config" }

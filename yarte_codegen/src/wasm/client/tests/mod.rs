@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use quote::quote;
 use syn::parse2;
 
-use yarte_config::Config;
+use yarte_helpers::config::Config;
 use yarte_hir::{generate, visit_derive};
 use yarte_parser::{parse, source_map::get_cursor};
 

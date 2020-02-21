@@ -17,6 +17,7 @@ travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]
+# TODO: remove
 yarte_parser = { version = "0.6", path = "../yarte_parser" }
 
 mac = "0.1"
