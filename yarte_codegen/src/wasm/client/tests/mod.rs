@@ -1,11 +1,15 @@
 use std::collections::BTreeMap;
 
+use proc_macro2::TokenStream;
 use quote::quote;
 use syn::parse2;
 
 use yarte_helpers::config::Config;
 use yarte_hir::{generate, visit_derive};
-use yarte_parser::{parse, source_map::get_cursor};
+use yarte_parser::{
+    emitter, parse,
+    source_map::{clean, get_cursor},
+};
 
 use crate::CodeGen;
 
@@ -13,28 +17,18 @@ mod tree_diff;
 
 use super::WASMCodeGen;
 
-fn tokens(src: &str) -> String {
+fn tokens(i: TokenStream) -> String {
     let config = &Config::new("");
-    let path = config.get_dir().join("Test.hbs");
-    let der = parse2(quote! {
-        #[derive(App)]
-        #[template(src = #src, mode = "wasm")]
-        #[msg(pub enum Msg {
-            Foo,
-        })]
-        pub struct Test {
-            black_box: <Self as App>::BlackBox,
-        }
-    })
-    .unwrap();
+    let der = parse2(i).unwrap();
     let s = visit_derive(&der, config);
-    assert_eq!(s.path, path);
-    assert_eq!(s.src, src);
-    let sources = parse(get_cursor(&path, src)).unwrap();
+    let mut src = BTreeMap::new();
+    src.insert(s.path.clone(), s.src.clone());
+    let sources = parse(get_cursor(&s.path, &s.src)).unwrap();
     let mut ctx = BTreeMap::new();
-    ctx.insert(&path, sources);
+    ctx.insert(&s.path, sources);
 
-    let ir = generate(config, &s, &ctx).unwrap_or_else(|e| panic!());
+    let ir = generate(config, &s, &ctx).unwrap_or_else(|e| emitter(&src, config, e.into_iter()));
+    clean();
 
     WASMCodeGen::new(&s).gen(ir).to_string()
 }
@@ -45,6 +39,16 @@ fn test() {
     <!doctype html><html><body>
     <div>{{ foo }}</div>
     </body></html>"#;
+    let der = quote! {
+        #[derive(App)]
+        #[template(src = #src, mode = "wasm")]
+        #[msg(pub enum Msg {
+            Foo,
+        })]
+        pub struct Test {
+            black_box: <Self as App>::BlackBox,
+        }
+    };
 
     let expected = quote! {
         #[wasm_bindgen]
@@ -115,5 +119,5 @@ fn test() {
     }
     .to_string();
 
-    assert_eq!(tokens(src), expected)
+    assert_eq!(tokens(der), expected)
 }
