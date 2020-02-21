@@ -1,6 +1,5 @@
-#[path = "src/recompile.rs"]
-mod recompile;
+use yarte_helpers::recompile::when_changed;
 
 fn main() {
-    recompile::when_changed();
+    when_changed();
 }

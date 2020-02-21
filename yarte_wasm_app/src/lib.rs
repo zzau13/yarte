@@ -4,6 +4,13 @@ use std::{
     rc::Rc,
 };
 
+pub use serde_json::from_str;
+pub use wasm_bindgen::JsCast;
+pub use web_sys as web;
+
+pub use yarte_derive::Template as App;
+pub use yarte_helpers::{helpers::big_num::*, recompile};
+
 mod queue;
 
 use self::queue::Queue;
@@ -130,6 +137,7 @@ impl<A: App> Context<A> {
 }
 
 #[cfg(test)]
+#[cfg(target_arch = "wasm32")]
 mod test {
     use super::*;
     use std::default::Default;

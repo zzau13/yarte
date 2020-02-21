@@ -162,7 +162,7 @@ impl State {
                         attrs: vec![],
                         member: Member::Named(x.name.clone()),
                         colon_token: Some(<Token![:]>::default()),
-                        expr: parse2(quote!(yarte::YNumber::zero())).unwrap(),
+                        expr: parse2(quote!(yarte_wasm_app::YNumber::zero())).unwrap(),
                     });
                 } else if x.name == root {
                     acc.push(FieldValue {

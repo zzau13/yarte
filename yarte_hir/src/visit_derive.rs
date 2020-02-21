@@ -306,6 +306,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(feature = "client-wasm")]
     fn test_msg() {
         let src = r#"
             #[derive(Template)]

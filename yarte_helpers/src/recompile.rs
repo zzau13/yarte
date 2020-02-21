@@ -1,6 +1,6 @@
 use std::fs;
 
-use yarte_helpers::config::{config_file_path, read_config_file, Config};
+use crate::config::{config_file_path, read_config_file, Config};
 
 /// Recompile when changed. Put me on your `build.rs`
 pub fn when_changed() {

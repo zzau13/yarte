@@ -11,19 +11,10 @@
 //!
 
 pub use yarte_derive::Template;
-#[cfg(any(not(target_arch = "wasm32"), debug_assertions))]
-pub use yarte_helpers::{helpers::Render, Error, Result};
-#[cfg(not(target_arch = "wasm32"))]
+pub use yarte_helpers::{helpers::Render, recompile, Error, Result};
 pub use yarte_template::Template;
-#[cfg(target_arch = "wasm32")]
-pub use yarte_wasm_app::{Addr, App as Template};
 
-#[cfg(feature = "client")]
-pub use yarte_helpers::helpers::big_num::*;
-
-pub mod recompile;
-
-#[cfg(all(feature = "with-actix-web", not(target_arch = "wasm32")))]
+#[cfg(feature = "with-actix-web")]
 pub mod aw {
     pub use actix_web::{
         error::ErrorInternalServerError, Error, HttpRequest, HttpResponse, Responder,
@@ -35,13 +26,3 @@ pub mod aw {
 pub mod serde_json {
     pub use serde_json::to_string;
 }
-
-#[cfg(target_arch = "wasm32")]
-pub mod wasm {
-    pub use serde_json::from_str;
-    pub use wasm_bindgen::JsCast;
-    pub use web_sys as web;
-}
-
-#[cfg(target_arch = "wasm32")]
-pub use self::wasm::*;
