@@ -41,7 +41,7 @@ fn test() {
     </body></html>"#;
     let der = quote! {
         #[derive(App)]
-        #[template(src = #src, mode = "wasm")]
+        #[template(src = #src)]
         #[msg(pub enum Msg {
             Foo,
         })]

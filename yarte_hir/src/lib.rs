@@ -199,7 +199,8 @@ impl<'a> Generator<'a> {
                         self.buf_w.push(Writable::Expr(Box::new(expr), false));
                     }
                 }
-                #[cfg(feature = "client")]
+                // TODO: feature
+                #[cfg(feature = "wasm-app")]
                 Node::RExpr(ws, sexpr) => {
                     let mut expr = *sexpr.t().clone();
 

@@ -11,7 +11,7 @@ fn test_raw() {
 }
 
 #[derive(Template)]
-#[template(path = "raw-partial.hbs")]
+#[template(path = "raw-partial.hbs", mode = "min")]
 struct RawPartialTemplate;
 
 #[test]

@@ -90,7 +90,7 @@ impl<'a> FindEach<'a> {
             match n.t() {
                 Node::Local(expr) => self.visit_local(expr.t()),
                 Node::Expr(_, expr) | Node::Safe(_, expr) => self.visit_expr(expr.t()),
-                #[cfg(feature = "client")]
+                #[cfg(feature = "wasm-app")]
                 Node::RExpr(_, expr) => self.visit_expr(expr.t()),
                 Node::Helper(h) => {
                     let h: &Helper = &*h;
