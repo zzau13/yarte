@@ -19,23 +19,52 @@ use self::logger::log;
 
 type Sources<'a> = &'a BTreeMap<PathBuf, String>;
 
-// TODO: Split in various crates
-#[proc_macro_derive(Template, attributes(template, msg, inner))]
-pub fn derive(input: TokenStream) -> TokenStream {
-    build(&syn::parse(input).unwrap())
+macro_rules! build {
+    ($input:ident, $codegen:path) => {{
+        let i = &syn::parse($input).unwrap();
+        let config_toml: &str = &read_config_file();
+        let config = &Config::new(config_toml);
+        let s = &visit_derive(i, config);
+        let sources = &read(s.path.clone(), s.src.clone(), config);
+
+        sources_to_tokens(sources, config, s, $codegen(s)).into()
+    }};
 }
 
-#[inline]
-fn build(i: &syn::DeriveInput) -> TokenStream {
-    let config_toml: &str = &read_config_file();
-    let config = &Config::new(config_toml);
-    let s = &visit_derive(i, config);
-    let sources = &read(s.path.clone(), s.src.clone(), config);
+#[proc_macro_derive(Template, attributes(template))]
+pub fn template(input: TokenStream) -> TokenStream {
+    fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
+        let codegen: Box<dyn CodeGen> = match s.mode {
+            Mode::Text => Box::new(FmtCodeGen::new(TextCodeGen, s)),
+            Mode::HTML => Box::new(FmtCodeGen::new(HTMLCodeGen, s)),
+            Mode::HTMLMin => Box::new(FmtCodeGen::new(HTMLMinCodeGen, s)),
+            Mode::WASMServer => Box::new(FmtCodeGen::new(server::WASMCodeGen::new(s), s)),
+            #[cfg(feature = "wasm-app")]
+            Mode::WASM => panic!("Use `yarte_wasm_app` crate instead"),
+        };
 
-    sources_to_tokens(sources, config, s).into()
+        codegen
+    }
+
+    build!(input, get_codegen)
 }
 
-fn sources_to_tokens(sources: Sources, config: &Config, s: &Struct) -> proc_macro2::TokenStream {
+// TODO:
+#[proc_macro_derive(App, attributes(template, msg, inner))]
+#[cfg(feature = "wasm-app")]
+pub fn app(input: TokenStream) -> TokenStream {
+    fn build<'a>(s: &'a Struct<'a>) -> Box<dyn CodeGen + 'a> {
+        Box::new(yarte_codegen::wasm::client::WASMCodeGen::new(s))
+    }
+    build!(input, build)
+}
+
+fn sources_to_tokens<'a>(
+    sources: Sources,
+    config: &Config,
+    s: &'a Struct<'a>,
+    mut codegen: Box<dyn CodeGen + 'a>,
+) -> proc_macro2::TokenStream {
     let mut parsed = BTreeMap::new();
     for (p, src) in sources {
         let nodes = match parse(source_map::get_cursor(p, src)) {
@@ -58,7 +87,7 @@ fn sources_to_tokens(sources: Sources, config: &Config, s: &Struct) -> proc_macr
     // when multiple templates
     source_map::clean();
 
-    let tokens = get_codegen(s).gen(hir);
+    let tokens = codegen.gen(hir);
 
     if cfg!(debug_assertions) && config.print_override == PrintConfig::Code
         || config.print_override == PrintConfig::All
@@ -73,19 +102,6 @@ fn sources_to_tokens(sources: Sources, config: &Config, s: &Struct) -> proc_macr
     }
 
     tokens
-}
-
-fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
-    let codegen: Box<dyn CodeGen> = match s.mode {
-        Mode::Text => Box::new(FmtCodeGen::new(TextCodeGen, s)),
-        Mode::HTML => Box::new(FmtCodeGen::new(HTMLCodeGen, s)),
-        Mode::HTMLMin => Box::new(FmtCodeGen::new(HTMLMinCodeGen, s)),
-        #[cfg(feature = "client")]
-        Mode::WASM => Box::new(yarte_codegen::wasm::client::WASMCodeGen::new(s)),
-        Mode::WASMServer => Box::new(FmtCodeGen::new(server::WASMCodeGen::new(s), s)),
-    };
-
-    codegen
 }
 
 fn read(path: PathBuf, src: String, config: &Config) -> BTreeMap<PathBuf, String> {
