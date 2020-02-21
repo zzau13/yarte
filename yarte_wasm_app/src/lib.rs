@@ -1,3 +1,4 @@
+#![cfg(target_arch = "wasm32")]
 use std::{
     cell::{Cell, UnsafeCell},
     default::Default,
@@ -137,7 +138,6 @@ impl<A: App> Context<A> {
 }
 
 #[cfg(test)]
-#[cfg(target_arch = "wasm32")]
 mod test {
     use super::*;
     use std::default::Default;
