@@ -1,5 +1,5 @@
 #[macro_use]
-#[cfg(feature = "client")]
+#[cfg(feature = "wasm-app")]
 pub mod dom;
 pub mod dom_fmt;
 mod serialize;
