@@ -10,7 +10,7 @@ use yarte_helpers::helpers::calculate_hash;
 use super::state::{InsertPath, PathNode, PathStep};
 
 thread_local! {
-    static BB_TYPE: Type = parse2(quote!(<Self as Template>::BlackBox)).unwrap();
+    static BB_TYPE: Type = parse2(quote!(<Self as App>::BlackBox)).unwrap();
     static SELF_ID: u64 = calculate_hash(&"self");
 }
 
@@ -195,9 +195,9 @@ pub fn get_t_root_type(len: usize) -> (TokenStream, usize) {
         0..=8 => (quote!(u8), 8),
         9..=16 => (quote!(u16), 16),
         17..=32 => (quote!(u32), 32),
-        33..=64 => (quote!(yarte::U64), 64),
-        65..=128 => (quote!(yarte::U128), 128),
-        129..=256 => (quote!(yarte::U256), 256),
+        33..=64 => (quote!(yarte_wasm_app::U64), 64),
+        65..=128 => (quote!(yarte_wasm_app::U128), 128),
+        129..=256 => (quote!(yarte_wasm_app::U256), 256),
         _ => todo!("more than 256 variables per context"),
     }
 }

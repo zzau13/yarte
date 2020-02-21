@@ -36,10 +36,10 @@ fn get_closure(msg: &syn::Expr) -> (TokenStream, TokenStream) {
     };
     (
         quote! {
-            Closure::wrap(Box::new(move |__event: yarte::web::Event| {
+            Closure::wrap(Box::new(move |__event: yarte_wasm_app::web::Event| {
                     __event.prevent_default();
                     __cloned__.send(#msg);
-                }) as Box<dyn Fn(yarte::web::Event)>)
+                }) as Box<dyn Fn(yarte_wasm_app::web::Event)>)
         },
         cloned,
     )
@@ -84,7 +84,7 @@ impl<'a> WASMCodeGen<'a> {
                 let __cloned__ = __addr.clone();
                 let __closure__ = #closure_expr;
                 #name
-                    .add_event_listener_with_callback(#event, yarte::JsCast::unchecked_ref(__closure__.as_ref()))
+                    .add_event_listener_with_callback(#event, yarte_wasm_app::JsCast::unchecked_ref(__closure__.as_ref()))
                 .unwrap_throw();
                 __closure__.forget();
             });
@@ -96,14 +96,14 @@ impl<'a> WASMCodeGen<'a> {
             current.black_box.push(BlackBox {
                 doc: "".to_string(),
                 name: closure.clone(),
-                ty: parse2(quote!(Option<Closure<dyn Fn(yarte::web::Event)>>)).unwrap(),
+                ty: parse2(quote!(Option<Closure<dyn Fn(yarte_wasm_app::web::Event)>>)).unwrap(),
             });
             current.buff_new.push(quote! {
                     #clones
                     let __cloned__ = __addr.clone();
                     let #closure = Some(#closure_expr);
                     #name
-                        .add_event_listener_with_callback(#event, yarte::JsCast::unchecked_ref(#closure.as_ref().unwrap().as_ref()))
+                        .add_event_listener_with_callback(#event, yarte_wasm_app::JsCast::unchecked_ref(#closure.as_ref().unwrap().as_ref()))
                     .unwrap_throw();
                 });
             current
@@ -114,7 +114,7 @@ impl<'a> WASMCodeGen<'a> {
                     let __cloned__ = __addr.clone();
                     let __closure__ = #closure_expr;
                     #dom.#name
-                        .add_event_listener_with_callback(#event, yarte::JsCast::unchecked_ref(__closure__.as_ref()))
+                        .add_event_listener_with_callback(#event, yarte_wasm_app::JsCast::unchecked_ref(__closure__.as_ref()))
                     .unwrap_throw();
                     #dom.#closure.replace(__closure__);
                 });
@@ -124,7 +124,7 @@ impl<'a> WASMCodeGen<'a> {
                     #dom.#name
                     .remove_event_listener_with_callback(
                         #event,
-                        yarte::JsCast::unchecked_ref(#dom
+                        yarte_wasm_app::JsCast::unchecked_ref(#dom
                             .#closure
                             .as_ref()
                             .unwrap_throw()
@@ -144,7 +144,7 @@ impl<'a> WASMCodeGen<'a> {
             current.black_box.push(BlackBox {
                 doc: "Yarte Node element".to_string(),
                 name,
-                ty: parse2(quote!(yarte::web::Element)).unwrap(),
+                ty: parse2(quote!(yarte_wasm_app::web::Element)).unwrap(),
             });
         };
     }

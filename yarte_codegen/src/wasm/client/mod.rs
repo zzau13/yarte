@@ -266,15 +266,15 @@ impl<'a> WASMCodeGen<'a> {
                     }
                     64 => {
                         let tokens = get_split_32(&bits);
-                        quote!(yarte::U64([#tokens]))
+                        quote!(yarte_wasm_app::U64([#tokens]))
                     }
                     128 => {
                         let tokens = get_split_32(&bits);
-                        quote!(yarte::U128([#tokens]))
+                        quote!(yarte_wasm_app::U128([#tokens]))
                     }
                     256 => {
                         let tokens = get_split_32(&bits);
-                        quote!(yarte::U256([#tokens]))
+                        quote!(yarte_wasm_app::U256([#tokens]))
                     }
                     _ => todo!("more than 256 variables per context"),
                 };
@@ -287,7 +287,7 @@ impl<'a> WASMCodeGen<'a> {
                     quote!(self.#bb)
                 };
 
-                quote!(yarte::YNumber::neq_zero(#vdom.t_root & #number))
+                quote!(yarte_wasm_app::YNumber::neq_zero(#vdom.t_root & #number))
             })
             .collect();
         let mut buff = buff.drain(..);
@@ -349,8 +349,8 @@ impl<'a> WASMCodeGen<'a> {
         let args = self.get_state_fields();
 
         quote! {
-            let #ident { #args } = yarte::from_str(&get_state()).unwrap_or_default();
-            let doc = yarte::web::window().unwrap_throw().document().unwrap_throw();
+            let #ident { #args } = yarte_wasm_app::from_str(&get_state()).unwrap_or_default();
+            let doc = yarte_wasm_app::web::window().unwrap_throw().document().unwrap_throw();
             #build
         }
     }
@@ -363,7 +363,7 @@ impl<'a> WASMCodeGen<'a> {
         } else {
             let body = get_body_ident();
             let mut hydrate = quote! {
-                let #body = yarte::web::window().unwrap_throw()
+                let #body = yarte_wasm_app::web::window().unwrap_throw()
                     .document().unwrap_throw()
                     .body().unwrap_throw();
             };
@@ -384,7 +384,7 @@ impl<'a> WASMCodeGen<'a> {
         let (base, _) = self.get_bb_t_root(iter::once(get_self_id()));
         let render = self.get_render(curr);
         let render = quote! {
-            if self.#name.t_root == <#base as yarte::YNumber>::zero() {
+            if self.#name.t_root == <#base as yarte_wasm_app::YNumber>::zero() {
                 return;
             }
             #render
@@ -627,7 +627,7 @@ impl<'a> WASMCodeGen<'a> {
         current.black_box.push(BlackBox {
             doc: "Yarte Node element".into(),
             name,
-            ty: parse2(quote!(yarte::web::Element)).unwrap(),
+            ty: parse2(quote!(yarte_wasm_app::web::Element)).unwrap(),
         });
     }
 
@@ -673,12 +673,12 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
         let mut render = self.init_render(&mut curr);
         // Ended 'render' buffer
         render.extend(quote! {
-            self.#bb_ident.t_root = yarte::YNumber::zero();
+            self.#bb_ident.t_root = yarte_wasm_app::YNumber::zero();
         });
 
         // BlackBox
         // TODO: specify component type
-        let component_type: Type = parse2(quote!(yarte::web::Element)).unwrap();
+        let component_type: Type = parse2(quote!(yarte_wasm_app::web::Element)).unwrap();
         let mut bb_field_value = curr.get_black_box_fields(&get_field_root_ident(), true);
 
         for (i, _) in &self.component {
@@ -733,17 +733,17 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
 
             #[doc(hidden)]
             #[inline]
-            fn __render(&mut self, __addr: &yarte::Addr<Self>) { # render }
+            fn __render(&mut self, __addr: &yarte_wasm_app::Addr<Self>) { # render }
 
             #[doc(hidden)]
             #[inline]
-            fn __hydrate(&mut self, __addr: &yarte::Addr<Self>) { # hydrate }
+            fn __hydrate(&mut self, __addr: &yarte_wasm_app::Addr<Self>) { # hydrate }
 
             #[doc(hidden)]
-            fn __dispatch(&mut self, __msg: Self::Message, __addr: &yarte::Addr<Self>) { #dispatch }
+            fn __dispatch(&mut self, __msg: Self::Message, __addr: &yarte_wasm_app::Addr<Self>) { #dispatch }
         };
         // Implement App trait
-        let app = self.s.implement_head(quote!(yarte::Template), &app);
+        let app = self.s.implement_head(quote!(yarte_wasm_app::App), &app);
         let helpers = &self.helpers;
 
         let initial_state = self.get_initial_state();

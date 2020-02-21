@@ -2,9 +2,9 @@ use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::HtmlInputElement;
 
 use model::Fortune;
-use yarte::Template;
+use yarte_wasm_app::{App, Addr};
 
-#[derive(Template)]
+#[derive(App)]
 #[template(path = "fortune.hbs", mode = "wasm", print = "code")]
 #[msg(pub enum Msg {
     Clear,
@@ -20,13 +20,13 @@ pub struct Test {
     // TODO: in template with update function
     #[inner("build_foo")]
     foo: HtmlInputElement,
-    black_box: <Self as Template>::BlackBox,
+    black_box: <Self as App>::BlackBox,
 }
 
 // TODO: in template with update function
 #[inline]
 fn build_foo() -> HtmlInputElement {
-    yarte::web::window()
+    web_sys::window()
         .unwrap()
         .document()
         .unwrap()
@@ -36,14 +36,14 @@ fn build_foo() -> HtmlInputElement {
 }
 
 #[inline]
-fn clear(app: &mut Test, _addr: &yarte::Addr<Test>) {
+fn clear(app: &mut Test, _addr: &Addr<Test>) {
     app.fortunes.clear();
     // TODO: macro
     app.black_box.t_root |= 1u8;
 }
 
 #[inline]
-fn delete(app: &mut Test, id: u32, _addr: &yarte::Addr<Test>) {
+fn delete(app: &mut Test, id: u32, _addr: &Addr<Test>) {
     let index = app.fortunes.iter().position(|x| x.id == id).unwrap();
     app.fortunes.remove(index);
     // TODO: macro
@@ -52,7 +52,7 @@ fn delete(app: &mut Test, id: u32, _addr: &yarte::Addr<Test>) {
 }
 
 #[inline]
-fn add(app: &mut Test, _addr: &yarte::Addr<Test>) {
+fn add(app: &mut Test, _addr: &Addr<Test>) {
     let message = app.foo.value();
     let id = app.count;
     app.count += 1;
@@ -66,7 +66,7 @@ fn add(app: &mut Test, _addr: &yarte::Addr<Test>) {
 }
 
 #[inline]
-fn add10(app: &mut Test, _addr: &yarte::Addr<Test>) {
+fn add10(app: &mut Test, _addr: &Addr<Test>) {
     for _ in 0..10 {
         let id = app.count;
         app.count += 1;
@@ -80,7 +80,7 @@ fn add10(app: &mut Test, _addr: &yarte::Addr<Test>) {
 }
 
 #[inline]
-fn add20(app: &mut Test, _addr: &yarte::Addr<Test>) {
+fn add20(app: &mut Test, _addr: &Addr<Test>) {
     for _ in 0..20 {
         let id = app.count;
         app.count += 1;

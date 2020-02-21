@@ -71,7 +71,7 @@ impl<'a> WASMCodeGen<'a> {
         curr.black_box.push(BlackBox {
             doc: "root dom element".to_string(),
             name: get_field_root_ident(),
-            ty: parse2(quote!(yarte::web::Element)).unwrap(),
+            ty: parse2(quote!(yarte_wasm_app::web::Element)).unwrap(),
         });
 
         // Write component
@@ -215,7 +215,7 @@ impl<'a> WASMCodeGen<'a> {
         last.black_box.push(BlackBox {
             doc: "Each DOM Element".to_string(),
             name: table_dom,
-            ty: parse2(quote!(yarte::web::Element)).unwrap(),
+            ty: parse2(quote!(yarte_wasm_app::web::Element)).unwrap(),
         });
     }
 
@@ -260,9 +260,9 @@ impl<'a> WASMCodeGen<'a> {
             (
                 quote!(#table_dom.insert_before(&#vdom.#froot, __cached__.as_ref()).unwrap_throw();),
                 Some(if parent.is_some() {
-                    quote!(#table_dom.children().item(#tokens + __dom_len__ as u32).map(yarte::JsCast::unchecked_into::<yarte::web::Node>))
+                    quote!(#table_dom.children().item(#tokens + __dom_len__ as u32).map(yarte_wasm_app::JsCast::unchecked_into::<yarte_wasm_app::web::Node>))
                 } else {
-                    quote!(#table_dom.children().item(#tokens).map(yarte::JsCast::unchecked_into::<yarte::web::Node>))
+                    quote!(#table_dom.children().item(#tokens).map(yarte_wasm_app::JsCast::unchecked_into::<yarte_wasm_app::web::Node>))
                 }),
             )
         };
@@ -270,7 +270,7 @@ impl<'a> WASMCodeGen<'a> {
         let build = &curr.buff_new;
         (
             quote! {
-                 let #tmp = yarte::JsCast::unchecked_into::<yarte::web::Element>(self.#bb.#component
+                 let #tmp = yarte_wasm_app::JsCast::unchecked_into::<yarte_wasm_app::web::Element>(self.#bb.#component
                      .clone_node_with_deep(true)
                      .unwrap_throw());
                  #steps
@@ -378,7 +378,7 @@ impl<'a> WASMCodeGen<'a> {
                         .zip(#args)
                     {
                         #render
-                        #vdom.t_root = yarte::YNumber::zero();
+                        #vdom.t_root = yarte_wasm_app::YNumber::zero();
                     }
                 }
             } else {
@@ -386,10 +386,10 @@ impl<'a> WASMCodeGen<'a> {
                     for (#vdom, #expr) in #table
                         .iter_mut()
                         .zip(#args)
-                        .filter(|(__d__, _)| yarte::YNumber::neq_zero(__d__.t_root))
+                        .filter(|(__d__, _)| yarte_wasm_app::YNumber::neq_zero(__d__.t_root))
                         {
                             #render
-                            #vdom.t_root = yarte::YNumber::zero();
+                            #vdom.t_root = yarte_wasm_app::YNumber::zero();
                         }
                 }
             }
