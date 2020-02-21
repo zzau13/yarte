@@ -33,4 +33,3 @@ script:
   - cargo test --all-features --all -- --nocapture
   - cd yarte && cargo test -- --nocapture && cd ..
   - cd yarte_wasm_app && wasm-pack test --node
-  - cd benches && wasm-pack build --target web --release
