@@ -5,7 +5,7 @@ Yarte implements template with `actix-web`'s `Responder` trait to make it easier
 in this framework. This is done using feature `with-actix-web` of your `Cargo.toml`:
 
 ```toml
-yarte = { version = "0.6", features = ["with-actix-web"]  }
+yarte = { version = "0.7", features = ["with-actix-web"]  }
 ```
 
 For example, let's create an api with `actix-web` that will serve a template `index` when the root url is called.

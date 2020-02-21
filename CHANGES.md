@@ -1,4 +1,15 @@
 # Changes
+## [0.7.0] (2020-02-21)
+## Fixed 
+- Use `html` mode by default
+- Unnecessary alloc
+
+## Refactor
+- Remove yarte_template crate
+- Add new derive App
+- Move wasm app derive and helpers to yarte_wasm_app
+- Rename features
+
 ## [0.6.0] (2020-02-03)
 ### Added
 - Html minifier 
