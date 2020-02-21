@@ -1,7 +1,7 @@
 use yarte::Template;
 
 #[derive(Template)]
-#[template(path = "title.hbs")]
+#[template(path = "title.hbs", mode = "min")]
 struct TitleTemplate<'a> {
     title: &'a str,
 }
@@ -13,7 +13,7 @@ fn test_title() {
 }
 
 #[derive(Template)]
-#[template(path = "article-title-template.hbs")]
+#[template(path = "article-title-template.hbs", mode = "min")]
 struct ArticleTitleTemplate<'a> {
     article: Article<'a>,
 }

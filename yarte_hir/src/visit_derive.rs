@@ -110,7 +110,7 @@ impl StructBuilder {
         let mode = self.mode.map(Into::into).unwrap_or_else(|| {
             if let Some(e) = path.extension() {
                 if HTML_EXTENSIONS.contains(&e.to_str().unwrap()) {
-                    return Mode::HTMLMin;
+                    return Mode::HTML;
                 }
             }
 
@@ -241,7 +241,7 @@ pub enum Mode {
     Text,
     HTML,
     HTMLMin,
-    #[cfg(feature = "client")]
+    #[cfg(feature = "wasm-app")]
     WASM,
     WASMServer,
 }
@@ -251,8 +251,8 @@ impl From<String> for Mode {
         match s.as_ref() {
             "text" => Mode::Text,
             "html" => Mode::HTML,
-            "html-min" => Mode::HTMLMin,
-            #[cfg(feature = "client")]
+            "html-min" | "min" => Mode::HTMLMin,
+            #[cfg(feature = "wasm-app")]
             "wasm" | "client" | "front" => Mode::WASM,
             "wasm-server" | "iso" | "server" | "back" => Mode::WASMServer,
             v => panic!("invalid value for mode attribute: {}", v),
@@ -303,24 +303,5 @@ mod test {
         assert_eq!(s.path, config.get_dir().join(PathBuf::from("Test.txt")));
         assert_eq!(s.print, Print::Code);
         assert_eq!(s.mode, Mode::Text);
-    }
-
-    #[test]
-    #[cfg(feature = "client-wasm")]
-    fn test_msg() {
-        let src = r#"
-            #[derive(Template)]
-            #[template(src = "", ext = "txt", mode = "wasm")]
-            #[msg(enum Msg {
-                #[foo::bar]
-                Foo(usize, Bar)
-            })]
-            struct Test;
-        "#;
-        let i = parse_str::<syn::DeriveInput>(src).unwrap();
-        let config = Config::new("");
-        let s = visit_derive(&i, &config);
-
-        assert_eq!(s.mode, Mode::WASM);
     }
 }

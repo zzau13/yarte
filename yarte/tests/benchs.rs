@@ -24,7 +24,7 @@ fn big_table() {
 }
 
 #[derive(Template)]
-#[template(path = "big-table.hbs")]
+#[template(path = "big-table.hbs", mode = "min")]
 struct BigTable {
     table: Vec<Vec<usize>>,
 }
@@ -63,7 +63,7 @@ fn teams() {
 }
 
 #[derive(Template)]
-#[template(path = "teams.hbs")]
+#[template(path = "teams.hbs", mode = "min")]
 struct Teams {
     year: u16,
     teams: Vec<Team>,

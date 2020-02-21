@@ -56,6 +56,7 @@ pub fn app(input: TokenStream) -> TokenStream {
     fn build<'a>(s: &'a Struct<'a>) -> Box<dyn CodeGen + 'a> {
         Box::new(yarte_codegen::wasm::client::WASMCodeGen::new(s))
     }
+
     build!(input, build)
 }
 

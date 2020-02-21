@@ -11,7 +11,11 @@ struct Fortune {
 }
 
 #[derive(Template, Serialize)]
-#[template(path = "html/fortune.hbs", mode = "iso", script = "./pkg/example.js")]
+#[template(
+    path = "html/fortune.hbs",
+    mode = "server",
+    script = "./pkg/example.js"
+)]
 struct WasmServer {
     fortunes: Vec<Fortune>,
 }

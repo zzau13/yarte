@@ -8,7 +8,7 @@ pub struct Fortune {
 }
 
 #[derive(Template)]
-#[template(path = "html/fortune.hbs")]
+#[template(path = "html/fortune.hbs", mode = "min")]
 pub struct FortunesTemplate {
     fortunes: Vec<Fortune>,
 }
@@ -55,7 +55,7 @@ struct Header {
 }
 
 #[derive(Template)]
-#[template(path = "html/header.hbs")]
+#[template(path = "html/header.hbs", mode = "min")]
 struct HeaderTemplate {
     mode: Mode,
     header: Header,
@@ -89,7 +89,7 @@ fn test_header() {
 }
 
 #[derive(Template)]
-#[template(path = "html/article.hbs")]
+#[template(path = "html/article.hbs", mode = "min")]
 struct ArticleTemplate {
     flag: bool,
 }
@@ -109,7 +109,7 @@ fn test_article() {
 }
 
 #[derive(Template)]
-#[template(path = "html/pre.hbs")]
+#[template(path = "html/pre.hbs", mode = "min")]
 struct PreTemplate {
     flag: bool,
 }
@@ -126,7 +126,7 @@ fn test_pre() {
 }
 
 #[derive(Template)]
-#[template(path = "html/section.hbs")]
+#[template(path = "html/section.hbs", mode = "min")]
 struct SectionTemplate {
     flag: bool,
 }
@@ -164,9 +164,12 @@ fn test_section() {
 }
 
 #[derive(Template)]
-#[template(src = "
+#[template(
+    src = "
 <noscript> <meta> <style></style> <link></noscript>
-")]
+",
+    mode = "min"
+)]
 struct NoScript;
 
 #[test]
@@ -178,7 +181,7 @@ fn test_noscript() {
 }
 
 #[derive(Template)]
-#[template(src = "<{{ tag }}></{{ tag}}>")]
+#[template(src = "<{{ tag }}></{{ tag}}>", mode = "min")]
 struct TagExpr {
     tag: String,
 }
@@ -194,7 +197,10 @@ struct Attr {
 }
 
 #[derive(Template)]
-#[template(src = "{{#with attr}}<div {{ name }}=\"{{ value }}\"></div>{{/with }}")]
+#[template(
+    src = "{{#with attr}}<div {{ name }}=\"{{ value }}\"></div>{{/with }}",
+    mode = "min"
+)]
 struct AttrExpr {
     attr: Attr,
 }
@@ -215,7 +221,7 @@ fn test_attr_expression() {
 }
 
 #[derive(Template)]
-#[template(path = "html/raw/index.html")]
+#[template(path = "html/raw/index.html", mode = "min")]
 struct RawHtml;
 
 #[test]
