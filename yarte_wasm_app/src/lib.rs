@@ -9,7 +9,7 @@ pub use wasm_bindgen::JsCast;
 pub use web_sys as web;
 
 pub use yarte_derive::Template as App;
-pub use yarte_helpers::{helpers::big_num::*, recompile};
+pub use yarte_helpers::{helpers::big_num_32::*, recompile};
 
 mod queue;
 

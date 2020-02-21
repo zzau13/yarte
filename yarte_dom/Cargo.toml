@@ -17,7 +17,7 @@ travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [features]
-client = ["yarte_hir/client", "yarte_helpers/big_num"]
+client = ["yarte_hir/client", "yarte_helpers/big_num_32"]
 actix-web = ["yarte_hir/actix-web"]
 
 [dependencies]

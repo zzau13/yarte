@@ -19,6 +19,7 @@ use self::logger::log;
 
 type Sources<'a> = &'a BTreeMap<PathBuf, String>;
 
+// TODO: Split in various crates
 #[proc_macro_derive(Template, attributes(template, msg, inner))]
 pub fn derive(input: TokenStream) -> TokenStream {
     build(&syn::parse(input).unwrap())

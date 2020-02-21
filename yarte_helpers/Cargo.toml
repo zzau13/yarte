@@ -13,7 +13,7 @@ repository = "https://github.com/botika/yarte"
 workspace = ".."
 
 [features]
-big_num = []
+big_num_32 = []
 
 [badges]
 travis-ci = { repository = "botika/yarte", branch = "master" }
