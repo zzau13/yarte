@@ -8,6 +8,15 @@
 // except according to those terms.
 
 //! The HTML5 tree builder.
+//!
+// TODO: remove https://html.spec.whatwg.org/#optional-tags
+// TODO: Whitespace control
+// TODO: Never two text nodes one behind the other
+// TODO: svg
+// TODO: math
+// TODO: coverage
+// TODO: Use the spec html5 as possible
+// TODO: Coverage with html5lib-test
 
 #![allow(
 clippy::cognitive_complexity,
@@ -481,18 +490,6 @@ where
         elem
     }
 
-    fn remove_from_stack(&mut self, elem: &Handle) {
-        let sink = &mut self.sink;
-        let position = self
-            .open_elems
-            .iter()
-            .rposition(|x| sink.same_node(elem, &x));
-        if let Some(position) = position {
-            self.open_elems.remove(position);
-            sink.pop(elem);
-        }
-    }
-
     fn is_marker_or_open(&self, entry: &FormatEntry<Handle>) -> bool {
         // TODO
         match *entry {
@@ -790,21 +787,6 @@ where
             self.unexpected(&tag);
         }
         self.open_elems.truncate(match_idx);
-    }
-
-    fn handle_misnested_a_tags(&mut self, tag: &Tag) {
-        let node = unwrap_or_return!(
-            self.active_formatting_end_to_marker()
-                .find(|&(_, n, _)| self.html_elem_named(n, y_name!("a")))
-                .map(|(_, n, _)| n.clone()),
-            ()
-        );
-
-        self.unexpected(tag);
-        self.adoption_agency(y_name!("a"));
-        self.position_in_active_formatting(&node)
-            .map(|index| self.active_formatting.remove(index));
-        self.remove_from_stack(&node);
     }
 
     //§ tree-construction
