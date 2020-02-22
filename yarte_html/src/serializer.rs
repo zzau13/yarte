@@ -46,6 +46,7 @@ fn tagname(name: &QualName) -> YName {
     name.local.clone()
 }
 
+// TODO: optional tag
 impl<Wr: Write> HtmlSerializer<Wr> {
     pub fn new(writer: Wr, opts: SerializerOpt) -> Self {
         HtmlSerializer {

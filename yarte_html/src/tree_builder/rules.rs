@@ -181,7 +181,6 @@ where
                 }
 
                 tag @ <a> => {
-                    self.handle_misnested_a_tags(&tag);
                     self.reconstruct_formatting();
                     self.create_formatting_element_for(tag);
                     Done
