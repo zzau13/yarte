@@ -4,10 +4,10 @@ members = [
     "yarte",
     "yarte_codegen",
     "yarte_derive",
+    "yarte_format",
     "yarte_helpers",
     "yarte_hir",
     "yarte_html",
     "yarte_parser",
     "yarte_wasm_app",
-    "yarte_write",
 ]

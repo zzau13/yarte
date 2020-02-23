@@ -62,7 +62,7 @@ pub fn app(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro]
-pub fn ywrite(i: TokenStream) -> TokenStream {
+pub fn yformat(i: TokenStream) -> TokenStream {
     fn build<'a>(_s: &'a Struct<'a>) -> Box<dyn CodeGen + 'a> {
         Box::new(yarte_codegen::FnFmtCodeGen::new(HTMLCodeGen))
     }
