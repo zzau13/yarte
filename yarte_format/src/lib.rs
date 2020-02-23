@@ -7,7 +7,7 @@ use std::{
     fmt::{self, Display, Formatter},
 };
 
-pub use yarte_derive::ywrite;
+pub use yarte_derive::yformat;
 pub use yarte_helpers::{helpers::Render, recompile, Error, Result};
 
 #[doc(hidden)]
