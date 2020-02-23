@@ -7,10 +7,11 @@ use std::{
 };
 
 use proc_macro::TokenStream;
+use quote::quote;
 
 use yarte_codegen::{wasm::server, CodeGen, FmtCodeGen, HTMLCodeGen, HTMLMinCodeGen, TextCodeGen};
 use yarte_helpers::config::{get_source, read_config_file, Config, PrintConfig};
-use yarte_hir::{generate, visit_derive, Mode, Print, Struct};
+use yarte_hir::{generate, visit_derive, HIROptions, Mode, Print, Struct};
 use yarte_parser::{emitter, parse, parse_partials, source_map, Partial};
 
 mod logger;
@@ -20,14 +21,13 @@ use self::logger::log;
 type Sources<'a> = &'a BTreeMap<PathBuf, String>;
 
 macro_rules! build {
-    ($input:ident, $codegen:path) => {{
-        let i = &syn::parse($input).unwrap();
+    ($i:ident, $codegen:path, $opt:expr) => {{
         let config_toml: &str = &read_config_file();
         let config = &Config::new(config_toml);
-        let s = &visit_derive(i, config);
+        let s = &visit_derive($i, config);
         let sources = &read(s.path.clone(), s.src.clone(), config);
 
-        sources_to_tokens(sources, config, s, $codegen(s)).into()
+        sources_to_tokens(sources, config, s, $codegen(s), $opt).into()
     }};
 }
 
@@ -46,7 +46,8 @@ pub fn template(input: TokenStream) -> TokenStream {
         codegen
     }
 
-    build!(input, get_codegen)
+    let i = &syn::parse(input).unwrap();
+    build!(i, get_codegen, Default::default())
 }
 
 // TODO:
@@ -56,8 +57,30 @@ pub fn app(input: TokenStream) -> TokenStream {
     fn build<'a>(s: &'a Struct<'a>) -> Box<dyn CodeGen + 'a> {
         Box::new(yarte_codegen::wasm::client::WASMCodeGen::new(s))
     }
+    let i = &syn::parse(input).unwrap();
+    build!(i, build, Default::default())
+}
 
-    build!(input, build)
+#[proc_macro]
+pub fn ywrite(i: TokenStream) -> TokenStream {
+    fn build<'a>(_s: &'a Struct<'a>) -> Box<dyn CodeGen + 'a> {
+        Box::new(yarte_codegen::FnFmtCodeGen::new(HTMLCodeGen))
+    }
+
+    let src: syn::LitStr = syn::parse(i).unwrap();
+    let input = quote! {
+        #[template(src = #src)]
+        struct __Foo__ {}
+    };
+
+    let i = &syn::parse2(input).unwrap();
+    build!(
+        i,
+        build,
+        HIROptions {
+            resolve_to_self: false
+        }
+    )
 }
 
 fn sources_to_tokens<'a>(
@@ -65,6 +88,7 @@ fn sources_to_tokens<'a>(
     config: &Config,
     s: &'a Struct<'a>,
     mut codegen: Box<dyn CodeGen + 'a>,
+    opt: HIROptions,
 ) -> proc_macro2::TokenStream {
     let mut parsed = BTreeMap::new();
     for (p, src) in sources {
@@ -83,8 +107,8 @@ fn sources_to_tokens<'a>(
         eprintln!("{:?}\n", parsed);
     }
 
-    let hir =
-        generate(config, s, &parsed).unwrap_or_else(|e| emitter(sources, config, e.into_iter()));
+    let hir = generate(config, s, &parsed, opt)
+        .unwrap_or_else(|e| emitter(sources, config, e.into_iter()));
     // when multiple templates
     source_map::clean();
 

@@ -39,12 +39,26 @@ pub use self::{
 };
 use yarte_parser::source_map::Span;
 
+#[derive(Copy, Clone, Debug)]
+pub struct HIROptions {
+    pub resolve_to_self: bool,
+}
+
+impl Default for HIROptions {
+    fn default() -> Self {
+        Self {
+            resolve_to_self: true,
+        }
+    }
+}
+
 pub fn generate(
     c: &Config,
     s: &Struct,
     ctx: Context,
+    opt: HIROptions,
 ) -> Result<Vec<HIR>, Vec<ErrorMessage<GError>>> {
-    Generator::new(c, s, ctx).build()
+    Generator::new(c, s, ctx, opt).build()
 }
 
 pub type Context<'a> = &'a BTreeMap<&'a PathBuf, Vec<SNode<'a>>>;
@@ -65,6 +79,7 @@ enum Writable<'a> {
 /// lowering from `SNode` to `HIR`
 /// TODO: Document
 struct Generator<'a> {
+    pub(self) opt: HIROptions,
     pub(self) c: &'a Config<'a>,
     /// ast of DeriveInput
     pub(self) s: &'a Struct<'a>,
@@ -96,6 +111,7 @@ struct Generator<'a> {
 impl<'a> Clone for Generator<'a> {
     fn clone(&self) -> Self {
         Self {
+            opt: self.opt,
             c: self.c,
             s: self.s,
             scp: self.scp.clone(),
@@ -115,8 +131,14 @@ impl<'a> Clone for Generator<'a> {
 }
 
 impl<'a> Generator<'a> {
-    fn new<'n>(c: &'n Config<'n>, s: &'n Struct<'n>, ctx: Context<'n>) -> Generator<'n> {
+    fn new<'n>(
+        c: &'n Config<'n>,
+        s: &'n Struct<'n>,
+        ctx: Context<'n>,
+        opt: HIROptions,
+    ) -> Generator<'n> {
         Generator {
+            opt,
             c,
             s,
             ctx,
@@ -583,6 +605,7 @@ impl<'a> Generator<'a> {
             }
 
             if let Some(scope) = scope {
+                let old = mem::replace(&mut self.opt.resolve_to_self, true);
                 let mut scope = scope.clone();
                 self.visit_expr_mut(&mut scope);
                 self.write_errors(*exprs.span());
@@ -598,6 +621,7 @@ impl<'a> Generator<'a> {
                 self.scp = parent;
                 self.partial = last;
                 self.on = on;
+                self.opt.resolve_to_self = old;
             } else {
                 let last = mem::replace(&mut self.partial, Some((cur, self.on.len())));
                 self.scp.push_scope(vec![]);
@@ -798,9 +822,13 @@ impl<'a> Generator<'a> {
         macro_rules! self_var {
             ($ident:ident) => {{
                 index_var!($ident, 0);
-                let ident = self.scp.root();
                 let field = format_ident!("{}", $ident);
-                writes!(#ident.#field)
+                if self.opt.resolve_to_self {
+                    let ident = self.scp.root();
+                    writes!(#ident.#field)
+                } else {
+                    writes!(#field)
+                }
             }};
         }
 

@@ -33,5 +33,6 @@ yarte_parser = { version = "0.7.0", path = "../yarte_parser" }
 prettyprint = "0.7"
 proc-macro2 = { version = "1.0", features = ["span-locations"] }
 syn = "1.0"
+quote = "1.0"
 tempfile = "3.0"
 toolchain_find = "0.1"

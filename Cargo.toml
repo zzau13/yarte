@@ -9,4 +9,5 @@ members = [
     "yarte_html",
     "yarte_parser",
     "yarte_wasm_app",
+    "yarte_write",
 ]
