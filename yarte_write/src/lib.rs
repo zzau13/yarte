@@ -21,9 +21,6 @@ impl<F: FnOnce(&mut Formatter) -> fmt::Result> DisplayFn<F> {
 
 impl<F: FnOnce(&mut Formatter) -> fmt::Result> Display for DisplayFn<F> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        match self.0.take() {
-            Some(cl) => cl(f),
-            None => fmt::Error,
-        }
+        self.0.take().ok_or(fmt::Error).and_then(|cl| cl(f))
     }
 }
