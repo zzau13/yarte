@@ -27,7 +27,8 @@ fn tokens(i: TokenStream) -> String {
     let mut ctx = BTreeMap::new();
     ctx.insert(&s.path, sources);
 
-    let ir = generate(config, &s, &ctx).unwrap_or_else(|e| emitter(&src, config, e.into_iter()));
+    let ir = generate(config, &s, &ctx, Default::default())
+        .unwrap_or_else(|e| emitter(&src, config, e.into_iter()));
     clean();
 
     WASMCodeGen::new(&s).gen(ir).to_string()
