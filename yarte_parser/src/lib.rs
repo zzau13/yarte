@@ -19,12 +19,12 @@ mod strnom;
 pub use self::{
     error::{emitter, ErrorMessage},
     pre_partials::parse_partials,
+    stmt_local::StmtLocal,
 };
 use crate::{
     error::PError,
     expr_list::ExprList,
     source_map::{spanned, Span, S},
-    stmt_local::StmtLocal,
     strnom::{is_ws, skip_ws, ws, Cursor, LexError, PResult},
 };
 
