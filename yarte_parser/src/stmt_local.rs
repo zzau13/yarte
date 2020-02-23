@@ -1,3 +1,5 @@
+use proc_macro2::TokenStream;
+use quote::{quote, ToTokens};
 use syn::{
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
@@ -6,7 +8,7 @@ use syn::{
 };
 
 #[derive(Debug, PartialEq)]
-pub(super) struct StmtLocal {
+pub struct StmtLocal {
     pub let_token: Token![let],
     pub pat: Pat,
     pub init: Option<(Token![=], Box<Expr>)>,
@@ -65,6 +67,21 @@ impl Parse for StmtLocal {
     }
 }
 
+impl ToTokens for StmtLocal {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let StmtLocal {
+            let_token,
+            pat,
+            init,
+        } = self;
+        if let Some((eq, init)) = init {
+            tokens.extend(quote!(#let_token #pat #eq #init));
+        } else {
+            tokens.extend(quote!(#let_token #pat));
+        }
+    }
+}
+
 // Use for no duplicate code in generator
 impl Into<Local> for StmtLocal {
     fn into(self) -> Local {
@@ -74,6 +91,16 @@ impl Into<Local> for StmtLocal {
             pat: self.pat,
             init: self.init,
             semi_token: Semi::default(),
+        }
+    }
+}
+
+impl From<Local> for StmtLocal {
+    fn from(local: Local) -> Self {
+        StmtLocal {
+            let_token: local.let_token,
+            pat: local.pat,
+            init: local.init,
         }
     }
 }

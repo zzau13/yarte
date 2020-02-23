@@ -23,4 +23,5 @@ annotate-snippets = { version = "0.6", features = ["ansi_term"] }
 derive_more = "0.99"
 quote = "1.0"
 syn = { version = "1.0", features = ["extra-traits", "full"] }
+proc-macro2 = "1.0"
 unicode-xid = "0.2"

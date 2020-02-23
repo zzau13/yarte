@@ -21,6 +21,7 @@ mod macros;
 mod error;
 mod hir;
 mod scope;
+mod serialize;
 mod validator;
 mod visit_derive;
 mod visit_each;
@@ -35,6 +36,7 @@ use self::{
 };
 pub use self::{
     hir::*,
+    serialize::serialize,
     visit_derive::{visit_derive, Mode, Print, Struct},
 };
 use yarte_parser::source_map::Span;

@@ -2,7 +2,10 @@
 #![feature(proc_macro_hygiene)]
 
 /// Adapted from [`fomat`](https://github.com/krdln/fomat-macros)
-use std::{fmt::{self, Display, Formatter}, cell::Cell};
+use std::{
+    cell::Cell,
+    fmt::{self, Display, Formatter},
+};
 
 pub use yarte_derive::ywrite;
 pub use yarte_helpers::{helpers::Render, recompile, Error, Result};
