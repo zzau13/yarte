@@ -30,7 +30,7 @@ impl<T: CodeGen> CodeGen for FnFmtCodeGen<T> {
             {
                 use std::fmt::Write;
                 let mut buf = String::with_capacity(#size_hint);
-                let _ = write!(buf, "{}", yarte_write::DisplayFn::new(|_fmt| {
+                let _ = write!(buf, "{}", yarte_format::DisplayFn::new(|_fmt| {
                     #body
                     Ok(())
                 }));

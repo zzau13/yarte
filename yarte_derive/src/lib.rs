@@ -36,8 +36,8 @@ pub fn template(input: TokenStream) -> TokenStream {
     fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
         let codegen: Box<dyn CodeGen> = match s.mode {
             Mode::Text => Box::new(FmtCodeGen::new(TextCodeGen, s)),
-            Mode::HTML => Box::new(FmtCodeGen::new(HTMLCodeGen, s)),
-            Mode::HTMLMin => Box::new(FmtCodeGen::new(HTMLMinCodeGen, s)),
+            Mode::HTML => Box::new(FmtCodeGen::new(HTMLCodeGen("yarte"), s)),
+            Mode::HTMLMin => Box::new(FmtCodeGen::new(HTMLMinCodeGen("yarte"), s)),
             Mode::WASMServer => Box::new(FmtCodeGen::new(server::WASMCodeGen::new(s), s)),
             #[cfg(feature = "wasm-app")]
             Mode::WASM => panic!("Use `yarte_wasm_app` crate instead"),
@@ -62,15 +62,39 @@ pub fn app(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro]
-pub fn yformat(i: TokenStream) -> TokenStream {
+pub fn yformat_html(i: TokenStream) -> TokenStream {
     fn build<'a>(_s: &'a Struct<'a>) -> Box<dyn CodeGen + 'a> {
-        Box::new(yarte_codegen::FnFmtCodeGen::new(HTMLCodeGen))
+        Box::new(yarte_codegen::FnFmtCodeGen::new(HTMLCodeGen(
+            "yarte_format",
+        )))
     }
 
     let src: syn::LitStr = syn::parse(i).unwrap();
     let input = quote! {
-        #[template(src = #src)]
-        struct __Foo__ {}
+        #[template(src = #src, mode = "html")]
+        struct __YFormat__;
+    };
+
+    let i = &syn::parse2(input).unwrap();
+    build!(
+        i,
+        build,
+        HIROptions {
+            resolve_to_self: false
+        }
+    )
+}
+
+#[proc_macro]
+pub fn yformat(i: TokenStream) -> TokenStream {
+    fn build<'a>(_s: &'a Struct<'a>) -> Box<dyn CodeGen + 'a> {
+        Box::new(yarte_codegen::FnFmtCodeGen::new(TextCodeGen))
+    }
+
+    let src: syn::LitStr = syn::parse(i).unwrap();
+    let input = quote! {
+        #[template(src = #src, mode = "text")]
+        struct __YFormat__;
     };
 
     let i = &syn::parse2(input).unwrap();

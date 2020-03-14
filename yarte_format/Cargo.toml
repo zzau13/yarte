@@ -1,6 +1,6 @@
 [package]
 name = "yarte_format"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 edition = "2018"
 description = "Proc-macro, compiled Handlebars"
