@@ -993,3 +993,38 @@ fn test_partial_block_ws_1() {
         ]
     );
 }
+
+fn test_error(rest: &str, _message: PError, _span: Span) {
+    let cursor = Cursor { rest, off: 0 };
+    match _parse(cursor) {
+        Err(ErrorMessage { message, span }) => {
+            if _message != message || _span != span {
+                panic!(
+                        "\n\nExpect:\n\tmessage: {:?}\n\tspan: {:?}\n\nResult:\n\tmessage: {:?}\n\tspan: {:?}",
+                        message.to_string(), span, _message.to_string(), _span
+                    )
+            }
+        }
+        _ => panic!(
+            "\n\nIt's Ok rest: {:?}\n\nExpect:\n\tmessage: {:?}\n\tspan: {:?}",
+            rest,
+            _message.to_string(),
+            _span
+        ),
+    };
+}
+
+#[test]
+fn test_error_expr() {
+    test_error("{{ @ }}", PError::Expr, bytes!(3..4));
+}
+
+#[test]
+fn test_error_local() {
+    test_error("{{ let @ }}", PError::Local, bytes!(3..8));
+}
+
+#[test]
+fn test_error_if() {
+    test_error("{{# if let @ }}{{/if }}", PError::Argument, bytes!(7..12));
+}

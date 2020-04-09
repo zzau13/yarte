@@ -1,8 +1,5 @@
 //! Adapted from [`proc-macro2`](https://github.com/alexcrichton/proc-macro2).
-// TODO: Remove
-#![allow(dead_code)]
-
-use std::{cell::RefCell, cmp, fmt, path::PathBuf};
+use std::{cell::RefCell, fmt, path::PathBuf};
 
 use syn::export::Debug;
 
@@ -62,9 +59,23 @@ impl FileInfo {
         }
     }
 
-    fn get_init_line(&self, lc: LineColumn) -> Option<usize> {
-        assert_ne!(lc.line, 0);
-        self.lines.get(lc.line - 1).copied()
+    fn get_ranges(&self, span: Span) -> ((usize, usize), (usize, usize)) {
+        assert!(self.span_within(span));
+        let lo = (span.lo - self.span.lo) as usize;
+        let hi = (span.hi - self.span.lo) as usize;
+        let lo_line = match self.lines.binary_search(&lo) {
+            Ok(_) => lo,
+            Err(idx) => self.lines[idx - 1],
+        };
+        let hi_line = match self.lines.binary_search(&hi) {
+            Ok(_) => hi,
+            Err(idx) => self
+                .lines
+                .get(idx)
+                .copied()
+                .unwrap_or(self.span.hi as usize),
+        };
+        ((lo_line, hi_line), (lo - lo_line, hi - lo_line))
     }
 
     fn span_within(&self, span: Span) -> bool {
@@ -90,7 +101,6 @@ struct SourceMap {
 impl SourceMap {
     fn next_start_pos(&self) -> u32 {
         // Add 1 so there's always space between files.
-        //
         self.files.last().map(|f| f.span.hi + 1).unwrap_or(0)
     }
 
@@ -128,8 +138,8 @@ pub struct Span {
 }
 
 // Don't allow `Span` to transfer between thread
-//impl !Send for Span {}
-//impl !Sync for Span {}
+// impl !Send for Span {}
+// impl !Sync for Span {}
 
 impl Span {
     /// Assume a <= b
@@ -149,14 +159,12 @@ impl Span {
         }
     }
 
-    pub fn range_in_line(self) -> (usize, usize) {
+    /// Returns line bounds and range in bounds
+    pub fn range_in_file(self) -> ((usize, usize), (usize, usize)) {
         SOURCE_MAP.with(|cm| {
             let cm = cm.borrow();
             let fi = cm.fileinfo(self);
-            let lc = fi.offset_line_column(self.lo as usize);
-            let init = fi.get_init_line(lc).expect("Spam in source map");
-            let lo = fi.span.lo;
-            (init, (self.hi - lo) as usize)
+            fi.get_ranges(self)
         })
     }
 
@@ -173,28 +181,6 @@ impl Span {
             let cm = cm.borrow();
             let fi = cm.fileinfo(self);
             fi.offset_line_column(self.lo as usize)
-        })
-    }
-
-    pub fn end(self) -> LineColumn {
-        SOURCE_MAP.with(|cm| {
-            let cm = cm.borrow();
-            let fi = cm.fileinfo(self);
-            fi.offset_line_column(self.hi as usize)
-        })
-    }
-
-    pub fn join(self, other: Span) -> Option<Span> {
-        SOURCE_MAP.with(|cm| {
-            let cm = cm.borrow();
-            // If `other` is not within the same FileInfo as us, return None.
-            if !cm.fileinfo(self).span_within(other) {
-                return None;
-            }
-            Some(Span {
-                lo: cmp::min(self.lo, other.lo),
-                hi: cmp::max(self.hi, other.hi),
-            })
         })
     }
 }
