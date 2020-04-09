@@ -440,22 +440,28 @@ macro_rules! make_argument {
                         break $fun(s)
                             .map(|e| (i.adv(at + j - 1), S(e, Span::from_len(skip_ws(i), s.len()))))
                             .map_err(|_| {
-                                LexError::Fail(PError::Argument, Span::from_cursor(i, i.adv(at)))
+                                LexError::Fail(
+                                    PError::Argument,
+                                    Span::from_len(skip_ws(i), s.len()),
+                                )
                             });
                     } else if i.adv_starts_with(j + 1, "}") {
                         let (_, s, _) = trim(&i.rest[..j]);
                         break $fun(s)
                             .map(|e| (i.adv(at + j), S(e, Span::from_len(skip_ws(i), s.len()))))
                             .map_err(|_| {
-                                LexError::Fail(PError::Argument, Span::from_cursor(i, i.adv(at)))
+                                LexError::Fail(
+                                    PError::Argument,
+                                    Span::from_len(skip_ws(i), s.len()),
+                                )
                             });
                     }
 
                     at += j + 1;
                 } else {
                     break Err(LexError::Next(
-                        PError::Argument,
-                        Span::from_cursor(i, i.adv(at)),
+                        PError::EndExpression,
+                        Span::from_cursor(i, i),
                     ));
                 }
             }
@@ -519,19 +525,19 @@ fn expr(i: Cursor, lws: bool) -> PResult<Node> {
     };
 
     let (_, s, _) = trim(s);
+    macro_rules! s {
+        () => {
+            Span::from_len(skip_ws(i), s.len())
+        };
+    }
     if s.starts_with("let ") {
         eat_local(s)
-            .map(|e| (c, Node::Local(S(e, Span::from_len(skip_ws(i), s.len())))))
-            .map_err(|_| LexError::Fail(PError::Local, Span::from_cursor(i, c)))
+            .map(|e| (c, Node::Local(S(e, s!()))))
+            .map_err(|_| LexError::Fail(PError::Local, s!()))
     } else {
         eat_expr(s)
-            .map(|e| {
-                (
-                    c,
-                    Node::Expr((lws, rws), S(e, Span::from_len(skip_ws(i), s.len()))),
-                )
-            })
-            .map_err(|_| LexError::Fail(PError::Expr, Span::from_cursor(i, c)))
+            .map(|e| (c, Node::Expr((lws, rws), S(e, s!()))))
+            .map_err(|_| LexError::Fail(PError::Expr, s!()))
     }
 }
 

@@ -1,8 +1,7 @@
-use std::fmt::Display;
+use std::{collections::BTreeMap, fmt::Display, path::PathBuf};
 
 use annotate_snippets::{
-    display_list::DisplayList,
-    formatter::DisplayListFormatter,
+    display_list::{DisplayList, FormatOptions},
     snippet::{Annotation, AnnotationType, Slice, Snippet, SourceAnnotation},
 };
 use derive_more::Display;
@@ -10,10 +9,9 @@ use derive_more::Display;
 use yarte_helpers::config::Config;
 
 use crate::{source_map::Span, strnom::LexError};
-use std::{collections::BTreeMap, path::PathBuf};
 
 // TODO: #39 improve error messages
-#[derive(Debug, Display, Copy, Clone)]
+#[derive(Debug, Display, Copy, Clone, PartialEq)]
 pub enum PError {
     #[display(fmt = "problems parsing template source")]
     Uncompleted,
@@ -65,9 +63,6 @@ pub struct ErrorMessage<T: Display> {
     pub span: Span,
 }
 
-// TODO: #39 improve
-// TODO: label
-// - print all line with len limits
 pub fn emitter<I, T>(sources: &BTreeMap<PathBuf, String>, config: &Config, errors: I) -> !
 where
     I: Iterator<Item = ErrorMessage<T>>,
@@ -78,31 +73,30 @@ where
     let mut errors: Vec<ErrorMessage<T>> = errors.collect();
 
     errors.sort_unstable_by(|a, b| a.span.lo.cmp(&b.span.lo));
-    let slices = errors
+    let slices: Vec<(String, PathBuf, Span)> = errors
         .into_iter()
-        .map(|err| {
-            let origin = err.span.file_path();
-            let (lo, hi) = err.span.range_in_line();
-            let start = err.span.start();
+        .map(|err| (err.message.to_string(), err.span.file_path(), err.span))
+        .collect();
+    let slices = slices
+        .iter()
+        .map(|(label, origin, span)| {
+            let ((lo_line, hi_line), (lo, hi)) = span.range_in_file();
+            let start = span.start();
             let source = sources
-                .get(&origin)
+                .get(origin)
                 .unwrap()
-                .get(lo..hi)
+                .get(lo_line..hi_line)
                 .unwrap()
-                .to_string();
-            let origin = origin
-                .strip_prefix(&prefix)
-                .unwrap()
-                .to_string_lossy()
-                .to_string();
+                .trim_end();
+            let origin = origin.strip_prefix(&prefix).unwrap().to_str().unwrap();
 
             Slice {
                 source,
                 line_start: start.line,
                 origin: Some(origin),
                 annotations: vec![SourceAnnotation {
-                    range: (start.column, hi),
-                    label: err.message.to_string(),
+                    label,
+                    range: (lo, hi),
                     annotation_type: AnnotationType::Error,
                 }],
                 fold: false,
@@ -118,10 +112,11 @@ where
         }),
         footer: vec![],
         slices,
+        opt: FormatOptions {
+            color: true,
+            ..Default::default()
+        },
     };
 
-    let dl = DisplayList::from(s);
-    let dlf = DisplayListFormatter::new(true, false);
-
-    panic!("{}", dlf.format(&dl))
+    panic!("{}", DisplayList::from(s))
 }
