@@ -1,4 +1,8 @@
-use std::{collections::BTreeMap, fmt::Display, path::PathBuf};
+use std::{
+    collections::BTreeMap,
+    fmt::{self, Display, Write},
+    path::PathBuf,
+};
 
 use annotate_snippets::{
     display_list::{DisplayList, FormatOptions},
@@ -10,8 +14,27 @@ use yarte_helpers::config::Config;
 
 use crate::{source_map::Span, strnom::LexError};
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum DOption {
+    Some(String),
+    None,
+}
+
+impl Display for DOption {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use DOption::*;
+        match self {
+            Some(s) => {
+                f.write_char(' ')?;
+                f.write_str(s)
+            }
+            None => Ok(()),
+        }
+    }
+}
+
 // TODO: #39 improve error messages
-#[derive(Debug, Display, Copy, Clone, PartialEq)]
+#[derive(Debug, Display, Clone, PartialEq)]
 pub enum PError {
     #[display(fmt = "problems parsing template source")]
     Uncompleted,
@@ -21,12 +44,12 @@ pub enum PError {
     Tag,
     #[display(fmt = "comment")]
     Comment,
-    #[display(fmt = "expression")]
-    Expr,
-    #[display(fmt = "safe")]
-    Safe,
-    #[display(fmt = "local")]
-    Local,
+    #[display(fmt = "expression{}", _0)]
+    Expr(DOption),
+    #[display(fmt = "safe{}", _0)]
+    Safe(DOption),
+    #[display(fmt = "local{}", _0)]
+    Local(DOption),
     #[display(fmt = "if else")]
     IfElse,
     #[display(fmt = "raw")]
@@ -41,8 +64,8 @@ pub enum PError {
     Ident,
     #[display(fmt = "end expression")]
     EndExpression,
-    #[display(fmt = "argument")]
-    Argument,
+    #[display(fmt = "argument{}", _0)]
+    Argument(DOption),
 }
 
 impl From<LexError> for ErrorMessage<PError> {

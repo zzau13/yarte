@@ -21,6 +21,8 @@ pub use self::{
     pre_partials::parse_partials,
     stmt_local::StmtLocal,
 };
+
+use crate::error::DOption;
 use crate::{
     error::PError,
     expr_list::ExprList,
@@ -435,26 +437,29 @@ macro_rules! make_argument {
             let mut at = 0;
             loop {
                 if let Some(j) = i.adv_find(at, '}') {
+                    macro_rules! cl {
+                        ($s:ident, $d:expr) => {
+                            $fun($s)
+                                .map(|x| {
+                                    (
+                                        i.adv(at + j - $d),
+                                        S(x, Span::from_len(skip_ws(i), $s.len())),
+                                    )
+                                })
+                                .map_err(|e| {
+                                    LexError::Fail(
+                                        PError::Argument(DOption::Some(e.message)),
+                                        Span::from_range(skip_ws(i), e.span),
+                                    )
+                                });
+                        };
+                    }
                     if 0 < j && i.adv_starts_with(at + j - 1, "~}}") {
                         let (_, s, _) = trim(&i.rest[..j - 1]);
-                        break $fun(s)
-                            .map(|e| (i.adv(at + j - 1), S(e, Span::from_len(skip_ws(i), s.len()))))
-                            .map_err(|_| {
-                                LexError::Fail(
-                                    PError::Argument,
-                                    Span::from_len(skip_ws(i), s.len()),
-                                )
-                            });
+                        break cl!(s, 1);
                     } else if i.adv_starts_with(j + 1, "}") {
                         let (_, s, _) = trim(&i.rest[..j]);
-                        break $fun(s)
-                            .map(|e| (i.adv(at + j), S(e, Span::from_len(skip_ws(i), s.len()))))
-                            .map_err(|_| {
-                                LexError::Fail(
-                                    PError::Argument,
-                                    Span::from_len(skip_ws(i), s.len()),
-                                )
-                            });
+                        break cl!(s, 0);
                     }
 
                     at += j + 1;
@@ -489,7 +494,7 @@ fn safe(i: Cursor, lws: bool) -> PResult<Node> {
 
             at += j + 1;
         } else {
-            return Err(LexError::Next(PError::Safe, Span::from(i)));
+            return Err(LexError::Next(PError::Safe(DOption::None), Span::from(i)));
         }
     };
 
@@ -501,7 +506,12 @@ fn safe(i: Cursor, lws: bool) -> PResult<Node> {
                 Node::Safe((lws, rws), S(e, Span::from_len(skip_ws(i), s.len()))),
             )
         })
-        .map_err(|_| LexError::Fail(PError::Safe, Span::from_cursor(i, c)))
+        .map_err(|e| {
+            LexError::Fail(
+                PError::Safe(DOption::Some(e.message)),
+                Span::from_len(skip_ws(i).adv(e.span.0), e.span.1 - e.span.0),
+            )
+        })
 }
 
 /// Eat expression Node
@@ -518,7 +528,7 @@ fn expr(i: Cursor, lws: bool) -> PResult<Node> {
             at += j + 1;
         } else {
             return Err(LexError::Next(
-                PError::Expr,
+                PError::Expr(DOption::None),
                 Span::from_cursor(i, i.adv(at)),
             ));
         }
@@ -533,27 +543,96 @@ fn expr(i: Cursor, lws: bool) -> PResult<Node> {
     if s.starts_with("let ") {
         eat_local(s)
             .map(|e| (c, Node::Local(S(e, s!()))))
-            .map_err(|_| LexError::Fail(PError::Local, s!()))
+            .map_err(|e| {
+                LexError::Fail(
+                    PError::Local(DOption::Some(e.message)),
+                    Span::from_range(skip_ws(i), e.span),
+                )
+            })
     } else {
         eat_expr(s)
             .map(|e| (c, Node::Expr((lws, rws), S(e, s!()))))
-            .map_err(|_| LexError::Fail(PError::Expr, s!()))
+            .map_err(|e| {
+                LexError::Fail(
+                    PError::Expr(DOption::Some(e.message)),
+                    Span::from_range(skip_ws(i), e.span),
+                )
+            })
+    }
+}
+
+/// Intermediate error representation
+#[derive(Debug)]
+struct MiddleError {
+    pub message: String,
+    pub span: (usize, usize),
+}
+
+fn get_line_offset(src: &str, line_num: usize) -> usize {
+    assert!(1 < line_num);
+    let mut line_num = line_num - 1;
+    let mut prev = 0;
+    while let Some(len) = src[prev..].find('\n') {
+        prev += len + 1;
+        line_num -= 1;
+        if line_num == 0 {
+            break;
+        }
+    }
+    assert_eq!(line_num, 0);
+
+    prev
+}
+
+impl MiddleError {
+    fn new(src: &str, e: syn::Error) -> Self {
+        // TODO: remove, debug why not span-locations runs outside the coverage
+        let def = proc_macro2::Span::call_site();
+        let start = e.span().start();
+        let end = e.span().end();
+        if start == def.start() && end == def.end() {
+            return Self {
+                message: e.to_string(),
+                span: (0, src.len()),
+            };
+        }
+        let lo = if start.line == 1 {
+            start.column
+        } else {
+            get_line_offset(src, start.line) + start.column
+        };
+        let hi = if end.line == 1 {
+            end.column
+        } else {
+            get_line_offset(src, end.line) + end.column
+        };
+        Self {
+            message: e.to_string(),
+            span: (lo, hi),
+        }
     }
 }
 
 /// Parse syn expression
-fn eat_expr(i: &str) -> Result<Box<Expr>, syn::Error> {
-    parse_str::<Expr>(i).map(Box::new)
+fn eat_expr(i: &str) -> Result<Box<Expr>, MiddleError> {
+    parse_str::<Expr>(i)
+        .map(Box::new)
+        .map_err(|e| MiddleError::new(i, e))
 }
 
 /// Parse syn local
-fn eat_local(i: &str) -> Result<Box<Local>, syn::Error> {
-    parse_str::<StmtLocal>(i).map(Into::into).map(Box::new)
+fn eat_local(i: &str) -> Result<Box<Local>, MiddleError> {
+    parse_str::<StmtLocal>(i)
+        .map(Into::into)
+        .map(Box::new)
+        .map_err(|e| MiddleError::new(i, e))
 }
 
 /// Parse syn expression comma separated list
-fn eat_expr_list(i: &str) -> Result<Vec<Expr>, syn::Error> {
-    parse_str::<ExprList>(i).map(Into::into)
+fn eat_expr_list(i: &str) -> Result<Vec<Expr>, MiddleError> {
+    parse_str::<ExprList>(i)
+        .map(Into::into)
+        .map_err(|e| MiddleError::new(i, e))
 }
 
 /// Eat whitespace flag in end of expressions `.. }}` or `.. ~}}`
