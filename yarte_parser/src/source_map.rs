@@ -1,14 +1,14 @@
 //! Adapted from [`proc-macro2`](https://github.com/alexcrichton/proc-macro2).
-use std::{cell::RefCell, fmt, path::PathBuf};
-
-use syn::export::Debug;
+use std::{
+    cell::RefCell,
+    fmt::{self, Debug},
+    path::PathBuf,
+};
 
 use crate::strnom::{skip_ws, Cursor, PResult};
 
 thread_local! {
-    static SOURCE_MAP: RefCell<SourceMap> = RefCell::new(SourceMap {
-        files: vec![],
-    });
+    static SOURCE_MAP: RefCell<SourceMap> = RefCell::new(Default::default());
 }
 
 /// Add file to source map and return lower bound
@@ -25,7 +25,7 @@ pub fn get_cursor<'a>(p: &PathBuf, rest: &'a str) -> Cursor<'a> {
 ///
 /// Use in the same thread
 pub fn clean() {
-    SOURCE_MAP.with(|x| *x.borrow_mut() = SourceMap { files: vec![] });
+    SOURCE_MAP.with(|x| *x.borrow_mut() = Default::default());
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -94,6 +94,7 @@ fn lines_offsets(s: &str) -> Vec<usize> {
     lines
 }
 
+#[derive(Default)]
 struct SourceMap {
     files: Vec<FileInfo>,
 }
@@ -144,18 +145,25 @@ pub struct Span {
 impl Span {
     /// Assume a <= b
     #[inline]
-    pub fn from_cursor(a: Cursor, b: Cursor) -> Span {
+    pub fn from_cursor(a: Cursor, b: Cursor) -> Self {
         debug_assert!(a.off <= b.off);
-        Span {
+        Self {
             lo: a.off,
             hi: b.off,
         }
     }
 
-    pub fn from_len(i: Cursor, len: usize) -> Span {
-        Span {
+    pub fn from_len(i: Cursor, len: usize) -> Self {
+        Self {
             lo: i.off,
             hi: i.off + (len as u32),
+        }
+    }
+
+    pub fn from_range(i: Cursor, (lo, hi): (usize, usize)) -> Self {
+        Self {
+            lo: i.off + (lo as u32),
+            hi: i.off + (hi as u32),
         }
     }
 

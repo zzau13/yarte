@@ -47,7 +47,7 @@ impl<'a> Cursor<'a> {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub enum LexError {
     Fail(PError, Span),
     Next(PError, Span),

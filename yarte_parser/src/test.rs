@@ -1016,15 +1016,51 @@ fn test_error(rest: &str, _message: PError, _span: Span) {
 
 #[test]
 fn test_error_expr() {
-    test_error("{{ @ }}", PError::Expr, bytes!(3..4));
+    test_error(
+        "{{ @ }}",
+        PError::Expr(DOption::Some(String::from("expected expression"))),
+        bytes!(3..4),
+    );
+}
+
+#[test]
+fn test_error_safe() {
+    test_error(
+        "{{{ @ }}}",
+        PError::Safe(DOption::Some(String::from("expected expression"))),
+        bytes!(4..5),
+    );
 }
 
 #[test]
 fn test_error_local() {
-    test_error("{{ let @ }}", PError::Local, bytes!(3..8));
+    test_error(
+        "{{ let @ }}",
+        PError::Local(DOption::Some(String::from("expected one of: identifier, `::`, `<`, `_`, literal, `ref`, `mut`, `&`, parentheses, square brackets, `..`"))),
+        bytes!(7..8)
+    );
+    // TODO: Why `span-locations` runs here and not when use in derive
+    let rest = String::from("{{ let") + " @ }}";
+    test_error(
+        &rest,
+        PError::Local(DOption::Some(String::from("expected one of: identifier, `::`, `<`, `_`, literal, `ref`, `mut`, `&`, parentheses, square brackets, `..`"))),
+        bytes!(7..8)
+    );
 }
 
 #[test]
 fn test_error_if() {
-    test_error("{{# if let @ }}{{/if }}", PError::Argument, bytes!(7..12));
+    test_error(
+        "{{# if let @ }}{{/if }}",
+        PError::Argument(DOption::Some(String::from("expected one of: identifier, `::`, `<`, `_`, literal, `ref`, `mut`, `&`, parentheses, square brackets, `..`"))),
+        bytes!(11..12));
+}
+
+#[test]
+fn test_error_expr_multiline() {
+    test_error(
+        "{{ foo\n\n.map(|x| x)\n\n   .bar(@)\n.foo() }}",
+        PError::Expr(DOption::Some(String::from("expected expression"))),
+        bytes!(29..30),
+    );
 }

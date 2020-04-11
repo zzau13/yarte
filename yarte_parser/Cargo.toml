@@ -23,5 +23,5 @@ annotate-snippets = { git = "https://github.com/rust-lang/annotate-snippets-rs",
 derive_more = "0.99"
 quote = "1.0"
 syn = { version = "1.0", features = ["extra-traits", "full"] }
-proc-macro2 = "1.0"
+proc-macro2 = { version = "1.0", features = ["span-locations"] }
 unicode-xid = "0.2"
