@@ -1,5 +1,9 @@
 #![allow(clippy::type_complexity)]
 
+extern crate syn_impersonated as syn;
+extern crate quote_impersonated as quote;
+extern crate proc_macro2_impersonated as proc_macro2;
+
 use std::{collections::BTreeMap, mem, path::PathBuf, str};
 
 use quote::{format_ident, quote};

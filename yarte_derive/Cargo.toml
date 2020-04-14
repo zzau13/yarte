@@ -31,8 +31,10 @@ yarte_hir = { version = "0.7.0", path = "../yarte_hir" }
 yarte_parser = { version = "0.7.0", path = "../yarte_parser" }
 
 prettyprint = "0.8"
-proc-macro2 = { version = "1.0", features = ["span-locations"] }
-syn = "1.0"
-quote = "1.0"
+
+proc-macro2-impersonated = "0.1"
+quote-impersonated = "0.1"
+syn-impersonated = "0.1"
+
 tempfile = "3.0"
 toolchain_find = "0.1"

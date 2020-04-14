@@ -26,5 +26,6 @@ yarte_helpers = { version = "0.7.0", path = "../yarte_helpers" }
 yarte_html = { version = "0.7.0", path = "../yarte_html" }
 
 markup5ever = "0.10"
-syn = { version = "1.0", features = ["extra-traits", "full", "visit"] }
-quote = "1.0"
+
+quote-impersonated = "0.1"
+syn-impersonated = { version= "0.1", features = ["full", "visit", "extra-traits"] }

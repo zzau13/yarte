@@ -27,9 +27,9 @@ yarte_helpers = { version = "0.7.0", path = "../yarte_helpers" }
 yarte_hir = { version = "0.7.0", path = "../yarte_hir" }
 yarte_html = { version = "0.7.0", path = "../yarte_html" }
 
-proc-macro2 = { version = "1.0", features = ["span-locations"] }
-quote = "1.0"
-syn = { version = "1.0", features = ["extra-traits", "full"] }
+proc-macro2-impersonated = "0.1"
+quote-impersonated = "0.1"
+syn-impersonated = { version= "0.1", features = ["full", "extra-traits"] }
 
 markup5ever = "0.10"
 

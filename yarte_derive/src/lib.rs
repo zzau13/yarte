@@ -1,5 +1,9 @@
 extern crate proc_macro;
 
+extern crate syn_impersonated as syn;
+extern crate quote_impersonated as quote;
+extern crate proc_macro2_impersonated as proc_macro2;
+
 use std::{
     collections::{BTreeMap, BTreeSet},
     iter,
