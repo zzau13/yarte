@@ -21,7 +21,9 @@ yarte_helpers = { version = "0.7.0", path = "../yarte_helpers" }
 
 annotate-snippets = { git = "https://github.com/rust-lang/annotate-snippets-rs", features = ["color"] }
 derive_more = "0.99"
-quote = "1.0"
-syn = { version = "1.0", features = ["extra-traits", "full"] }
-proc-macro2 = { version = "1.0", features = ["span-locations"] }
+
+quote-impersonated = "0.1"
+syn-impersonated = { version="0.1", features = ["full", "extra-traits"] }
+proc-macro2-impersonated = { version = "0.1", features = ["span-locations"] }
+
 unicode-xid = "0.2"
