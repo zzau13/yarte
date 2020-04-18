@@ -1,4 +1,6 @@
-#![cfg(target_arch = "wasm32")]
+#[cfg(not(target_arch = "wasm32"))]
+compile_error!("Only compile to 'wasm32'");
+
 use std::{
     cell::{Cell, UnsafeCell},
     default::Default,
