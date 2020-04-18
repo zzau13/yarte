@@ -1,8 +1,8 @@
 #![allow(clippy::many_single_char_names, clippy::cognitive_complexity)]
 
-extern crate syn_impersonated as syn;
-extern crate quote_impersonated as quote;
 extern crate proc_macro2_impersonated as proc_macro2;
+extern crate quote_impersonated as quote;
+extern crate syn_impersonated as syn;
 
 use std::str;
 
@@ -19,19 +19,17 @@ pub mod source_map;
 mod stmt_local;
 #[macro_use]
 mod strnom;
+use self::{
+    error::{DOption, PError},
+    expr_list::ExprList,
+    source_map::{spanned, Span, S},
+    strnom::{is_ws, skip_ws, ws, Cursor, LexError, PResult},
+};
 
 pub use self::{
     error::{emitter, ErrorMessage},
     pre_partials::parse_partials,
     stmt_local::StmtLocal,
-};
-
-use crate::error::DOption;
-use crate::{
-    error::PError,
-    expr_list::ExprList,
-    source_map::{spanned, Span, S},
-    strnom::{is_ws, skip_ws, ws, Cursor, LexError, PResult},
 };
 
 pub type Ws = (bool, bool);
@@ -452,8 +450,8 @@ macro_rules! make_argument {
                                 })
                                 .map_err(|e| {
                                     LexError::Fail(
-                                        PError::Argument(DOption::Some(e.message)),
-                                        Span::from_range(skip_ws(i), e.span),
+                                        PError::Argument(DOption::Some(e.to_string())),
+                                        Span::from_range(skip_ws(i), e.span().range_in_file()),
                                     )
                                 });
                         };
@@ -512,8 +510,8 @@ fn safe(i: Cursor, lws: bool) -> PResult<Node> {
         })
         .map_err(|e| {
             LexError::Fail(
-                PError::Safe(DOption::Some(e.message)),
-                Span::from_len(skip_ws(i).adv(e.span.0), e.span.1 - e.span.0),
+                PError::Safe(DOption::Some(e.to_string())),
+                Span::from_range(skip_ws(i), e.span().range_in_file()),
             )
         })
 }
@@ -549,8 +547,8 @@ fn expr(i: Cursor, lws: bool) -> PResult<Node> {
             .map(|e| (c, Node::Local(S(e, s!()))))
             .map_err(|e| {
                 LexError::Fail(
-                    PError::Local(DOption::Some(e.message)),
-                    Span::from_range(skip_ws(i), e.span),
+                    PError::Local(DOption::Some(e.to_string())),
+                    Span::from_range(skip_ws(i), e.span().range_in_file()),
                 )
             })
     } else {
@@ -558,85 +556,26 @@ fn expr(i: Cursor, lws: bool) -> PResult<Node> {
             .map(|e| (c, Node::Expr((lws, rws), S(e, s!()))))
             .map_err(|e| {
                 LexError::Fail(
-                    PError::Expr(DOption::Some(e.message)),
-                    Span::from_range(skip_ws(i), e.span),
+                    PError::Expr(DOption::Some(e.to_string())),
+                    Span::from_range(skip_ws(i), e.span().range_in_file()),
                 )
             })
     }
 }
 
-/// Intermediate error representation
-#[derive(Debug)]
-struct MiddleError {
-    pub message: String,
-    pub span: (usize, usize),
-}
-
-fn get_line_offset(src: &str, line_num: usize) -> usize {
-    assert!(1 < line_num);
-    let mut line_num = line_num - 1;
-    let mut prev = 0;
-    while let Some(len) = src[prev..].find('\n') {
-        prev += len + 1;
-        line_num -= 1;
-        if line_num == 0 {
-            break;
-        }
-    }
-    assert_eq!(line_num, 0);
-
-    prev
-}
-
-impl MiddleError {
-    fn new(src: &str, e: syn::Error) -> Self {
-        // TODO: remove, debug why not span-locations runs outside the coverage
-        let def = proc_macro2::Span::call_site();
-        let start = e.span().start();
-        let end = e.span().end();
-        if start == def.start() && end == def.end() {
-            return Self {
-                message: e.to_string(),
-                span: (0, src.len()),
-            };
-        }
-        let lo = if start.line == 1 {
-            start.column
-        } else {
-            get_line_offset(src, start.line) + start.column
-        };
-        let hi = if end.line == 1 {
-            end.column
-        } else {
-            get_line_offset(src, end.line) + end.column
-        };
-        Self {
-            message: e.to_string(),
-            span: (lo, hi),
-        }
-    }
-}
-
 /// Parse syn expression
-fn eat_expr(i: &str) -> Result<Box<Expr>, MiddleError> {
-    parse_str::<Expr>(i)
-        .map(Box::new)
-        .map_err(|e| MiddleError::new(i, e))
+fn eat_expr(i: &str) -> Result<Box<Expr>, syn::Error> {
+    parse_str::<Expr>(i).map(Box::new)
 }
 
 /// Parse syn local
-fn eat_local(i: &str) -> Result<Box<Local>, MiddleError> {
-    parse_str::<StmtLocal>(i)
-        .map(Into::into)
-        .map(Box::new)
-        .map_err(|e| MiddleError::new(i, e))
+fn eat_local(i: &str) -> Result<Box<Local>, syn::Error> {
+    parse_str::<StmtLocal>(i).map(Into::into).map(Box::new)
 }
 
 /// Parse syn expression comma separated list
-fn eat_expr_list(i: &str) -> Result<Vec<Expr>, MiddleError> {
-    parse_str::<ExprList>(i)
-        .map(Into::into)
-        .map_err(|e| MiddleError::new(i, e))
+fn eat_expr_list(i: &str) -> Result<Vec<Expr>, syn::Error> {
+    parse_str::<ExprList>(i).map(Into::into)
 }
 
 /// Eat whitespace flag in end of expressions `.. }}` or `.. ~}}`
