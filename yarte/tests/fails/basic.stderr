@@ -1,0 +1,12 @@
+error: proc-macro derive panicked
+ --> $DIR/basic.rs:3:10
+  |
+3 | #[derive(Template)]
+  |          ^^^^^^^^
+  |
+  = help: message: error
+           --> $DIR/Test.hbs:1:4
+            |
+          1 | {{ @foo }}
+            |    ^ expression expected expression
+            |
