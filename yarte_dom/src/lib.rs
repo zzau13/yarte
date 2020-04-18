@@ -1,5 +1,5 @@
-extern crate syn_impersonated as syn;
 extern crate quote_impersonated as quote;
+extern crate syn_impersonated as syn;
 
 #[macro_use]
 #[cfg(feature = "wasm-app")]
