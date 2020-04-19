@@ -288,3 +288,12 @@ fn test_unwrapped() {
     };
     assert_eq!("&", t.call().unwrap());
 }
+
+#[derive(Template)]
+#[template(src = "{{#if false }} {{$ \"foo\" }} {{/if }}")]
+struct CompileError;
+
+#[test]
+fn test_compile_error() {
+    assert_eq!("", CompileError.call().unwrap());
+}

@@ -1,0 +1,12 @@
+error: proc-macro derive panicked
+ --> $DIR/user-compile-error.rs:3:10
+  |
+3 | #[derive(Template)]
+  |          ^^^^^^^^
+  |
+  = help: message: error
+           --> $DIR/Test.hbs:1:14
+            |
+          1 | {{#if true}} {{$ "foo" }} {{/if }}
+            |              ^^^^^^^^^^^^ Compile error: foo
+            |

@@ -1,5 +1,6 @@
-use super::{parse as _parse, Helper, Node::*, Partial, PartialBlock, *};
 use syn::{parse_str, Expr, Stmt};
+
+use super::{parse as _parse, Helper, Node::*, Partial, PartialBlock, *};
 
 const WS: Ws = (false, false);
 
@@ -991,6 +992,18 @@ fn test_partial_block_ws_1() {
             S(Block((true, true)), bytes!(8..31)),
             S(Lit("\n    ", S("Bar", bytes!(36..39)), ""), bytes!(31..39))
         ]
+    );
+}
+
+#[test]
+fn test_compile_error() {
+    let rest = "{{$ \"foo\" }}";
+    assert_eq!(
+        parse(rest),
+        vec![S(
+            Error(S(vec![parse_str("\"foo\"").unwrap()], bytes!(4..9))),
+            bytes!(0..12)
+        )]
     );
 }
 
