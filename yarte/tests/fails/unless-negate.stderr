@@ -1,0 +1,12 @@
+error: proc-macro derive panicked
+ --> $DIR/unless-negate.rs:3:10
+  |
+3 | #[derive(Template)]
+  |          ^^^^^^^^
+  |
+  = help: message: error
+           --> $DIR/Test.hbs:1:12
+            |
+          1 | {{# unless !foo }}{{/unless }}
+            |            ^ Unary negate operator in `unless helper`, use `if helper` instead
+            |

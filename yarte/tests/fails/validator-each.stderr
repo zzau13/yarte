@@ -1,0 +1,17 @@
+error: proc-macro derive panicked
+ --> $DIR/validator-each.rs:3:10
+  |
+3 | #[derive(Template)]
+  |          ^^^^^^^^
+  |
+  = help: message: error
+           --> $DIR/Test.hbs:1:10
+            |
+          1 | {{# each yield foo }}{{/each }}
+            |          ^^^^^^^^^ Not available in a template expression
+            |
+           ::: templates/Test.hbs:1:10
+            |
+          1 | {{# each yield foo }}{{/each }}
+            |          ^^^^^^^^^ Not available Rust expression in a template `each helper` argument
+            |

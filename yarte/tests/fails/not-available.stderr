@@ -1,0 +1,12 @@
+error: proc-macro derive panicked
+ --> $DIR/not-available.rs:3:10
+  |
+3 | #[derive(Template)]
+  |          ^^^^^^^^
+  |
+  = help: message: error
+           --> $DIR/Test.hbs:1:6
+            |
+          1 | {{ { yield foo } }}
+            |      ^^^^^^^^^ Not available in a template expression
+            |

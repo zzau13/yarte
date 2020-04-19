@@ -1,0 +1,17 @@
+error: proc-macro derive panicked
+ --> $DIR/validator-unless.rs:3:10
+  |
+3 | #[derive(Template)]
+  |          ^^^^^^^^
+  |
+  = help: message: error
+           --> $DIR/Test.hbs:1:12
+            |
+          1 | {{# unless yield foo }}{{/unless }}
+            |            ^^^^^^^^^ Not available in a template expression
+            |
+           ::: templates/Test.hbs:1:12
+            |
+          1 | {{# unless yield foo }}{{/unless }}
+            |            ^^^^^^^^^ Not available Rust expression in a template `unless helper` expression
+            |

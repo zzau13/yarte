@@ -1,0 +1,12 @@
+error: proc-macro derive panicked
+ --> $DIR/not-exist-assign-op.rs:3:10
+  |
+3 | #[derive(Template)]
+  |          ^^^^^^^^
+  |
+  = help: message: error
+           --> $DIR/TestMul.hbs:2:5
+            |
+          2 |     no_exist *= 0;
+            |     ^^^^^^^^ Not exist in current scope
+            |

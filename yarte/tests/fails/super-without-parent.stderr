@@ -1,0 +1,12 @@
+error: proc-macro derive panicked
+ --> $DIR/super-without-parent.rs:3:10
+  |
+3 | #[derive(Template)]
+  |          ^^^^^^^^
+  |
+  = help: message: error
+           --> $DIR/Test.hbs:1:4
+            |
+          1 | {{ super::foo }}
+            |    ^^^^^^^^^^ use super without any parent
+            |
