@@ -9,7 +9,7 @@ pub(super) fn expression(e: &SExpr, out: &mut Vec<ErrorMessage<GError>>) {
     match **e.t() {
         Binary(..) | Call(..) | MethodCall(..) | Index(..) | Field(..) | Path(..) | Paren(..)
         | Macro(..) | Lit(..) | Try(..) | Unary(..) | Unsafe(..) | If(..) | Loop(..)
-        | Match(..)  | Block(..) => (),
+        | Match(..) | Block(..) => (),
         _ => out.push(ErrorMessage {
             message: GError::ValidatorExpression,
             span: *e.span(),
