@@ -1,13 +1,15 @@
+use syn::spanned::Spanned;
+
 use yarte_parser::{source_map::Span, ErrorMessage, SExpr};
 
-use crate::error::GError;
+use crate::error::{GError, MiddleError};
 
 pub(super) fn expression(e: &SExpr, out: &mut Vec<ErrorMessage<GError>>) {
     use syn::Expr::*;
     match **e.t() {
         Binary(..) | Call(..) | MethodCall(..) | Index(..) | Field(..) | Path(..) | Paren(..)
         | Macro(..) | Lit(..) | Try(..) | Unary(..) | Unsafe(..) | If(..) | Loop(..)
-        | Match(..) => (),
+        | Match(..)  | Block(..) => (),
         _ => out.push(ErrorMessage {
             message: GError::ValidatorExpression,
             span: *e.span(),
@@ -46,11 +48,16 @@ pub(super) fn unless(e: &SExpr, out: &mut Vec<ErrorMessage<GError>>) {
         Binary(..) | Call(..) | MethodCall(..) | Index(..) | Field(..) | Path(..) | Paren(..)
         | Macro(..) | Lit(..) | Try(..) | Match(..) => (),
         Unary(syn::ExprUnary { op, .. }) => {
-            if let syn::UnOp::Not(..) = op {
-                out.push(ErrorMessage {
-                    message: GError::ValidatorUnlessNegate,
-                    span: *e.span(),
-                })
+            if let syn::UnOp::Not(t) = op {
+                let (lo, hi) = t.span().range_in_file();
+                out.push(
+                    MiddleError::new(
+                        GError::ValidatorUnlessNegate,
+                        (lo as u32, hi as u32),
+                        *e.span(),
+                    )
+                    .into(),
+                )
             }
         }
         _ => out.push(ErrorMessage {

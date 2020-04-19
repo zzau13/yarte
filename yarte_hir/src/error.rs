@@ -1,6 +1,42 @@
 use derive_more::Display;
 
+use yarte_parser::{source_map::Span, ErrorMessage};
+
 pub type GResult<T> = Result<T, GError>;
+
+pub(crate) struct MiddleError {
+    message: GError,
+    range: (u32, u32),
+    span: Span,
+}
+
+impl MiddleError {
+    pub(crate) fn new(message: GError, range: (u32, u32), span: Span) -> Self {
+        Self {
+            message,
+            range,
+            span,
+        }
+    }
+}
+
+impl Into<ErrorMessage<GError>> for MiddleError {
+    fn into(self) -> ErrorMessage<GError> {
+        let MiddleError {
+            message,
+            range,
+            span,
+        } = self;
+        assert!(span.lo + range.1 <= span.hi);
+        ErrorMessage {
+            message,
+            span: Span {
+                lo: span.lo + range.0,
+                hi: span.lo + range.1,
+            },
+        }
+    }
+}
 
 // TODO: #39 improve error messages
 #[derive(Display, Clone)]

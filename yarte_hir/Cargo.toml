@@ -27,7 +27,7 @@ yarte_parser = { version = "0.7.0", path = "../yarte_parser" }
 v_eval = "0.3"
 v_htmlescape = "0.4"
 
-proc-macro2-impersonated = "0.1"
+proc-macro2-impersonated = { version = "0.1", features = ["span-locations"] }
 quote-impersonated = "0.1"
 syn-impersonated = { version= "0.1", features = ["full", "visit", "visit-mut", "extra-traits"] }
 

@@ -1,9 +1,9 @@
 use yarte::Template;
 
 #[derive(Template)]
-#[template(src = "{{ @foo }}")]
+#[template(src = "{{# unless !foo }}{{/unless }}")]
 struct Test{
-    foo: usize
+    foo: bool
 }
 
 fn main() {}

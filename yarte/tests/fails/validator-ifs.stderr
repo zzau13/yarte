@@ -1,0 +1,17 @@
+error: proc-macro derive panicked
+ --> $DIR/validator-ifs.rs:3:10
+  |
+3 | #[derive(Template)]
+  |          ^^^^^^^^
+  |
+  = help: message: error
+           --> $DIR/Test.hbs:1:8
+            |
+          1 | {{# if yield foo }}{{/if }}
+            |        ^^^^^^^^^ Not available in a template expression
+            |
+           ::: templates/Test.hbs:1:8
+            |
+          1 | {{# if yield foo }}{{/if }}
+            |        ^^^^^^^^^ Not available Rust expression in a template `if helper` arguments
+            |

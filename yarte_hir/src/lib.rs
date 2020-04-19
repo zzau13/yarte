@@ -18,7 +18,9 @@ use v_eval::{eval, Value};
 use v_htmlescape::escape;
 
 use yarte_helpers::config::Config;
-use yarte_parser::{ErrorMessage, Helper, Node, Partial, PartialBlock, SExpr, SNode, SVExpr, Ws};
+use yarte_parser::{
+    source_map::Span, ErrorMessage, Helper, Node, Partial, PartialBlock, SExpr, SNode, SVExpr, Ws,
+};
 
 #[macro_use]
 mod macros;
@@ -33,7 +35,7 @@ mod visit_partial;
 mod visits;
 
 use self::{
-    error::{GError, GResult},
+    error::{GError, GResult, MiddleError},
     scope::Scope,
     visit_each::find_loop_var,
     visit_partial::visit_partial,
@@ -43,7 +45,6 @@ pub use self::{
     serialize::serialize,
     visit_derive::{visit_derive, Mode, Print, Struct},
 };
-use yarte_parser::source_map::Span;
 
 #[derive(Copy, Clone, Debug)]
 pub struct HIROptions {
@@ -98,9 +99,8 @@ struct Generator<'a> {
     block: Vec<(Ws, &'a [SNode<'a>], Generator<'a>)>,
     /// buffer for writable
     buf_w: Vec<Writable<'a>>,
-    // TODO: on Span
-    // buffer for GError
-    buf_err: Vec<GError>,
+    // buffer for error builders
+    buf_err: Vec<(GError, (usize, usize))>,
     /// Errors buffer
     errors: Vec<ErrorMessage<GError>>,
     /// path - nodes
@@ -906,8 +906,9 @@ impl<'a> Generator<'a> {
     }
 
     fn write_errors(&mut self, span: Span) {
-        for message in mem::take(&mut self.buf_err) {
-            self.errors.push(ErrorMessage { message, span })
+        for (message, (lo, hi)) in mem::take(&mut self.buf_err) {
+            self.errors
+                .push(MiddleError::new(message, (lo as u32, hi as u32), span).into())
         }
     }
 

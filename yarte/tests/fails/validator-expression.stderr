@@ -1,0 +1,12 @@
+error: proc-macro derive panicked
+ --> $DIR/validator-expression.rs:3:10
+  |
+3 | #[derive(Template)]
+  |          ^^^^^^^^
+  |
+  = help: message: error
+           --> $DIR/Test.hbs:1:4
+            |
+          1 | {{ while foo {} }}
+            |    ^^^^^^^^^^^^ Not available Rust expression in a template expression
+            |
