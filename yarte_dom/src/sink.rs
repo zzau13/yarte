@@ -245,6 +245,6 @@ pub fn parse_fragment(doc: &str) -> ParseResult<Sink> {
                     None
                 }
             })
-            .ok_or_else(|| vec![])
+            .ok_or_else(Vec::new)
     })
 }
