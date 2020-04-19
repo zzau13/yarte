@@ -49,11 +49,10 @@ pub(super) fn unless(e: &SExpr, out: &mut Vec<ErrorMessage<GError>>) {
         | Macro(..) | Lit(..) | Try(..) | Match(..) => (),
         Unary(syn::ExprUnary { op, .. }) => {
             if let syn::UnOp::Not(t) = op {
-                let (lo, hi) = t.span().range_in_file();
                 out.push(
                     MiddleError::new(
                         GError::ValidatorUnlessNegate,
-                        (lo as u32, hi as u32),
+                        t.span().range_in_file(),
                         *e.span(),
                     )
                     .into(),

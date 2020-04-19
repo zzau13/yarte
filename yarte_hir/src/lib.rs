@@ -8,10 +8,10 @@ use std::{collections::BTreeMap, mem, path::PathBuf, str};
 
 use quote::{format_ident, quote};
 use syn::{
-    parse_str, punctuated::Punctuated, visit_mut::VisitMut, ExprArray, ExprBinary, ExprBlock,
-    ExprCall, ExprCast, ExprClosure, ExprField, ExprGroup, ExprIf, ExprIndex, ExprLoop, ExprMacro,
-    ExprMatch, ExprMethodCall, ExprParen, ExprPath, ExprRange, ExprReference, ExprRepeat,
-    ExprTuple, ExprUnary, ExprUnsafe, PathSegment, Token,
+    parse_str, punctuated::Punctuated, spanned::Spanned, visit_mut::VisitMut, ExprArray,
+    ExprBinary, ExprBlock, ExprCall, ExprCast, ExprClosure, ExprField, ExprGroup, ExprIf,
+    ExprIndex, ExprLoop, ExprMacro, ExprMatch, ExprMethodCall, ExprParen, ExprPath, ExprRange,
+    ExprReference, ExprRepeat, ExprTuple, ExprUnary, ExprUnsafe, PathSegment, Token,
 };
 
 use v_eval::{eval, Value};
@@ -295,9 +295,38 @@ impl<'a> Generator<'a> {
                         })
                     }
                 }
+                Node::Error(err) => {
+                    self.skip_ws();
+                    if let Some(msg) = self.format_error(err) {
+                        self.errors.push(ErrorMessage {
+                            message: GError::UserCompileError(msg),
+                            span: *n.span(),
+                        })
+                    }
+                }
                 #[allow(unreachable_patterns)]
                 _ => (),
             }
+        }
+    }
+
+    // TODO:
+    fn format_error(&mut self, err: &SVExpr) -> Option<String> {
+        if let Some(first) = err.t().first() {
+            if let syn::Expr::Lit(e) = first {
+                if let syn::Lit::Str(v) = &e.lit {
+                    return Some(v.value());
+                }
+            }
+
+            self.errors.push(
+                MiddleError::new(GError::Internal, first.span().range_in_file(), *err.span())
+                    .into(),
+            );
+
+            None
+        } else {
+            Some(String::new())
         }
     }
 
@@ -906,9 +935,9 @@ impl<'a> Generator<'a> {
     }
 
     fn write_errors(&mut self, span: Span) {
-        for (message, (lo, hi)) in mem::take(&mut self.buf_err) {
+        for (message, range) in mem::take(&mut self.buf_err) {
             self.errors
-                .push(MiddleError::new(message, (lo as u32, hi as u32), span).into())
+                .push(MiddleError::new(message, range, span).into())
         }
     }
 

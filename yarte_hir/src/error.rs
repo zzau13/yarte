@@ -11,7 +11,8 @@ pub(crate) struct MiddleError {
 }
 
 impl MiddleError {
-    pub(crate) fn new(message: GError, range: (u32, u32), span: Span) -> Self {
+    pub(crate) fn new(message: GError, range: (usize, usize), span: Span) -> Self {
+        let range = (range.0 as u32, range.1 as u32);
         Self {
             message,
             range,
@@ -73,6 +74,8 @@ pub enum GError {
     NotExist,
     #[display(fmt = "Unimplemented")]
     Unimplemented,
+    #[display(fmt = "Compile error: {}", _0)]
+    UserCompileError(String),
     #[display(fmt = "Internal")]
     Internal,
     #[display(fmt = "use super without any parent")]

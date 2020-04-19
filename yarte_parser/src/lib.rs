@@ -59,6 +59,7 @@ pub enum Node<'a> {
     Block(Ws),
     Raw((Ws, Ws), &'a str, SStr<'a>, &'a str),
     Safe(Ws, SExpr),
+    Error(SVExpr),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -135,6 +136,7 @@ macro_rules! make_eater {
                                 b'#' => try_eat!(buf, i, at, j, hel(i.adv(at + j + 3 + $t), $ws)),
                                 b'>' => try_eat!(buf, i, at, j, par(i.adv(at + j + 3 + $t), $ws)),
                                 b'R' => try_eat!(buf, i, at, j, raw(i.adv(at + j + 3 + $t), $ws)),
+                                b'$' => try_eat!(buf, i, at, j, error(i.adv(at + j + 3 + $t))),
                                 b'/' => kill!(buf, i.adv(at + j + 2), i, at + j),
                                 _ => {
                                     $callback!(buf, i, at, j, $t, $ws);
@@ -396,6 +398,11 @@ fn if_else(abode_ws: Ws, i: Cursor, args: SExpr) -> PResult<Node> {
             break Err(LexError::Fail(PError::IfElse, Span::from(i)));
         }
     }
+}
+
+/// Eat error Node
+fn error(i: Cursor) -> PResult<Node> {
+    do_parse!(i, ws >> args: args_list >> end_expr >> (Node::Error(args)))
 }
 
 /// Eat raw Node
