@@ -8,6 +8,10 @@ use std::{
 
 #[cfg(feature = "big_num_32")]
 pub mod big_num_32;
+#[cfg(feature = "display_fn")]
+pub mod display_fn;
+#[cfg(feature = "io_fmt")]
+pub mod io_fmt;
 mod markup;
 
 pub use markup::Render;

@@ -14,6 +14,8 @@ workspace = ".."
 
 [features]
 big_num_32 = []
+display_fn = []
+io_fmt = []
 
 [badges]
 travis-ci = { repository = "botika/yarte", branch = "master" }
@@ -24,3 +26,6 @@ v_htmlescape = "0.4"
 
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.5"
+
+[dev-dependencies]
+serde_json = "1.0.51"
