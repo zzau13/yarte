@@ -1007,6 +1007,35 @@ fn test_compile_error() {
     );
 }
 
+#[test]
+fn test_at_helpers() {
+    let rest = "{{ @json foo }}";
+    assert_eq!(
+        parse(rest),
+        vec![S(
+            Node::AtHelper(
+                (false, false),
+                AtHelperKind::Json,
+                S(vec![parse_str("foo").unwrap()], bytes!(9..12))
+            ),
+            bytes!(0..15)
+        )]
+    );
+
+    let rest = "{{ @json_pretty foo }}";
+    assert_eq!(
+        parse(rest),
+        vec![S(
+            Node::AtHelper(
+                (false, false),
+                AtHelperKind::JsonPretty,
+                S(vec![parse_str("foo").unwrap()], bytes!(16..19))
+            ),
+            bytes!(0..22)
+        )]
+    )
+}
+
 fn test_error(rest: &str, _message: PError, _span: Span) {
     let cursor = Cursor { rest, off: 0 };
     match _parse(cursor) {
@@ -1075,5 +1104,19 @@ fn test_error_expr_multiline() {
         "{{ foo\n\n.map(|x| x)\n\n   .bar(@)\n.foo() }}",
         PError::Expr(DOption::Some(String::from("expected expression"))),
         bytes!(29..30),
+    );
+}
+
+#[test]
+fn test_error_at_helper_not_exist() {
+    test_error("{{ @foo }}", PError::AtHelperNotExist, bytes!(4..7));
+}
+
+#[test]
+fn test_error_at_helper_check_len() {
+    test_error(
+        "{{ @json one, two }}",
+        PError::AtHelperArgsLen(1),
+        bytes!(9..17),
     );
 }

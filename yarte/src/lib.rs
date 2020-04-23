@@ -12,6 +12,8 @@
 use std::fmt::{self, Write};
 
 pub use yarte_derive::Template;
+#[cfg(feature = "json")]
+pub use yarte_helpers::helpers::{display_fn::DisplayFn, io_fmt::IoFmt};
 pub use yarte_helpers::{helpers::Render, recompile, Error, Result};
 
 /// Template trait, will implement by derive like `Display` or `actix_web::Responder` (with feature)
@@ -45,4 +47,9 @@ pub mod aw {
 #[cfg(feature = "wasm")]
 pub mod serde_json {
     pub use serde_json::to_string;
+}
+
+#[cfg(feature = "json")]
+pub mod sd {
+    pub use serde_json::{to_writer, to_writer_pretty};
 }

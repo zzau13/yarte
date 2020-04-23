@@ -15,7 +15,7 @@ workspace = ".."
 [features]
 big_num_32 = []
 display_fn = []
-io_fmt = []
+io_fmt = ["display_fn"]
 
 [badges]
 travis-ci = { repository = "botika/yarte", branch = "master" }

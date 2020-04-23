@@ -8,7 +8,7 @@ use std::{collections::BTreeMap, mem, path::PathBuf, str};
 
 use quote::{format_ident, quote};
 use syn::{
-    parse_str, punctuated::Punctuated, spanned::Spanned, visit_mut::VisitMut, ExprArray,
+    parse2, parse_str, punctuated::Punctuated, spanned::Spanned, visit_mut::VisitMut, ExprArray,
     ExprBinary, ExprBlock, ExprCall, ExprCast, ExprClosure, ExprField, ExprGroup, ExprIf,
     ExprIndex, ExprLoop, ExprMacro, ExprMatch, ExprMethodCall, ExprParen, ExprPath, ExprRange,
     ExprReference, ExprRepeat, ExprTuple, ExprUnary, ExprUnsafe, PathSegment, Token,
@@ -19,7 +19,8 @@ use v_htmlescape::escape;
 
 use yarte_helpers::config::Config;
 use yarte_parser::{
-    source_map::Span, ErrorMessage, Helper, Node, Partial, PartialBlock, SExpr, SNode, SVExpr, Ws,
+    source_map::Span, AtHelperKind, ErrorMessage, Helper, Node, Partial, PartialBlock, SExpr,
+    SNode, SVExpr, Ws,
 };
 
 #[macro_use]
@@ -227,7 +228,6 @@ impl<'a> Generator<'a> {
                         self.buf_w.push(Writable::Expr(Box::new(expr), false));
                     }
                 }
-                // TODO: feature
                 #[cfg(feature = "wasm-app")]
                 Node::RExpr(ws, sexpr) => {
                     let mut expr = *sexpr.t().clone();
@@ -302,6 +302,24 @@ impl<'a> Generator<'a> {
                             message: GError::UserCompileError(msg),
                             span: *n.span(),
                         })
+                    }
+                }
+                Node::AtHelper(ws, e, args) => {
+                    self.handle_ws(*ws);
+                    use AtHelperKind::*;
+                    match e {
+                        Json => {
+                            let mut arg = args.t()[0].clone();
+                            self.visit_expr_mut(&mut arg);
+                            let expr = parse2(quote!(yarte::DisplayFn::new(|_f| yarte::sd::to_writer(yarte::IoFmt::new(_f), &(#arg)).map_err(|_| yarte::Error)))).unwrap();
+                            self.buf_w.push(Writable::Expr(Box::new(expr), true))
+                        }
+                        JsonPretty => {
+                            let mut arg = args.t()[0].clone();
+                            self.visit_expr_mut(&mut arg);
+                            let expr = parse2(quote!(yarte::DisplayFn::new(|_f| yarte::sd::to_writer_pretty(yarte::IoFmt::new(_f), &(#arg)).map_err(|_| yarte::Error)))).unwrap();
+                            self.buf_w.push(Writable::Expr(Box::new(expr), true))
+                        }
                     }
                 }
                 #[allow(unreachable_patterns)]
