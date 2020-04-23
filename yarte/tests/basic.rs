@@ -298,26 +298,27 @@ fn test_compile_error() {
 
 #[cfg(feature = "wasm")]
 mod sd {
-    use yarte::Template;
     use serde::Serialize;
+    use yarte::Template;
 
     // Clone only for test not need in template
     #[derive(Serialize, Clone)]
     struct Foo {
-        bar: String
+        bar: String,
     }
 
     #[derive(Template)]
     #[template(src = "{{{ serde_json::to_string(&foo).map_err(|_| yarte::Error)? }}}")]
     struct Json<S: Serialize> {
-        foo: S
+        foo: S,
     }
 
     #[test]
     fn test_serialize_json() {
-        let foo = Foo { bar: "foo".to_string() };
-        let t  = Json { foo: foo.clone() };
+        let foo = Foo {
+            bar: "foo".to_string(),
+        };
+        let t = Json { foo: foo.clone() };
         assert_eq!(serde_json::to_string(&foo).unwrap(), t.call().unwrap());
     }
 }
-

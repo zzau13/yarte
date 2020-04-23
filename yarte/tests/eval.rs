@@ -31,13 +31,11 @@ fn test_mul_paren_str() {
 }
 
 #[derive(Template)]
-#[template(
-    src = "
+#[template(src = "
     {{~# each &[\"foo\", \"bar\"] ~}}
         {{ this }} {{ index }}
     {{~/ each }}
-    "
-)]
+    ")]
 struct ConstForTemplate;
 
 #[test]
@@ -47,13 +45,11 @@ fn test_const_for() {
 }
 
 #[derive(Template)]
-#[template(
-    src = "
+#[template(src = "
     {{~# each 1..10 ~}}
         {{ this }} {{ index }}
     {{~/ each }}
-    "
-)]
+    ")]
 struct ConstForRangeTemplate;
 
 #[test]
@@ -63,15 +59,13 @@ fn test_const_for_range() {
 }
 
 #[derive(Template)]
-#[template(
-    src = "
+#[template(src = "
     {{~# each &[\"foo\", \"bar\"] ~}}
         {{# each 2..4 ~}}
             {{ super::index }} {{ this }}
         {{~/each }} {{ this }}
     {{~/ each }}
-    "
-)]
+    ")]
 struct ConstForNestedTemplate;
 
 #[test]
@@ -81,15 +75,13 @@ fn test_const_for_nested() {
 }
 
 #[derive(Template)]
-#[template(
-    src = "
+#[template(src = "
     {{~# each &[\"foo\", \"bar\"] ~}}
         {{# each 2..4 ~}}
             {{ super::index }} {{ super::super::_0 }} {{ this }}
         {{~/each }} {{ this }}
     {{~/ each }}
-    "
-)]
+    ")]
 struct ConstForNested2Template<'a>(&'a str);
 
 #[test]
