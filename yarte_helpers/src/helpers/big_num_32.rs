@@ -1,6 +1,7 @@
 use std::ops::{BitAnd, BitOr, BitOrAssign};
 // TODO: to 1024
 
+// TODO: trait const zero
 pub trait YNumber: Copy + PartialEq + BitOr + BitOrAssign + BitAnd {
     fn zero() -> Self;
     fn neq_zero(self) -> bool;
