@@ -3,7 +3,7 @@
 use yarte::Template;
 
 #[derive(Template)]
-#[template(path = "simple-iterator.hbs")]
+#[template(path = "simple-iterator")]
 struct SimpleIterator<'a> {
     title: &'a str,
     story: Story<'a>,
@@ -48,7 +48,7 @@ fn test_simple_iterator() {
 }
 
 #[derive(Template)]
-#[template(path = "with-simple-iterator.hbs")]
+#[template(path = "with-simple-iterator")]
 
 struct WhitSimpleIterator<'a> {
     title: &'a str,

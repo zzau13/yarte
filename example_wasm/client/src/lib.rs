@@ -5,7 +5,7 @@ use model::Fortune;
 use yarte_wasm_app::{App, Addr};
 
 #[derive(App)]
-#[template(path = "fortune.hbs", print = "code")]
+#[template(path = "fortune", print = "code")]
 #[msg(pub enum Msg {
     Clear,
     Add,

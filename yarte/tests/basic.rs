@@ -2,10 +2,10 @@
 
 use std::collections::HashMap;
 
-use yarte::Template;
+use yarte::{Template, TemplateText};
 
 #[derive(Template)]
-#[template(path = "hello.hbs")]
+#[template(path = "hello")]
 struct HelloTemplate<'a> {
     name: &'a str,
 }
@@ -16,8 +16,8 @@ fn test_hello() {
     assert_eq!("Hello, world!", hello.call().unwrap());
 }
 
-#[derive(Template)]
-#[template(src = "{{}", ext = "txt")]
+#[derive(TemplateText)]
+#[template(src = "{{}")]
 struct BracketsTemplate;
 
 #[test]
@@ -26,8 +26,8 @@ fn test_brackets() {
     assert_eq!("{{}", hello.call().unwrap());
 }
 
-#[derive(Template)]
-#[template(src = "{{{}", ext = "txt")]
+#[derive(TemplateText)]
+#[template(src = "{{{}")]
 struct Brackets2Template;
 
 #[test]
@@ -36,9 +36,8 @@ fn test_brackets2() {
     assert_eq!("{{{}", hello.call().unwrap());
 }
 
-#[cfg(feature = "with-actix-web")]
 #[derive(Template)]
-#[template(path = "simple.hbs")]
+#[template(path = "simple")]
 struct VariablesTemplate<'a> {
     strvar: &'a str,
     num: i64,
@@ -58,11 +57,10 @@ fn test_variables() {
         "hello world, foo\nwith number: 42\nIñtërnâtiônàlizætiøn is important\nin vars too: \
          Iñtërnâtiônàlizætiøn"
     );
-    assert_eq!(VariablesTemplate::mime(), "text/html; charset=utf-8");
 }
 
 #[derive(Template)]
-#[template(path = "hello.hbs")]
+#[template(path = "hello")]
 struct EscapeTemplate<'a> {
     name: &'a str,
 }
@@ -74,8 +72,8 @@ fn test_escape() {
     assert_eq!(s.call().unwrap(), "Hello, &lt;&gt;&amp;&quot;&#x27;&#x2f;!");
 }
 
-#[derive(Template)]
-#[template(path = "simple-no-escape.txt")]
+#[derive(TemplateText)]
+#[template(path = "simple-no-escape")]
 struct VariablesTemplateNoEscape<'a> {
     strvar: &'a str,
     num: i64,
@@ -97,7 +95,7 @@ fn test_variables_no_escape() {
 }
 
 #[derive(Template)]
-#[template(path = "if.hbs")]
+#[template(path = "if")]
 struct IfTemplate {
     cond: bool,
 }
@@ -109,7 +107,7 @@ fn test_if() {
 }
 
 #[derive(Template)]
-#[template(path = "else.hbs")]
+#[template(path = "else")]
 struct ElseTemplate {
     cond: bool,
 }
@@ -127,7 +125,7 @@ fn test_else_true() {
 }
 
 #[derive(Template)]
-#[template(path = "else-if.hbs")]
+#[template(path = "else-if")]
 struct ElseIfTemplate {
     cond: bool,
     check: bool,
@@ -143,7 +141,7 @@ fn test_else_if() {
 }
 
 #[derive(Template)]
-#[template(path = "comment.hbs")]
+#[template(path = "comment")]
 struct CommentTemplate {}
 
 #[test]
@@ -153,7 +151,7 @@ fn test_comment() {
 }
 
 #[derive(Template)]
-#[template(path = "negation.hbs")]
+#[template(path = "negation")]
 struct NegationTemplate {
     foo: bool,
 }
@@ -165,7 +163,7 @@ fn test_negation() {
 }
 
 #[derive(Template)]
-#[template(path = "minus.hbs")]
+#[template(path = "minus")]
 struct MinusTemplate {
     foo: i8,
 }
@@ -177,7 +175,7 @@ fn test_minus() {
 }
 
 #[derive(Template)]
-#[template(path = "index.hbs")]
+#[template(path = "index")]
 struct IndexTemplate {
     foo: HashMap<String, String>,
 }
@@ -191,7 +189,7 @@ fn test_index() {
 }
 
 #[derive(Template)]
-#[template(path = "tuple-attr.hbs")]
+#[template(path = "tuple-attr")]
 struct TupleAttrTemplate<'a>(&'a str, &'a str);
 
 #[test]
@@ -209,7 +207,7 @@ struct NestedHolder {
 }
 
 #[derive(Template)]
-#[template(path = "nested-attr.hbs")]
+#[template(path = "nested-attr")]
 struct NestedAttrTemplate {
     inner: NestedHolder,
 }
@@ -225,7 +223,7 @@ fn test_nested_attr() {
 }
 
 #[derive(Template)]
-#[template(path = "literals.hbs")]
+#[template(path = "literals")]
 struct LiteralsTemplate {}
 
 #[test]
@@ -235,7 +233,7 @@ fn test_literals() {
 }
 
 #[derive(Template)]
-#[template(path = "empty.hbs")]
+#[template(path = "empty")]
 struct Empty;
 
 #[test]
@@ -248,7 +246,7 @@ struct Foo {
 }
 
 #[derive(Template)]
-#[template(path = "attr.hbs")]
+#[template(path = "attr")]
 struct AttrTemplate {
     inner: Foo,
 }
@@ -262,7 +260,7 @@ fn test_attr() {
 }
 
 #[derive(Template)]
-#[template(path = "option.hbs")]
+#[template(path = "option")]
 struct OptionTemplate {
     var: Option<usize>,
 }

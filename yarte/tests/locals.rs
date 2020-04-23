@@ -1,7 +1,7 @@
 use yarte::Template;
 
 #[derive(Template)]
-#[template(path = "let.hbs")]
+#[template(path = "let")]
 struct LetTemplate<'a> {
     s: &'a str,
 }
@@ -13,7 +13,7 @@ fn test_let() {
 }
 
 #[derive(Template)]
-#[template(path = "let-tuple.hbs")]
+#[template(path = "let-tuple")]
 struct LetTupleTemplate<'a> {
     s: &'a str,
     t: (&'a str, &'a str),

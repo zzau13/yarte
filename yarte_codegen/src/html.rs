@@ -1,33 +1,7 @@
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 
-use yarte_dom::DOMFmt;
-
 use super::{CodeGen, EachCodeGen, IfElseCodeGen, HIR};
-
-pub struct HTMLCodeGen(pub &'static str);
-
-impl EachCodeGen for HTMLCodeGen {}
-
-impl IfElseCodeGen for HTMLCodeGen {}
-impl CodeGen for HTMLCodeGen {
-    fn gen(&mut self, v: Vec<HIR>) -> TokenStream {
-        let parent = self.0;
-        gen(self, v, parent)
-    }
-}
-
-pub struct HTMLMinCodeGen(pub &'static str);
-impl EachCodeGen for HTMLMinCodeGen {}
-impl IfElseCodeGen for HTMLMinCodeGen {}
-
-impl CodeGen for HTMLMinCodeGen {
-    fn gen(&mut self, v: Vec<HIR>) -> TokenStream {
-        let parent = self.0;
-        let dom: DOMFmt = v.into();
-        gen(self, dom.0, parent)
-    }
-}
 
 fn gen<C>(codegen: &mut C, v: Vec<HIR>, parent: &str) -> TokenStream
 where
@@ -47,4 +21,34 @@ where
         })
     }
     tokens
+}
+
+pub struct HTMLCodeGen(pub &'static str);
+
+impl EachCodeGen for HTMLCodeGen {}
+
+impl IfElseCodeGen for HTMLCodeGen {}
+impl CodeGen for HTMLCodeGen {
+    fn gen(&mut self, v: Vec<HIR>) -> TokenStream {
+        let parent = self.0;
+        gen(self, v, parent)
+    }
+}
+
+#[cfg(feature = "html-min")]
+pub mod html_min {
+    use super::*;
+    use yarte_dom::DOMFmt;
+
+    pub struct HTMLMinCodeGen(pub &'static str);
+    impl EachCodeGen for HTMLMinCodeGen {}
+    impl IfElseCodeGen for HTMLMinCodeGen {}
+
+    impl CodeGen for HTMLMinCodeGen {
+        fn gen(&mut self, v: Vec<HIR>) -> TokenStream {
+            let parent = self.0;
+            let dom: DOMFmt = v.into();
+            gen(self, dom.0, parent)
+        }
+    }
 }

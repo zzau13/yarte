@@ -1,10 +1,10 @@
 #![allow(clippy::redundant_pattern_matching, clippy::into_iter_on_ref)]
 
 use std::fmt::Error;
-use yarte::{Result, Template};
+use yarte::{Result, Template, TemplateText};
 
-#[derive(Template)]
-#[template(src = "Hello, {{ name }}!", ext = "txt")]
+#[derive(TemplateText)]
+#[template(src = "Hello, {{ name }}!")]
 struct HelloTemplate<'a> {
     name: &'a str,
 }
@@ -15,8 +15,8 @@ fn test_hello() {
     assert_eq!("Hello, world!", t.call().unwrap());
 }
 
-#[derive(Template)]
-#[template(path = "hello.txt")]
+#[derive(TemplateText)]
+#[template(path = "hello")]
 struct HelloTxtTemplate<'a> {
     name: &'a str,
 }
@@ -28,7 +28,7 @@ fn test_hello_txt() {
 }
 
 #[derive(Template)]
-#[template(path = "expr-ignore.hbs")]
+#[template(path = "expr-ignore")]
 struct IgnoreTemplate {
     cond: Option<bool>,
 }
@@ -40,7 +40,7 @@ fn test_ignore() {
 }
 
 #[derive(Template)]
-#[template(path = "expr-closure.hbs")]
+#[template(path = "expr-closure")]
 struct ClosureTemplate<'a> {
     name: &'a str,
 }
@@ -52,7 +52,7 @@ fn test_closure() {
 }
 
 #[derive(Template)]
-#[template(path = "expr-let-closure.hbs")]
+#[template(path = "expr-let-closure")]
 struct LetClosureTemplate<'a> {
     name: &'a str,
 }
@@ -64,7 +64,7 @@ fn test_let_closure() {
 }
 
 #[derive(Template)]
-#[template(path = "expr-let-closure-scope.hbs")]
+#[template(path = "expr-let-closure-scope")]
 struct LetClosureScopeTemplate<'a> {
     name: &'a str,
 }
@@ -76,7 +76,7 @@ fn test_let_closure_scope() {
 }
 
 #[derive(Template)]
-#[template(path = "expr-let.hbs")]
+#[template(path = "expr-let")]
 struct LetTemplate<'a> {
     name: &'a str,
 }
@@ -88,7 +88,7 @@ fn test_let() {
 }
 
 #[derive(Template)]
-#[template(path = "expr-withfields.hbs")]
+#[template(path = "expr-withfields")]
 struct WithFieldsTemplate<'a> {
     names: (Name<'a>, Name<'a>),
 }
@@ -116,7 +116,7 @@ fn test_with_fields() {
 }
 
 #[derive(Template)]
-#[template(path = "expr-struct.hbs")]
+#[template(path = "expr-struct")]
 struct StructTemplate;
 
 #[test]
@@ -126,7 +126,7 @@ fn test_struct() {
 }
 
 #[derive(Template)]
-#[template(path = "expr-letwith.hbs")]
+#[template(path = "expr-letwith")]
 struct LetWithTemplate<'a> {
     name: &'a str,
 }
@@ -138,7 +138,7 @@ fn test_let_with() {
 }
 
 #[derive(Template)]
-#[template(path = "expr-let-if.hbs")]
+#[template(path = "expr-let-if")]
 struct LetIfTemplate {
     cond: bool,
 }
@@ -150,7 +150,7 @@ fn test_let_if() {
 }
 
 #[derive(Template)]
-#[template(path = "expr-let-if-some.hbs")]
+#[template(path = "expr-let-if-some")]
 struct LetIfSomeTemplate {
     cond: Option<bool>,
 }
@@ -162,7 +162,7 @@ fn test_let_if_some() {
 }
 
 #[derive(Template)]
-#[template(path = "expr-elif-some.hbs")]
+#[template(path = "expr-elif-some")]
 struct LetElseIfSomeTemplate {
     cond: Option<bool>,
     check: Option<bool>,
@@ -198,7 +198,7 @@ fn test_let_else_if_some() {
 }
 
 #[derive(Template)]
-#[template(path = "expr-let-elif-each-some.hbs")]
+#[template(path = "expr-let-elif-each-some")]
 struct LetElseIfEachSomeTemplate {
     conditions: Vec<Cond>,
 }
@@ -234,7 +234,7 @@ fn test_let_else_if_each_some() {
 }
 
 #[derive(Template)]
-#[template(path = "expr-letloop.hbs")]
+#[template(path = "expr-letloop")]
 struct LetLoopTemplate<'a> {
     name: &'a str,
 }
@@ -246,7 +246,7 @@ fn test_let_loop() {
 }
 
 #[derive(Template)]
-#[template(path = "expr-letcollect.hbs")]
+#[template(path = "expr-letcollect")]
 struct LetCollectTemplate {
     a: Vec<usize>,
 }
@@ -258,7 +258,7 @@ fn test_let_collect() {
 }
 
 #[derive(Template)]
-#[template(path = "expr-try.hbs")]
+#[template(path = "expr-try")]
 struct TryTemplate {
     a: yarte::Result<usize>,
 }
@@ -273,7 +273,7 @@ fn test_try() {
 }
 
 #[derive(Template)]
-#[template(path = "expr-trymethod.hbs")]
+#[template(path = "expr-trymethod")]
 struct TryMethodTemplate {
     some: bool,
 }
@@ -298,7 +298,7 @@ fn test_try_method() {
 }
 
 #[derive(Template)]
-#[template(path = "expr-unsafe.hbs")]
+#[template(path = "expr-unsafe")]
 struct UnsafeTemplate {
     s: Vec<usize>,
 }
@@ -310,7 +310,7 @@ fn test_unsafe() {
 }
 
 #[derive(Template)]
-#[template(path = "expr-assign.hbs")]
+#[template(path = "expr-assign")]
 struct AssignAtLoopTemplate;
 
 #[test]
@@ -320,7 +320,7 @@ fn test_assign_at_loop() {
 }
 
 #[derive(Template)]
-#[template(path = "expr-assign-op.hbs")]
+#[template(path = "expr-assign-op")]
 struct AssignOpAtLoopTemplate;
 
 #[test]
@@ -330,7 +330,7 @@ fn test_assign_op_at_loop() {
 }
 
 #[derive(Template)]
-#[template(path = "expr-macros.hbs")]
+#[template(path = "expr-macros")]
 struct MacrosTemplate;
 
 #[test]
@@ -340,7 +340,7 @@ fn test_macro() {
 }
 
 #[derive(Template)]
-#[template(path = "expr-for-loop.hbs")]
+#[template(path = "expr-for-loop")]
 struct ForLoopTemplate {
     name: String,
 }
@@ -354,7 +354,7 @@ fn test_for_loop() {
 }
 
 #[derive(Template)]
-#[template(path = "expr-match.hbs")]
+#[template(path = "expr-match")]
 struct MatchTemplate<'a> {
     a: yarte::Result<&'a str>,
 }
@@ -369,7 +369,7 @@ fn test_match() {
 }
 
 #[derive(Template)]
-#[template(path = "expr-match-guard.hbs")]
+#[template(path = "expr-match-guard")]
 struct MatchGuardTemplate {
     a: yarte::Result<usize>,
 }
@@ -387,7 +387,7 @@ fn test_match_guard() {
 }
 
 #[derive(Template)]
-#[template(path = "self-method.hbs")]
+#[template(path = "self-method")]
 struct SelfMethodTemplate<'a> {
     s: &'a str,
 }
@@ -405,7 +405,7 @@ fn test_self_method() {
 }
 
 #[derive(Template)]
-#[template(path = "nested-self-method.hbs")]
+#[template(path = "nested-self-method")]
 struct NestedSelfMethodTemplate<'a> {
     t: SelfMethodTemplate<'a>,
 }
@@ -441,7 +441,7 @@ fn hello() -> &'static str {
 }
 
 #[derive(Template)]
-#[template(path = "expr-call.hbs")]
+#[template(path = "expr-call")]
 struct CallTemplate;
 
 #[test]

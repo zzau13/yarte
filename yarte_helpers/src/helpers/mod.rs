@@ -6,11 +6,11 @@ use std::{
     process::Command,
 };
 
-#[cfg(feature = "big_num_32")]
+#[cfg(feature = "big-num-32")]
 pub mod big_num_32;
-#[cfg(feature = "display_fn")]
+#[cfg(feature = "display-fn")]
 pub mod display_fn;
-#[cfg(feature = "io_fmt")]
+#[cfg(feature = "io-fmt")]
 pub mod io_fmt;
 mod markup;
 

@@ -3,7 +3,7 @@
 use yarte::Template;
 
 #[derive(Template)]
-#[template(path = "with-partial.hbs")]
+#[template(path = "with-partial")]
 struct PartialTemplate<'a> {
     strs: &'a [&'a str],
 }
@@ -16,7 +16,7 @@ fn test_partial() {
 }
 
 #[derive(Template)]
-#[template(path = "with-partial-indir.hbs")]
+#[template(path = "with-partial-indir")]
 struct PartialDirTemplate<'a> {
     strs: &'a [&'a str],
 }
@@ -32,7 +32,7 @@ fn test_partial_dir() {
 }
 
 #[derive(Template)]
-#[template(path = "deep/with-partial.hbs")]
+#[template(path = "deep/with-partial")]
 struct PartialDirDTemplate<'a> {
     strs: &'a [&'a str],
 }
@@ -53,7 +53,7 @@ struct Scope<'a> {
 }
 
 #[derive(Template)]
-#[template(path = "with-partial-scope.hbs")]
+#[template(path = "with-partial-scope")]
 struct PartialScopeTemplate<'a> {
     scope: Scope<'a>,
 }
@@ -70,7 +70,7 @@ fn test_partial_scope() {
 }
 
 #[derive(Template)]
-#[template(path = "with-partial-lit.hbs")]
+#[template(path = "with-partial-lit")]
 struct PartialLitTemplate;
 
 #[test]
@@ -79,7 +79,7 @@ fn test_partial_lit() {
 }
 
 #[derive(Template)]
-#[template(path = "with-partial-lit-mix.hbs")]
+#[template(path = "with-partial-lit-mix")]
 struct PartialLitMixTemplate {
     index: usize,
 }
@@ -91,7 +91,7 @@ fn test_partial_lit_mix() {
 }
 
 #[derive(Template)]
-#[template(path = "with-partial-lit-scp.hbs")]
+#[template(path = "with-partial-lit-scp")]
 struct PartialLitScopeTemplate<'a> {
     scope: Scope<'a>,
 }
@@ -108,7 +108,7 @@ fn test_partial_lit_scope() {
 }
 
 #[derive(Template)]
-#[template(path = "with-partial-compose.hbs")]
+#[template(path = "with-partial-compose")]
 struct PartialComposeTemplate<'a> {
     scope: Scope<'a>,
 }
@@ -125,7 +125,7 @@ fn test_partial_compose() {
 }
 
 #[derive(Template)]
-#[template(path = "with-partial-self.hbs")]
+#[template(path = "with-partial-self")]
 struct PartialSelfTemplate<'a> {
     scope: Scope<'a>,
     this: &'a str,
@@ -146,7 +146,7 @@ fn test_partial_self() {
 }
 
 #[derive(Template)]
-#[template(path = "with-partial-each.hbs")]
+#[template(path = "with-partial-each")]
 struct PartialEachTemplate<'a> {
     list: &'a [&'a str],
 }
@@ -160,7 +160,7 @@ fn test_partial_each() {
 }
 
 #[derive(Template)]
-#[template(path = "with-partial-on.hbs")]
+#[template(path = "with-partial-on")]
 struct PartialOnTemplate<'a> {
     list: &'a [Scope<'a>],
     this: &'a str,
@@ -191,7 +191,7 @@ fn test_partial_on() {
 }
 
 #[derive(Template)]
-#[template(path = "partial-compile.hbs")]
+#[template(path = "partial-compile")]
 struct PartialCompile {
     is_bar: bool,
     num: usize,
@@ -222,7 +222,7 @@ fn test_partial_compile() {
 }
 
 #[derive(Template)]
-#[template(path = "with-partial-compile.hbs")]
+#[template(path = "with-partial-compile")]
 struct WithPartialCompile;
 
 #[test]
@@ -233,7 +233,7 @@ fn test_with_partial_compile() {
 }
 
 #[derive(Template)]
-#[template(path = "partial-compile-cond.hbs")]
+#[template(path = "partial-compile-cond")]
 struct PartialCompileCond {
     is_bar: bool,
     num: usize,
@@ -264,7 +264,7 @@ fn test_partial_compile_cond() {
 }
 
 #[derive(Template)]
-#[template(path = "with-partial-compile-cond.hbs")]
+#[template(path = "with-partial-compile-cond")]
 struct WithPartialCompileCond;
 
 #[test]

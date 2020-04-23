@@ -17,8 +17,7 @@ travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [features]
-wasm-app = ["yarte_hir/wasm-app", "yarte_helpers/big_num_32"]
-actix-web = ["yarte_hir/actix-web"]
+wasm-app = ["yarte_hir/wasm-app"]
 
 [dependencies]
 yarte_hir = { version = "0.7.0", path = "../yarte_hir" }

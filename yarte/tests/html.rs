@@ -1,6 +1,7 @@
 #![allow(clippy::into_iter_on_ref)]
+#![cfg(feature = "html-min")]
 
-use yarte::Template;
+use yarte::TemplateMin as Template;
 
 pub struct Fortune {
     id: i32,
@@ -8,7 +9,7 @@ pub struct Fortune {
 }
 
 #[derive(Template)]
-#[template(path = "html/fortune.hbs", mode = "min")]
+#[template(path = "html/fortune")]
 pub struct FortunesTemplate {
     fortunes: Vec<Fortune>,
 }
@@ -55,7 +56,7 @@ struct Header {
 }
 
 #[derive(Template)]
-#[template(path = "html/header.hbs", mode = "min")]
+#[template(path = "html/header")]
 struct HeaderTemplate {
     mode: Mode,
     header: Header,
@@ -89,7 +90,7 @@ fn test_header() {
 }
 
 #[derive(Template)]
-#[template(path = "html/article.hbs", mode = "min")]
+#[template(path = "html/article")]
 struct ArticleTemplate {
     flag: bool,
 }
@@ -109,7 +110,7 @@ fn test_article() {
 }
 
 #[derive(Template)]
-#[template(path = "html/pre.hbs", mode = "min")]
+#[template(path = "html/pre")]
 struct PreTemplate {
     flag: bool,
 }
@@ -126,7 +127,7 @@ fn test_pre() {
 }
 
 #[derive(Template)]
-#[template(path = "html/section.hbs", mode = "min")]
+#[template(path = "html/section")]
 struct SectionTemplate {
     flag: bool,
 }
@@ -164,12 +165,9 @@ fn test_section() {
 }
 
 #[derive(Template)]
-#[template(
-    src = "
+#[template(src = "
 <noscript> <meta> <style></style> <link></noscript>
-",
-    mode = "min"
-)]
+")]
 struct NoScript;
 
 #[test]
@@ -180,27 +178,13 @@ fn test_noscript() {
     )
 }
 
-#[derive(Template)]
-#[template(src = "<{{ tag }}></{{ tag}}>", mode = "min")]
-struct TagExpr {
-    tag: String,
-}
-
-#[test]
-fn test_tag_expression() {
-    assert_eq!(TagExpr { tag: "div".into() }.call().unwrap(), "<div></div>")
-}
-
 struct Attr {
     name: String,
     value: String,
 }
 
 #[derive(Template)]
-#[template(
-    src = "{{#with attr}}<div {{ name }}=\"{{ value }}\"></div>{{/with }}",
-    mode = "min"
-)]
+#[template(src = "{{#with attr}}<div {{ name }}=\"{{ value }}\"></div>{{/with }}")]
 struct AttrExpr {
     attr: Attr,
 }
@@ -221,15 +205,16 @@ fn test_attr_expression() {
 }
 
 #[derive(Template)]
-#[template(path = "html/raw/index.html", mode = "min")]
+#[template(path = "html/raw/index")]
 struct RawHtml;
 
+use std::path::Path;
 #[test]
 fn test_raw_html() {
     use yarte_helpers::config::{read_config_file, Config};
     let config = read_config_file();
     let config = Config::new(&config);
-    let (_, expected) = config.get_template("html/raw/expected.html");
+    let (_, expected) = config.get_template(Path::new("html/raw/expected.html"));
 
     assert_eq!(RawHtml.call().unwrap(), expected);
 }

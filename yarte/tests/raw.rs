@@ -1,7 +1,8 @@
-use yarte::Template;
+#![cfg(feature = "html-min")]
+use yarte::TemplateMin;
 
-#[derive(Template)]
-#[template(path = "raw.hbs")]
+#[derive(TemplateMin)]
+#[template(path = "raw")]
 struct RawTemplate;
 
 #[test]
@@ -10,8 +11,8 @@ fn test_raw() {
     assert_eq!("{{#each example}}{{/each}}", raw.call().unwrap());
 }
 
-#[derive(Template)]
-#[template(path = "raw-partial.hbs", mode = "min")]
+#[derive(TemplateMin)]
+#[template(path = "raw-partial")]
 struct RawPartialTemplate;
 
 #[test]

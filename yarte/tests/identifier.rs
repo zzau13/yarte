@@ -1,7 +1,9 @@
-use yarte::Template;
+#![cfg(feature = "html-min")]
+
+use yarte::TemplateMin as Template;
 
 #[derive(Template)]
-#[template(path = "title.hbs", mode = "min")]
+#[template(path = "title")]
 struct TitleTemplate<'a> {
     title: &'a str,
 }
@@ -13,7 +15,7 @@ fn test_title() {
 }
 
 #[derive(Template)]
-#[template(path = "article-title-template.hbs", mode = "min")]
+#[template(path = "article-title-template")]
 struct ArticleTitleTemplate<'a> {
     article: Article<'a>,
 }

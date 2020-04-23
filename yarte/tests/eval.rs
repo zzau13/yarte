@@ -91,7 +91,7 @@ fn test_const_for_nested2() {
 }
 
 #[derive(Template)]
-#[template(path = "eval-partial.hbs")]
+#[template(path = "eval-partial")]
 struct ConstPartialTemplate;
 
 #[test]
@@ -104,7 +104,7 @@ fn test_const_partial() {
 }
 
 #[derive(Template)]
-#[template(path = "eval-partial-range.hbs")]
+#[template(path = "eval-partial-range")]
 struct ConstPartialRangeTemplate;
 
 #[test]
@@ -117,7 +117,7 @@ fn test_const_partial_range() {
 }
 
 #[derive(Template)]
-#[template(path = "eval-partial-str.hbs")]
+#[template(path = "eval-partial-str")]
 struct ConstPartialStrTemplate;
 
 #[test]

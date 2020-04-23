@@ -2,7 +2,7 @@
 #![cfg(feature = "wasm")]
 
 use serde::Serialize;
-use yarte::Template;
+use yarte::TemplateWasmServer as Template;
 
 #[derive(Serialize)]
 struct Fortune {
@@ -11,11 +11,7 @@ struct Fortune {
 }
 
 #[derive(Template, Serialize)]
-#[template(
-    path = "html/fortune.hbs",
-    mode = "server",
-    script = "./pkg/example.js"
-)]
+#[template(path = "html/fortune", script = "./pkg/example.js")]
 struct WasmServer {
     fortunes: Vec<Fortune>,
 }

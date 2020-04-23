@@ -44,11 +44,12 @@ use self::{
 pub use self::{
     hir::*,
     serialize::serialize,
-    visit_derive::{visit_derive, Mode, Print, Struct},
+    visit_derive::{visit_derive, Print, Struct},
 };
 
 #[derive(Copy, Clone, Debug)]
 pub struct HIROptions {
+    pub is_text: bool,
     pub resolve_to_self: bool,
 }
 
@@ -56,6 +57,7 @@ impl Default for HIROptions {
     fn default() -> Self {
         Self {
             resolve_to_self: true,
+            is_text: false,
         }
     }
 }
@@ -712,7 +714,7 @@ impl<'a> Generator<'a> {
             Int(a) => push_some!(a),
             Float(a) => push_some!(a),
             Bool(a) => push_some!(a),
-            Str(a) if safe || self.s.mode == Mode::Text => push_some!(a),
+            Str(a) if safe || self.opt.is_text => push_some!(a),
             Str(a) => push_some!(escape(&a)),
             _ => None,
         })

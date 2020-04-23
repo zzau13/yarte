@@ -20,9 +20,9 @@ maintenance = { status = "actively-developed" }
 proc-macro = true
 
 [features]
-mime = ["yarte_codegen/mime"]
-wasm-app = ["yarte_hir/wasm-app", "yarte_codegen/wasm-app", "yarte_helpers/big_num_32"]
-actix-web = ["yarte_hir/actix-web", "yarte_codegen/actix-web"]
+wasm-app = ["yarte_hir/wasm-app", "yarte_codegen/wasm-app"]
+html-min = ["yarte_codegen/html-min"]
+wasm-server = ["yarte_codegen/wasm-server"]
 
 [dependencies]
 yarte_codegen = { version = "0.7.0", path = "../yarte_codegen" }

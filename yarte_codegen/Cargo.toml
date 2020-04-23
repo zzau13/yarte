@@ -17,22 +17,20 @@ travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [features]
-mime = ["mime_guess"]
-wasm-app = ["indexmap", "heck", "yarte_hir/wasm-app", "yarte_dom/wasm-app", "yarte_helpers/big_num_32"]
-actix-web = ["yarte_dom/actix-web", "yarte_hir/actix-web", "mime_guess"]
+wasm-app = ["indexmap", "heck", "yarte_hir/wasm-app", "yarte_dom/wasm-app"]
+html-min = ["yarte_dom", "yarte_html"]
+wasm-server = ["yarte_dom", "yarte_html"]
 
 [dependencies]
-yarte_dom = { version = "0.7.0", path = "../yarte_dom" }
 yarte_helpers = { version = "0.7.0", path = "../yarte_helpers" }
 yarte_hir = { version = "0.7.0", path = "../yarte_hir" }
-yarte_html = { version = "0.7.0", path = "../yarte_html" }
 
 proc-macro2-impersonated = "0.1"
 quote-impersonated = "0.1"
 syn-impersonated = { version= "0.1", features = ["full", "extra-traits"] }
 
-markup5ever = "0.10"
-
+yarte_dom = { version = "0.7.0", path = "../yarte_dom", optional = true }
+yarte_html = { version = "0.7.0", path = "../yarte_html", optional = true }
 heck = { version = "0.3", optional = true }
 mime_guess = { version = "2.0", optional = true }
 indexmap = { version = "1.3", optional = true }
