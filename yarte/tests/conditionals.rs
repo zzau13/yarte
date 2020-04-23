@@ -1,7 +1,7 @@
 use yarte::Template;
 
 #[derive(Template)]
-#[template(path = "compare.hbs")]
+#[template(path = "compare")]
 struct CompareTemplate {
     a: usize,
     b: usize,
@@ -15,7 +15,7 @@ fn test_compare() {
 }
 
 #[derive(Template)]
-#[template(path = "operators.hbs")]
+#[template(path = "operators")]
 struct OperatorsTemplate {
     a: usize,
     b: usize,
@@ -29,7 +29,7 @@ fn test_operators() {
 }
 
 #[derive(Template)]
-#[template(path = "precedence.hbs")]
+#[template(path = "precedence")]
 struct PrecedenceTemplate {}
 
 #[test]
@@ -39,7 +39,7 @@ fn test_precedence() {
 }
 
 #[derive(Template)]
-#[template(path = "unless-operators.hbs")]
+#[template(path = "unless-operators")]
 struct UnlessTemplate {
     a: usize,
     b: usize,

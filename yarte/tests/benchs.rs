@@ -1,6 +1,7 @@
 #![allow(clippy::into_iter_on_ref)]
+#![cfg(feature = "html-min")]
 
-use yarte::Template;
+use yarte::TemplateMin as Template;
 
 #[test]
 fn big_table() {
@@ -24,7 +25,7 @@ fn big_table() {
 }
 
 #[derive(Template)]
-#[template(path = "big-table.hbs", mode = "min")]
+#[template(path = "big-table")]
 struct BigTable {
     table: Vec<Vec<usize>>,
 }
@@ -63,7 +64,7 @@ fn teams() {
 }
 
 #[derive(Template)]
-#[template(path = "teams.hbs", mode = "min")]
+#[template(path = "teams")]
 struct Teams {
     year: u16,
     teams: Vec<Team>,

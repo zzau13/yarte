@@ -16,12 +16,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@master
-
       - name: Install ${{ matrix.version }}
         uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{ matrix.version }}-x86_64-apple-darwin
           profile: minimal
+          components: rustfmt
           override: true
 
       - name: Generate Cargo.lock

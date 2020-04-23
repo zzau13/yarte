@@ -17,7 +17,6 @@ travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [features]
-actix-web = []
 wasm-app = []
 
 [dependencies]

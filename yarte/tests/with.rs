@@ -8,7 +8,7 @@ struct Holder {
 }
 
 #[derive(Template)]
-#[template(path = "with.hbs")]
+#[template(path = "with")]
 
 struct WithTemplate {
     hold: Holder,
@@ -27,7 +27,7 @@ struct DeepHold {
 }
 
 #[derive(Template)]
-#[template(path = "with-each.hbs")]
+#[template(path = "with-each")]
 
 struct WithEachTemplate {
     hold: Vec<DeepHold>,

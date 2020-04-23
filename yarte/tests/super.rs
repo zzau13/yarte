@@ -1,16 +1,13 @@
 #![allow(clippy::into_iter_on_ref)]
 
-use yarte::Template;
+use yarte::{Template, TemplateText};
 
-#[derive(Template)]
-#[template(
-    src = "Hello, {{#each this~}}
+#[derive(TemplateText)]
+#[template(src = "Hello, {{#each this~}}
         {{#each this.as_bytes() ~}}
             {{ super::index0 }} {{ super::super::this[0] }}
         {{~/each }}{{ super::this[0] }}
-    {{~/each}}!",
-    ext = "txt"
-)]
+    {{~/each}}!")]
 struct HelloSuperTemplate<'a> {
     this: &'a [&'a str],
 }
@@ -24,13 +21,10 @@ fn test_hello() {
     );
 }
 
-#[derive(Template)]
-#[template(
-    src = "Hello, {{#each this~}}
+#[derive(TemplateText)]
+#[template(src = "Hello, {{#each this~}}
             {{#with this}}{{ super::hold }}{{ hold }}{{/with}}
-    {{~/each}}!",
-    ext = "txt"
-)]
+    {{~/each}}!")]
 struct WithSuperTemplate<'a> {
     this: &'a [Holder],
 }
@@ -47,13 +41,10 @@ fn test_with() {
     assert_eq!("Hello, 127127!", t.call().unwrap());
 }
 
-#[derive(Template)]
-#[template(
-    src = "Hello, {{#each this~}}
+#[derive(TemplateText)]
+#[template(src = "Hello, {{#each this~}}
             {{#with this}}{{ super::hold }}{{ hold }}{{ super::index }}{{/with}}
-    {{~/each}}!",
-    ext = "txt"
-)]
+    {{~/each}}!")]
 struct WithSuperIndexTemplate<'a> {
     this: &'a [Holder],
 }

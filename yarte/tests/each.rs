@@ -1,7 +1,7 @@
 use yarte::Template;
 
 #[derive(Template)]
-#[template(path = "for.hbs")]
+#[template(path = "for")]
 struct ForTemplate<'a> {
     strings: Vec<&'a str>,
 }
@@ -15,7 +15,7 @@ fn test_for() {
 }
 
 #[derive(Template)]
-#[template(path = "nested-for.hbs")]
+#[template(path = "nested-for")]
 struct NestedForTemplate<'a> {
     seqs: &'a [&'a [&'a str]],
 }
@@ -30,7 +30,7 @@ fn test_nested_for() {
 }
 
 #[derive(Template)]
-#[template(path = "precedence-for.hbs")]
+#[template(path = "precedence-for")]
 struct PrecedenceTemplate<'a> {
     strings: &'a [&'a str],
 }
@@ -43,7 +43,7 @@ fn test_precedence_for() {
 }
 
 #[derive(Template)]
-#[template(path = "for-range.hbs")]
+#[template(path = "for-range")]
 struct ForRangeTemplate {
     init: i32,
     end: i32,

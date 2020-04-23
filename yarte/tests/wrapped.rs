@@ -1,7 +1,7 @@
 use yarte::Template;
 
 #[derive(Template)]
-#[template(path = "wrapped-if.hbs")]
+#[template(path = "wrapped-if")]
 struct IfTemplate {
     cond: bool,
 }
@@ -13,7 +13,7 @@ fn test_if() {
 }
 
 #[derive(Template)]
-#[template(path = "wrapped-index.hbs")]
+#[template(path = "wrapped-index")]
 struct IndexTemplate<'a> {
     arr: Vec<&'a str>,
 }
@@ -25,7 +25,7 @@ fn test_index() {
 }
 
 #[derive(Template)]
-#[template(path = "wrapped-slice.hbs")]
+#[template(path = "wrapped-slice")]
 struct SliceTemplate<'a> {
     arr: &'a [&'a str],
 }
@@ -42,7 +42,7 @@ fn repeat(s: &str, i: usize) -> String {
 }
 
 #[derive(Template)]
-#[template(path = "wrapped-call.hbs")]
+#[template(path = "wrapped-call")]
 struct CallTemplate<'a> {
     s: &'a str,
 }
@@ -54,7 +54,7 @@ fn test_call() {
 }
 
 #[derive(Template)]
-#[template(path = "wrapped-array.hbs")]
+#[template(path = "wrapped-array")]
 struct ArrayTemplate;
 
 #[test]
@@ -64,7 +64,7 @@ fn test_array() {
 }
 
 #[derive(Template)]
-#[template(path = "wrapped-tuple.hbs")]
+#[template(path = "wrapped-tuple")]
 struct TupleTemplate;
 
 #[test]
@@ -87,7 +87,7 @@ where
 }
 
 #[derive(Template)]
-#[template(src = "{{{ debug }}}", ext = "hbs")]
+#[template(src = "{{{ debug }}}")]
 struct DebugTemplate {
     debug: Debuggable<Vec<usize>>,
 }

@@ -3,7 +3,7 @@
 use yarte::Template;
 
 #[derive(Template)]
-#[template(path = "unless-template.hbs")]
+#[template(path = "unless-template")]
 struct UnlessTemplate {
     license: bool,
 }
@@ -22,7 +22,7 @@ fn test_unless() {
 }
 
 #[derive(Template)]
-#[template(path = "people-template.hbs")]
+#[template(path = "people-template")]
 struct PeopleTemplate<'a> {
     people: &'a [&'a str],
 }
@@ -37,7 +37,7 @@ fn test_people_template() {
 }
 
 #[derive(Template)]
-#[template(path = "paragraph-template.hbs")]
+#[template(path = "paragraph-template")]
 struct ParagraphTemplate<'a> {
     paragraphs: &'a [&'a str],
 }
@@ -53,7 +53,7 @@ fn test_paragraph_template() {
 }
 
 #[derive(Template)]
-#[template(path = "array-template.hbs")]
+#[template(path = "array-template")]
 struct ArrayTemplate<'a> {
     array: &'a [&'a str],
 }
@@ -67,7 +67,7 @@ fn test_array_template() {
 }
 
 #[derive(Template)]
-#[template(path = "title-template.hbs")]
+#[template(path = "title-template")]
 struct AuthorTemplate<'a> {
     title: &'a str,
     author: Author<'a>,

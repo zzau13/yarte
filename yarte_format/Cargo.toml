@@ -19,7 +19,7 @@ maintenance = { status = "actively-developed" }
 
 [dependencies]
 yarte_derive = { version = "0.7.0", path = "../yarte_derive" }
-yarte_helpers = { version = "0.7.0", path = "../yarte_helpers", features = ["display_fn"] }
+yarte_helpers = { version = "0.7.0", path = "../yarte_helpers", features = ["display-fn"] }
 
 [build-dependencies]
 yarte_helpers = { version = "0.7.0", path = "../yarte_helpers" }

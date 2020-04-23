@@ -21,8 +21,6 @@ pub struct Struct<'a> {
     pub path: PathBuf,
     pub print: Print,
     pub recursion_limit: usize,
-    pub mode: Mode,
-    pub err_msg: String,
     pub msgs: Option<ItemEnum>,
     pub script: Option<String>,
     pub fields: Vec<syn::Field>,
@@ -42,10 +40,7 @@ impl<'a> Struct<'a> {
 }
 
 struct StructBuilder {
-    err_msg: Option<String>,
-    ext: Option<String>,
     fields: Vec<syn::Field>,
-    mode: Option<String>,
     path: Option<String>,
     print: Option<String>,
     script: Option<String>,
@@ -56,10 +51,7 @@ struct StructBuilder {
 impl Default for StructBuilder {
     fn default() -> Self {
         StructBuilder {
-            err_msg: None,
-            ext: None,
             fields: vec![],
-            mode: None,
             path: None,
             print: None,
             script: None,
@@ -95,37 +87,32 @@ impl StructBuilder {
 
         self.visit_data(data);
 
-        let (path, src) = match (self.src, self.ext) {
-            (Some(src), ext) => (
+        let (path, src) = if let Some(src) = self.src {
+            (
                 config.get_dir().join(
-                    PathBuf::from(quote!(#ident).to_string())
-                        .with_extension(ext.unwrap_or_else(|| DEFAULT_EXTENSION.to_owned())),
+                    PathBuf::from(quote!(#ident).to_string()).with_extension(DEFAULT_EXTENSION),
                 ),
                 src.trim_end().to_owned(),
-            ),
-            (None, None) => config.get_template(&self.path.expect("some valid path")),
-            (None, Some(_)) => panic!("'ext' attribute cannot be used with 'path' attribute"),
+            )
+        } else {
+            let path = PathBuf::from(self.path.expect("some valid path"));
+            let path = if let Some(ext) = path.extension() {
+                if ext == DEFAULT_EXTENSION {
+                    path
+                } else {
+                    panic!("Default extension for yarte templates is `.hbs`")
+                }
+            } else {
+                path.with_extension(DEFAULT_EXTENSION)
+            };
+            config.get_template(&path)
         };
 
-        let mode = self.mode.map(Into::into).unwrap_or_else(|| {
-            if let Some(e) = path.extension() {
-                if HTML_EXTENSIONS.contains(&e.to_str().unwrap()) {
-                    return Mode::HTML;
-                }
-            }
-
-            Mode::Text
-        });
-
         Struct {
-            err_msg: self
-                .err_msg
-                .unwrap_or_else(|| "Template parsing error".into()),
             recursion_limit: self.recursion_limit.unwrap_or(RECURSION_LIMIT),
             fields: self.fields,
             generics,
             ident,
-            mode,
             msgs,
             path,
             print: self.print.into(),
@@ -178,18 +165,6 @@ impl<'a> Visit<'a> for StructBuilder {
             } else {
                 panic!("attribute 'print' must be string literal");
             }
-        } else if path.is_ident("mode") {
-            if let syn::Lit::Str(ref s) = lit {
-                self.mode = Some(s.value());
-            } else {
-                panic!("attribute 'mode' must be string literal");
-            }
-        } else if path.is_ident("ext") {
-            if let syn::Lit::Str(ref s) = lit {
-                self.ext = Some(s.value());
-            } else {
-                panic!("attribute 'ext' must be string literal");
-            }
         } else if path.is_ident("script") {
             if let syn::Lit::Str(ref s) = lit {
                 self.script = Some(s.value());
@@ -201,12 +176,6 @@ impl<'a> Visit<'a> for StructBuilder {
                 self.recursion_limit = Some(s.base10_parse().unwrap());
             } else {
                 panic!("attribute 'script' must be string literal");
-            }
-        } else if cfg!(feature = "actix-web") && path.is_ident("err") {
-            if let syn::Lit::Str(ref s) = lit {
-                self.err_msg = Some(s.value());
-            } else {
-                panic!("attribute 'err' must be string literal");
             }
         } else {
             panic!("invalid attribute '{:?}'", path.get_ident());
@@ -236,39 +205,7 @@ impl From<Option<String>> for Print {
     }
 }
 
-#[derive(PartialEq, Debug)]
-pub enum Mode {
-    Text,
-    HTML,
-    HTMLMin,
-    #[cfg(feature = "wasm-app")]
-    WASM,
-    WASMServer,
-}
-
-impl From<String> for Mode {
-    fn from(s: String) -> Mode {
-        match s.as_ref() {
-            "text" => Mode::Text,
-            "html" => Mode::HTML,
-            "html-min" | "min" => Mode::HTMLMin,
-            #[cfg(feature = "wasm-app")]
-            "wasm" | "client" | "front" => Mode::WASM,
-            "wasm-server" | "iso" | "server" | "back" => Mode::WASMServer,
-            v => panic!("invalid value for mode attribute: {}", v),
-        }
-    }
-}
-
 static DEFAULT_EXTENSION: &str = "hbs";
-static HTML_EXTENSIONS: [&str; 6] = [
-    DEFAULT_EXTENSION,
-    "htm",
-    "xml",
-    "html",
-    "handlebars",
-    "mustache",
-];
 
 #[cfg(test)]
 mod test {
@@ -280,7 +217,7 @@ mod test {
     fn test_panic() {
         let src = r#"
             #[derive(Template)]
-            #[template(path = "no-exist.html")]
+            #[template(path = "no-exist")]
             struct Test;
         "#;
         let i = parse_str::<syn::DeriveInput>(src).unwrap();
@@ -292,7 +229,7 @@ mod test {
     fn test() {
         let src = r#"
             #[derive(Template)]
-            #[template(src = "", ext = "txt", print = "code")]
+            #[template(src = "", print = "code")]
             struct Test;
         "#;
         let i = parse_str::<syn::DeriveInput>(src).unwrap();
@@ -300,8 +237,7 @@ mod test {
         let s = visit_derive(&i, &config);
 
         assert_eq!(s.src, "");
-        assert_eq!(s.path, config.get_dir().join(PathBuf::from("Test.txt")));
+        assert_eq!(s.path, config.get_dir().join(PathBuf::from("Test.hbs")));
         assert_eq!(s.print, Print::Code);
-        assert_eq!(s.mode, Mode::Text);
     }
 }

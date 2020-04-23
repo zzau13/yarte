@@ -15,12 +15,10 @@ mod html;
 mod text;
 pub mod wasm;
 
-pub use self::{
-    fmt::FmtCodeGen,
-    fn_fmt::FnFmtCodeGen,
-    html::{HTMLCodeGen, HTMLMinCodeGen},
-    text::TextCodeGen,
-};
+#[cfg(feature = "html-min")]
+pub use self::html::html_min::HTMLMinCodeGen;
+pub use self::{fmt::FmtCodeGen, fn_fmt::FnFmtCodeGen, html::HTMLCodeGen, text::TextCodeGen};
+pub use wasm::*;
 
 pub trait CodeGen {
     fn gen(&mut self, v: Vec<HIR>) -> TokenStream;

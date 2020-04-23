@@ -1,5 +1,6 @@
 #[cfg(feature = "wasm-app")]
 pub mod client;
+#[cfg(feature = "wasm-server")]
 pub mod server {
     use proc_macro2::TokenStream;
     use quote::quote;

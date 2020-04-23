@@ -1,12 +1,31 @@
 use std::collections::HashMap;
 
-use actix_web::{get, middleware::Logger, web, App, HttpServer, Responder};
-use yarte::Template;
+use actix_web::{
+    error::ErrorInternalServerError, get, middleware::Logger, web, App, HttpRequest, HttpResponse,
+    HttpServer, Responder,
+};
+use futures::future::{err, ok, Ready};
+use yarte::TemplateMin;
 
-#[derive(Template)]
-#[template(path = "index.hbs", mode = "min", err = "Some error message")]
+#[derive(TemplateMin)]
+#[template(path = "index")]
 struct IndexTemplate {
     query: web::Query<HashMap<String, String>>,
+}
+
+impl Responder for IndexTemplate {
+    type Error = actix_web::Error;
+    type Future = Ready<Result<HttpResponse, Self::Error>>;
+
+    #[inline]
+    fn respond_to(self, _req: &HttpRequest) -> Self::Future {
+        match self.call() {
+            Ok(body) => ok(HttpResponse::Ok()
+                .content_type("text/html; charset=utf-8")
+                .body(body)),
+            Err(_) => err(ErrorInternalServerError("Some error message")),
+        }
+    }
 }
 
 #[get("/")]

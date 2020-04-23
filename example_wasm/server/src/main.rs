@@ -1,17 +1,36 @@
 use actix_files as fs;
-use actix_web::{get, middleware::Logger, App, HttpServer, Responder};
+use actix_web::{
+    error::ErrorInternalServerError, get, middleware::Logger, App, HttpRequest, HttpResponse,
+    HttpServer, Responder,
+};
+use futures::future::{err, ok, Ready};
 use serde::Serialize;
-
-use yarte::Template;
+use yarte::TemplateWasmServer;
 
 use model::{Fortune, Item};
 
-#[derive(Template, Serialize)]
-#[template(path = "fortune.hbs", mode = "iso", script = "./pkg/client.js")]
+// TODO: Serialize bounded by trait
+#[derive(TemplateWasmServer, Serialize)]
+#[template(path = "fortune", script = "./pkg/client.js")]
 pub struct Test {
     fortunes: Vec<Fortune>,
     head: String,
     count: u32,
+}
+
+impl Responder for Test {
+    type Error = actix_web::Error;
+    type Future = Ready<Result<HttpResponse, Self::Error>>;
+
+    #[inline]
+    fn respond_to(self, _req: &HttpRequest) -> Self::Future {
+        match self.call() {
+            Ok(body) => ok(HttpResponse::Ok()
+                .content_type("text/html; charset=utf-8")
+                .body(body)),
+            Err(_) => err(ErrorInternalServerError("Some error message")),
+        }
+    }
 }
 
 #[get("/")]

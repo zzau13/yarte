@@ -13,9 +13,9 @@ repository = "https://github.com/botika/yarte"
 workspace = ".."
 
 [features]
-big_num_32 = []
-display_fn = []
-io_fmt = ["display_fn"]
+big-num-32 = []
+display-fn = []
+io-fmt = ["display-fn"]
 
 [badges]
 travis-ci = { repository = "botika/yarte", branch = "master" }

@@ -3,7 +3,7 @@ use std::io;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use yarte::Template;
+use yarte::{Template, TemplateText};
 
 criterion_group!(benches, functions);
 criterion_main!(benches);
@@ -61,7 +61,7 @@ fn big_table(b: &mut criterion::Bencher, size: usize) {
 }
 
 #[derive(Template)]
-#[template(path = "big-table.hbs")]
+#[template(path = "big-table")]
 struct BigTable {
     table: Vec<Vec<usize>>,
 }
@@ -73,8 +73,8 @@ fn big_table_display(b: &mut criterion::Bencher, size: usize) {
     b.iter(|| t.call().unwrap());
 }
 
-#[derive(Template)]
-#[template(path = "big-table.hbs", mode = "text")]
+#[derive(TemplateText)]
+#[template(path = "big-table")]
 struct BigTableDisplay {
     table: Vec<Vec<usize>>,
 }
@@ -123,7 +123,7 @@ fn teams(b: &mut criterion::Bencher) {
 }
 
 #[derive(Template)]
-#[template(path = "teams.hbs")]
+#[template(path = "teams")]
 struct Teams {
     year: u16,
     teams: Vec<Team>,
@@ -137,8 +137,8 @@ fn teams_display(b: &mut criterion::Bencher) {
     b.iter(|| teams.call().unwrap());
 }
 
-#[derive(Template)]
-#[template(path = "teams.hbs", mode = "text")]
+#[derive(TemplateText)]
+#[template(path = "teams")]
 struct TeamsDisplay {
     year: u16,
     teams: Vec<Team>,
@@ -183,7 +183,10 @@ impl Display for TeamsFmt {
     }
 }
 
-fn io_writer_big_table<W: std::io::Write>(f: &mut W, table: &Vec<Vec<usize>>) -> std::io::Result<()> {
+fn io_writer_big_table<W: std::io::Write>(
+    f: &mut W,
+    table: &Vec<Vec<usize>>,
+) -> std::io::Result<()> {
     f.write_all(b"<table>")?;
     for i in table {
         f.write_all(b"<tr>")?;
@@ -252,7 +255,10 @@ impl<W: std::io::Write> TeamsWriter<W> {
 }
 
 fn teams_io_writer(b: &mut criterion::Bencher) {
-    let teams = Teams { year: 2015, teams: build_teams() };
+    let teams = Teams {
+        year: 2015,
+        teams: build_teams(),
+    };
     let mut buf = TeamsWriter(vec![]);
     let _ = buf.io_writer_teams(&teams);
     let mut buf = TeamsWriter(Vec::with_capacity(buf.0.len()));
@@ -260,4 +266,3 @@ fn teams_io_writer(b: &mut criterion::Bencher) {
         let _ = buf.io_writer_teams(&teams);
     });
 }
-

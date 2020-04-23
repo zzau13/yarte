@@ -71,7 +71,7 @@ use serde::Deserialize;
 pub struct Dir(PathBuf);
 
 impl Dir {
-    pub fn get_template(&self, path: &str) -> PathBuf {
+    pub fn get_template(&self, path: &Path) -> PathBuf {
         let template = self.0.join(path);
 
         if template.exists() {
@@ -134,8 +134,8 @@ impl<'a> Config<'a> {
         &self.dir.0
     }
 
-    pub fn get_template(&self, ident: &str) -> (PathBuf, String) {
-        let path = self.dir.get_template(ident);
+    pub fn get_template(&self, path: &Path) -> (PathBuf, String) {
+        let path = self.dir.get_template(path);
         let src = get_source(path.as_path());
         (path, src)
     }
@@ -162,7 +162,7 @@ impl<'a> Config<'a> {
         };
 
         if is_alias {
-            normalize(self.dir.get_template(buf.to_str().unwrap()))
+            normalize(self.dir.get_template(&buf))
         } else {
             let mut parent = parent.to_owned();
             parent.pop();

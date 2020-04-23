@@ -13,9 +13,9 @@ use std::{
 use proc_macro::TokenStream;
 use quote::quote;
 
-use yarte_codegen::{wasm::server, CodeGen, FmtCodeGen, HTMLCodeGen, HTMLMinCodeGen, TextCodeGen};
+use yarte_codegen::{CodeGen, FmtCodeGen, HTMLCodeGen, TextCodeGen};
 use yarte_helpers::config::{get_source, read_config_file, Config, PrintConfig};
-use yarte_hir::{generate, visit_derive, HIROptions, Mode, Print, Struct};
+use yarte_hir::{generate, visit_derive, HIROptions, Print, Struct};
 use yarte_parser::{emitter, parse, parse_partials, source_map, Partial};
 
 mod logger;
@@ -25,7 +25,7 @@ use self::logger::log;
 type Sources<'a> = &'a BTreeMap<PathBuf, String>;
 
 macro_rules! build {
-    ($i:ident, $codegen:path, $opt:expr) => {{
+    ($i:ident, $codegen:ident, $opt:expr) => {{
         let config_toml: &str = &read_config_file();
         let config = &Config::new(config_toml);
         let s = &visit_derive($i, config);
@@ -35,21 +35,38 @@ macro_rules! build {
     }};
 }
 
-#[proc_macro_derive(Template, attributes(template))]
+#[proc_macro_derive(TemplateText, attributes(template))]
 pub fn template(input: TokenStream) -> TokenStream {
     fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
-        let codegen: Box<dyn CodeGen> = match s.mode {
-            Mode::Text => Box::new(FmtCodeGen::new(TextCodeGen, s)),
-            Mode::HTML => Box::new(FmtCodeGen::new(HTMLCodeGen("yarte"), s)),
-            Mode::HTMLMin => Box::new(FmtCodeGen::new(HTMLMinCodeGen("yarte"), s)),
-            Mode::WASMServer => Box::new(FmtCodeGen::new(server::WASMCodeGen::new(s), s)),
-            #[cfg(feature = "wasm-app")]
-            Mode::WASM => panic!("Use `yarte_wasm_app` crate instead"),
-        };
-
-        codegen
+        Box::new(FmtCodeGen::new(TextCodeGen, s))
     }
 
+    let i = &syn::parse(input).unwrap();
+    build!(
+        i,
+        get_codegen,
+        HIROptions {
+            is_text: true,
+            ..Default::default()
+        }
+    )
+}
+
+#[proc_macro_derive(Template, attributes(template))]
+pub fn template_html(input: TokenStream) -> TokenStream {
+    fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
+        Box::new(FmtCodeGen::new(HTMLCodeGen("yarte"), s))
+    }
+    let i = &syn::parse(input).unwrap();
+    build!(i, get_codegen, Default::default())
+}
+
+#[proc_macro_derive(TemplateMin, attributes(template))]
+#[cfg(feature = "html-min")]
+pub fn template_html_min(input: TokenStream) -> TokenStream {
+    fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
+        Box::new(FmtCodeGen::new(yarte_codegen::HTMLMinCodeGen("yarte"), s))
+    }
     let i = &syn::parse(input).unwrap();
     build!(i, get_codegen, Default::default())
 }
@@ -58,11 +75,25 @@ pub fn template(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(App, attributes(template, msg, inner))]
 #[cfg(feature = "wasm-app")]
 pub fn app(input: TokenStream) -> TokenStream {
-    fn build<'a>(s: &'a Struct<'a>) -> Box<dyn CodeGen + 'a> {
-        Box::new(yarte_codegen::wasm::client::WASMCodeGen::new(s))
+    fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
+        Box::new(yarte_codegen::client::WASMCodeGen::new(s))
     }
     let i = &syn::parse(input).unwrap();
-    build!(i, build, Default::default())
+    build!(i, get_codegen, Default::default())
+}
+
+// TODO:
+#[proc_macro_derive(TemplateWasmServer, attributes(template))]
+#[cfg(feature = "wasm-server")]
+pub fn template_wasm_server(input: TokenStream) -> TokenStream {
+    fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
+        Box::new(FmtCodeGen::new(
+            yarte_codegen::server::WASMCodeGen::new(s),
+            s,
+        ))
+    }
+    let i = &syn::parse(input).unwrap();
+    build!(i, get_codegen, Default::default())
 }
 
 #[proc_macro]
@@ -75,7 +106,7 @@ pub fn yformat_html(i: TokenStream) -> TokenStream {
 
     let src: syn::LitStr = syn::parse(i).unwrap();
     let input = quote! {
-        #[template(src = #src, mode = "html")]
+        #[template(src = #src)]
         struct __YFormat__;
     };
 
@@ -84,7 +115,8 @@ pub fn yformat_html(i: TokenStream) -> TokenStream {
         i,
         build,
         HIROptions {
-            resolve_to_self: false
+            resolve_to_self: false,
+            ..Default::default()
         }
     )
 }
@@ -97,7 +129,7 @@ pub fn yformat(i: TokenStream) -> TokenStream {
 
     let src: syn::LitStr = syn::parse(i).unwrap();
     let input = quote! {
-        #[template(src = #src, mode = "text")]
+        #[template(src = #src)]
         struct __YFormat__;
     };
 
@@ -106,7 +138,8 @@ pub fn yformat(i: TokenStream) -> TokenStream {
         i,
         build,
         HIROptions {
-            resolve_to_self: false
+            resolve_to_self: false,
+            is_text: true,
         }
     )
 }
