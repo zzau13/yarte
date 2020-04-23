@@ -3,6 +3,7 @@
 - [Description](./description.md)
 - [Getting started](./getting_started.md)
 - [Config](./config.md)
+- [Meta programming](./meta-programming.md)
 - [With actix_web](./with_actix_web.md)
 - [Templating](./templating/templating.md)
     - [Comments](templating/comment.md)

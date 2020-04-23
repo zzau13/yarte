@@ -18,7 +18,6 @@ fn test_hello() {
 
 #[derive(Template)]
 #[template(src = "{{}", ext = "txt")]
-
 struct BracketsTemplate;
 
 #[test]
@@ -29,7 +28,6 @@ fn test_brackets() {
 
 #[derive(Template)]
 #[template(src = "{{{}", ext = "txt")]
-
 struct Brackets2Template;
 
 #[test]
@@ -297,3 +295,29 @@ struct CompileError;
 fn test_compile_error() {
     assert_eq!("", CompileError.call().unwrap());
 }
+
+#[cfg(feature = "wasm")]
+mod sd {
+    use yarte::Template;
+    use serde::Serialize;
+
+    // Clone only for test not need in template
+    #[derive(Serialize, Clone)]
+    struct Foo {
+        bar: String
+    }
+
+    #[derive(Template)]
+    #[template(src = "{{{ serde_json::to_string(&foo).map_err(|_| yarte::Error)? }}}")]
+    struct Json<S: Serialize> {
+        foo: S
+    }
+
+    #[test]
+    fn test_serialize_json() {
+        let foo = Foo { bar: "foo".to_string() };
+        let t  = Json { foo: foo.clone() };
+        assert_eq!(serde_json::to_string(&foo).unwrap(), t.call().unwrap());
+    }
+}
+

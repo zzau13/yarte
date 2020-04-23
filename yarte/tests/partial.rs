@@ -222,7 +222,7 @@ fn test_partial_compile() {
 }
 
 #[derive(Template)]
-#[template(path = "with-partial-compile.hbs", print = "code")]
+#[template(path = "with-partial-compile.hbs")]
 struct WithPartialCompile;
 
 #[test]
@@ -264,7 +264,7 @@ fn test_partial_compile_cond() {
 }
 
 #[derive(Template)]
-#[template(path = "with-partial-compile-cond.hbs", print = "code")]
+#[template(path = "with-partial-compile-cond.hbs")]
 struct WithPartialCompileCond;
 
 #[test]
