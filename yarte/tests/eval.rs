@@ -36,8 +36,7 @@ fn test_mul_paren_str() {
     {{~# each &[\"foo\", \"bar\"] ~}}
         {{ this }} {{ index }}
     {{~/ each }}
-    ",
-    print = "code"
+    "
 )]
 struct ConstForTemplate;
 
@@ -53,8 +52,7 @@ fn test_const_for() {
     {{~# each 1..10 ~}}
         {{ this }} {{ index }}
     {{~/ each }}
-    ",
-    print = "code"
+    "
 )]
 struct ConstForRangeTemplate;
 
@@ -72,8 +70,7 @@ fn test_const_for_range() {
             {{ super::index }} {{ this }}
         {{~/each }} {{ this }}
     {{~/ each }}
-    ",
-    print = "code"
+    "
 )]
 struct ConstForNestedTemplate;
 
@@ -91,8 +88,7 @@ fn test_const_for_nested() {
             {{ super::index }} {{ super::super::_0 }} {{ this }}
         {{~/each }} {{ this }}
     {{~/ each }}
-    ",
-    print = "code"
+    "
 )]
 struct ConstForNested2Template<'a>(&'a str);
 
@@ -103,7 +99,7 @@ fn test_const_for_nested2() {
 }
 
 #[derive(Template)]
-#[template(path = "eval-partial.hbs", print = "code")]
+#[template(path = "eval-partial.hbs")]
 struct ConstPartialTemplate;
 
 #[test]
@@ -116,7 +112,7 @@ fn test_const_partial() {
 }
 
 #[derive(Template)]
-#[template(path = "eval-partial-range.hbs", print = "code")]
+#[template(path = "eval-partial-range.hbs")]
 struct ConstPartialRangeTemplate;
 
 #[test]
@@ -129,7 +125,7 @@ fn test_const_partial_range() {
 }
 
 #[derive(Template)]
-#[template(path = "eval-partial-str.hbs", print = "code")]
+#[template(path = "eval-partial-str.hbs")]
 struct ConstPartialStrTemplate;
 
 #[test]
@@ -142,7 +138,7 @@ fn test_const_partial_str() {
 }
 
 #[derive(Template)]
-#[template(src = "{{> with-partial strs = &[\"foo\", s]}}", print = "code")]
+#[template(src = "{{> with-partial strs = &[\"foo\", s]}}")]
 struct ConstPartial2Template<'a> {
     s: &'a str,
 }
@@ -156,8 +152,7 @@ fn test_const_partial2() {
 #[derive(Template)]
 #[template(
     src = "  {{# if false ~}} n\n{{ else if false }}\tn\t {{else if true ~}}     n  {{ else \
-           }}{{/if}}",
-    print = "code"
+           }}{{/if}}"
 )]
 struct ConstIfWSTemplate;
 
@@ -170,8 +165,7 @@ fn test_const_if_ws() {
 #[derive(Template)]
 #[template(
     src = "  {{# if false ~}} n\n{{~ else if false ~}}\tn\t {{~ else if true }}     n  {{ else \
-           }}{{/if}}",
-    print = "code"
+           }}{{/if}}"
 )]
 struct ConstIfWS2Template;
 
@@ -184,8 +178,7 @@ fn test_const_if_ws_2() {
 #[derive(Template)]
 #[template(
     src = "  {{# if false ~}} n\n{{~ else if true}}\tn\t {{~ else if true }}     n  {{ else \
-           }}{{/if}}",
-    print = "code"
+           }}{{/if}}"
 )]
 struct ConstIfWS3Template;
 
@@ -198,8 +191,7 @@ fn test_const_if_ws_3() {
 #[derive(Template)]
 #[template(
     src = "  {{# if false ~}} n\n{{~ else if true}}\tn\t {{ else if true }}     n  {{~ else \
-           ~}}{{~/if}}",
-    print = "code"
+           ~}}{{~/if}}"
 )]
 struct ConstIfWS4Template;
 
@@ -212,8 +204,7 @@ fn test_const_if_ws_4() {
 #[derive(Template)]
 #[template(
     src = "  {{# if false ~}} n\n{{~ else if true}}\tn\t {{ else if true }}     n  {{~ else \
-           ~}}{{~/if~}}  n",
-    print = "code"
+           ~}}{{~/if~}}  n"
 )]
 struct ConstIfWS5Template;
 
@@ -226,8 +217,7 @@ fn test_const_if_ws_5() {
 #[derive(Template)]
 #[template(
     src = "  {{# if false ~}} n\n{{~ else if false ~}}\tn\t {{~ else if true }}     n  {{~ else \
-           }}{{/if}}\tfoo",
-    print = "code"
+           }}{{/if}}\tfoo"
 )]
 struct ConstIfWS6Template;
 
