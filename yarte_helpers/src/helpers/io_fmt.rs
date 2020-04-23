@@ -37,19 +37,19 @@ mod test {
     }
     #[test]
     fn test() {
-        let foo = Foo { n: 1 };
+        let j = Foo { n: 1 };
         assert_eq!(
-            DisplayFn::new(|f| serde_json::to_writer(IoFmt::new(f), &foo).map_err(|_| fmt::Error))
+            DisplayFn::new(|f| serde_json::to_writer(IoFmt::new(f), &j).map_err(|_| fmt::Error))
                 .to_string(),
-            serde_json::to_string(&foo).unwrap()
+            serde_json::to_string(&j).unwrap()
         );
 
         assert_eq!(
             DisplayFn::new(
-                |f| serde_json::to_writer_pretty(IoFmt::new(f), &foo).map_err(|_| fmt::Error)
+                |f| serde_json::to_writer_pretty(IoFmt::new(f), &j).map_err(|_| fmt::Error)
             )
             .to_string(),
-            serde_json::to_string_pretty(&foo).unwrap()
+            serde_json::to_string_pretty(&j).unwrap()
         );
     }
 }

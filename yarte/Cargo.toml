@@ -22,6 +22,7 @@ default = []
 mime = ["yarte_derive/mime"]
 with-actix-web = ["actix-web", "futures", "yarte_derive/actix-web"]
 wasm = ["serde_json", "serde"]
+json = ["serde_json", "serde", "yarte_helpers/io_fmt"]
 
 [dependencies]
 yarte_derive = { version = "0.7.0", path = "../yarte_derive" }

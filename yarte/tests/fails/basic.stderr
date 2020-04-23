@@ -5,8 +5,8 @@ error: proc-macro derive panicked
   |          ^^^^^^^^
   |
   = help: message: error
-           --> $DIR/Test.hbs:1:4
+           --> $DIR/Test.hbs:1:5
             |
           1 | {{ @foo }}
-            |    ^ expression expected expression
+            |     ^^^ Not exist @ helper
             |

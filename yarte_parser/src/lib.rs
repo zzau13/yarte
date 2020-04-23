@@ -50,6 +50,7 @@ pub struct PartialBlock<'a>(pub (Ws, Ws), pub SStr<'a>, pub SVExpr, pub Vec<SNod
 pub enum Node<'a> {
     Comment(&'a str),
     Expr(Ws, SExpr),
+    AtHelper(Ws, AtHelperKind, SVExpr),
     RExpr(Ws, SExpr),
     Helper(Box<Helper<'a>>),
     Lit(&'a str, SStr<'a>, &'a str),
@@ -60,6 +61,14 @@ pub enum Node<'a> {
     Raw((Ws, Ws), &'a str, SStr<'a>, &'a str),
     Safe(Ws, SExpr),
     Error(SVExpr),
+}
+
+const JSON: &str = "json";
+const JSON_PRETTY: &str = "json_pretty";
+#[derive(Debug, PartialEq, Clone)]
+pub enum AtHelperKind {
+    Json,
+    JsonPretty,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -523,8 +532,48 @@ fn safe(i: Cursor, lws: bool) -> PResult<Node> {
         })
 }
 
+#[inline]
+fn at_helper(i: Cursor, lws: bool) -> PResult<Node> {
+    let (c, (name, args, rws)) = do_parse!(
+        i,
+        ws >> tag!("@")
+            >> name: call!(spanned, identifier)
+            >> args: args_list
+            >> rws: end_expr
+            >> ((name, args, rws))
+    )?;
+
+    macro_rules! check_args_len {
+        ($len:expr) => {
+            if args.t().len() != $len {
+                return Err(LexError::Fail(PError::AtHelperArgsLen($len), *args.span()));
+            }
+        };
+    }
+    match *name.t() {
+        JSON => {
+            check_args_len!(1);
+            Ok((c, Node::AtHelper((lws, rws), AtHelperKind::Json, args)))
+        }
+        JSON_PRETTY => {
+            check_args_len!(1);
+            Ok((
+                c,
+                Node::AtHelper((lws, rws), AtHelperKind::JsonPretty, args),
+            ))
+        }
+        _ => Err(LexError::Fail(PError::AtHelperNotExist, *name.span())),
+    }
+}
+
 /// Eat expression Node
 fn expr(i: Cursor, lws: bool) -> PResult<Node> {
+    match at_helper(i, lws) {
+        Ok(x) => return Ok(x),
+        Err(e @ LexError::Fail(..)) => return Err(e),
+        _ => (),
+    }
+
     let mut at = 0;
     let (c, rws, s) = loop {
         if let Some(j) = i.adv_find(at, '}') {

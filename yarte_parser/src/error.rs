@@ -66,6 +66,10 @@ pub enum PError {
     EndExpression,
     #[display(fmt = "argument{}", _0)]
     Argument(DOption),
+    #[display(fmt = "Not exist @ helper")]
+    AtHelperNotExist,
+    #[display(fmt = "@ helper need only {} argument", _0)]
+    AtHelperArgsLen(usize),
 }
 
 impl From<LexError> for ErrorMessage<PError> {
