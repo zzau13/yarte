@@ -17,8 +17,8 @@ impl<'a, 'b> io::Write for IoFmt<'a, 'b> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.0
             .write_str(unsafe { from_utf8_unchecked(buf) })
-            .map_err(|_| io::Error::from(io::ErrorKind::Other))?;
-        Ok(buf.len())
+            .map(|_| buf.len())
+            .map_err(|_| io::Error::from(io::ErrorKind::Other))
     }
 
     fn flush(&mut self) -> io::Result<()> {
