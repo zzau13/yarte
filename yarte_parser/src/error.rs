@@ -84,12 +84,15 @@ impl From<LexError> for ErrorMessage<PError> {
     }
 }
 
+// TODO: T: Priority trait
 #[derive(Debug)]
 pub struct ErrorMessage<T: Display> {
     pub message: T,
     pub span: Span,
 }
 
+
+// TODO: Accumulate by priority
 pub fn emitter<I, T>(sources: &BTreeMap<PathBuf, String>, config: &Config, errors: I) -> !
 where
     I: Iterator<Item = ErrorMessage<T>>,

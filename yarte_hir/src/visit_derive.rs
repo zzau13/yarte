@@ -14,7 +14,6 @@ pub fn visit_derive<'a>(i: &'a syn::DeriveInput, config: &Config) -> Struct<'a> 
     StructBuilder::default().build(i, config)
 }
 
-// TODO: proc_macro_diagnostic when stable
 #[derive(Debug)]
 pub struct Struct<'a> {
     pub src: String,

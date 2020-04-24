@@ -56,6 +56,7 @@ macro_rules! breaks {
 }
 
 impl<'a> FindEach<'a> {
+    // TODO: #39
     pub fn find(&mut self, nodes: &'a [SNode]) -> GResult<bool> {
         macro_rules! partial {
             ($path:ident, $expr:ident) => {{
@@ -136,6 +137,7 @@ impl<'a> FindEach<'a> {
                             self.on_ -= 1;
                         }
                         Helper::Defined(..) => {
+                            // TODO: #39
                             self.on_error.replace(GError::Unimplemented);
                         }
                     }
@@ -163,6 +165,7 @@ impl<'a> FindEach<'a> {
                         self.loop_var |= old.loop_var;
                         self.block.push((block, old));
                     } else {
+                        // TODO: #39
                         self.on_error.replace(GError::PartialBlockNoParent);
                     }
                 }
