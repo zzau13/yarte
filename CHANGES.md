@@ -1,4 +1,22 @@
 # Changes
+## [0.8.0] (2020-04-24)
+## Added
+- `{{ @json obj }}` and `{{ @json_pretty obj }}` @helpers 
+- User compile error `{{$ "message" }}`
+
+## Fixed
+- Annotate snippets error messages for parse and lowering
+
+## Refactor
+- Remove `mode` in favor of features and alias
+- Remove `with-actix-web` feature
+- Remove `ext`, `err` attributes
+- Unique path for templates `hbs`
+
+## Update
+- `annotate-snippets` to `0.8`
+- `prettyprint` to `0.8`
+
 ## [0.7.0] (2020-02-21)
 ## Fixed 
 - Use `html` mode by default

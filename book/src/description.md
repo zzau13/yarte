@@ -11,8 +11,4 @@ and using templates composition with partials.
 - `src`: template sources
 - `path`: path to sources relative to template directory
 - `print`: `all`, `ast` or `code` display debug info. Overridden by config file print option.
-- `mode`: `default: html`; `text`,`html`, `html-min` or `server`
-- `ext`: Set file extension
 - `recursion-limit`: `default: 2048` Set limit of partial deep 
-###### `with-actix-web` feature 
-- `err`: Set error response body
