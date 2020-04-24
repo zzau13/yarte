@@ -1,6 +1,6 @@
 //! ## Only run in nightly
 //!
-//! ## [Our book](https://yarte.netlify.app/]
+//! ## [Our book](https://yarte.netlify.app/)
 //!
 //! ## Example
 //! ```rust
