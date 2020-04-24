@@ -17,7 +17,9 @@ struct Foo<S: Serialize> {
 {{ @json_pretty foo }}
 ```
 
-Don't escape html characters. If you are looking to paint it as html text (like "Text" in `<h1>Text</h1`>):
+Don't escape html characters. 
+
+If you are looking to paint it as html text (like "Text" in `<h1>Text</h1>`):
 ```handlebars
 <h1>{{ serde_json::to_string(&foo).map_err(|_| yarte::Error)? }}</h1>
 ```
