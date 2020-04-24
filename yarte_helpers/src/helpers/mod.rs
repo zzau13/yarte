@@ -12,6 +12,7 @@ pub mod big_num_32;
 pub mod display_fn;
 #[cfg(feature = "io-fmt")]
 pub mod io_fmt;
+#[cfg(feature = "markup")]
 mod markup;
 
 pub use markup::Render;
