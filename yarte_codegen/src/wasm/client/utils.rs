@@ -5,7 +5,7 @@ use syn::{parse2, punctuated::Punctuated, Field, Ident, Token, Type};
 use yarte_dom::dom::{
     Attribute, Each, Element, ExprId, ExprOrText, Expression, IfBlock, IfElse, Node,
 };
-use yarte_helpers::helpers::calculate_hash;
+use yarte_helpers::calculate_hash;
 
 use super::state::{InsertPath, PathNode, PathStep};
 

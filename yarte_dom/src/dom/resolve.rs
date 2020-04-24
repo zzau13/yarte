@@ -4,7 +4,7 @@ use syn::{
     ExprPath, FieldPat, Ident, Local, Pat, PatIdent, PatType,
 };
 
-use yarte_helpers::helpers::calculate_hash;
+use yarte_helpers::calculate_hash;
 use yarte_hir::Each;
 
 use crate::dom::{DOMBuilder, ExprId, Var, VarId, VarInner};
