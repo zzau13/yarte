@@ -28,3 +28,6 @@ markup5ever = "0.10"
 
 quote-impersonated = "0.1"
 syn-impersonated = { version= "0.1", features = ["full", "visit", "extra-traits"] }
+
+[package.metadata.docs.rs]
+all-features = true

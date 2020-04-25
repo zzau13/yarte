@@ -31,3 +31,6 @@ quote-impersonated = "0.1"
 syn-impersonated = { version= "0.1", features = ["full", "visit", "visit-mut", "extra-traits"] }
 
 derive_more = "0.99"
+
+[package.metadata.docs.rs]
+all-features = true

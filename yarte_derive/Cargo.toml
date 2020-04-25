@@ -38,3 +38,6 @@ syn-impersonated = "0.1"
 
 tempfile = "3.0"
 toolchain_find = "0.1"
+
+[package.metadata.docs.rs]
+all-features = true

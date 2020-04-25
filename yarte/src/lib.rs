@@ -12,8 +12,7 @@ use std::fmt::{self, Write};
 pub use yarte_helpers::helpers::{display_fn::DisplayFn, io_fmt::IoFmt};
 pub use yarte_helpers::{helpers::Render, recompile, Error, Result};
 
-/// Template trait, will implement by derive like `Display` or `actix_web::Responder` (with feature)
-///
+/// Template trait, will implement by derive like `Display`
 pub trait TemplateTrait: fmt::Display {
     /// which will write this template
     fn call(&self) -> Result<String> {

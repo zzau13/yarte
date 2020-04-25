@@ -36,6 +36,7 @@ macro_rules! build {
 }
 
 #[proc_macro_derive(TemplateText, attributes(template))]
+/// Implements TemplateTrait without html escape functionality
 pub fn template(input: TokenStream) -> TokenStream {
     fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
         Box::new(FmtCodeGen::new(TextCodeGen, s))
@@ -53,6 +54,7 @@ pub fn template(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_derive(Template, attributes(template))]
+/// Implements TemplateTrait with html escape functionality
 pub fn template_html(input: TokenStream) -> TokenStream {
     fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
         Box::new(FmtCodeGen::new(HTMLCodeGen("yarte"), s))
@@ -63,6 +65,8 @@ pub fn template_html(input: TokenStream) -> TokenStream {
 
 #[proc_macro_derive(TemplateMin, attributes(template))]
 #[cfg(feature = "html-min")]
+/// # Work in Progress
+/// Implements TemplateTrait with html minifier
 pub fn template_html_min(input: TokenStream) -> TokenStream {
     fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
         Box::new(FmtCodeGen::new(yarte_codegen::HTMLMinCodeGen("yarte"), s))
@@ -85,6 +89,10 @@ pub fn app(input: TokenStream) -> TokenStream {
 // TODO:
 #[proc_macro_derive(TemplateWasmServer, attributes(template))]
 #[cfg(feature = "wasm-server")]
+/// # Work in Progress
+/// Implements TemplateTrait with wasm server behavior
+///
+/// Need additional `scrip` path argument attribute
 pub fn template_wasm_server(input: TokenStream) -> TokenStream {
     fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
         Box::new(FmtCodeGen::new(
@@ -97,8 +105,9 @@ pub fn template_wasm_server(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro]
+/// Format handlebars string in this scope with html escape functionality
 pub fn yformat_html(i: TokenStream) -> TokenStream {
-    fn build<'a>(_s: &'a Struct<'a>) -> Box<dyn CodeGen + 'a> {
+    fn get_codegen<'a>(_s: &'a Struct<'a>) -> Box<dyn CodeGen + 'a> {
         Box::new(yarte_codegen::FnFmtCodeGen::new(HTMLCodeGen(
             "yarte_format",
         )))
@@ -113,7 +122,7 @@ pub fn yformat_html(i: TokenStream) -> TokenStream {
     let i = &syn::parse2(input).unwrap();
     build!(
         i,
-        build,
+        get_codegen,
         HIROptions {
             resolve_to_self: false,
             ..Default::default()
@@ -122,8 +131,9 @@ pub fn yformat_html(i: TokenStream) -> TokenStream {
 }
 
 #[proc_macro]
+/// Format handlebars string in this scope without html escape functionality
 pub fn yformat(i: TokenStream) -> TokenStream {
-    fn build<'a>(_s: &'a Struct<'a>) -> Box<dyn CodeGen + 'a> {
+    fn get_codegen<'a>(_s: &'a Struct<'a>) -> Box<dyn CodeGen + 'a> {
         Box::new(yarte_codegen::FnFmtCodeGen::new(TextCodeGen))
     }
 
@@ -136,7 +146,7 @@ pub fn yformat(i: TokenStream) -> TokenStream {
     let i = &syn::parse2(input).unwrap();
     build!(
         i,
-        build,
+        get_codegen,
         HIROptions {
             resolve_to_self: false,
             is_text: true,
