@@ -130,18 +130,6 @@ fn test_const_partial_str() {
 }
 
 #[derive(Template)]
-#[template(src = "{{> with-partial strs = &[\"foo\", s]}}")]
-struct ConstPartial2Template<'a> {
-    s: &'a str,
-}
-
-#[test]
-fn test_const_partial2() {
-    let t = ConstPartial2Template { s: "bar" };
-    assert_eq!(t.call().unwrap(), "foo\nIn partial\n1bar\nIn partial\n2");
-}
-
-#[derive(Template)]
 #[template(
     src = "  {{# if false ~}} n\n{{ else if false }}\tn\t {{else if true ~}}     n  {{ else \
            }}{{/if}}"
@@ -208,7 +196,7 @@ fn test_const_if_ws_5() {
 
 #[derive(Template)]
 #[template(
-    src = "  {{# if false ~}} n\n{{~ else if false ~}}\tn\t {{~ else if true }}     n  {{~ else \
+    src = "\t {{# if false ~}} foo\n{{~ else if false ~}}\tbar\t {{~ else if true }} \nfon {{~ else \
            }}{{/if}}\tfoo"
 )]
 struct ConstIfWS6Template;
@@ -216,5 +204,25 @@ struct ConstIfWS6Template;
 #[test]
 fn test_const_if_ws_6() {
     let t = ConstIfWS6Template;
-    assert_eq!(t.call().unwrap(), "       n\tfoo");
+    assert_eq!(t.call().unwrap(), "\t  \nfon\tfoo");
+}
+
+#[derive(Template)]
+#[template(src = "{{> eval-none }}")]
+struct PartialEvalNone;
+
+#[test]
+fn test_partial_eval_none() {
+    let t = PartialEvalNone;
+    assert_eq!(t.call().unwrap(), "foo");
+}
+
+#[derive(Template)]
+#[template(src = "{{> eval-partial-arg name = \"foo\" }}")]
+struct PartialEvalArg;
+
+#[test]
+fn test_partial_eval_arg() {
+    let t = PartialEvalArg;
+    assert_eq!(t.call().unwrap(), "foo");
 }
