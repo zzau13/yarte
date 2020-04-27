@@ -400,8 +400,8 @@ impl<'a> Generator<'a> {
                 self.scp.push_scope(vec![]);
                 self.handle(nodes, buf);
                 self.scp.pop();
-                self.handle_ws(ws.1);
             }
+            self.handle_ws(ws.1);
         } else {
             validator::unless(scond, &mut self.errors);
 
@@ -520,17 +520,18 @@ impl<'a> Generator<'a> {
         self.visit_expr_mut(&mut cond);
         self.write_errors(*scond.span());
         self.handle_ws(pws.0);
-        let (mut last, mut o_ifs) = if let Some(val) = self.eval_bool(&cond) {
+
+        let (mut last, mut o_ifs, mut is_handled) = if let Some(val) = self.eval_bool(&cond) {
             if val {
                 self.handle(block, buf);
             }
-            (val, None)
+            (val, None, val)
         } else {
             validator::ifs(scond, &mut self.errors);
             self.write_buf_writable(buf);
             let mut body = Vec::new();
             self.handle(block, &mut body);
-            (false, Some((cond, body)))
+            (false, Some((cond, body)), false)
         };
         self.scp.pop();
 
@@ -562,6 +563,7 @@ impl<'a> Generator<'a> {
                         o_els = Some(body);
                     } else {
                         self.handle(block, buf);
+                        is_handled = true;
                     }
                     last = i + 1 != ifs.len();
                 }
@@ -592,6 +594,11 @@ impl<'a> Generator<'a> {
             } else if let Some((_, body)) = o_ifs.as_mut() {
                 self.write_buf_writable(body);
             }
+
+            if is_handled {
+                return None;
+            }
+
             if o_ifs.is_some() {
                 self.scp.push_scope(vec![]);
                 let mut body = Vec::new();
