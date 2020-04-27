@@ -1,6 +1,6 @@
 [package]
 name = "yarte_parser"
-version = "0.8.1"
+version = "0.8.2"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "Ast, lexer and parser for yarte"
 categories = ["template-engine", "web-programming", "gui"]
@@ -17,7 +17,7 @@ travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]
-yarte_helpers = { version = "0.8.1", path = "../yarte_helpers" }
+yarte_helpers = { version = "0.8.2", path = "../yarte_helpers" }
 
 quote-impersonated = "0.1"
 syn-impersonated = { version="0.1", features = ["full", "extra-traits"] }

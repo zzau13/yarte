@@ -1,6 +1,6 @@
 [package]
 name = "yarte_dom"
-version = "0.8.1"
+version = "0.8.2"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "Markup parser"
 categories = ["template-engine", "web-programming", "gui"]
@@ -20,9 +20,9 @@ maintenance = { status = "actively-developed" }
 wasm-app = ["yarte_hir/wasm-app"]
 
 [dependencies]
-yarte_hir = { version = "0.8.1", path = "../yarte_hir" }
-yarte_helpers = { version = "0.8.1", path = "../yarte_helpers" }
-yarte_html = { version = "0.8.1", path = "../yarte_html" }
+yarte_hir = { version = "0.8.2", path = "../yarte_hir" }
+yarte_helpers = { version = "0.8.2", path = "../yarte_helpers" }
+yarte_html = { version = "0.8.2", path = "../yarte_html" }
 
 markup5ever = "0.10"
 
