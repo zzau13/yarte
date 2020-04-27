@@ -23,7 +23,7 @@ wasm-app = []
 yarte_helpers = { version = "0.8.1", path = "../yarte_helpers" }
 yarte_parser = { version = "0.8.1", path = "../yarte_parser" }
 
-v_eval = "0.4"
+v_eval = "0.5"
 v_htmlescape = "0.4"
 
 proc-macro2-impersonated = { version = "0.1", features = ["span-locations"] }

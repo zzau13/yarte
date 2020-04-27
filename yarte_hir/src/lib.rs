@@ -765,6 +765,7 @@ impl<'a> Generator<'a> {
         self.on.pop();
     }
 
+    #[inline]
     fn eval_expr(&self, expr: &syn::Expr) -> Option<Value> {
         eval(&BTreeMap::new(), expr)
     }

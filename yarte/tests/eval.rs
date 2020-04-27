@@ -226,3 +226,15 @@ fn test_partial_eval_arg() {
     let t = PartialEvalArg;
     assert_eq!(t.call().unwrap(), "foo");
 }
+
+#[derive(Template)]
+#[template(src = "{{> with-partial strs = &[\"foo\", s]}}")]
+struct ConstPartial2Template<'a> {
+    s: &'a str,
+}
+
+#[test]
+fn test_const_partial2() {
+    let t = ConstPartial2Template { s: "bar" };
+    assert_eq!(t.call().unwrap(), "foo\nIn partial\n1bar\nIn partial\n2");
+}
