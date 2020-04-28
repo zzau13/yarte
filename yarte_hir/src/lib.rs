@@ -716,13 +716,12 @@ impl<'a> Generator<'a> {
             }};
         }
 
-        use Value::*;
         self.eval_expr(expr).and_then(|val| match val {
-            Int(a) => push_some!(a),
-            Float(a) => push_some!(a),
-            Bool(a) => push_some!(a),
-            Str(a) if safe || self.opt.is_text => push_some!(a),
-            Str(a) => push_some!(escape(&a)),
+            Value::Int(a) => push_some!(a),
+            Value::Float(a) => push_some!(a),
+            Value::Bool(a) => push_some!(a),
+            Value::Str(a) if safe || self.opt.is_text => push_some!(a),
+            Value::Str(a) => push_some!(escape(&a)),
             _ => None,
         })
     }
