@@ -1,6 +1,6 @@
 [package]
 name = "yarte_format"
-version = "0.8.2"
+version = "0.8.3"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 edition = "2018"
 description = "Proc-macro, compiled Handlebars"
@@ -18,8 +18,8 @@ travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]
-yarte_derive = { version = "0.8.2", path = "../yarte_derive" }
-yarte_helpers = { version = "0.8.2", path = "../yarte_helpers", features = ["display-fn"] }
+yarte_derive = { version = "0.8.3", path = "../yarte_derive" }
+yarte_helpers = { version = "0.8.3", path = "../yarte_helpers", features = ["display-fn"] }
 
 [build-dependencies]
-yarte_helpers = { version = "0.8.2", path = "../yarte_helpers", default-features = false }
+yarte_helpers = { version = "0.8.3", path = "../yarte_helpers", default-features = false }
