@@ -4,5 +4,10 @@
         - tag
         - id
         - tail
+    TODO: Regex evaluators for str
+    TODO: format_args for error
 !}}
+{{#if tag.is_empty() || id.is_empty() }}
+   {{$ "Need static args: tag: str /^h[1-6]$/, id: str" }}
+{{/if }}
 <{{ tag }} id="{{ id }}" class="welcome">Welcome{{ tail }}</{{ tag }}>
