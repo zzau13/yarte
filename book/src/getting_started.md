@@ -9,7 +9,7 @@ Add Yarte dependency to your Cargo.toml file:
 yarte = "0.8"
 ```
 Yarte templates look like regular text, with embedded yarte expressions. 
-Create a simple Yarte template called `hello.html` in your template directory.
+Create a simple Yarte template called `hello.hbs` in your template directory.
 
 ```handlebars
 <div class="entry">
@@ -30,14 +30,12 @@ define `template` as a `CardTemplate` with content.
 use yarte::Template;
 
 #[derive(Template)]
-#[template(path = "hello.html")]
+#[template(path = "hello")]
 struct CardTemplate<'a> {
     title: &'a str,
     body: &'a str,
 }
 ```
-Yarte will read `hello.html` and build a parser for the template at compile time,
-that can be later applied to any `CardTemplate` object.
 
 ```rust
 let template = CardTemplate {
