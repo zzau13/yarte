@@ -1,4 +1,4 @@
-#![allow(clippy::type_complexity)]
+#![allow(clippy::type_complexity, clippy::match_on_vec_items)]
 
 extern crate proc_macro2_impersonated as proc_macro2;
 extern crate quote_impersonated as quote;
