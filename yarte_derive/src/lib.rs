@@ -22,7 +22,10 @@ macro_rules! build {
     ($i:ident, $codegen:ident, $opt:expr) => {{
         let config_toml: &str = &read_config_file();
         let config = &Config::new(config_toml);
-        let s = &visit_derive($i, config);
+        let s = &match visit_derive($i, config) {
+            Ok(s) => s,
+            Err(tt) => return tt.into(),
+        };
         proc_macro2::fallback::force();
         let sources = &read(s.path.clone(), s.src.clone(), config);
 

@@ -1,0 +1,5 @@
+error: invalid value for print attribute: foo
+ --> $DIR/derive-print.rs:4:22
+  |
+4 | #[template(src = "", print = "foo")]
+  |                      ^^^^^^^^^^^^^
