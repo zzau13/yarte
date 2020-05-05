@@ -1,9 +1,8 @@
-#![allow(clippy::type_complexity, clippy::match_on_vec_items)]
-
-extern crate proc_macro2_impersonated as proc_macro2;
-extern crate quote_impersonated as quote;
-extern crate syn_impersonated as syn;
-
+#![allow(
+    clippy::unknown_clippy_lints,
+    clippy::type_complexity,
+    clippy::match_on_vec_items
+)]
 use std::{collections::BTreeMap, mem, path::PathBuf, str};
 
 use quote::{format_ident, quote};
@@ -103,7 +102,7 @@ struct Generator<'a> {
     /// buffer for writable
     buf_w: Vec<Writable<'a>>,
     // buffer for error builders
-    buf_err: Vec<(GError, (usize, usize))>,
+    buf_err: Vec<(GError, proc_macro2::Span)>,
     /// Errors buffer
     errors: Vec<ErrorMessage<GError>>,
     /// path - nodes
@@ -339,10 +338,8 @@ impl<'a> Generator<'a> {
                 }
             }
 
-            self.errors.push(
-                MiddleError::new(GError::Internal, first.span().range_in_file(), *err.span())
-                    .into(),
-            );
+            self.errors
+                .push(MiddleError::new(GError::Internal, first.span(), *err.span()).into());
 
             None
         } else {

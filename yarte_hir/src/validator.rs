@@ -50,12 +50,7 @@ pub(super) fn unless(e: &SExpr, out: &mut Vec<ErrorMessage<GError>>) {
         Unary(syn::ExprUnary { op, .. }) => {
             if let syn::UnOp::Not(t) = op {
                 out.push(
-                    MiddleError::new(
-                        GError::ValidatorUnlessNegate,
-                        t.span().range_in_file(),
-                        *e.span(),
-                    )
-                    .into(),
+                    MiddleError::new(GError::ValidatorUnlessNegate, t.span(), *e.span()).into(),
                 )
             }
         }

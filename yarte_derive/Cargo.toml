@@ -32,9 +32,9 @@ yarte_parser = { version = "0.8.3", path = "../yarte_parser" }
 
 prettyprint = "0.8"
 
-proc-macro2-impersonated = "0.1"
-quote-impersonated = "0.1"
-syn-impersonated = "0.1"
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = "1.0"
 
 tempfile = "3.0"
 toolchain_find = "0.1"
