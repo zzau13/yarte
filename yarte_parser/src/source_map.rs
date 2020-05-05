@@ -167,6 +167,32 @@ impl Span {
         }
     }
 
+    pub fn join_proc(self, proc: proc_macro2::Span) -> Self {
+        let start = self.start();
+        let p_start = proc.start();
+        let p_end = proc.end();
+        let lo = if p_start.line == 1 {
+            self.lo + p_start.column as u32
+        } else {
+            SOURCE_MAP.with(|cm| {
+                let cm = cm.borrow();
+                let fi = cm.fileinfo(self);
+                fi.lines[start.line + p_start.line - 2] as u32 + p_start.column as u32
+            })
+        };
+        let hi = if p_end.line == 1 {
+            self.lo + p_end.column as u32
+        } else {
+            SOURCE_MAP.with(|cm| {
+                let cm = cm.borrow();
+                let fi = cm.fileinfo(self);
+                fi.lines[start.line + p_end.line - 2] as u32 + p_end.column as u32
+            })
+        };
+
+        Self { lo, hi }
+    }
+
     /// Returns line bounds and range in bounds
     pub fn range_in_file(self) -> ((usize, usize), (usize, usize)) {
         SOURCE_MAP.with(|cm| {

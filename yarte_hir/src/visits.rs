@@ -40,7 +40,7 @@ impl<'a> VisitMut for Generator<'a> {
                         *expr = e;
                     }
                     Err(e) => {
-                        self.buf_err.push((e, expr.span().range_in_file()));
+                        self.buf_err.push((e, expr.span()));
                     }
                 }
             }
@@ -53,8 +53,7 @@ impl<'a> VisitMut for Generator<'a> {
             *left = Box::new(ident.clone());
             self.visit_expr_mut(right);
         } else {
-            self.buf_err
-                .push((GError::NotExist, left.span().range_in_file()));
+            self.buf_err.push((GError::NotExist, left.span()));
         };
     }
 
@@ -66,14 +65,12 @@ impl<'a> VisitMut for Generator<'a> {
             *left = Box::new(ident.clone());
             self.visit_expr_mut(right);
         } else {
-            self.buf_err
-                .push((GError::NotExist, left.span().range_in_file()));
+            self.buf_err.push((GError::NotExist, left.span()));
         };
     }
 
     fn visit_expr_async_mut(&mut self, i: &mut syn::ExprAsync) {
-        self.buf_err
-            .push((GError::NotAvailable, i.span().range_in_file()));
+        self.buf_err.push((GError::NotAvailable, i.span()));
     }
 
     fn visit_expr_call_mut(&mut self, syn::ExprCall { func, args, .. }: &mut syn::ExprCall) {
@@ -93,8 +90,7 @@ impl<'a> VisitMut for Generator<'a> {
         }: &mut syn::ExprClosure,
     ) {
         if let Some(..) = asyncness {
-            self.buf_err
-                .push((GError::NotAvailable, asyncness.span().range_in_file()));
+            self.buf_err.push((GError::NotAvailable, asyncness.span()));
         };
 
         self.scp.push_scope(vec![]);
@@ -149,13 +145,11 @@ impl<'a> VisitMut for Generator<'a> {
     }
 
     fn visit_expr_try_block_mut(&mut self, i: &mut syn::ExprTryBlock) {
-        self.buf_err
-            .push((GError::NotAvailable, i.span().range_in_file()));
+        self.buf_err.push((GError::NotAvailable, i.span()));
     }
 
     fn visit_expr_yield_mut(&mut self, i: &mut syn::ExprYield) {
-        self.buf_err
-            .push((GError::NotAvailable, i.span().range_in_file()));
+        self.buf_err.push((GError::NotAvailable, i.span()));
     }
 
     fn visit_local_mut(&mut self, syn::Local { pat, init, .. }: &mut syn::Local) {
@@ -170,33 +164,27 @@ impl<'a> VisitMut for Generator<'a> {
 
     fn visit_pat_ident_mut(&mut self, syn::PatIdent { ident, subpat, .. }: &mut syn::PatIdent) {
         if let Some((at, pat)) = subpat {
-            self.buf_err.push((
-                GError::NotAvailable,
-                at.span().join(pat.span()).unwrap().range_in_file(),
-            ));
+            self.buf_err
+                .push((GError::NotAvailable, at.span().join(pat.span()).unwrap()));
         }
 
         *ident = self.scp.push_ident(&ident.to_string());
     }
 
     fn visit_pat_lit_mut(&mut self, i: &mut syn::PatLit) {
-        self.buf_err
-            .push((GError::NotAvailable, i.span().range_in_file()));
+        self.buf_err.push((GError::NotAvailable, i.span()));
     }
 
     fn visit_pat_macro_mut(&mut self, i: &mut syn::PatMacro) {
-        self.buf_err
-            .push((GError::NotAvailable, i.span().range_in_file()));
+        self.buf_err.push((GError::NotAvailable, i.span()));
     }
 
     fn visit_pat_range_mut(&mut self, i: &mut syn::PatRange) {
-        self.buf_err
-            .push((GError::NotAvailable, i.span().range_in_file()));
+        self.buf_err.push((GError::NotAvailable, i.span()));
     }
 
     fn visit_pat_struct_mut(&mut self, i: &mut syn::PatStruct) {
-        self.buf_err
-            .push((GError::NotAvailable, i.span().range_in_file()));
+        self.buf_err.push((GError::NotAvailable, i.span()));
     }
 
     fn visit_stmt_mut(&mut self, i: &mut syn::Stmt) {
@@ -206,8 +194,7 @@ impl<'a> VisitMut for Generator<'a> {
                 self.visit_local_mut(i);
             }
             Item(i) => {
-                self.buf_err
-                    .push((GError::Unimplemented, i.span().range_in_file()));
+                self.buf_err.push((GError::Unimplemented, i.span()));
             }
             Expr(i) => {
                 self.visit_expr_mut(i);

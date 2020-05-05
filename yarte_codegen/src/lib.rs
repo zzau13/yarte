@@ -1,8 +1,4 @@
-#![allow(clippy::match_on_vec_items)]
-extern crate proc_macro2_impersonated as proc_macro2;
-extern crate quote_impersonated as quote;
-extern crate syn_impersonated as syn;
-
+#![allow(clippy::unknown_clippy_lints, clippy::match_on_vec_items)]
 use proc_macro2::TokenStream;
 use quote::quote;
 

@@ -1,9 +1,3 @@
-extern crate proc_macro;
-
-extern crate proc_macro2_impersonated as proc_macro2;
-extern crate quote_impersonated as quote;
-extern crate syn_impersonated as syn;
-
 use std::{
     collections::{BTreeMap, BTreeSet},
     iter,
@@ -29,6 +23,7 @@ macro_rules! build {
         let config_toml: &str = &read_config_file();
         let config = &Config::new(config_toml);
         let s = &visit_derive($i, config);
+        proc_macro2::fallback::force();
         let sources = &read(s.path.clone(), s.src.clone(), config);
 
         sources_to_tokens(sources, config, s, $codegen(s), $opt).into()

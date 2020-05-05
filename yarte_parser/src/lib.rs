@@ -1,9 +1,4 @@
 #![allow(clippy::many_single_char_names, clippy::cognitive_complexity)]
-
-extern crate proc_macro2_impersonated as proc_macro2;
-extern crate quote_impersonated as quote;
-extern crate syn_impersonated as syn;
-
 use std::str;
 
 use syn::{parse_str, Expr, Local};
@@ -466,8 +461,8 @@ macro_rules! make_argument {
                                 })
                                 .map_err(|e| {
                                     LexError::Fail(
-                                        PError::Argument(DOption::Some(e.to_string())),
-                                        Span::from_range(skip_ws(i), e.span().range_in_file()),
+                                        PError::Argument(DOption::Some(e.message)),
+                                        Span::from_range(skip_ws(i), e.span),
                                     )
                                 });
                         };
@@ -526,8 +521,8 @@ fn safe(i: Cursor, lws: bool) -> PResult<Node> {
         })
         .map_err(|e| {
             LexError::Fail(
-                PError::Safe(DOption::Some(e.to_string())),
-                Span::from_range(skip_ws(i), e.span().range_in_file()),
+                PError::Safe(DOption::Some(e.message)),
+                Span::from_range(skip_ws(i), e.span),
             )
         })
 }
@@ -603,8 +598,8 @@ fn expr(i: Cursor, lws: bool) -> PResult<Node> {
             .map(|e| (c, Node::Local(S(e, s!()))))
             .map_err(|e| {
                 LexError::Fail(
-                    PError::Local(DOption::Some(e.to_string())),
-                    Span::from_range(skip_ws(i), e.span().range_in_file()),
+                    PError::Local(DOption::Some(e.message)),
+                    Span::from_range(skip_ws(i), e.span),
                 )
             })
     } else {
@@ -612,26 +607,77 @@ fn expr(i: Cursor, lws: bool) -> PResult<Node> {
             .map(|e| (c, Node::Expr((lws, rws), S(e, s!()))))
             .map_err(|e| {
                 LexError::Fail(
-                    PError::Expr(DOption::Some(e.to_string())),
-                    Span::from_range(skip_ws(i), e.span().range_in_file()),
+                    PError::Expr(DOption::Some(e.message)),
+                    Span::from_range(skip_ws(i), e.span),
                 )
             })
     }
 }
 
+/// Intermediate error representation
+#[derive(Debug)]
+struct MiddleError {
+    pub message: String,
+    pub span: (usize, usize),
+}
+
+fn get_line_offset(src: &str, line_num: usize) -> usize {
+    assert!(1 < line_num);
+    let mut line_num = line_num - 1;
+    let mut prev = 0;
+    while let Some(len) = src[prev..].find('\n') {
+        prev += len + 1;
+        line_num -= 1;
+        if line_num == 0 {
+            break;
+        }
+    }
+    assert_eq!(line_num, 0);
+
+    prev
+}
+
+impl MiddleError {
+    fn new(src: &str, e: syn::Error) -> Self {
+        let start = e.span().start();
+        let end = e.span().end();
+        let lo = if start.line == 1 {
+            start.column
+        } else {
+            get_line_offset(src, start.line) + start.column
+        };
+        let hi = if end.line == 1 {
+            end.column
+        } else {
+            get_line_offset(src, end.line) + end.column
+        };
+        Self {
+            message: e.to_string(),
+            span: (lo, hi),
+        }
+    }
+}
+
 /// Parse syn expression
-fn eat_expr(i: &str) -> Result<Box<Expr>, syn::Error> {
-    parse_str::<Expr>(i).map(Box::new)
+fn eat_expr(i: &str) -> Result<Box<Expr>, MiddleError> {
+    parse_str::<Expr>(i)
+        .map(Box::new)
+        .map_err(|e| MiddleError::new(i, e))
 }
 
 /// Parse syn local
-fn eat_local(i: &str) -> Result<Box<Local>, syn::Error> {
-    parse_str::<StmtLocal>(i).map(Into::into).map(Box::new)
+fn eat_local(i: &str) -> Result<Box<Local>, MiddleError> {
+    parse_str::<StmtLocal>(i)
+        .map(Into::into)
+        .map(Box::new)
+        .map_err(|e| MiddleError::new(i, e))
 }
 
 /// Parse syn expression comma separated list
-fn eat_expr_list(i: &str) -> Result<Vec<Expr>, syn::Error> {
-    parse_str::<ExprList>(i).map(Into::into)
+fn eat_expr_list(i: &str) -> Result<Vec<Expr>, MiddleError> {
+    parse_str::<ExprList>(i)
+        .map(Into::into)
+        .map_err(|e| MiddleError::new(i, e))
 }
 
 /// Eat whitespace flag in end of expressions `.. }}` or `.. ~}}`

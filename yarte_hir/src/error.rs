@@ -6,16 +6,15 @@ pub type GResult<T> = Result<T, GError>;
 
 pub(crate) struct MiddleError {
     message: GError,
-    range: (u32, u32),
+    in_span: proc_macro2::Span,
     span: Span,
 }
 
 impl MiddleError {
-    pub(crate) fn new(message: GError, range: (usize, usize), span: Span) -> Self {
-        let range = (range.0 as u32, range.1 as u32);
+    pub(crate) fn new(message: GError, in_span: proc_macro2::Span, span: Span) -> Self {
         Self {
             message,
-            range,
+            in_span,
             span,
         }
     }
@@ -25,16 +24,12 @@ impl Into<ErrorMessage<GError>> for MiddleError {
     fn into(self) -> ErrorMessage<GError> {
         let MiddleError {
             message,
-            range,
+            in_span,
             span,
         } = self;
-        assert!(span.lo + range.1 <= span.hi);
         ErrorMessage {
             message,
-            span: Span {
-                lo: span.lo + range.0,
-                hi: span.lo + range.1,
-            },
+            span: span.join_proc(in_span),
         }
     }
 }
