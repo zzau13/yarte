@@ -1,0 +1,11 @@
+error: invalid attribute 'source'
+ --> $DIR/derive.rs:4:12
+  |
+4 | #[template(source = "")]
+  |            ^^^^^^^^^^^
+
+error: must specify 'src' or 'path'
+ --> $DIR/derive.rs:4:1
+  |
+4 | #[template(source = "")]
+  | ^^^^^^^^^^^^^^^^^^^^^^^^

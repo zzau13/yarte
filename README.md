@@ -26,7 +26,7 @@ In order to  fully understand Yarte's capabilities take a look at the following 
 - [Tests](./yarte/tests)
 - [Our book](https://yarte.netlify.com/)
 - [Crate documentation](https://docs.rs/yarte/)
-- Minimum supported Rust version: 1.40 or later
+- Minimum supported Rust version: 1.42 or later
 
 ## Roadmap
 - [ ] [#37](https://github.com/botika/yarte/issues/37) Derive for compiled DOM, implement [`App`](./yarte_wasm_app/src/lib.rs) trait 

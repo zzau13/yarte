@@ -1,17 +1,21 @@
-use std::path::PathBuf;
+use std::{
+    convert::{TryFrom, TryInto},
+    path::PathBuf,
+};
 
+use proc_macro2::TokenStream;
 use quote::quote;
-use syn::visit::Visit;
+use syn::{parse_str, visit::Visit, ItemEnum};
 
 use yarte_helpers::config::Config;
 
-use proc_macro2::TokenStream;
-use syn::{parse_str, ItemEnum};
-
 const RECURSION_LIMIT: usize = 2048;
 
-pub fn visit_derive<'a>(i: &'a syn::DeriveInput, config: &Config) -> Struct<'a> {
-    StructBuilder::default().build(i, config)
+pub fn visit_derive<'a, 'b>(
+    i: &'a syn::DeriveInput,
+    config: &'b Config<'b>,
+) -> Result<Struct<'a>, TokenStream> {
+    StructBuilder::new(config).build(i)
 }
 
 #[derive(Debug)]
@@ -38,30 +42,34 @@ impl<'a> Struct<'a> {
     }
 }
 
-struct StructBuilder {
+struct StructBuilder<'a> {
     fields: Vec<syn::Field>,
-    path: Option<String>,
-    print: Option<String>,
+    path: Option<PathBuf>,
+    print: Option<Print>,
     script: Option<String>,
     recursion_limit: Option<usize>,
     src: Option<String>,
+    err: Vec<syn::Error>,
+    ident: String,
+    config: &'a Config<'a>,
 }
 
-impl Default for StructBuilder {
-    fn default() -> Self {
+impl<'a> StructBuilder<'a> {
+    fn new<'n>(config: &'n Config) -> StructBuilder<'n> {
         StructBuilder {
+            config,
+            ident: String::new(),
             fields: vec![],
             path: None,
             print: None,
             script: None,
             recursion_limit: None,
             src: None,
+            err: vec![],
         }
     }
-}
 
-impl StructBuilder {
-    fn build<'n>(
+    fn build(
         mut self,
         syn::DeriveInput {
             attrs,
@@ -69,15 +77,22 @@ impl StructBuilder {
             generics,
             data,
             ..
-        }: &'n syn::DeriveInput,
-        config: &Config,
-    ) -> Struct<'n> {
+        }: &syn::DeriveInput,
+    ) -> Result<Struct, TokenStream> {
+        self.ident = ident.to_string();
         let mut msgs = None;
         for i in attrs {
             if i.path.is_ident("template") {
-                self.visit_meta(&i.parse_meta().expect("valid meta attributes"));
+                match i.parse_meta() {
+                    Ok(ref m) => self.visit_meta(m),
+                    Err(e) => {
+                        self.err.push(e);
+                        continue;
+                    }
+                };
             } else if i.path.is_ident("msg") {
                 let tokens = i.tokens.to_string();
+                // TODO:
                 let tokens = tokens.get(1..tokens.len() - 1).expect("some");
                 let enu: ItemEnum = parse_str(tokens).expect("valid enum");
                 msgs = Some(enu);
@@ -85,50 +100,50 @@ impl StructBuilder {
         }
 
         self.visit_data(data);
-
-        let (path, src) = if let Some(src) = self.src {
-            (
-                config.get_dir().join(
-                    PathBuf::from(quote!(#ident).to_string()).with_extension(DEFAULT_EXTENSION),
-                ),
-                src.trim_end().to_owned(),
-            )
-        } else {
-            let path = PathBuf::from(self.path.expect("some valid path"));
-            let path = if let Some(ext) = path.extension() {
-                if ext == DEFAULT_EXTENSION {
-                    path
-                } else {
-                    panic!("Default extension for yarte templates is `.hbs`")
-                }
-            } else {
-                path.with_extension(DEFAULT_EXTENSION)
-            };
-            config.get_template(&path)
+        let (path, src) = match (self.path, self.src) {
+            (Some(path), Some(src)) => (path, src),
+            _ => {
+                self.err.push(syn::Error::new_spanned(
+                    attrs.iter().find(|x| x.path.is_ident("template")).unwrap(),
+                    "must specify 'src' or 'path'",
+                ));
+                (PathBuf::new(), String::new())
+            }
         };
 
-        Struct {
-            recursion_limit: self.recursion_limit.unwrap_or(RECURSION_LIMIT),
-            fields: self.fields,
-            generics,
-            ident,
-            msgs,
-            path,
-            print: self.print.into(),
-            script: self.script,
-            src,
+        if self.err.is_empty() {
+            Ok(Struct {
+                recursion_limit: self.recursion_limit.unwrap_or(RECURSION_LIMIT),
+                fields: self.fields,
+                generics,
+                ident,
+                msgs,
+                path,
+                print: self.print.unwrap_or(Print::None),
+                script: self.script,
+                src,
+            })
+        } else {
+            let mut tokens = TokenStream::new();
+            for e in self.err {
+                tokens.extend(e.to_compile_error());
+            }
+            Err(tokens)
         }
     }
 }
 
-impl<'a> Visit<'a> for StructBuilder {
+impl<'a, 'b> Visit<'a> for StructBuilder<'b> {
     fn visit_data(&mut self, i: &'a syn::Data) {
         use syn::Data::*;
         match i {
             Struct(ref i) => {
                 self.visit_data_struct(i);
             }
-            Enum(_) | Union(_) => panic!("Not valid need a `struc`"),
+            Enum(_) | Union(_) => self.err.push(syn::Error::new(
+                proc_macro2::Span::call_site(),
+                "Not valid need a `struc`",
+            )),
         }
     }
 
@@ -136,48 +151,94 @@ impl<'a> Visit<'a> for StructBuilder {
         self.fields.push(e.clone());
     }
 
-    fn visit_meta_name_value(
-        &mut self,
-        syn::MetaNameValue { path, lit, .. }: &'a syn::MetaNameValue,
-    ) {
+    fn visit_meta_name_value(&mut self, i: &'a syn::MetaNameValue) {
+        let syn::MetaNameValue { path, lit, .. } = i;
         if path.is_ident("path") {
             if let syn::Lit::Str(ref s) = lit {
                 if self.src.is_some() {
-                    panic!("must specify 'src' or 'path', not both");
+                    self.err.push(syn::Error::new_spanned(
+                        i,
+                        "must specify 'src' or 'path', not both",
+                    ))
                 }
-                self.path = Some(s.value());
+                let mut path = PathBuf::from(s.value());
+                if let Some(ext) = path.extension() {
+                    if ext != DEFAULT_EXTENSION {
+                        self.err.push(syn::Error::new_spanned(
+                            i,
+                            "Default extension for yarte templates is `.hbs`",
+                        ))
+                    }
+                } else {
+                    path = path.with_extension(DEFAULT_EXTENSION);
+                };
+                let (path, src) = self.config.get_template(&path);
+                self.path = Some(path);
+                self.src = Some(src);
             } else {
-                panic!("attribute 'path' must be string literal");
+                self.err.push(syn::Error::new_spanned(
+                    i,
+                    "attribute 'path' must be string literal",
+                ))
             }
         } else if path.is_ident("src") {
             if let syn::Lit::Str(ref s) = lit {
                 if self.path.is_some() {
-                    panic!("must specify 'src' or 'path', not both");
+                    self.err.push(syn::Error::new_spanned(
+                        i,
+                        "must specify 'src' or 'path', not both",
+                    ));
                 }
-                self.src = Some(s.value());
+                self.path = Some(
+                    self.config
+                        .get_dir()
+                        .join(PathBuf::from(self.ident.clone()))
+                        .with_extension(DEFAULT_EXTENSION),
+                );
+                self.src = Some(s.value().trim_end().to_owned());
             } else {
-                panic!("attribute 'src' must be string literal");
+                self.err.push(syn::Error::new_spanned(
+                    i,
+                    "attribute 'src' must be string literal",
+                ));
             }
         } else if path.is_ident("print") {
             if let syn::Lit::Str(ref s) = lit {
-                self.print = Some(s.value());
+                match s.value().try_into() {
+                    Ok(s) => self.print = Some(s),
+                    Err(e) => {
+                        self.err.push(syn::Error::new_spanned(i, e));
+                    }
+                }
             } else {
-                panic!("attribute 'print' must be string literal");
+                self.err.push(syn::Error::new_spanned(
+                    i,
+                    "attribute 'print' must be string literal",
+                ));
             }
         } else if path.is_ident("script") {
             if let syn::Lit::Str(ref s) = lit {
                 self.script = Some(s.value());
             } else {
-                panic!("attribute 'script' must be string literal");
+                self.err.push(syn::Error::new_spanned(
+                    i,
+                    "attribute 'script' must be string literal",
+                ));
             }
         } else if path.is_ident("recursion-limit") {
             if let syn::Lit::Int(s) = lit {
                 self.recursion_limit = Some(s.base10_parse().unwrap());
             } else {
-                panic!("attribute 'script' must be string literal");
+                self.err.push(syn::Error::new_spanned(
+                    i,
+                    "attribute 'recursion-limit' must be number literal",
+                ));
             }
         } else {
-            panic!("invalid attribute '{:?}'", path.get_ident());
+            self.err.push(syn::Error::new_spanned(
+                i,
+                format!("invalid attribute '{}'", path.get_ident().unwrap()),
+            ));
         }
     }
 }
@@ -190,16 +251,14 @@ pub enum Print {
     None,
 }
 
-impl From<Option<String>> for Print {
-    fn from(s: Option<String>) -> Print {
-        match s {
-            Some(s) => match s.as_ref() {
-                "all" => Print::All,
-                "ast" => Print::Ast,
-                "code" => Print::Code,
-                v => panic!("invalid value for print attribute: {}", v),
-            },
-            None => Print::None,
+impl TryFrom<String> for Print {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        match s.as_ref() {
+            "all" => Ok(Print::All),
+            "ast" => Ok(Print::Ast),
+            "code" => Ok(Print::Code),
+            v => Err(format!("invalid value for print attribute: {}", v)),
         }
     }
 }
@@ -221,7 +280,7 @@ mod test {
         "#;
         let i = parse_str::<syn::DeriveInput>(src).unwrap();
         let config = Config::new("");
-        let _ = visit_derive(&i, &config);
+        let _ = visit_derive(&i, &config).unwrap();
     }
 
     #[test]
@@ -233,7 +292,7 @@ mod test {
         "#;
         let i = parse_str::<syn::DeriveInput>(src).unwrap();
         let config = Config::new("");
-        let s = visit_derive(&i, &config);
+        let s = visit_derive(&i, &config).unwrap();
 
         assert_eq!(s.src, "");
         assert_eq!(s.path, config.get_dir().join(PathBuf::from("Test.hbs")));

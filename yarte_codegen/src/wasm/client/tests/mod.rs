@@ -20,7 +20,7 @@ use super::WASMCodeGen;
 fn tokens(i: TokenStream) -> String {
     let config = &Config::new("");
     let der = parse2(i).unwrap();
-    let s = visit_derive(&der, config);
+    let s = visit_derive(&der, config).unwrap();
     let mut src = BTreeMap::new();
     src.insert(s.path.clone(), s.src.clone());
     let sources = parse(get_cursor(&s.path, &s.src)).unwrap();
