@@ -541,7 +541,7 @@ fn at_helper(i: Cursor, lws: bool) -> PResult<Node> {
     macro_rules! check_args_len {
         ($len:expr) => {
             if args.t().len() != $len {
-                return Err(LexError::Fail(PError::AtHelperArgsLen($len), *args.span()));
+                return Err(LexError::Fail(PError::AtHelperArgsLen($len), args.span()));
             }
         };
     }
@@ -557,7 +557,7 @@ fn at_helper(i: Cursor, lws: bool) -> PResult<Node> {
                 Node::AtHelper((lws, rws), AtHelperKind::JsonPretty, args),
             ))
         }
-        _ => Err(LexError::Fail(PError::AtHelperNotExist, *name.span())),
+        _ => Err(LexError::Fail(PError::AtHelperNotExist, name.span())),
     }
 }
 

@@ -12,7 +12,7 @@ pub(super) fn expression(e: &SExpr, out: &mut Vec<ErrorMessage<GError>>) {
         | Match(..) | Block(..) => (),
         _ => out.push(ErrorMessage {
             message: GError::ValidatorExpression,
-            span: *e.span(),
+            span: e.span(),
         }),
     }
 }
@@ -25,7 +25,7 @@ pub(super) fn ifs(e: &SExpr, out: &mut Vec<ErrorMessage<GError>>) {
         | Match(..) | Let(..) => (),
         _ => out.push(ErrorMessage {
             message: GError::ValidatorIfs,
-            span: *e.span(),
+            span: e.span(),
         }),
     }
 }
@@ -37,7 +37,7 @@ pub(super) fn each(e: &SExpr, out: &mut Vec<ErrorMessage<GError>>) {
         | Try(..) | Unsafe(..) | If(..) | Loop(..) | Match(..) | Range(..) | Reference(..) => (),
         _ => out.push(ErrorMessage {
             message: GError::ValidatorEach,
-            span: *e.span(),
+            span: e.span(),
         }),
     }
 }
@@ -49,14 +49,12 @@ pub(super) fn unless(e: &SExpr, out: &mut Vec<ErrorMessage<GError>>) {
         | Macro(..) | Lit(..) | Try(..) | Match(..) => (),
         Unary(syn::ExprUnary { op, .. }) => {
             if let syn::UnOp::Not(t) = op {
-                out.push(
-                    MiddleError::new(GError::ValidatorUnlessNegate, t.span(), *e.span()).into(),
-                )
+                out.push(MiddleError::new(GError::ValidatorUnlessNegate, t.span(), e.span()).into())
             }
         }
         _ => out.push(ErrorMessage {
             message: GError::ValidatorUnless,
-            span: *e.span(),
+            span: e.span(),
         }),
     }
 }
@@ -67,13 +65,13 @@ pub(super) fn scope(e: &SExpr, out: &mut Vec<ErrorMessage<GError>>) {
         Path(..) | Field(..) | Index(..) => (),
         _ => out.push(ErrorMessage {
             message: GError::ValidatorPartialScope,
-            span: *e.span(),
+            span: e.span(),
         }),
     }
 }
 
 #[allow(clippy::trivially_copy_pass_by_ref)]
-pub(super) fn partial_assign(e: &syn::Expr, span: &Span, out: &mut Vec<ErrorMessage<GError>>) {
+pub(super) fn partial_assign(e: &syn::Expr, span: Span, out: &mut Vec<ErrorMessage<GError>>) {
     use syn::Expr::*;
     match e {
         Path(..) | Field(..) | Index(..) | Lit(..) | Reference(..) | Array(..) | Range(..)
@@ -81,7 +79,7 @@ pub(super) fn partial_assign(e: &syn::Expr, span: &Span, out: &mut Vec<ErrorMess
         | Unsafe(..) => (),
         _ => out.push(ErrorMessage {
             message: GError::ValidatorPartialAssign,
-            span: *span,
+            span,
         }),
     }
 }

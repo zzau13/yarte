@@ -208,7 +208,7 @@ impl<'a> Generator<'a> {
 
                     self.handle_ws(*ws);
                     self.visit_expr_mut(&mut expr);
-                    self.write_errors(*sexpr.span());
+                    self.write_errors(sexpr.span());
 
                     if self.read_attributes(&mut expr).is_none()
                         && self.const_eval(&expr, true).is_none()
@@ -222,7 +222,7 @@ impl<'a> Generator<'a> {
 
                     self.handle_ws(*ws);
                     self.visit_expr_mut(&mut expr);
-                    self.write_errors(*sexpr.span());
+                    self.write_errors(sexpr.span());
 
                     if self.const_eval(&expr, false).is_none() {
                         validator::expression(sexpr, &mut self.errors);
@@ -235,7 +235,7 @@ impl<'a> Generator<'a> {
 
                     self.handle_ws(*ws);
                     self.visit_expr_mut(&mut expr);
-                    self.write_errors(*sexpr.span());
+                    self.write_errors(sexpr.span());
 
                     self.buf_w.push(Writable::LitP(quote!(#expr).to_string()));
                 }
@@ -245,7 +245,7 @@ impl<'a> Generator<'a> {
                     if let Err(message) = self.visit_partial(buf, *ws, path.t(), expr, None) {
                         self.errors.push(ErrorMessage {
                             message,
-                            span: *n.span(),
+                            span: n.span(),
                         })
                     }
                 }
@@ -281,7 +281,7 @@ impl<'a> Generator<'a> {
                         self.flush_ws(*ws);
                         self.errors.push(ErrorMessage {
                             message: GError::PartialBlockNoParent,
-                            span: *n.span(),
+                            span: n.span(),
                         });
                         self.prepare_ws(*ws);
                     }
@@ -292,7 +292,7 @@ impl<'a> Generator<'a> {
                     {
                         self.errors.push(ErrorMessage {
                             message,
-                            span: *n.span(),
+                            span: n.span(),
                         })
                     }
                 }
@@ -301,7 +301,7 @@ impl<'a> Generator<'a> {
                     if let Some(msg) = self.format_error(err) {
                         self.errors.push(ErrorMessage {
                             message: GError::UserCompileError(msg),
-                            span: *n.span(),
+                            span: n.span(),
                         })
                     }
                 }
@@ -339,7 +339,7 @@ impl<'a> Generator<'a> {
             }
 
             self.errors
-                .push(MiddleError::new(GError::Internal, first.span(), *err.span()).into());
+                .push(MiddleError::new(GError::Internal, first.span(), err.span()).into());
 
             None
         } else {
@@ -390,7 +390,7 @@ impl<'a> Generator<'a> {
         let mut cond = *scond.t().clone();
         self.handle_ws(ws.0);
         self.visit_expr_mut(&mut cond);
-        self.write_errors(*scond.span());
+        self.write_errors(scond.span());
 
         if let Some(val) = self.eval_bool(&cond) {
             if !val {
@@ -433,7 +433,7 @@ impl<'a> Generator<'a> {
         self.handle_ws(ws.0);
         let mut arg = *args.t().clone();
         self.visit_expr_mut(&mut arg);
-        self.write_errors(*args.span());
+        self.write_errors(args.span());
         self.on.push(On::With(self.scp.len()));
         self.scp.push_scope(vec![arg]);
 
@@ -454,14 +454,14 @@ impl<'a> Generator<'a> {
         let loop_var = find_loop_var(self, nodes).unwrap_or_else(|message| {
             self.errors.push(ErrorMessage {
                 message,
-                span: *sargs.span(),
+                span: sargs.span(),
             });
             false
         });
 
         let mut args = *sargs.t().clone();
         self.visit_expr_mut(&mut args);
-        self.write_errors(*sargs.span());
+        self.write_errors(sargs.span());
 
         if let Some(args) = self.eval_iter(&args) {
             self.const_iter(buf, ws, args, nodes, loop_var);
@@ -515,7 +515,7 @@ impl<'a> Generator<'a> {
         self.scp.push_scope(vec![]);
         let mut cond = *scond.t().clone();
         self.visit_expr_mut(&mut cond);
-        self.write_errors(*scond.span());
+        self.write_errors(scond.span());
         self.handle_ws(pws.0);
 
         let (mut last, mut o_ifs, mut is_handled) = if let Some(val) = self.eval_bool(&cond) {
@@ -550,7 +550,7 @@ impl<'a> Generator<'a> {
             self.scp.push_scope(vec![]);
             let mut cond = *scond.t().clone();
             self.visit_expr_mut(&mut cond);
-            self.write_errors(*scond.span());
+            self.write_errors(scond.span());
 
             if let Some(val) = self.eval_bool(&cond) {
                 if val {
@@ -659,7 +659,7 @@ impl<'a> Generator<'a> {
             for (k, expr) in no_visited {
                 let mut expr = expr.clone();
                 self.visit_expr_mut(&mut expr);
-                self.write_errors(*exprs.span());
+                self.write_errors(exprs.span());
                 cur.insert(k, expr);
             }
 
@@ -667,7 +667,7 @@ impl<'a> Generator<'a> {
                 let old = mem::replace(&mut self.opt.resolve_to_self, true);
                 let mut scope = scope.clone();
                 self.visit_expr_mut(&mut scope);
-                self.write_errors(*exprs.span());
+                self.write_errors(exprs.span());
                 let count = self.scp.count;
                 let mut parent = mem::replace(&mut self.scp, Scope::new(scope, count));
                 let last = mem::replace(&mut self.partial, Some((cur, 0)));
