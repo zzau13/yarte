@@ -28,7 +28,7 @@ macro_rules! panic_some {
         if $some.is_some() {
             $_self.err.push(ErrorMessage {
                 message: GError::NotAvailable,
-                span: *$_self.e.span(),
+                span: $_self.e.span(),
             });
         }
     };
@@ -57,7 +57,7 @@ impl<'a, 'b> PartialBuilder<'a, 'b> {
             e @ Path(..) => self.scope = Some(e),
             _ => self.err.push(ErrorMessage {
                 message: GError::PartialArguments,
-                span: *self.e.span(),
+                span: self.e.span(),
             }),
         }
 
@@ -66,11 +66,11 @@ impl<'a, 'b> PartialBuilder<'a, 'b> {
                 Assign(assign) => self.visit_expr_assign(&assign),
                 Path(..) => self.err.push(ErrorMessage {
                     message: GError::PartialArgumentsScopeFirst,
-                    span: *self.e.span(),
+                    span: self.e.span(),
                 }),
                 _ => self.err.push(ErrorMessage {
                     message: GError::PartialArguments,
-                    span: *self.e.span(),
+                    span: self.e.span(),
                 }),
             }
         }
@@ -91,14 +91,14 @@ impl<'a, 'b> Visit<'a> for PartialBuilder<'a, 'b> {
                 if e.path.segments.len() != 1 {
                     self.err.push(ErrorMessage {
                         message: GError::PartialArgumentsScope,
-                        span: *self.e.span(),
+                        span: self.e.span(),
                     })
                 }
                 let ident = e.path.segments[0].ident.to_string();
                 if RESERVED_WORDS.contains(&ident.as_str()) || is_tuple_index(ident.as_bytes()) {
                     self.err.push(ErrorMessage {
                         message: GError::ReservedWord,
-                        span: *self.e.span(),
+                        span: self.e.span(),
                     })
                 }
 
@@ -106,7 +106,7 @@ impl<'a, 'b> Visit<'a> for PartialBuilder<'a, 'b> {
             }
             _ => self.err.push(ErrorMessage {
                 message: GError::PartialArguments,
-                span: *self.e.span(),
+                span: self.e.span(),
             }),
         }
     }

@@ -238,8 +238,8 @@ impl<T: Debug + PartialEq + Clone> S<T> {
     pub fn t(&self) -> &T {
         &self.0
     }
-    pub fn span(&self) -> &Span {
-        &self.1
+    pub fn span(&self) -> Span {
+        self.1
     }
 }
 
