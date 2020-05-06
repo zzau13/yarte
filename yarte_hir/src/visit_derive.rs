@@ -5,7 +5,7 @@ use std::{
 
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{parse_str, visit::Visit, Data, ItemEnum};
+use syn::{parse_str, visit::Visit, Data, Error, ItemEnum};
 
 use yarte_helpers::config::Config;
 
@@ -49,7 +49,7 @@ struct StructBuilder<'a> {
     script: Option<String>,
     recursion_limit: Option<usize>,
     src: Option<String>,
-    err: Vec<syn::Error>,
+    err: Vec<Error>,
     ident: String,
     config: &'a Config<'a>,
 }
@@ -83,7 +83,7 @@ impl<'a> StructBuilder<'a> {
                 self.visit_data_struct(i);
             }
             Data::Enum(_) | Data::Union(_) => {
-                self.err.push(syn::Error::new_spanned(i, "need a `struc`"))
+                self.err.push(Error::new_spanned(i, "need a `struc`"))
             }
         }
         let mut msgs = None;
@@ -108,7 +108,7 @@ impl<'a> StructBuilder<'a> {
         let (path, src) = match (self.path, self.src) {
             (Some(path), Some(src)) => (path, src),
             _ => {
-                self.err.push(syn::Error::new_spanned(
+                self.err.push(Error::new_spanned(
                     attrs.iter().find(|x| x.path.is_ident("template")).unwrap(),
                     "must specify 'src' or 'path'",
                 ));
@@ -129,11 +129,7 @@ impl<'a> StructBuilder<'a> {
                 src,
             })
         } else {
-            let mut tokens = TokenStream::new();
-            for e in self.err {
-                tokens.extend(e.to_compile_error());
-            }
-            Err(tokens)
+            Err(self.err.iter().flat_map(Error::to_compile_error).collect())
         }
     }
 }
@@ -148,7 +144,7 @@ impl<'a, 'b> Visit<'a> for StructBuilder<'b> {
         if path.is_ident("path") {
             if let syn::Lit::Str(ref s) = lit {
                 if self.src.is_some() {
-                    self.err.push(syn::Error::new_spanned(
+                    self.err.push(Error::new_spanned(
                         i,
                         "must specify 'src' or 'path', not both",
                     ))
@@ -156,7 +152,7 @@ impl<'a, 'b> Visit<'a> for StructBuilder<'b> {
                 let mut path = PathBuf::from(s.value());
                 if let Some(ext) = path.extension() {
                     if ext != DEFAULT_EXTENSION {
-                        self.err.push(syn::Error::new_spanned(
+                        self.err.push(Error::new_spanned(
                             i,
                             "Default extension for yarte templates is `.hbs`",
                         ))
@@ -168,7 +164,7 @@ impl<'a, 'b> Visit<'a> for StructBuilder<'b> {
                 self.path = Some(path);
                 self.src = Some(src);
             } else {
-                self.err.push(syn::Error::new_spanned(
+                self.err.push(Error::new_spanned(
                     i,
                     "attribute 'path' must be string literal",
                 ))
@@ -176,7 +172,7 @@ impl<'a, 'b> Visit<'a> for StructBuilder<'b> {
         } else if path.is_ident("src") {
             if let syn::Lit::Str(ref s) = lit {
                 if self.path.is_some() {
-                    self.err.push(syn::Error::new_spanned(
+                    self.err.push(Error::new_spanned(
                         i,
                         "must specify 'src' or 'path', not both",
                     ));
@@ -189,7 +185,7 @@ impl<'a, 'b> Visit<'a> for StructBuilder<'b> {
                 );
                 self.src = Some(s.value().trim_end().to_owned());
             } else {
-                self.err.push(syn::Error::new_spanned(
+                self.err.push(Error::new_spanned(
                     i,
                     "attribute 'src' must be string literal",
                 ));
@@ -199,11 +195,11 @@ impl<'a, 'b> Visit<'a> for StructBuilder<'b> {
                 match s.value().try_into() {
                     Ok(s) => self.print = Some(s),
                     Err(e) => {
-                        self.err.push(syn::Error::new_spanned(i, e));
+                        self.err.push(Error::new_spanned(i, e));
                     }
                 }
             } else {
-                self.err.push(syn::Error::new_spanned(
+                self.err.push(Error::new_spanned(
                     i,
                     "attribute 'print' must be string literal",
                 ));
@@ -212,7 +208,7 @@ impl<'a, 'b> Visit<'a> for StructBuilder<'b> {
             if let syn::Lit::Str(ref s) = lit {
                 self.script = Some(s.value());
             } else {
-                self.err.push(syn::Error::new_spanned(
+                self.err.push(Error::new_spanned(
                     i,
                     "attribute 'script' must be string literal",
                 ));
@@ -221,13 +217,13 @@ impl<'a, 'b> Visit<'a> for StructBuilder<'b> {
             if let syn::Lit::Int(s) = lit {
                 self.recursion_limit = Some(s.base10_parse().unwrap());
             } else {
-                self.err.push(syn::Error::new_spanned(
+                self.err.push(Error::new_spanned(
                     i,
                     "attribute 'recursion-limit' must be number literal",
                 ));
             }
         } else {
-            self.err.push(syn::Error::new_spanned(
+            self.err.push(Error::new_spanned(
                 i,
                 format!("invalid attribute '{}'", path.get_ident().unwrap()),
             ));
