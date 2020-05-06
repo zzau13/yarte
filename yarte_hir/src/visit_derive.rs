@@ -5,7 +5,7 @@ use std::{
 
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{parse_str, visit::Visit, ItemEnum};
+use syn::{parse_str, visit::Visit, Data, ItemEnum};
 
 use yarte_helpers::config::Config;
 
@@ -69,17 +69,23 @@ impl<'a> StructBuilder<'a> {
         }
     }
 
-    fn build(
-        mut self,
-        syn::DeriveInput {
+    fn build(mut self, i: &syn::DeriveInput) -> Result<Struct, TokenStream> {
+        let syn::DeriveInput {
             attrs,
             ident,
             generics,
             data,
             ..
-        }: &syn::DeriveInput,
-    ) -> Result<Struct, TokenStream> {
+        } = i;
         self.ident = ident.to_string();
+        match data {
+            Data::Struct(ref i) => {
+                self.visit_data_struct(i);
+            }
+            Data::Enum(_) | Data::Union(_) => {
+                self.err.push(syn::Error::new_spanned(i, "need a `struc`"))
+            }
+        }
         let mut msgs = None;
         for i in attrs {
             if i.path.is_ident("template") {
@@ -99,7 +105,6 @@ impl<'a> StructBuilder<'a> {
             }
         }
 
-        self.visit_data(data);
         let (path, src) = match (self.path, self.src) {
             (Some(path), Some(src)) => (path, src),
             _ => {
@@ -134,19 +139,6 @@ impl<'a> StructBuilder<'a> {
 }
 
 impl<'a, 'b> Visit<'a> for StructBuilder<'b> {
-    fn visit_data(&mut self, i: &'a syn::Data) {
-        use syn::Data::*;
-        match i {
-            Struct(ref i) => {
-                self.visit_data_struct(i);
-            }
-            Enum(_) | Union(_) => self.err.push(syn::Error::new(
-                proc_macro2::Span::call_site(),
-                "Not valid need a `struc`",
-            )),
-        }
-    }
-
     fn visit_field(&mut self, e: &'a syn::Field) {
         self.fields.push(e.clone());
     }

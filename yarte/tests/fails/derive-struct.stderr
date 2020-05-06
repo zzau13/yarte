@@ -1,0 +1,8 @@
+error: need a `struc`
+ --> $DIR/derive-struct.rs:4:1
+  |
+4 | / #[template(src = "")]
+5 | | enum Test {
+6 | |     F
+7 | | }
+  | |_^
