@@ -10,16 +10,35 @@ use yarte_parser::StmtLocal;
 
 use crate::{Each, IfElse, HIR};
 
+#[inline]
 pub fn serialize<'a, W, I>(ir: I, writer: &mut W) -> fmt::Result
 where
     W: Write,
     I: Iterator<Item = &'a HIR>,
 {
+    _serialize(ir, writer, &mut Serialize)
+}
+
+#[inline]
+pub fn serialize_resolved<'a, W, I>(ir: I, writer: &mut W) -> fmt::Result
+where
+    W: Write,
+    I: Iterator<Item = &'a HIR>,
+{
+    _serialize(ir, writer, &mut SerializeResolve)
+}
+
+fn _serialize<'a, W, I, V>(ir: I, writer: &mut W, visitor: &mut V) -> fmt::Result
+where
+    W: Write,
+    I: Iterator<Item = &'a HIR>,
+    V: VisitMut,
+{
     for i in ir {
         match i {
             HIR::Local(a) => {
                 let mut local = *a.clone();
-                Serialize.visit_local_mut(&mut local);
+                visitor.visit_local_mut(&mut local);
                 let local: StmtLocal = local.into();
                 writer.write_str("{{ ")?;
                 writer.write_str(&quote!(#local).to_string())?;
@@ -28,14 +47,14 @@ where
             HIR::Lit(a) => writer.write_str(a)?,
             HIR::Safe(a) => {
                 let mut expr = *a.clone();
-                Serialize.visit_expr_mut(&mut expr);
+                visitor.visit_expr_mut(&mut expr);
                 writer.write_str("{{{ ")?;
                 writer.write_str(&quote!(#expr).to_string())?;
                 writer.write_str(" }}}")?
             }
             HIR::Expr(a) => {
                 let mut expr = *a.clone();
-                Serialize.visit_expr_mut(&mut expr);
+                visitor.visit_expr_mut(&mut expr);
                 writer.write_str("{{ ")?;
                 writer.write_str(&quote!(#expr).to_string())?;
                 writer.write_str(" }}")?
@@ -44,14 +63,14 @@ where
                 let IfElse { ifs, if_else, els } = &**a;
                 let (expr, ir) = ifs;
                 let mut expr = expr.clone();
-                Serialize.visit_expr_mut(&mut expr);
+                visitor.visit_expr_mut(&mut expr);
                 writer.write_str("{{#if ")?;
                 writer.write_str(&quote!(#expr).to_string())?;
                 writer.write_str(" }}")?;
                 serialize(ir.iter(), writer)?;
                 for (expr, ir) in if_else {
                     let mut expr = expr.clone();
-                    Serialize.visit_expr_mut(&mut expr);
+                    visitor.visit_expr_mut(&mut expr);
                     writer.write_str("{{else if ")?;
                     writer.write_str(&quote!(#expr).to_string())?;
                     writer.write_str(" }}")?;
@@ -95,7 +114,7 @@ where
                             if let Reference(ExprReference { expr, .. }) = &**expr {
                                 if let Paren(ExprParen { expr, .. }) = &**expr {
                                     let mut expr = *expr.clone();
-                                    Serialize.visit_expr_mut(&mut expr);
+                                    visitor.visit_expr_mut(&mut expr);
                                     expr
                                 } else {
                                     unreachable!()
@@ -109,12 +128,12 @@ where
                     }
                     Paren(ExprParen { expr, .. }) => {
                         let mut expr = *expr.clone();
-                        Serialize.visit_expr_mut(&mut expr);
+                        visitor.visit_expr_mut(&mut expr);
                         expr
                     }
                     expr @ Range(_) => {
                         let mut expr = expr.clone();
-                        Serialize.visit_expr_mut(&mut expr);
+                        visitor.visit_expr_mut(&mut expr);
                         expr
                     }
                     _ => unreachable!(),
@@ -130,6 +149,10 @@ where
 
     Ok(())
 }
+
+struct SerializeResolve;
+
+impl VisitMut for SerializeResolve {}
 
 struct Serialize;
 

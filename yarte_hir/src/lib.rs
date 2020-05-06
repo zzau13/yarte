@@ -42,7 +42,7 @@ use self::{
 };
 pub use self::{
     hir::*,
-    serialize::serialize,
+    serialize::{serialize, serialize_resolved},
     visit_derive::{visit_derive, Print, Struct},
 };
 
