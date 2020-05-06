@@ -85,10 +85,9 @@ pub fn parse(i: Cursor) -> Result<Vec<SNode>, ErrorMessage<PError>> {
     if c.is_empty() {
         Ok(res)
     } else {
-        let end = (i.len() - c.len()) as u32;
         Err(ErrorMessage {
             message: PError::Uncompleted,
-            span: Span { lo: end, hi: end },
+            span: Span::from_len(c, 1),
         })
     }
 }
