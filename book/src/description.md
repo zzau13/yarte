@@ -20,7 +20,5 @@ and will be subject to several refactors before first release.
 - `recursion-limit`: `default: 2048` Set limit of partial deep 
 
 ## Rules
-- Not use `}}` inside expression (If you want to use them, you are free to implement a tokenizer that includes the syntax of yarte and rust and do PR)
+- Only use `}}` or `{{\` for expressions or blocks (If you want to use them in any place, you are free to implement a tokenizer that includes the syntax of yarte and rust and do PR)
 - Default template extension is `hbs`, since it includes much of the language (If you want to better IDE support, you are free to write a plugin with `yrt` extension)
-
-
