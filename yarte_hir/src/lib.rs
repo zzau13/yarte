@@ -110,6 +110,7 @@ struct Generator<'a> {
     /// current file path
     on_path: PathBuf,
     recursion: usize,
+    current_span: Option<Span>,
     /// whitespace buffer adapted from [`askama`](https://github.com/djc/askama)
     next_ws: Option<&'a str>,
     /// whitespace flag adapted from [`askama`](https://github.com/djc/askama)
@@ -134,6 +135,7 @@ impl<'a> Clone for Generator<'a> {
             recursion: self.recursion,
             next_ws: self.next_ws,
             skip_ws: self.skip_ws,
+            current_span: self.current_span,
         }
     }
 }
@@ -161,6 +163,7 @@ impl<'a> Generator<'a> {
             block: vec![],
             recursion: 0,
             buf_err: vec![],
+            current_span: None,
         }
     }
 
@@ -240,7 +243,11 @@ impl<'a> Generator<'a> {
                     self.buf_w.push(Writable::LitP(quote!(#expr).to_string()));
                 }
                 Node::Lit(l, lit, r) => self.visit_lit(l, lit.t(), r),
-                Node::Helper(h) => self.visit_helper(buf, &h),
+                Node::Helper(h) => {
+                    let old_span = self.current_span.replace(n.span());
+                    self.visit_helper(buf, &h);
+                    self.current_span = old_span;
+                }
                 Node::Partial(Partial(ws, path, expr)) => {
                     if let Err(message) = self.visit_partial(buf, *ws, path.t(), expr, None) {
                         self.errors.push(ErrorMessage {
@@ -301,7 +308,7 @@ impl<'a> Generator<'a> {
                     if let Some(msg) = self.format_error(err) {
                         self.errors.push(ErrorMessage {
                             message: GError::UserCompileError(msg),
-                            span: n.span(),
+                            span: self.current_span.unwrap_or_else(|| n.span()),
                         })
                     }
                 }
@@ -387,6 +394,7 @@ impl<'a> Generator<'a> {
         scond: &SExpr,
         nodes: &'a [SNode],
     ) {
+        let old_span = self.current_span.replace(scond.span());
         let mut cond = *scond.t().clone();
         self.handle_ws(ws.0);
         self.visit_expr_mut(&mut cond);
@@ -425,6 +433,8 @@ impl<'a> Generator<'a> {
                 els: None,
             })));
         }
+
+        self.current_span = old_span;
     }
 
     fn visit_with(&mut self, buf: &mut Vec<HIR>, ws: (Ws, Ws), args: &SExpr, nodes: &'a [SNode]) {
@@ -451,6 +461,7 @@ impl<'a> Generator<'a> {
         sargs: &'a SExpr,
         nodes: &'a [SNode<'a>],
     ) {
+        let old_span = self.current_span.replace(sargs.span());
         let loop_var = find_loop_var(self, nodes).unwrap_or_else(|message| {
             self.errors.push(ErrorMessage {
                 message,
@@ -465,6 +476,7 @@ impl<'a> Generator<'a> {
 
         if let Some(args) = self.eval_iter(&args) {
             self.const_iter(buf, ws, args, nodes, loop_var);
+            self.current_span = old_span;
             return;
         }
 
@@ -501,6 +513,7 @@ impl<'a> Generator<'a> {
 
         self.on.pop();
         self.scp.pop();
+        self.current_span = old_span;
 
         buf.push(HIR::Each(Box::new(Each { args, body, expr })))
     }
@@ -518,6 +531,7 @@ impl<'a> Generator<'a> {
         self.write_errors(scond.span());
         self.handle_ws(pws.0);
 
+        let old_span = self.current_span.replace(scond.span());
         let (mut last, mut o_ifs, mut is_handled) = if let Some(val) = self.eval_bool(&cond) {
             if val {
                 self.handle(block, buf);
@@ -552,6 +566,7 @@ impl<'a> Generator<'a> {
             self.visit_expr_mut(&mut cond);
             self.write_errors(scond.span());
 
+            self.current_span.replace(scond.span());
             if let Some(val) = self.eval_bool(&cond) {
                 if val {
                     if o_ifs.is_some() {
@@ -578,6 +593,7 @@ impl<'a> Generator<'a> {
             self.scp.pop();
         }
 
+        self.current_span = old_span;
         let mut els = els.as_ref().and_then(|(ws, els)| {
             if last {
                 return None;

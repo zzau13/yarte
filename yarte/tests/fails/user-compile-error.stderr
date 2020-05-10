@@ -5,8 +5,8 @@ error: proc-macro derive panicked
   |          ^^^^^^^^
   |
   = help: message: error
-           --> $DIR/Test.hbs:1:14
+           --> $DIR/Test.hbs:1:7
             |
-          1 | {{#if true}} {{$ "foo" }} {{/if }}
-            |              ^^^^^^^^^^^^ Compile error: foo
+          1 | {{#if true.is_some() }}
+            |       ^^^^^^^^^^^^^^ Compile error: OMG! true is some
             |
