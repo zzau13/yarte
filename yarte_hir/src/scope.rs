@@ -83,8 +83,22 @@ impl Scope {
         &self.scope[0]
     }
 
+    #[inline]
     pub(super) fn get_by(&self, ident: &str) -> Option<&syn::Expr> {
-        self.scope.iter().rev().find(|e| {
+        Self::find(ident, self.scope.iter().rev())
+    }
+
+    #[inline]
+    #[allow(dead_code)]
+    pub(super) fn get_by_at(&self, take: usize, ident: &str) -> Option<&syn::Expr> {
+        Self::find(ident, self.scope.iter().take(take).rev())
+    }
+
+    fn find<'a, I>(ident: &str, mut i: I) -> Option<&'a syn::Expr>
+    where
+        I: Iterator<Item = &'a syn::Expr>,
+    {
+        i.find(|e| {
             let e = quote!(#e).to_string();
             let e = e.as_bytes();
             let ident = ident.as_bytes();

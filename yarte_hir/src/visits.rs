@@ -5,10 +5,10 @@ use syn::{
     visit_mut::{self, VisitMut},
 };
 
-use super::Generator;
+use super::LoweringContext;
 use crate::error::GError;
 
-impl<'a> VisitMut for Generator<'a> {
+impl<'a> VisitMut for LoweringContext<'a> {
     fn visit_arm_mut(
         &mut self,
         syn::Arm {

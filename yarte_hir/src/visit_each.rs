@@ -7,13 +7,13 @@ use syn::visit::Visit;
 use yarte_helpers::config::Config;
 use yarte_parser::{Helper, Node, Partial, PartialBlock, SNode};
 
-use super::{is_super, Context, Generator};
+use super::{is_super, Context, LoweringContext};
 use crate::{
     error::{GError, GResult},
     Struct,
 };
 
-pub(super) fn find_loop_var(g: &Generator, nodes: &[SNode]) -> GResult<bool> {
+pub(super) fn find_loop_var(g: &LoweringContext, nodes: &[SNode]) -> GResult<bool> {
     FindEach::from(g).find(nodes)
 }
 
@@ -31,8 +31,8 @@ pub struct FindEach<'a> {
     on_error: Option<GError>,
 }
 
-impl<'a> From<&Generator<'a>> for FindEach<'a> {
-    fn from(g: &Generator<'a>) -> FindEach<'a> {
+impl<'a> From<&LoweringContext<'a>> for FindEach<'a> {
+    fn from(g: &LoweringContext<'a>) -> FindEach<'a> {
         FindEach {
             loop_var: false,
             c: g.c,

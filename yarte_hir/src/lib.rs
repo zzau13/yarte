@@ -67,7 +67,7 @@ pub fn generate(
     ctx: Context,
     opt: HIROptions,
 ) -> Result<Vec<HIR>, Vec<ErrorMessage<GError>>> {
-    Generator::new(c, s, ctx, opt).build()
+    LoweringContext::new(c, s, ctx, opt).build()
 }
 
 pub type Context<'a> = &'a BTreeMap<&'a PathBuf, Vec<SNode<'a>>>;
@@ -87,37 +87,55 @@ enum Writable<'a> {
 
 /// lowering from `SNode` to `HIR`
 /// TODO: Document
-struct Generator<'a> {
+/// TODO: refactor for only left booleans on the stack at recursion
+struct LoweringContext<'a> {
+    // as state
     pub(self) opt: HIROptions,
+    // Copiable
     pub(self) c: &'a Config<'a>,
     /// ast of DeriveInput
+    // Copiable
     pub(self) s: &'a Struct<'a>,
     /// Scope stack
+    // TODO:
     pub(self) scp: Scope,
     /// On State stack
+    // TODO:
     pub(self) on: Vec<On>,
     /// On partial scope
+    // TODO: remove in favor of anything
     pub(self) partial: Option<(BTreeMap<String, syn::Expr>, usize)>,
-    block: Vec<(Ws, &'a [SNode<'a>], Generator<'a>)>,
+    // TODO: remove LoweringContext in favor of reference to state
+    block: Vec<(Ws, &'a [SNode<'a>], LoweringContext<'a>)>,
+    /// current file path
+    // TODO:
+    on_path: PathBuf,
     /// buffer for writable
+    // UnAlloc init
     buf_w: Vec<Writable<'a>>,
     // buffer for error builders
+    // UnAlloc init
     buf_err: Vec<(GError, proc_macro2::Span)>,
     /// Errors buffer
+    // UnAlloc init
     errors: Vec<ErrorMessage<GError>>,
     /// path - nodes
+    // Copiable
     ctx: Context<'a>,
-    /// current file path
-    on_path: PathBuf,
-    recursion: usize,
-    current_span: Option<Span>,
+    /// Last parent conditional
+    spans: Vec<Span>,
     /// whitespace buffer adapted from [`askama`](https://github.com/djc/askama)
+    // Copiable
     next_ws: Option<&'a str>,
     /// whitespace flag adapted from [`askama`](https://github.com/djc/askama)
+    // Copiable
     skip_ws: bool,
+    // Copiable
+    recursion: usize,
 }
 
-impl<'a> Clone for Generator<'a> {
+// TODO: remove in favor of mut reference
+impl<'a> Clone for LoweringContext<'a> {
     fn clone(&self) -> Self {
         Self {
             opt: self.opt,
@@ -125,6 +143,7 @@ impl<'a> Clone for Generator<'a> {
             s: self.s,
             scp: self.scp.clone(),
             on: self.on.to_vec(),
+            spans: self.spans.to_vec(),
             partial: self.partial.clone(),
             block: self.block.clone(),
             buf_w: vec![],
@@ -135,19 +154,18 @@ impl<'a> Clone for Generator<'a> {
             recursion: self.recursion,
             next_ws: self.next_ws,
             skip_ws: self.skip_ws,
-            current_span: self.current_span,
         }
     }
 }
 
-impl<'a> Generator<'a> {
+impl<'a> LoweringContext<'a> {
     fn new<'n>(
         c: &'n Config<'n>,
         s: &'n Struct<'n>,
         ctx: Context<'n>,
         opt: HIROptions,
-    ) -> Generator<'n> {
-        Generator {
+    ) -> LoweringContext<'n> {
+        LoweringContext {
             opt,
             c,
             s,
@@ -163,7 +181,7 @@ impl<'a> Generator<'a> {
             block: vec![],
             recursion: 0,
             buf_err: vec![],
-            current_span: None,
+            spans: vec![],
         }
     }
 
@@ -244,16 +262,17 @@ impl<'a> Generator<'a> {
                 }
                 Node::Lit(l, lit, r) => self.visit_lit(l, lit.t(), r),
                 Node::Helper(h) => {
-                    let old_span = self.current_span.replace(n.span());
+                    self.spans.push(n.span());
                     self.visit_helper(buf, &h);
-                    self.current_span = old_span;
+                    self.spans.pop();
                 }
                 Node::Partial(Partial(ws, path, expr)) => {
                     if let Err(message) = self.visit_partial(buf, *ws, path.t(), expr, None) {
                         self.errors.push(ErrorMessage {
                             message,
                             span: n.span(),
-                        })
+                        });
+                        return;
                     }
                 }
                 // TODO
@@ -308,7 +327,7 @@ impl<'a> Generator<'a> {
                     if let Some(msg) = self.format_error(err) {
                         self.errors.push(ErrorMessage {
                             message: GError::UserCompileError(msg),
-                            span: self.current_span.unwrap_or_else(|| n.span()),
+                            span: self.spans.last().copied().unwrap_or_else(|| n.span()),
                         })
                     }
                 }
@@ -394,7 +413,7 @@ impl<'a> Generator<'a> {
         scond: &SExpr,
         nodes: &'a [SNode],
     ) {
-        let old_span = self.current_span.replace(scond.span());
+        self.spans.push(scond.span());
         let mut cond = *scond.t().clone();
         self.handle_ws(ws.0);
         self.visit_expr_mut(&mut cond);
@@ -434,7 +453,7 @@ impl<'a> Generator<'a> {
             })));
         }
 
-        self.current_span = old_span;
+        self.spans.pop();
     }
 
     fn visit_with(&mut self, buf: &mut Vec<HIR>, ws: (Ws, Ws), args: &SExpr, nodes: &'a [SNode]) {
@@ -461,7 +480,7 @@ impl<'a> Generator<'a> {
         sargs: &'a SExpr,
         nodes: &'a [SNode<'a>],
     ) {
-        let old_span = self.current_span.replace(sargs.span());
+        self.spans.push(sargs.span());
         let loop_var = find_loop_var(self, nodes).unwrap_or_else(|message| {
             self.errors.push(ErrorMessage {
                 message,
@@ -476,7 +495,7 @@ impl<'a> Generator<'a> {
 
         if let Some(args) = self.eval_iter(&args) {
             self.const_iter(buf, ws, args, nodes, loop_var);
-            self.current_span = old_span;
+            self.spans.pop();
             return;
         }
 
@@ -513,7 +532,7 @@ impl<'a> Generator<'a> {
 
         self.on.pop();
         self.scp.pop();
-        self.current_span = old_span;
+        self.spans.pop();
 
         buf.push(HIR::Each(Box::new(Each { args, body, expr })))
     }
@@ -531,7 +550,7 @@ impl<'a> Generator<'a> {
         self.write_errors(scond.span());
         self.handle_ws(pws.0);
 
-        let old_span = self.current_span.replace(scond.span());
+        self.spans.push(scond.span());
         let (mut last, mut o_ifs, mut is_handled) = if let Some(val) = self.eval_bool(&cond) {
             if val {
                 self.handle(block, buf);
@@ -566,7 +585,7 @@ impl<'a> Generator<'a> {
             self.visit_expr_mut(&mut cond);
             self.write_errors(scond.span());
 
-            self.current_span.replace(scond.span());
+            self.spans.push(scond.span());
             if let Some(val) = self.eval_bool(&cond) {
                 if val {
                     if o_ifs.is_some() {
@@ -593,7 +612,7 @@ impl<'a> Generator<'a> {
             self.scp.pop();
         }
 
-        self.current_span = old_span;
+        self.spans.pop();
         let mut els = els.as_ref().and_then(|(ws, els)| {
             if last {
                 return None;
@@ -648,13 +667,15 @@ impl<'a> Generator<'a> {
         block: Option<(Ws, &'a [SNode<'a>])>,
     ) -> GResult<()> {
         self.recursion += 1;
-        if self.s.recursion_limit <= self.recursion {
+        if self.s.recursion_limit < self.recursion {
             return Err(GError::RecursionLimit);
         }
 
+        // TODO: identifiers
         let p = self.c.resolve_partial(&self.on_path, path);
         let nodes = self.ctx.get(&p).unwrap();
 
+        // TODO: to on path stack without duplicates
         let p = mem::replace(&mut self.on_path, p);
 
         let block = if let Some((ws, block)) = block {
@@ -685,6 +706,7 @@ impl<'a> Generator<'a> {
                 self.visit_expr_mut(&mut scope);
                 self.write_errors(exprs.span());
                 let count = self.scp.count;
+                // TODO: to heap stack without realloc every block
                 let mut parent = mem::replace(&mut self.scp, Scope::new(scope, count));
                 let last = mem::replace(&mut self.partial, Some((cur, 0)));
 
@@ -698,6 +720,7 @@ impl<'a> Generator<'a> {
                 self.on = on;
                 self.opt.resolve_to_self = old;
             } else {
+                // TODO:
                 let last = mem::replace(&mut self.partial, Some((cur, self.on.len())));
                 self.scp.push_scope(vec![]);
 
@@ -713,6 +736,7 @@ impl<'a> Generator<'a> {
         } else {
             self.prepare_ws(a_ws)
         }
+        // TODO: identifiers
         self.on_path = p;
         self.recursion -= 1;
         Ok(())
