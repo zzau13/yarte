@@ -5,6 +5,7 @@ use std::str::Chars;
 use crate::{error::PError, source_map::Span};
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
+// TODO: to utf-8 chars
 pub struct Cursor<'a> {
     pub rest: &'a str,
     pub off: u32,

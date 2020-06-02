@@ -381,6 +381,18 @@ fn test_partial_recursion() {
 }
 
 #[derive(Template)]
+// TODO: stack overflow
+#[template(src = "{{> partial-recursion a = 127 }}")]
+struct PartialRecursionLimit;
+
+#[test]
+fn test_partial_recursion_limit() {
+    let t = PartialRecursionLimit;
+
+    assert!(t.call().is_ok());
+}
+
+#[derive(Template)]
 #[template(
     src = "{{# each a }}{{#> partial-block-ctx a = \"b\" }}_{{ this }}a{{ index }}{{/partial-block-ctx }}{{/each}}"
 )]

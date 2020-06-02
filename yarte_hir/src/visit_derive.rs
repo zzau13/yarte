@@ -9,7 +9,8 @@ use syn::{parse_str, visit::Visit, Data, Error, ItemEnum};
 
 use yarte_helpers::config::Config;
 
-const RECURSION_LIMIT: usize = 2048;
+// TODO:
+const RECURSION_LIMIT: usize = 128;
 
 pub fn visit_derive<'a, 'b>(
     i: &'a syn::DeriveInput,
@@ -213,7 +214,7 @@ impl<'a, 'b> Visit<'a> for StructBuilder<'b> {
                     "attribute 'script' must be string literal",
                 ));
             }
-        } else if path.is_ident("recursion-limit") {
+        } else if path.is_ident("recursion") {
             if let syn::Lit::Int(s) = lit {
                 self.recursion_limit = Some(s.base10_parse().unwrap());
             } else {

@@ -42,6 +42,7 @@ pub struct Partial<'a>(pub Ws, pub SStr<'a>, pub SVExpr);
 pub struct PartialBlock<'a>(pub (Ws, Ws), pub SStr<'a>, pub SVExpr, pub Vec<SNode<'a>>);
 
 #[derive(Debug, PartialEq, Clone)]
+// TODO: reduce size
 pub enum Node<'a> {
     Comment(&'a str),
     Expr(Ws, SExpr),
