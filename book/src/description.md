@@ -17,7 +17,7 @@ and will be subject to several refactors before first release.
 - `src`: template sources
 - `path`: path to sources relative to template directory
 - `print`: `all`, `ast` or `code` display debug info. Overridden by config file print option.
-- `recursion-limit`: `default: 2048` Set limit of partial deep 
+- `recursion`: `default: 128` Set limit of partial deep, can produce stackoverflow at compile time
 
 ## Rules
 - Only use `}}` or `{{\` for expressions or blocks (If you want to use them in any place, you are free to implement a tokenizer that includes the syntax of yarte and rust and do PR)
