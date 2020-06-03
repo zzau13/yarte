@@ -219,7 +219,7 @@ fn max_size_teams_io_writer(b: &mut criterion::Bencher) {
             year: 2015,
             teams: build_teams(),
         };
-        const LEN: usize = 2048;
+        const LEN: usize = 256;
 
         b.iter(|| {
             let mut buf: [u8; LEN] = MaybeUninit::uninit().assume_init();
@@ -253,7 +253,6 @@ fn max_size_teams_io_writer(b: &mut criterion::Bencher) {
                 if i == 0 {
                     write_b!(b"champion");
                 }
-                assert!(curr < LEN);
                 write_b!(b"\"><b>");
                 write_b!(v.name.as_bytes());
 
@@ -266,7 +265,7 @@ fn max_size_teams_io_writer(b: &mut criterion::Bencher) {
                 write_b!(b"</li>");
             }
             write_b!(b"</ul></body></html>");
-            let _ = slice::from_raw_parts(buf_ptr, curr);
+            let _ = slice::from_raw_parts(buf_ptr, curr).to_vec();
         })
     }
 }
