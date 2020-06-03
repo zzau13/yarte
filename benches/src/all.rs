@@ -1,14 +1,17 @@
 use std::fmt::{Display, Formatter, Result, Write};
-use std::io;
+use std::mem::MaybeUninit;
+use std::{io, slice};
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
+use itoa;
 use yarte::{Template, TemplateText};
 
 criterion_group!(benches, functions);
 criterion_main!(benches);
 
 fn functions(c: &mut Criterion) {
+    c.bench_function("Unsafe Teams", max_size_teams_io_writer);
     c.bench_function("Teams", teams);
     c.bench_function("Teams io writer implements io::Write", teams_io_writer);
     c.bench_function("Teams Unescaped", teams_display);
@@ -208,6 +211,64 @@ fn big_table_io_writer(b: &mut criterion::Bencher, size: usize) {
     b.iter(|| {
         let _ = io_writer_big_table(&mut buf, &table);
     });
+}
+
+fn max_size_teams_io_writer(b: &mut criterion::Bencher) {
+    unsafe {
+        let teams = Teams {
+            year: 2015,
+            teams: build_teams(),
+        };
+        const LEN: usize = 2048;
+
+        b.iter(|| {
+            let mut buf: [u8; LEN] = MaybeUninit::uninit().assume_init();
+            let mut curr = 0;
+            let buf_ptr = buf.as_mut_ptr();
+
+            macro_rules! write_b {
+                ($b:expr) => {
+                    for i in $b {
+                        buf_ptr.add(curr).write(*i);
+                        curr += 1;
+                    }
+                };
+            }
+
+            curr += itoa::write(
+                slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr),
+                teams.year,
+            )
+            .unwrap();
+            write_b!(b"<html><head><title>");
+            write_b!(b"</title></head><body><h1>CSL ");
+            curr += itoa::write(
+                slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr),
+                teams.year,
+            )
+            .unwrap();
+            write_b!(b"</h1><ul>");
+            for (i, v) in teams.teams.iter().enumerate() {
+                write_b!(b"<li class=\"");
+                if i == 0 {
+                    write_b!(b"champion");
+                }
+                assert!(curr < LEN);
+                write_b!(b"\"><b>");
+                write_b!(v.name.as_bytes());
+
+                write_b!(b"</b>: ");
+                curr += itoa::write(
+                    slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr),
+                    v.score,
+                )
+                .unwrap();
+                write_b!(b"</li>");
+            }
+            write_b!(b"</ul></body></html>");
+            let _ = slice::from_raw_parts(buf_ptr, curr);
+        })
+    }
 }
 
 // Version of `termcolor`

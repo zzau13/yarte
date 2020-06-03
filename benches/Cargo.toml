@@ -9,6 +9,7 @@ members = ["."]
 
 [dependencies]
 yarte = { path = "../yarte", version = "*" }
+itoa = "0.4"
 
 [build-dependencies]
 yarte = { path = "../yarte", version = "*" }
