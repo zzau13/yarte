@@ -1,7 +1,11 @@
 // Based on https://github.com/utkarshkukreti/markup.rs/blob/master/markup/src/lib.rs
 use std::fmt::{self, Display};
 
+use dtoa::write;
+use itoa::fmt;
 use v_htmlescape::escape;
+
+use super::io_fmt::IoFmt;
 
 /// Render trait, used for wrap unsafe expressions `{{ ... }}` when it's in a html template
 pub trait Render {
@@ -40,6 +44,177 @@ macro_rules! string_display {
 #[rustfmt::skip]
 string_display!(String &String &&String &&&String &&&&String);
 
+macro_rules! itoa_display_0 {
+    ($($ty:ty)*) => {
+        $(
+            impl Render for $ty {
+                #[inline(always)]
+                fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                    fmt(f, *self)
+                }
+            }
+        )*
+    };
+}
+
+macro_rules! itoa_display_1 {
+    ($($ty:ty)*) => {
+        $(
+            impl Render for &$ty {
+                #[inline(always)]
+                fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                    fmt(f, **self)
+                }
+            }
+        )*
+    };
+}
+
+macro_rules! itoa_display_2 {
+    ($($ty:ty)*) => {
+        $(
+            impl Render for &&$ty {
+                #[inline(always)]
+                fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                    fmt(f, ***self)
+                }
+            }
+        )*
+    };
+}
+
+macro_rules! itoa_display_3 {
+    ($($ty:ty)*) => {
+        $(
+            impl Render for &&&$ty {
+                #[inline(always)]
+                fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                    fmt(f, ****self)
+                }
+            }
+        )*
+    };
+}
+
+macro_rules! itoa_display_4 {
+    ($($ty:ty)*) => {
+        $(
+            impl Render for &&&&$ty {
+                #[inline(always)]
+                fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                    fmt(f, *****self)
+                }
+            }
+        )*
+    };
+}
+
+macro_rules! itoa_display {
+    ($($ty:ty)*) => {
+        itoa_display_0!($($ty)*);
+        itoa_display_1!($($ty)*);
+        itoa_display_2!($($ty)*);
+        itoa_display_3!($($ty)*);
+        itoa_display_4!($($ty)*);
+    };
+}
+
+#[rustfmt::skip]
+itoa_display! {
+    u8 u16 u32 u64 usize
+    i8 i16 i32 i64 isize
+}
+
+macro_rules! dtoa_display_0 {
+    ($($ty:ty)*) => {
+        $(
+            impl Render for $ty {
+                #[inline(always)]
+                fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                    write(IoFmt::new(f), *self)
+                    .map(|_| ())
+                    .map_err(|_| fmt::Error)
+                }
+            }
+        )*
+    };
+}
+
+macro_rules! dtoa_display_1 {
+    ($($ty:ty)*) => {
+        $(
+            impl Render for &$ty {
+                #[inline(always)]
+                fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                    write(IoFmt::new(f), **self)
+                    .map(|_| ())
+                    .map_err(|_| fmt::Error)
+                }
+            }
+        )*
+    };
+}
+
+macro_rules! dtoa_display_2 {
+    ($($ty:ty)*) => {
+        $(
+            impl Render for &&$ty {
+                #[inline(always)]
+                fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                    write(IoFmt::new(f), ***self)
+                    .map(|_| ())
+                    .map_err(|_| fmt::Error)
+                }
+            }
+        )*
+    };
+}
+
+macro_rules! dtoa_display_3 {
+    ($($ty:ty)*) => {
+        $(
+            impl Render for &&&$ty {
+                #[inline(always)]
+                fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                    write(IoFmt::new(f), ****self)
+                    .map(|_| ())
+                    .map_err(|_| fmt::Error)
+                }
+            }
+        )*
+    };
+}
+
+macro_rules! dtoa_display_4 {
+    ($($ty:ty)*) => {
+        $(
+            impl Render for &&&&$ty {
+                #[inline(always)]
+                fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                    write(IoFmt::new(f), *****self)
+                    .map(|_| ())
+                    .map_err(|_| fmt::Error)
+                }
+            }
+        )*
+    };
+}
+
+macro_rules! dtoa_display {
+    ($($ty:ty)*) => {
+        dtoa_display_0!($($ty)*);
+        dtoa_display_1!($($ty)*);
+        dtoa_display_2!($($ty)*);
+        dtoa_display_3!($($ty)*);
+        dtoa_display_4!($($ty)*);
+    };
+}
+
+#[rustfmt::skip]
+dtoa_display! {
+    f32 f64
+}
+
 macro_rules! raw_display {
     ($($ty:ty)*) => {
         $(
@@ -57,31 +232,21 @@ macro_rules! raw_display {
 raw_display! {
     bool
     char
-    u8 u16 u32 u64 u128 usize
-    i8 i16 i32 i64 i128 isize
-    f32 f64
+    u128 i128
 
     &bool
     &char
-    &u8 &u16 &u32 &u64 &u128 &usize
-    &i8 &i16 &i32 &i64 &i128 &isize
-    &f32 &f64
+    &u128 &i128
 
     &&bool
     &&char
-    &&u8 &&u16 &&u32 &&u64 &&u128 &&usize
-    &&i8 &&i16 &&i32 &&i64 &&i128 &&isize
-    &&f32 &&f64
+    &&u128 &&i128
 
     &&&bool
     &&&char
-    &&&u8 &&&u16 &&&u32 &&&u64 &&&u128 &&&usize
-    &&&i8 &&&i16 &&&i32 &&&i64 &&&i128 &&&isize
-    &&&f32 &&&f64
+    &&&u128 &&&i128
 
     &&&&bool
     &&&&char
-    &&&&u8 &&&&u16 &&&&u32 &&&&u64 &&&&u128 &&&&usize
-    &&&&i8 &&&&i16 &&&&i32 &&&&i64 &&&&i128 &&&&isize
-    &&&&f32 &&&&f64
+    &&&&u128 &&&&i128
 }
