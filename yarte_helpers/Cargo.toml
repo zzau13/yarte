@@ -14,7 +14,7 @@ workspace = ".."
 
 [features]
 default = ["markup", "config"]
-markup = ["v_htmlescape"]
+markup = ["io-fmt", "v_htmlescape", "itoa", "dtoa"]
 config = ["serde", "toml"]
 big-num-32 = []
 display-fn = []
@@ -26,6 +26,8 @@ maintenance = { status = "actively-developed" }
 
 [dependencies]
 v_htmlescape = { version = "0.4", optional = true }
+itoa = { version = "0.4", optional = true }
+dtoa = { version = "0.4", optional = true }
 
 serde = { version = "1.0", features = ["derive"], optional = true }
 toml = { version = "0.5", optional = true }
