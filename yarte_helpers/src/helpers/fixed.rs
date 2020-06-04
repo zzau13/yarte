@@ -277,7 +277,7 @@ macro_rules! str_display {
                     if buf.len() < self.len() {
                         None
                     } else {
-                        buf.copy_from_slice(self.as_bytes());
+                        (&mut buf[..self.len()]).copy_from_slice(self.as_bytes());
                         Some(self.len())
                     }
                 }
@@ -289,8 +289,20 @@ macro_rules! str_display {
 #[rustfmt::skip]
 str_display!(
     str &str &&str &&&str &&&&str
-    String &String &&String &&&String &&&&String
+    String &String &&String &&&String
 );
+
+impl RenderSafe for String {
+    #[inline(always)]
+    fn render(&self, buf: &mut [u8]) -> Option<usize> {
+        if buf.len() < self.len() {
+            None
+        } else {
+            (&mut buf[..self.len()]).copy_from_slice(self.as_bytes());
+            Some(self.len())
+        }
+    }
+}
 
 macro_rules! itoa_display_0 {
     ($($ty:ty)*) => {

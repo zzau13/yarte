@@ -6,7 +6,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 
 use itoa;
 use v_htmlescape::v_escape;
-use yarte::{Template, TemplateText};
+use yarte::{Template, TemplateText, TemplateFixed, TemplateFixedText};
 
 criterion_group!(benches, functions);
 criterion_main!(benches);
@@ -15,6 +15,8 @@ fn functions(c: &mut Criterion) {
     c.bench_function("Unsafe Teams", max_size_teams);
     c.bench_function("Safe Unsafe Teams", safe_max_size_teams);
     c.bench_function("Safe Escaped Unsafe Teams", safe_max_size_teams_escaped);
+    c.bench_function("Fixed Teams", teams_fixed);
+    c.bench_function("Fixed Text Teams", teams_fixed_text);
     c.bench_function("Teams", teams);
     c.bench_function("Teams io writer implements io::Write", teams_io_writer);
     c.bench_function("Teams Unescaped", teams_display);
@@ -141,6 +143,44 @@ fn teams_display(b: &mut criterion::Bencher) {
         teams: build_teams(),
     };
     b.iter(|| teams.call().unwrap());
+}
+
+#[derive(TemplateFixed)]
+#[template(path = "teams")]
+struct TeamsF {
+    year: u16,
+    teams: Vec<Team>,
+}
+
+fn teams_fixed(b: &mut criterion::Bencher) {
+    let teams = TeamsF {
+        year: 2015,
+        teams: build_teams(),
+    };
+    b.iter(|| {
+        let mut buf: [u8; 2048] = unsafe { MaybeUninit::uninit().assume_init() };
+        let b = unsafe { teams.call(&mut buf) }.unwrap();
+        let _ = &buf[..b].to_vec();
+    });
+}
+
+#[derive(TemplateFixedText)]
+#[template(path = "teams")]
+struct TeamsFT {
+    year: u16,
+    teams: Vec<Team>,
+}
+
+fn teams_fixed_text(b: &mut criterion::Bencher) {
+    let teams = TeamsFT {
+        year: 2015,
+        teams: build_teams(),
+    };
+    b.iter(|| {
+        let mut buf: [u8; 2048] = unsafe { MaybeUninit::uninit().assume_init() };
+        let b = unsafe { teams.call(&mut buf) }.unwrap();
+        let _ = &buf[..b].to_vec();
+    });
 }
 
 #[derive(TemplateText)]

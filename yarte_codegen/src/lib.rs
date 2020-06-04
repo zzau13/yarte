@@ -10,7 +10,6 @@ mod macros;
 mod fixed;
 mod fmt;
 mod fn_fmt;
-#[cfg(feature = "html-min")]
 mod html;
 mod text;
 pub mod wasm;
