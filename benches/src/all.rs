@@ -241,7 +241,7 @@ fn max_size_teams_io_writer(b: &mut criterion::Bencher) {
                 slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr),
                 teams.year,
             )
-            .unwrap();
+            .expect("buffer overflow");
             write_b!(b"</title></head><body><h1>CSL ");
             curr += itoa::write(
                 slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr),
@@ -262,7 +262,7 @@ fn max_size_teams_io_writer(b: &mut criterion::Bencher) {
                     slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr),
                     v.score,
                 )
-                .unwrap();
+                .expect("buffer overflow");
                 write_b!(b"</li>");
             }
             write_b!(b"</ul></body></html>");
@@ -292,23 +292,16 @@ fn safe_max_size_teams_io_writer(b: &mut criterion::Bencher) {
                             curr += 1;
                         }
                     } else {
-                        panic!("TODO to error");
+                        panic!("buffer overflow");
                     }
                 };
             }
 
             macro_rules! write_u16 {
                 ($n:expr) => {
-                    // TODO: max size in render interface
-                    if curr + 5 < LEN {
-                        curr += itoa::write(
-                            slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr),
-                            $n,
-                        )
-                        .unwrap();
-                    } else {
-                        panic!("TODO to error");
-                    }
+                    curr +=
+                        itoa::write(slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr), $n)
+                            .expect("buffer overflow");
                 };
             }
 
