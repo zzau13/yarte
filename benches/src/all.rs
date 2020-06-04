@@ -5,6 +5,7 @@ use std::{io, slice};
 use criterion::{criterion_group, criterion_main, Criterion};
 
 use itoa;
+use v_htmlescape::v_escape;
 use yarte::{Template, TemplateText};
 
 criterion_group!(benches, functions);
@@ -13,6 +14,7 @@ criterion_main!(benches);
 fn functions(c: &mut Criterion) {
     c.bench_function("Unsafe Teams", max_size_teams_io_writer);
     c.bench_function("Safe Unsafe Teams", safe_max_size_teams_io_writer);
+    c.bench_function("Safe Escaped Unsafe Teams", safe_max_size_teams_escaped);
     c.bench_function("Teams", teams);
     c.bench_function("Teams io writer implements io::Write", teams_io_writer);
     c.bench_function("Teams Unescaped", teams_display);
@@ -316,8 +318,67 @@ fn safe_max_size_teams_io_writer(b: &mut criterion::Bencher) {
                     write_b!(b"champion");
                 }
                 write_b!(b"\"><b>");
-                // TODO: v_escape
                 write_b!(v.name.as_bytes());
+                write_b!(b"</b>: ");
+                write_u16!(v.score);
+                write_b!(b"</li>");
+            }
+            write_b!(b"</ul></body></html>");
+            let _ = slice::from_raw_parts(buf_ptr, curr).to_vec();
+        })
+    }
+}
+
+fn safe_max_size_teams_escaped(b: &mut criterion::Bencher) {
+    unsafe {
+        let teams = Teams {
+            year: 2015,
+            teams: build_teams(),
+        };
+        const LEN: usize = 256;
+
+        b.iter(|| {
+            let mut buf: [u8; LEN] = MaybeUninit::uninit().assume_init();
+            let mut curr = 0;
+            let buf_ptr = buf.as_mut_ptr();
+
+            macro_rules! write_b {
+                ($b:expr) => {
+                    if curr + $b.len() < LEN {
+                        for i in $b {
+                            buf_ptr.add(curr).write(*i);
+                            curr += 1;
+                        }
+                    } else {
+                        panic!("buffer overflow");
+                    }
+                };
+            }
+
+            macro_rules! write_u16 {
+                ($n:expr) => {
+                    curr +=
+                        itoa::write(slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr), $n)
+                            .expect("buffer overflow");
+                };
+            }
+
+            write_b!(b"<html><head><title>");
+            write_u16!(teams.year);
+            write_b!(b"</title></head><body><h1>CSL ");
+            write_u16!(teams.year);
+            write_b!(b"</h1><ul>");
+            for (i, v) in teams.teams.iter().enumerate() {
+                write_b!(b"<li class=\"");
+                if i == 0 {
+                    write_b!(b"champion");
+                }
+                write_b!(b"\"><b>");
+                curr += v_escape(
+                    v.name.as_bytes(),
+                    slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr),
+                )
+                .expect("buffer overflow");
                 write_b!(b"</b>: ");
                 write_u16!(v.score);
                 write_b!(b"</li>");
