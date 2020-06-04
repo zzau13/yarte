@@ -20,6 +20,7 @@ maintenance = { status = "actively-developed" }
 wasm-app = ["indexmap", "heck", "yarte_hir/wasm-app", "yarte_dom/wasm-app"]
 html-min = ["yarte_dom", "yarte_html"]
 wasm-server = ["yarte_dom", "yarte_html"]
+fixed = []
 
 [dependencies]
 yarte_helpers = { version = "0.9.4", path = "../yarte_helpers" }

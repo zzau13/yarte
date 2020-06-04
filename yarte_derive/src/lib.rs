@@ -61,6 +61,42 @@ pub fn template_html(input: TokenStream) -> TokenStream {
     build!(i, get_codegen, Default::default())
 }
 
+#[proc_macro_derive(TemplateFixedText, attributes(template))]
+#[cfg(feature = "fixed")]
+/// Implements TemplateTrait without html escape functionality
+pub fn template_ptr(input: TokenStream) -> TokenStream {
+    fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
+        Box::new(yarte_codegen::FixedCodeGen::new(
+            yarte_codegen::TextFixedCodeGen("yarte"),
+            s,
+        ))
+    }
+
+    let i = &syn::parse(input).unwrap();
+    build!(
+        i,
+        get_codegen,
+        HIROptions {
+            is_text: true,
+            ..Default::default()
+        }
+    )
+}
+
+#[proc_macro_derive(TemplateFixed, attributes(template))]
+#[cfg(feature = "fixed")]
+/// Implements TemplateTrait with html escape functionality
+pub fn template_html_ptr(input: TokenStream) -> TokenStream {
+    fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
+        Box::new(yarte_codegen::FixedCodeGen::new(
+            yarte_codegen::HTMLFixedCodeGen("yarte"),
+            s,
+        ))
+    }
+    let i = &syn::parse(input).unwrap();
+    build!(i, get_codegen, Default::default())
+}
+
 #[proc_macro_derive(TemplateMin, attributes(template))]
 #[cfg(feature = "html-min")]
 /// # Work in Progress

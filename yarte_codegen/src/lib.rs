@@ -6,12 +6,17 @@ use yarte_hir::{Each, IfElse, HIR};
 
 #[macro_use]
 mod macros;
+#[cfg(feature = "fixed")]
+mod fixed;
 mod fmt;
 mod fn_fmt;
+#[cfg(feature = "html-min")]
 mod html;
 mod text;
 pub mod wasm;
 
+#[cfg(feature = "fixed")]
+pub use self::fixed::{FixedCodeGen, HTMLFixedCodeGen, TextFixedCodeGen};
 #[cfg(feature = "html-min")]
 pub use self::html::html_min::HTMLMinCodeGen;
 pub use self::{fmt::FmtCodeGen, fn_fmt::FnFmtCodeGen, html::HTMLCodeGen, text::TextCodeGen};

@@ -12,8 +12,8 @@ criterion_group!(benches, functions);
 criterion_main!(benches);
 
 fn functions(c: &mut Criterion) {
-    c.bench_function("Unsafe Teams", max_size_teams_io_writer);
-    c.bench_function("Safe Unsafe Teams", safe_max_size_teams_io_writer);
+    c.bench_function("Unsafe Teams", max_size_teams);
+    c.bench_function("Safe Unsafe Teams", safe_max_size_teams);
     c.bench_function("Safe Escaped Unsafe Teams", safe_max_size_teams_escaped);
     c.bench_function("Teams", teams);
     c.bench_function("Teams io writer implements io::Write", teams_io_writer);
@@ -216,7 +216,7 @@ fn big_table_io_writer(b: &mut criterion::Bencher, size: usize) {
     });
 }
 
-fn max_size_teams_io_writer(b: &mut criterion::Bencher) {
+fn max_size_teams(b: &mut criterion::Bencher) {
     unsafe {
         let teams = Teams {
             year: 2015,
@@ -273,7 +273,7 @@ fn max_size_teams_io_writer(b: &mut criterion::Bencher) {
     }
 }
 
-fn safe_max_size_teams_io_writer(b: &mut criterion::Bencher) {
+fn safe_max_size_teams(b: &mut criterion::Bencher) {
     unsafe {
         let teams = Teams {
             year: 2015,
