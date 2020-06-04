@@ -6,7 +6,7 @@ use std::mem::MaybeUninit;
 use yarte::TemplateFixed;
 
 #[derive(TemplateFixed)]
-#[template(path = "simple", print = "code")]
+#[template(path = "simple")]
 struct VariablesTemplate<'a> {
     strvar: &'a str,
     num: i64,
@@ -20,7 +20,7 @@ fn test_variables() {
         num: 42,
         i18n: "Iñtërnâtiônàlizætiøn".to_string(),
     };
-    let mut buf: [u8; 512] = unsafe { MaybeUninit::uninit().assume_init() };
+    let mut buf: [u8; 128] = unsafe { MaybeUninit::uninit().assume_init() };
     let b = unsafe { s.call(&mut buf) }.unwrap();
     assert_eq!(
         &buf[..b],
@@ -31,7 +31,7 @@ fn test_variables() {
 }
 
 #[derive(TemplateFixed)]
-#[template(path = "hello", print = "code")]
+#[template(path = "hello")]
 struct EscapeTemplate<'a> {
     name: &'a str,
 }
@@ -39,7 +39,7 @@ struct EscapeTemplate<'a> {
 #[test]
 fn test_escape() {
     let s = EscapeTemplate { name: "<>&\"'/" };
-    let mut buf: [u8; 256] = unsafe { MaybeUninit::uninit().assume_init() };
+    let mut buf: [u8; 64] = unsafe { MaybeUninit::uninit().assume_init() };
     let b = unsafe { s.call(&mut buf) }.unwrap();
     assert_eq!(
         &buf[..b],
