@@ -1,6 +1,6 @@
 [package]
 name = "yarte_html"
-version = "0.9.3"
+version = "0.9.4"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "Markup parser"
 categories = ["template-engine", "web-programming", "gui"]
@@ -18,7 +18,7 @@ maintenance = { status = "actively-developed" }
 
 [dependencies]
 # TODO: remove
-yarte_parser = { version = "0.9.3", path = "../yarte_parser" }
+yarte_parser = { version = "0.9.4", path = "../yarte_parser" }
 
 mac = "0.1"
 log = "0.4"
