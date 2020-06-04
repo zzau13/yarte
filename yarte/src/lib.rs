@@ -56,3 +56,20 @@ pub mod serde_json {
 pub mod sd {
     pub use serde_json::{to_writer, to_writer_pretty};
 }
+
+#[cfg(feature = "fixed")]
+pub trait TemplateFixedTrait {
+    /// Writes to buffer
+    ///
+    /// # Safety
+    /// Return None when buffer overruns but write up there
+    unsafe fn call(&self, buf: &mut [u8]) -> Option<usize>;
+}
+#[cfg(feature = "fixed")]
+pub use yarte_derive::{TemplateFixed, TemplateFixedText};
+#[cfg(feature = "fixed")]
+pub use yarte_helpers::helpers::{RenderFixed, RenderSafe};
+#[cfg(feature = "fixed")]
+pub use TemplateFixedTrait as TemplateFixed;
+#[cfg(feature = "fixed")]
+pub use TemplateFixedTrait as TemplateFixedText;

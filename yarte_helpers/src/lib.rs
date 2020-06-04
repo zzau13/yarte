@@ -19,6 +19,7 @@ pub mod recompile;
     feature = "display-fn",
     feature = "io-fmt",
     feature = "markup",
+    feature = "fixed",
 ))]
 pub mod helpers;
 

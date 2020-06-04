@@ -44,7 +44,6 @@ struct VariablesTemplate<'a> {
     i18n: String,
 }
 
-#[cfg(feature = "with-actix-web")]
 #[test]
 fn test_variables() {
     let s = VariablesTemplate {

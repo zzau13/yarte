@@ -22,6 +22,7 @@ default = []
 wasm = ["serde_json", "serde", "yarte_derive/wasm-server"]
 json = ["serde_json", "serde", "yarte_helpers/io-fmt"]
 html-min = ["yarte_derive/html-min"]
+fixed = ["yarte_helpers/fixed", "yarte_derive/fixed"]
 
 [dependencies]
 yarte_derive = { version = "0.9.4", path = "../yarte_derive" }
