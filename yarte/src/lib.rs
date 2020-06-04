@@ -62,7 +62,7 @@ pub trait TemplateFixedTrait {
     /// Writes to buffer
     ///
     /// # Safety
-    /// Return None when buffer overruns but write up there
+    /// Return None before buffer overruns but write up there
     unsafe fn call(&self, buf: &mut [u8]) -> Option<usize>;
 }
 #[cfg(feature = "fixed")]
