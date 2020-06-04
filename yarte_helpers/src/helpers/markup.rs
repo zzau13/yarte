@@ -3,7 +3,7 @@ use std::fmt::{self, Display};
 
 use dtoa::write;
 use itoa::fmt;
-use v_htmlescape::escape;
+use v_htmlescape::{escape, escape_char};
 
 use super::io_fmt::IoFmt;
 
@@ -121,8 +121,8 @@ macro_rules! itoa_display {
 
 #[rustfmt::skip]
 itoa_display! {
-    u8 u16 u32 u64 usize
-    i8 i16 i32 i64 isize
+    u8 u16 u32 u64 u128 usize
+    i8 i16 i32 i64 i128 isize
 }
 
 macro_rules! dtoa_display_0 {
@@ -215,6 +215,41 @@ dtoa_display! {
     f32 f64
 }
 
+impl Render for char {
+    #[inline(always)]
+    fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        escape_char(*self).fmt(f)
+    }
+}
+
+impl Render for &char {
+    #[inline(always)]
+    fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        escape_char(**self).fmt(f)
+    }
+}
+
+impl Render for &&char {
+    #[inline(always)]
+    fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        escape_char(***self).fmt(f)
+    }
+}
+
+impl Render for &&&char {
+    #[inline(always)]
+    fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        escape_char(****self).fmt(f)
+    }
+}
+
+impl Render for &&&&char {
+    #[inline(always)]
+    fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        escape_char(*****self).fmt(f)
+    }
+}
+
 macro_rules! raw_display {
     ($($ty:ty)*) => {
         $(
@@ -231,22 +266,8 @@ macro_rules! raw_display {
 #[rustfmt::skip]
 raw_display! {
     bool
-    char
-    u128 i128
-
     &bool
-    &char
-    &u128 &i128
-
     &&bool
-    &&char
-    &&u128 &&i128
-
     &&&bool
-    &&&char
-    &&&u128 &&&i128
-
     &&&&bool
-    &&&&char
-    &&&&u128 &&&&i128
 }
