@@ -1,6 +1,6 @@
 [package]
 name = "yarte_derive"
-version = "0.9.5"
+version = "0.9.6"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "Procedural macro package for yarte"
 categories = ["template-engine", "web-programming", "gui"]
@@ -26,10 +26,10 @@ wasm-server = ["yarte_codegen/wasm-server"]
 fixed = ["yarte_codegen/fixed", "yarte_helpers/fixed"]
 
 [dependencies]
-yarte_codegen = { version = "0.9.5", path = "../yarte_codegen" }
-yarte_helpers = { version = "0.9.5", path = "../yarte_helpers" }
-yarte_hir = { version = "0.9.5", path = "../yarte_hir" }
-yarte_parser = { version = "0.9.5", path = "../yarte_parser" }
+yarte_codegen = { version = "0.9.6", path = "../yarte_codegen" }
+yarte_helpers = { version = "0.9.6", path = "../yarte_helpers" }
+yarte_hir = { version = "0.9.6", path = "../yarte_hir" }
+yarte_parser = { version = "0.9.6", path = "../yarte_parser" }
 
 prettyprint = "0.8"
 
