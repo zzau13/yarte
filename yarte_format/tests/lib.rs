@@ -88,3 +88,18 @@ fn test_noescape() {
 
     assert_eq!("&", yformat!("{{ a }}"));
 }
+
+#[test]
+#[cfg(feature = "json")]
+fn test_json() {
+    use serde::Serialize;
+    use serde_json::{to_string, to_string_pretty};
+    #[derive(Serialize)]
+    struct Json {
+        f: usize,
+    }
+
+    let val = Json { f: 1 };
+    assert_eq!(to_string(&val).unwrap(), yformat!("{{ @json val }}"));
+    assert_eq!(to_string_pretty(&val).unwrap(), yformat!("{{ @json_pretty val }}"));
+}

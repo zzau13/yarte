@@ -50,6 +50,7 @@ pub use self::{
 pub struct HIROptions {
     pub is_text: bool,
     pub resolve_to_self: bool,
+    pub parent: &'static str,
 }
 
 impl Default for HIROptions {
@@ -57,6 +58,7 @@ impl Default for HIROptions {
         Self {
             resolve_to_self: true,
             is_text: false,
+            parent: "yarte",
         }
     }
 }
@@ -338,13 +340,15 @@ impl<'a> LoweringContext<'a> {
                         Json => {
                             let mut arg = args.t()[0].clone();
                             self.visit_expr_mut(&mut arg);
-                            let expr = parse2(quote!(yarte::Json(&(#arg)))).unwrap();
+                            let parent = format_ident!("{}", self.opt.parent);
+                            let expr = parse2(quote!(#parent::Json(&(#arg)))).unwrap();
                             self.buf_w.push(Writable::Expr(Box::new(expr), false))
                         }
                         JsonPretty => {
                             let mut arg = args.t()[0].clone();
                             self.visit_expr_mut(&mut arg);
-                            let expr = parse2(quote!(yarte::JsonPretty(&(#arg)))).unwrap();
+                            let parent = format_ident!("{}", self.opt.parent);
+                            let expr = parse2(quote!(#parent::JsonPretty(&(#arg)))).unwrap();
                             self.buf_w.push(Writable::Expr(Box::new(expr), false))
                         }
                     }

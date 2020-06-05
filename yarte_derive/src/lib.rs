@@ -150,9 +150,10 @@ pub fn template_wasm_server(input: TokenStream) -> TokenStream {
 #[proc_macro]
 /// Format handlebars string in this scope with html escape functionality
 pub fn yformat_html(i: TokenStream) -> TokenStream {
+    const PARENT: &str = "yarte_format";
     fn get_codegen<'a>(_s: &'a Struct<'a>) -> Box<dyn CodeGen + 'a> {
         Box::new(yarte_codegen::FnFmtCodeGen::new(HTMLCodeGen(
-            "yarte_format",
+            PARENT,
         )))
     }
 
@@ -168,6 +169,7 @@ pub fn yformat_html(i: TokenStream) -> TokenStream {
         get_codegen,
         HIROptions {
             resolve_to_self: false,
+            parent: PARENT,
             ..Default::default()
         }
     )
@@ -176,6 +178,7 @@ pub fn yformat_html(i: TokenStream) -> TokenStream {
 #[proc_macro]
 /// Format handlebars string in this scope without html escape functionality
 pub fn yformat(i: TokenStream) -> TokenStream {
+    const PARENT: &str = "yarte_format";
     fn get_codegen<'a>(_s: &'a Struct<'a>) -> Box<dyn CodeGen + 'a> {
         Box::new(yarte_codegen::FnFmtCodeGen::new(TextCodeGen))
     }
@@ -193,6 +196,7 @@ pub fn yformat(i: TokenStream) -> TokenStream {
         HIROptions {
             resolve_to_self: false,
             is_text: true,
+            parent: PARENT,
         }
     )
 }
