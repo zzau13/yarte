@@ -338,14 +338,14 @@ impl<'a> LoweringContext<'a> {
                         Json => {
                             let mut arg = args.t()[0].clone();
                             self.visit_expr_mut(&mut arg);
-                            let expr = parse2(quote!(yarte::DisplayFn::new(|_f| yarte::sd::to_writer(yarte::IoFmt::new(_f), &(#arg)).map_err(|_| yarte::Error)))).unwrap();
-                            self.buf_w.push(Writable::Expr(Box::new(expr), true))
+                            let expr = parse2(quote!(yarte::Json(&(#arg)))).unwrap();
+                            self.buf_w.push(Writable::Expr(Box::new(expr), false))
                         }
                         JsonPretty => {
                             let mut arg = args.t()[0].clone();
                             self.visit_expr_mut(&mut arg);
-                            let expr = parse2(quote!(yarte::DisplayFn::new(|_f| yarte::sd::to_writer_pretty(yarte::IoFmt::new(_f), &(#arg)).map_err(|_| yarte::Error)))).unwrap();
-                            self.buf_w.push(Writable::Expr(Box::new(expr), true))
+                            let expr = parse2(quote!(yarte::JsonPretty(&(#arg)))).unwrap();
+                            self.buf_w.push(Writable::Expr(Box::new(expr), false))
                         }
                     }
                 }

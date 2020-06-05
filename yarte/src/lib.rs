@@ -8,9 +8,11 @@
 //!
 use std::fmt::{self, Write};
 
-#[cfg(feature = "json")]
-pub use yarte_helpers::helpers::{display_fn::DisplayFn, io_fmt::IoFmt};
-pub use yarte_helpers::{helpers::Render, recompile, Error, Result};
+pub use yarte_helpers::at_helpers::*;
+pub use yarte_helpers::{
+    helpers::{io_fmt::IoFmt, Render},
+    recompile, Error, Result,
+};
 
 /// Template trait, will implement by derive like `Display`
 pub trait TemplateTrait: fmt::Display {
@@ -50,11 +52,6 @@ pub mod aw {
 #[cfg(feature = "wasm")]
 pub mod serde_json {
     pub use serde_json::to_string;
-}
-
-#[cfg(feature = "json")]
-pub mod sd {
-    pub use serde_json::{to_writer, to_writer_pretty};
 }
 
 #[cfg(feature = "fixed")]

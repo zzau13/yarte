@@ -535,6 +535,85 @@ impl RenderSafe for &&&&bool {
     }
 }
 
+use std::io;
+struct Writer<'a> {
+    buf: &'a mut [u8],
+    len: usize,
+}
+
+#[allow(dead_code)]
+impl<'a> Writer<'a> {
+    #[inline]
+    fn new(buf: &mut [u8]) -> Writer {
+        Writer { buf, len: 0 }
+    }
+
+    #[inline]
+    fn consume(self) -> usize {
+        self.len
+    }
+}
+
+impl<'a> io::Write for Writer<'a> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        if self.buf.len() < buf.len() + self.len {
+            Err(io::Error::from(io::ErrorKind::Other))
+        } else {
+            (&mut self.buf[self.len..self.len + buf.len()]).copy_from_slice(buf);
+            self.len += buf.len();
+            Ok(buf.len())
+        }
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+#[cfg(feature = "json")]
+mod json {
+    use super::*;
+    use crate::at_helpers::{Json, JsonPretty};
+    use serde::Serialize;
+    use serde_json::{to_writer, to_writer_pretty};
+
+    impl<'a, S: Serialize> RenderFixed for Json<'a, S> {
+        #[inline(always)]
+        fn render(&self, buf: &mut [u8]) -> Option<usize> {
+            let mut buf = Writer::new(buf);
+            to_writer(&mut buf, self.0).ok()?;
+            Some(buf.consume())
+        }
+    }
+
+    impl<'a, D: Serialize> RenderFixed for JsonPretty<'a, D> {
+        #[inline(always)]
+        fn render(&self, buf: &mut [u8]) -> Option<usize> {
+            let mut buf = Writer::new(buf);
+            to_writer_pretty(&mut buf, self.0).ok()?;
+            Some(buf.consume())
+        }
+    }
+
+    impl<'a, S: Serialize> RenderSafe for Json<'a, S> {
+        #[inline(always)]
+        fn render(&self, buf: &mut [u8]) -> Option<usize> {
+            let mut buf = Writer::new(buf);
+            to_writer(&mut buf, self.0).ok()?;
+            Some(buf.consume())
+        }
+    }
+
+    impl<'a, D: Serialize> RenderSafe for JsonPretty<'a, D> {
+        #[inline(always)]
+        fn render(&self, buf: &mut [u8]) -> Option<usize> {
+            let mut buf = Writer::new(buf);
+            to_writer_pretty(&mut buf, self.0).ok()?;
+            Some(buf.consume())
+        }
+    }
+}
+
 #[inline(always)]
 fn render_char(c: char, buf: &mut [u8]) -> Option<usize> {
     if buf.len() < c.len_utf8() {
