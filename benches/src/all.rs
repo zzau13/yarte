@@ -6,17 +6,20 @@ use criterion::{criterion_group, criterion_main, Criterion};
 
 use itoa;
 use v_htmlescape::v_escape;
-use yarte::{Template, TemplateText, TemplateFixed, TemplateFixedText};
+use yarte::{Template, TemplateFixed, TemplateFixedText, TemplateText};
 
 criterion_group!(benches, functions);
 criterion_main!(benches);
 
 fn functions(c: &mut Criterion) {
+    c.bench_function("Fixed Teams", teams_fixed);
+    c.bench_function("Fixed Text Teams", teams_fixed_text);
+    c.bench_function("Fixed Big Table", |b| big_table_fixed(b, 100));
+    c.bench_function("Fixed Text Big Table", |b| big_table_fixed_text(b, 100));
+    c.bench_function("Formatter Big table", |b| big_table_fmt(b, 100));
     c.bench_function("Unsafe Teams", max_size_teams);
     c.bench_function("Safe Unsafe Teams", safe_max_size_teams);
     c.bench_function("Safe Escaped Unsafe Teams", safe_max_size_teams_escaped);
-    c.bench_function("Fixed Teams", teams_fixed);
-    c.bench_function("Fixed Text Teams", teams_fixed_text);
     c.bench_function("Teams", teams);
     c.bench_function("Teams io writer implements io::Write", teams_io_writer);
     c.bench_function("Teams Unescaped", teams_display);
@@ -24,7 +27,6 @@ fn functions(c: &mut Criterion) {
     c.bench_function("Big table", |b| big_table(b, 100));
     c.bench_function("Big table io writer", |b| big_table_io_writer(b, 100));
     c.bench_function("Big table Unescaped", |b| big_table_display(b, 100));
-    c.bench_function("Formatter Big table", |b| big_table_fmt(b, 100));
 }
 
 fn build_big_table(size: usize) -> Vec<Vec<usize>> {
@@ -93,6 +95,7 @@ fn big_table_fmt(b: &mut criterion::Bencher, size: usize) {
     };
     let mut buf = String::with_capacity(t.to_string().len());
     b.iter(|| {
+        buf.clear();
         write!(buf, "{}", t).unwrap();
     });
 }
@@ -143,6 +146,40 @@ fn teams_display(b: &mut criterion::Bencher) {
         teams: build_teams(),
     };
     b.iter(|| teams.call().unwrap());
+}
+
+#[derive(TemplateFixed)]
+#[template(path = "big-table")]
+struct BigTableF {
+    table: Vec<Vec<usize>>,
+}
+
+fn big_table_fixed(b: &mut criterion::Bencher, size: usize) {
+    let t = BigTableF {
+        table: build_big_table(size),
+    };
+    b.iter(|| {
+        let mut buf: [u8; 109915] = unsafe { MaybeUninit::uninit().assume_init() };
+        let b = unsafe { t.call(&mut buf) }.unwrap();
+        let _ = &buf[..b].to_vec();
+    });
+}
+
+#[derive(TemplateFixedText)]
+#[template(path = "big-table")]
+struct BigTableFT {
+    table: Vec<Vec<usize>>,
+}
+
+fn big_table_fixed_text(b: &mut criterion::Bencher, size: usize) {
+    let t = BigTableFT {
+        table: build_big_table(size),
+    };
+    b.iter(|| {
+        let mut buf: [u8; 109915] = unsafe { MaybeUninit::uninit().assume_init() };
+        let b = unsafe { t.call(&mut buf) }.unwrap();
+        let _ = &buf[..b].to_vec();
+    });
 }
 
 #[derive(TemplateFixed)]
@@ -198,6 +235,7 @@ fn teams_fmt(b: &mut criterion::Bencher) {
 
     let mut buf = String::with_capacity(teams.to_string().len());
     b.iter(|| {
+        buf.clear();
         write!(buf, "{}", teams).unwrap();
     });
 }
@@ -252,6 +290,7 @@ fn big_table_io_writer(b: &mut criterion::Bencher, size: usize) {
     let _ = io_writer_big_table(&mut buf, &table);
     let mut buf = Vec::with_capacity(buf.len());
     b.iter(|| {
+        buf.clear();
         let _ = io_writer_big_table(&mut buf, &table);
     });
 }
@@ -480,8 +519,9 @@ fn teams_io_writer(b: &mut criterion::Bencher) {
     };
     let mut buf = TeamsWriter(vec![]);
     let _ = buf.io_writer_teams(&teams);
-    let mut buf = TeamsWriter(Vec::with_capacity(buf.0.len()));
+    let len = buf.0.len();
     b.iter(|| {
+        let mut buf = TeamsWriter(Vec::with_capacity(len));
         let _ = buf.io_writer_teams(&teams);
     });
 }
