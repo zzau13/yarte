@@ -24,7 +24,7 @@ features = [
 ]
 
 [build-dependencies]
-yarte_wasm_app = { version = "*", path = "../../yarte_wasm_app" }
+yarte_helpers = { version = "*", default-features = false, path = "../../yarte_helpers" }
 
 [lib]
 crate-type = ["cdylib"]

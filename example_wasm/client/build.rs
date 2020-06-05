@@ -1,3 +1,3 @@
 fn main() {
-    yarte_wasm_app::recompile::when_changed();
+    yarte_helpers::recompile::when_changed();
 }

@@ -117,7 +117,16 @@ pub fn app(input: TokenStream) -> TokenStream {
         Box::new(yarte_codegen::client::WASMCodeGen::new(s))
     }
     let i = &syn::parse(input).unwrap();
-    build!(i, get_codegen, Default::default())
+    let config_toml: &str = &read_config_file();
+    let config = &Config::new(config_toml);
+    let s = &match visit_derive(i, config) {
+        Ok(s) => s,
+        Err(tt) => return tt.into(),
+    };
+    // TODO: proc_macro2::fallback::force cause mismatch()
+    let sources = &read(s.path.clone(), s.src.clone(), config);
+
+    sources_to_tokens(sources, config, s, get_codegen(s), Default::default()).into()
 }
 
 // TODO:

@@ -49,11 +49,6 @@ pub mod aw {
     pub use futures::future::{err, ok, Ready};
 }
 
-#[cfg(feature = "wasm")]
-pub mod serde_json {
-    pub use serde_json::to_string;
-}
-
 #[cfg(feature = "fixed")]
 pub trait TemplateFixedTrait {
     /// Writes to buffer

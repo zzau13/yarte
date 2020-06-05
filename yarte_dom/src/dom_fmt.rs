@@ -81,10 +81,7 @@ fn add_scripts(s: &Struct, sink: &mut Sink, ir: &mut Vec<HIR>) {
     );
 
     ir.push(HIR::Safe(Box::new(
-        parse2(quote!(
-            yarte::serde_json::to_string(&self).map_err(|_| yarte::Error)?
-        ))
-        .unwrap(),
+        parse2(quote!(yarte::Json(&self))).unwrap(),
     )));
 
     let state = Node {

@@ -19,7 +19,7 @@ maintenance = { status = "actively-developed" }
 
 [features]
 default = []
-wasm = ["serde_json", "serde", "yarte_derive/wasm-server"]
+wasm = ["json", "yarte_derive/wasm-server"]
 json = ["yarte_helpers/json"]
 html-min = ["yarte_derive/html-min"]
 fixed = ["yarte_helpers/fixed", "yarte_derive/fixed"]
