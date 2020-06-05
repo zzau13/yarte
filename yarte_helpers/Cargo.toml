@@ -13,13 +13,13 @@ repository = "https://github.com/botika/yarte"
 workspace = ".."
 
 [features]
-default = ["markup", "config"]
-markup = ["io-fmt", "v_htmlescape", "itoa", "dtoa"]
-config = ["serde", "toml"]
 big-num-32 = []
+config = ["serde", "toml"]
+default = ["markup", "config"]
 display-fn = []
-io-fmt = ["display-fn", "serde_json"]
-fixed = []
+fixed = ["v_htmlescape", "itoa", "dtoa"]
+json = ["serde", "serde_json"]
+markup = ["v_htmlescape", "itoa", "dtoa"]
 
 [badges]
 travis-ci = { repository = "botika/yarte", branch = "master" }
@@ -32,8 +32,10 @@ dtoa = { version = "0.4", optional = true }
 
 serde = { version = "1.0", features = ["derive"], optional = true }
 toml = { version = "0.5", optional = true }
-# dev-dependency io-fmt feature
-serde_json = { version = "1.0.51", optional = true }
+serde_json = { version = "1.0", optional = true }
+
+[dev-dependencies]
+serde_json = "1.0"
 
 [package.metadata.docs.rs]
 all-features = true

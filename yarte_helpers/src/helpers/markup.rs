@@ -271,3 +271,25 @@ raw_display! {
     &&&bool
     &&&&bool
 }
+
+#[cfg(feature = "json")]
+mod json {
+    use super::*;
+    use crate::at_helpers::{Json, JsonPretty};
+    use serde::Serialize;
+    use serde_json::{to_writer, to_writer_pretty};
+
+    impl<'a, S: Serialize> Render for Json<'a, S> {
+        #[inline(always)]
+        fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            to_writer(IoFmt::new(f), self.0).map_err(|_| fmt::Error)
+        }
+    }
+
+    impl<'a, D: Serialize> Render for JsonPretty<'a, D> {
+        #[inline(always)]
+        fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            to_writer_pretty(IoFmt::new(f), self.0).map_err(|_| fmt::Error)
+        }
+    }
+}
