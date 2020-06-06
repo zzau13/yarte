@@ -71,7 +71,7 @@ impl CodeGen for TextFixedCodeGen {
                     let len = a.len();
                     let a = a.into_bytes();
                     quote! {{
-                        static YARTE_SLICE: [u8; #len] = [#(#a),*];
+                        const YARTE_SLICE: [u8; #len] = [#(#a),*];
                         __yarte_write_bytes!(YARTE_SLICE);
                     }}
                 },
@@ -98,7 +98,7 @@ where
                 let len = a.len();
                 let a = a.into_bytes();
                 quote! {{
-                        static YARTE_SLICE: [u8; #len] = [#(#a),*];
+                        const YARTE_SLICE: [u8; #len] = [#(#a),*];
                         __yarte_write_bytes!(YARTE_SLICE);
                     }}
             },
