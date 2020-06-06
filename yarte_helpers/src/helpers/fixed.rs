@@ -1,4 +1,6 @@
 // Based on https://github.com/utkarshkukreti/markup.rs/blob/master/markup/src/lib.rs
+#![allow(dead_code)]
+
 use std::ptr::copy_nonoverlapping;
 use v_htmlescape::{v_escape, v_escape_char};
 
@@ -569,7 +571,6 @@ struct Writer<'a> {
     len: usize,
 }
 
-#[allow(dead_code)]
 impl<'a> Writer<'a> {
     #[inline]
     fn new(buf: &mut [u8]) -> Writer {
