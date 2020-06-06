@@ -69,9 +69,11 @@ impl CodeGen for TextFixedCodeGen {
                 Local(a) => quote!(#a),
                 Lit(a) => {
                     let len = a.len();
-                    let a = a.into_bytes();
+                    let b = a.into_bytes();
+                    let a = unsafe { std::str::from_utf8_unchecked(&b) };
                     quote! {{
-                        const YARTE_SLICE: [u8; #len] = [#(#a),*];
+                        #[doc = #a]
+                        const YARTE_SLICE: [u8; #len] = [#(#b),*];
                         __yarte_write_bytes!(YARTE_SLICE);
                     }}
                 },
@@ -96,9 +98,11 @@ where
             Local(a) => quote!(#a),
             Lit(a) => {
                 let len = a.len();
-                let a = a.into_bytes();
+                let b = a.into_bytes();
+                let a = unsafe { std::str::from_utf8_unchecked(&b) };
                 quote! {{
-                        const YARTE_SLICE: [u8; #len] = [#(#a),*];
+                        #[doc = #a]
+                        const YARTE_SLICE: [u8; #len] = [#(#b),*];
                         __yarte_write_bytes!(YARTE_SLICE);
                     }}
             },
