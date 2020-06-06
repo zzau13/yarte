@@ -22,15 +22,16 @@ impl<'a, T: CodeGen> FixedCodeGen<'a, T> {
             quote!(yarte::TemplateFixedTrait),
             &quote!(
                 unsafe fn call(&self, buf: &mut [u8]) -> Option<usize> {
-                    let buf_ptr = buf.as_mut_ptr();
+                    let len = buf.len();
+                    let buf = buf.as_mut_ptr();
                     let mut buf_cur = 0;
                     macro_rules! __yarte_write_bytes {
                         ($b:ident) => {
-                            if buf.len() < buf_cur + $b.len() {
+                            if len < buf_cur + $b.len() {
                                 return None;
                             } else {
                                 for cur in 0..$b.len() {
-                                    buf_ptr.add(buf_cur).write($b.as_ptr().add(cur).read());
+                                    buf.add(buf_cur).write($b.as_ptr().add(cur).read());
                                     buf_cur += 1;
                                 }
                             }
@@ -77,7 +78,7 @@ impl CodeGen for TextFixedCodeGen {
                         __yarte_write_bytes!(YARTE_SLICE);
                     }}
                 },
-                Safe(a) | Expr(a) => quote!(buf_cur += #parent::RenderSafe::render(&(#a), std::slice::from_raw_parts_mut(buf_ptr.add(buf_cur), buf.len() - buf_cur))?;),
+                Safe(a) | Expr(a) => quote!(buf_cur += #parent::RenderSafe::render(&(#a), std::slice::from_raw_parts_mut(buf.add(buf_cur), len - buf_cur))?;),
                 Each(a) => self.gen_each(*a),
                 IfElse(a) => self.gen_if_else(*a),
             });
@@ -106,8 +107,8 @@ where
                         __yarte_write_bytes!(YARTE_SLICE);
                     }}
             },
-            Safe(a) => quote!(buf_cur += #parent::RenderSafe::render(&(#a), std::slice::from_raw_parts_mut(buf_ptr.add(buf_cur), buf.len() - buf_cur))?;),
-            Expr(a) => quote!(buf_cur += #parent::RenderFixed::render(&(#a), std::slice::from_raw_parts_mut(buf_ptr.add(buf_cur), buf.len() - buf_cur))?;),
+            Safe(a) => quote!(buf_cur += #parent::RenderSafe::render(&(#a), std::slice::from_raw_parts_mut(buf.add(buf_cur), len - buf_cur))?;),
+            Expr(a) => quote!(buf_cur += #parent::RenderFixed::render(&(#a), std::slice::from_raw_parts_mut(buf.add(buf_cur), len - buf_cur))?;),
             Each(a) => codegen.gen_each(*a),
             IfElse(a) => codegen.gen_if_else(*a),
         })
