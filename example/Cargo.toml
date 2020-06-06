@@ -8,13 +8,7 @@ edition = "2018"
 workspace = ".."
 
 [dependencies]
-env_logger = "0.7"
-
-yarte = { path = "../yarte", version = "*", features = ["html-min"]  }
-
-actix-rt = "1.0"
-actix-web = "2.0"
-futures = "0.3"
+yarte = { path = "../yarte", version = "*", features = ["html-min", "fixed"]  }
 
 [build-dependencies]
 yarte = { path = "../yarte", version = "*" }

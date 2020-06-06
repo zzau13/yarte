@@ -1,133 +1,48 @@
+#![allow(clippy::uninit_assumed_init)]
 use std::collections::HashMap;
+use std::io::{stdout, Write};
+use std::mem::MaybeUninit;
 
-use actix_web::{
-    error::ErrorInternalServerError, get, middleware::Logger, web, App, HttpRequest, HttpResponse,
-    HttpServer, Responder,
-};
-use futures::future::{err, ok, Ready};
-use yarte::TemplateMin;
+use yarte::{Template, TemplateFixed, TemplateMin};
+
+#[derive(Template)]
+#[template(path = "index")]
+struct IndexTemplate {
+    query: HashMap<&'static str, &'static str>,
+}
 
 #[derive(TemplateMin)]
 #[template(path = "index")]
-struct IndexTemplate {
-    query: web::Query<HashMap<String, String>>,
+struct IndexTemplateMin {
+    query: HashMap<&'static str, &'static str>,
 }
 
-impl Responder for IndexTemplate {
-    type Error = actix_web::Error;
-    type Future = Ready<Result<HttpResponse, Self::Error>>;
+#[derive(TemplateFixed)]
+#[template(path = "index_fixed")]
+struct IndexTemplateF {
+    query: HashMap<&'static str, &'static str>,
+}
 
-    #[inline]
-    fn respond_to(self, _req: &HttpRequest) -> Self::Future {
-        match self.call() {
-            Ok(body) => ok(HttpResponse::Ok()
-                .content_type("text/html; charset=utf-8")
-                .body(body)),
-            Err(_) => err(ErrorInternalServerError("Some error message")),
+fn main() {
+    let mut query = HashMap::new();
+    query.insert("name", "new");
+    query.insert("lastname", "user");
+
+    println!(
+        "Fmt:\n{}",
+        IndexTemplate {
+            query: query.clone()
         }
-    }
-}
-
-#[get("/")]
-async fn index(query: web::Query<HashMap<String, String>>) -> impl Responder {
-    IndexTemplate { query }
-}
-
-#[actix_rt::main]
-async fn main() -> std::io::Result<()> {
-    std::env::set_var("RUST_LOG", "actix_web=info");
-    env_logger::init();
-
-    // start http server
-    HttpServer::new(move || App::new().wrap(Logger::default()).service(index))
-        .bind("127.0.0.1:8080")?
-        .run()
-        .await
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use actix_web::{http, test as atest, web::Bytes};
-
-    #[actix_rt::test]
-    async fn test() {
-        let mut app = atest::init_service(App::new().service(index)).await;
-
-        let req = atest::TestRequest::with_uri("/").to_request();
-        let resp = atest::call_service(&mut app, req).await;
-
-        assert!(resp.status().is_success());
-
-        assert_eq!(
-            resp.headers().get(http::header::CONTENT_TYPE).unwrap(),
-            "text/html; charset=utf-8"
-        );
-
-        let bytes = atest::read_body(resp).await;
-        assert_eq!(
-            bytes,
-            Bytes::from_static(
-                "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>Actix \
-                 web</title></head><body><h1 id=\"welcome\" \
-                 class=\"welcome\">Welcome!</h1><div><h3>What is your name?</h3><form>Name: \
-                 <input type=\"text\" name=\"name\"><br>Last name: <input type=\"text\" \
-                 name=\"lastname\"><br><p><input type=\"submit\"></p></form></div></body></html>"
-                    .as_ref()
-            )
-        );
-
-        let req = atest::TestRequest::with_uri("/?name=foo&lastname=bar").to_request();
-        let resp = atest::call_service(&mut app, req).await;
-
-        assert!(resp.status().is_success());
-
-        assert_eq!(
-            resp.headers().get(http::header::CONTENT_TYPE).unwrap(),
-            "text/html; charset=utf-8"
-        );
-
-        let bytes = atest::read_body(resp).await;
-        assert_eq!(
-            bytes,
-            Bytes::from_static(
-                "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>Actix \
-                 web</title></head><body><h1>Hi, foo bar!</h1><p id=\"hi\" \
-                 class=\"welcome\">Welcome</p></body></html>"
-                    .as_ref()
-            )
-        );
-
-        let req = atest::TestRequest::with_uri("/?name=foo").to_request();
-        let resp = atest::call_service(&mut app, req).await;
-
-        assert!(resp.status().is_server_error());
-
-        let bytes = atest::read_body(resp).await;
-
-        assert_eq!(bytes, Bytes::from_static("Some error message".as_ref()));
-
-        let req = atest::TestRequest::with_uri("/?lastname=bar").to_request();
-        let resp = atest::call_service(&mut app, req).await;
-
-        assert!(resp.status().is_success());
-
-        assert_eq!(
-            resp.headers().get(http::header::CONTENT_TYPE).unwrap(),
-            "text/html; charset=utf-8"
-        );
-
-        let bytes = atest::read_body(resp).await;
-        assert_eq!(
-            bytes,
-            Bytes::from_static(
-                "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>Actix \
-                 web</title></head><body><h1 id=\"welcome\" \
-                 class=\"welcome\">Welcome!</h1><div><h3>What is your name?</h3><form>Name: \
-                 <input type=\"text\" name=\"name\"><br>Last name: <input type=\"text\" \
-                 name=\"lastname\"><br><p><input type=\"submit\"></p></form></div></body></html>"
-                    .as_ref()
-            )
-        );
-    }
+    );
+    println!(
+        "\nFmt Min:\n{}",
+        IndexTemplateMin {
+            query: query.clone()
+        }
+    );
+    let mut buf: [u8; 2048] = unsafe { MaybeUninit::uninit().assume_init() };
+    let size = unsafe { IndexTemplateF { query }.call(&mut buf) }.unwrap();
+    println!("\nFixed:");
+    let _ = stdout().lock().write(&buf[..size]);
+    println!()
 }
