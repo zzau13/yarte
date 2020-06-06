@@ -43,7 +43,7 @@ impl<'a, T: CodeGen> FixedCodeGen<'a, T> {
                         ($b:expr) => {
                             __yarte_check_write!($b.len(), {
                                 // Not use copy_from_slice for elide double checked
-                                std::ptr::copy_nonoverlapping($b.as_ptr(), buf_ptr!().add(buf_cur), $b.len());
+                                std::ptr::copy_nonoverlapping((&$b as *const [u8] as *const u8), buf_ptr!().add(buf_cur), $b.len());
                                 buf_cur += $b.len();
                             })
                         };
