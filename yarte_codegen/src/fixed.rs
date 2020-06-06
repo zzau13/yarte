@@ -23,21 +23,13 @@ impl<'a, T: CodeGen> FixedCodeGen<'a, T> {
             &quote!(
                 unsafe fn call(&self, buf: &mut [u8]) -> Option<usize> {
                     let mut buf_cur = 0;
-                    macro_rules! buf_ptr {
-                        () => { buf as *mut [u8] as *mut u8 };
-                    }
-                    macro_rules! len {
-                        () => { buf.len() };
-                    }
                     macro_rules! __yarte_write_bytes {
                         ($b:ident) => {
-                            if len!() < buf_cur + $b.len() {
+                            if buf.len() < buf_cur + $b.len() {
                                 return None;
                             } else {
-                                for cur in 0..$b.len() {
-                                    buf_ptr!().add(buf_cur).write($b.as_ptr().add(cur).read());
-                                    buf_cur += 1;
-                                }
+                                (&mut buf[buf_cur..buf_cur + $b.len()]).copy_from_slice(&$b);
+                                buf_cur += $b.len();
                             }
                         };
                     }
