@@ -101,5 +101,8 @@ fn test_json() {
 
     let val = Json { f: 1 };
     assert_eq!(to_string(&val).unwrap(), yformat!("{{ @json val }}"));
-    assert_eq!(to_string_pretty(&val).unwrap(), yformat!("{{ @json_pretty val }}"));
+    assert_eq!(
+        to_string_pretty(&val).unwrap(),
+        yformat!("{{ @json_pretty val }}")
+    );
 }

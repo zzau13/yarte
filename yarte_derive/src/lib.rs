@@ -152,9 +152,7 @@ pub fn template_wasm_server(input: TokenStream) -> TokenStream {
 pub fn yformat_html(i: TokenStream) -> TokenStream {
     const PARENT: &str = "yarte_format";
     fn get_codegen<'a>(_s: &'a Struct<'a>) -> Box<dyn CodeGen + 'a> {
-        Box::new(yarte_codegen::FnFmtCodeGen::new(HTMLCodeGen(
-            PARENT,
-        )))
+        Box::new(yarte_codegen::FnFmtCodeGen::new(HTMLCodeGen(PARENT)))
     }
 
     let src: syn::LitStr = syn::parse(i).unwrap();
