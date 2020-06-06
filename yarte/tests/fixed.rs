@@ -21,7 +21,7 @@ fn test_variables() {
         i18n: "Iñtërnâtiônàlizætiøn".to_string(),
     };
     let mut buf: [u8; 128] = unsafe { MaybeUninit::uninit().assume_init() };
-    let b = unsafe { s.call(&mut buf) }.unwrap();
+    let b = s.call(&mut buf).unwrap();
     assert_eq!(
         &buf[..b],
         "hello world, foo\nwith number: 42\nIñtërnâtiônàlizætiøn is important\nin vars too: \
@@ -40,7 +40,7 @@ struct EscapeTemplate<'a> {
 fn test_escape() {
     let s = EscapeTemplate { name: "<>&\"'/" };
     let mut buf: [u8; 64] = unsafe { MaybeUninit::uninit().assume_init() };
-    let b = unsafe { s.call(&mut buf) }.unwrap();
+    let b = s.call(&mut buf).unwrap();
     assert_eq!(
         &buf[..b],
         "Hello, &lt;&gt;&amp;&quot;&#x27;&#x2f;!".as_bytes()

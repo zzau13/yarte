@@ -21,7 +21,7 @@ impl<'a, T: CodeGen> FixedCodeGen<'a, T> {
         tokens.extend(self.s.implement_head(
             quote!(yarte::TemplateFixedTrait),
             &quote!(
-                unsafe fn call(&self, buf: &mut [u8]) -> Option<usize> {
+                fn call(&self, buf: &mut [u8]) -> Option<usize> {
                     let mut buf_cur = 0;
                     macro_rules! __yarte_write_bytes {
                         ($b:ident) => {
