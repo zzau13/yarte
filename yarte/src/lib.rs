@@ -55,8 +55,9 @@ pub trait TemplateFixedTrait {
     ///
     /// # Safety
     /// Return None before buffer overruns but write up there
-    fn call(&self, buf: &mut [u8]) -> Option<usize>;
+    unsafe fn call(&self, buf: &mut [u8]) -> Option<usize>;
 }
+
 #[cfg(feature = "fixed")]
 pub use yarte_derive::{TemplateFixed, TemplateFixedText};
 #[cfg(feature = "fixed")]

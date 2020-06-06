@@ -81,22 +81,22 @@ mod json {
             let f = Json { f: 1 };
             let t = JsonTemplateF { f };
             let mut buf: [u8; 1024] = unsafe { std::mem::MaybeUninit::uninit().assume_init() };
-            let b = t.call(&mut buf).unwrap();
+            let b = unsafe { t.call(&mut buf) }.unwrap();
             assert_eq!(serde_json::to_vec(&f).unwrap(), buf[..b].to_vec());
 
             let t = JsonPrettyTemplateF { f };
             let mut buf: [u8; 1024] = unsafe { std::mem::MaybeUninit::uninit().assume_init() };
-            let b = t.call(&mut buf).unwrap();
+            let b = unsafe { t.call(&mut buf) }.unwrap();
             assert_eq!(serde_json::to_vec_pretty(&f).unwrap(), buf[..b].to_vec());
 
             let t = JsonTemplateFT { f };
             let mut buf: [u8; 1024] = unsafe { std::mem::MaybeUninit::uninit().assume_init() };
-            let b = t.call(&mut buf).unwrap();
+            let b = unsafe { t.call(&mut buf) }.unwrap();
             assert_eq!(serde_json::to_vec(&f).unwrap(), buf[..b].to_vec());
 
             let t = JsonPrettyTemplateFT { f };
             let mut buf: [u8; 1024] = unsafe { std::mem::MaybeUninit::uninit().assume_init() };
-            let b = t.call(&mut buf).unwrap();
+            let b = unsafe { t.call(&mut buf) }.unwrap();
             assert_eq!(serde_json::to_vec_pretty(&f).unwrap(), buf[..b].to_vec());
         }
     }

@@ -21,14 +21,21 @@ impl<'a, T: CodeGen> FixedCodeGen<'a, T> {
         tokens.extend(self.s.implement_head(
             quote!(yarte::TemplateFixedTrait),
             &quote!(
-                fn call(&self, buf: &mut [u8]) -> Option<usize> {
+                unsafe fn call(&self, buf: &mut [u8]) -> Option<usize> {
+                    macro_rules! buf_ptr {
+                        () => { buf as *mut [u8] as * mut u8 };
+                    }
+                    macro_rules! len {
+                        () => { buf.len() };
+                    }
                     let mut buf_cur = 0;
                     macro_rules! __yarte_write_bytes {
                         ($b:ident) => {
-                            if buf.len() < buf_cur + $b.len() {
+                            if len!() < buf_cur + $b.len() {
                                 return None;
                             } else {
-                                (&mut buf[buf_cur..buf_cur + $b.len()]).copy_from_slice(&$b);
+                                // Not use copy_from_slice for elide double checked
+                                std::ptr::copy_nonoverlapping($b.as_ptr(), buf_ptr!().add(buf_cur), $b.len());
                                 buf_cur += $b.len();
                             }
                         };
