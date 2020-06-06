@@ -93,7 +93,7 @@ fn literal(a: String, parent: &Ident) -> TokenStream {
             }}
         }
         // memcopy writes long-by-long (8 bytes) but pointer should be aligned.
-        // For 2 to 15 bytes, is mostly faster write byte-by-byte
+        // For 2 to 7 bytes, is mostly faster write byte-by-byte
         // https://github.com/torvalds/linux/blob/master/arch/alpha/lib/memcpy.c#L128
         2..=7 => {
             quote! {{
