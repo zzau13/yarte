@@ -1,4 +1,5 @@
 pub mod io_fmt;
+pub mod memcpy;
 
 #[cfg(feature = "big-num-32")]
 pub mod big_num_32;

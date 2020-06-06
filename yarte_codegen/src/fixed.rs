@@ -1,4 +1,4 @@
-use proc_macro2::TokenStream;
+use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
 
 use yarte_hir::{Struct, HIR};
@@ -32,7 +32,7 @@ impl<'a, T: CodeGen> FixedCodeGen<'a, T> {
 
                     #[allow(unused_macros)]
                     macro_rules! __yarte_check_write {
-                        ($b:ident, $len:expr, { $($t:tt)+ }) => {
+                        ($b:expr, $len:expr, { $($t:tt)+ }) => {
                             if len!() < buf_cur + $len {
                                 return None;
                             } else {
@@ -41,8 +41,8 @@ impl<'a, T: CodeGen> FixedCodeGen<'a, T> {
                         };
                     }
                     #[allow(unused_macros)]
-                    macro_rules! __yarte_write_bytes {
-                        ($b:ident) => {
+                    macro_rules! __yarte_write_bytes_long {
+                        ($b:expr) => {
                             __yarte_check_write!($b, $b.len(), {
                                 // Not use copy_from_slice for elide double checked
                                 std::ptr::copy_nonoverlapping($b.as_ptr(), buf_ptr!().add(buf_cur), $b.len());
@@ -79,23 +79,37 @@ impl<'a, T: CodeGen> FixedCodeGen<'a, T> {
     }
 }
 
-fn literal(a: String) -> TokenStream {
+fn literal(a: String, parent: &Ident) -> TokenStream {
     let len = a.len();
     let b = a.as_bytes();
-    let macr = match len {
+    match len {
         0 => unreachable!(),
-        1 => quote!(__yarte_write_bytes_one!(YARTE_SLICE);),
-        // memcopy writes long-by-long (4 bytes) but pointer should be aligned.
-        // For 2 to 7 bytes, is mostly faster write byte-by-byte
+        1 => {
+            let b = b[0];
+            quote! {{
+                #[doc = #a]
+                const YARTE_BYTE: u8 = #b;
+                __yarte_write_bytes_one!(YARTE_BYTE);
+            }}
+        }
+        // memcopy writes long-by-long (8 bytes) but pointer should be aligned.
+        // For 2 to 15 bytes, is mostly faster write byte-by-byte
         // https://github.com/torvalds/linux/blob/master/arch/alpha/lib/memcpy.c#L128
-        2..=7 => quote!(__yarte_write_bytes_short!(YARTE_SLICE);),
-        _ => quote!(__yarte_write_bytes!(YARTE_SLICE);),
-    };
-    quote! {{
-        #[doc = #a]
-        const YARTE_SLICE: [u8; #len] = [#(#b),*];
-        #macr
-    }}
+        2..=7 => {
+            quote! {{
+                #[doc = #a]
+                const YARTE_SLICE: [u8; #len] = [#(#b),*];
+                __yarte_write_bytes_short!(YARTE_SLICE);
+            }}
+        }
+        _ => {
+            quote! {{
+                #[doc = #a]
+                const YARTE_SLICE: #parent::Aligned64<[u8; #len]> = #parent::Aligned64([#(#b),*]);
+                __yarte_write_bytes_long!(YARTE_SLICE.0);
+            }}
+        }
+    }
 }
 
 impl<'a, T: CodeGen> CodeGen for FixedCodeGen<'a, T> {
@@ -121,7 +135,7 @@ impl CodeGen for TextFixedCodeGen {
             use HIR::*;
             tokens.extend(match i {
                 Local(a) => quote!(#a),
-                Lit(a) => literal(a),
+                Lit(a) => literal(a, &parent),
                 Safe(a) | Expr(a) => {
                     // TODO: check slice builder, raw or cut
                     quote!(buf_cur += #parent::RenderSafe::render(&(#a), &mut buf[buf_cur..])?;)
@@ -144,7 +158,7 @@ where
         use HIR::*;
         tokens.extend(match i {
             Local(a) => quote!(#a),
-            Lit(a) => literal(a),
+            Lit(a) => literal(a, &parent),
             // TODO: check slice builder, raw or cut
             Safe(a) => quote!(buf_cur += #parent::RenderSafe::render(&(#a), &mut buf[buf_cur..])?;),
             Expr(a) => {
