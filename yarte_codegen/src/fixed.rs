@@ -29,15 +29,46 @@ impl<'a, T: CodeGen> FixedCodeGen<'a, T> {
                         () => { buf.len() };
                     }
                     let mut buf_cur = 0;
-                    macro_rules! __yarte_write_bytes {
-                        ($b:ident) => {
-                            if len!() < buf_cur + $b.len() {
+
+                    #[allow(unused_macros)]
+                    macro_rules! __yarte_check_write {
+                        ($b:ident, $len:expr, { $($t:tt)+ }) => {
+                            if len!() < buf_cur + $len {
                                 return None;
                             } else {
+                                $($t)+
+                            }
+                        };
+                    }
+                    #[allow(unused_macros)]
+                    macro_rules! __yarte_write_bytes {
+                        ($b:ident) => {
+                            __yarte_check_write!($b, $b.len(), {
                                 // Not use copy_from_slice for elide double checked
                                 std::ptr::copy_nonoverlapping($b.as_ptr(), buf_ptr!().add(buf_cur), $b.len());
                                 buf_cur += $b.len();
-                            }
+                            })
+                        };
+                    }
+                    // between 2-7 bytes
+                    #[allow(unused_macros)]
+                    macro_rules! __yarte_write_bytes_short {
+                        ($b:ident) => {
+                            __yarte_check_write!($b, $b.len(), {
+                                for i in 0..$b.len() {
+                                    buf_ptr!().add(buf_cur).write($b.as_ptr().add(i).read());
+                                    buf_cur += 1;
+                                }
+                            })
+                        };
+                    }
+                    #[allow(unused_macros)]
+                    macro_rules! __yarte_write_bytes_one {
+                        ($b:ident) => {
+                            __yarte_check_write!($b, 1, {
+                                buf_ptr!().add(buf_cur).write($b);
+                                buf_cur += 1;
+                            })
                         };
                     }
                     #nodes
@@ -46,6 +77,25 @@ impl<'a, T: CodeGen> FixedCodeGen<'a, T> {
             ),
         ));
     }
+}
+
+fn literal(a: String) -> TokenStream {
+    let len = a.len();
+    let b = a.as_bytes();
+    let macr = match len {
+        0 => unreachable!(),
+        1 => quote!(__yarte_write_bytes_one!(YARTE_SLICE);),
+        // memcopy writes long-by-long (4 bytes) but pointer should be aligned.
+        // For 2 to 7 bytes, is mostly faster write byte-by-byte
+        // https://github.com/torvalds/linux/blob/master/arch/alpha/lib/memcpy.c#L128
+        2..=7 => quote!(__yarte_write_bytes_short!(YARTE_SLICE);),
+        _ => quote!(__yarte_write_bytes!(YARTE_SLICE);),
+    };
+    quote! {{
+        #[doc = #a]
+        const YARTE_SLICE: [u8; #len] = [#(#b),*];
+        #macr
+    }}
 }
 
 impl<'a, T: CodeGen> CodeGen for FixedCodeGen<'a, T> {
@@ -71,16 +121,9 @@ impl CodeGen for TextFixedCodeGen {
             use HIR::*;
             tokens.extend(match i {
                 Local(a) => quote!(#a),
-                Lit(a) => {
-                    let len = a.len();
-                    let b = a.as_bytes();
-                    quote! {{
-                        #[doc = #a]
-                        const YARTE_SLICE: [u8; #len] = [#(#b),*];
-                        __yarte_write_bytes!(YARTE_SLICE);
-                    }}
-                }
+                Lit(a) => literal(a),
                 Safe(a) | Expr(a) => {
+                    // TODO: check slice builder, raw or cut
                     quote!(buf_cur += #parent::RenderSafe::render(&(#a), &mut buf[buf_cur..])?;)
                 }
                 Each(a) => self.gen_each(*a),
@@ -101,17 +144,11 @@ where
         use HIR::*;
         tokens.extend(match i {
             Local(a) => quote!(#a),
-            Lit(a) => {
-                let len = a.len();
-                let b = a.as_bytes();
-                quote! {{
-                    #[doc = #a]
-                    const YARTE_SLICE: [u8; #len] = [#(#b),*];
-                    __yarte_write_bytes!(YARTE_SLICE);
-                }}
-            }
+            Lit(a) => literal(a),
+            // TODO: check slice builder, raw or cut
             Safe(a) => quote!(buf_cur += #parent::RenderSafe::render(&(#a), &mut buf[buf_cur..])?;),
             Expr(a) => {
+                // TODO: check slice builder, raw or cut
                 quote!(buf_cur += #parent::RenderFixed::render(&(#a), &mut buf[buf_cur..])?;)
             }
             Each(a) => codegen.gen_each(*a),
