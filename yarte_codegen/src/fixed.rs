@@ -32,12 +32,10 @@ impl<'a, T: CodeGen> FixedCodeGen<'a, T> {
 
                     #[allow(unused_macros)]
                     macro_rules! __yarte_check_write {
-                        ($len:expr, { $($t:tt)+ }) => {
+                        ($len:expr, $write:block) => {
                             if len!() < buf_cur + $len {
                                 return None;
-                            } else {
-                                $($t)+
-                            }
+                            } else $write
                         };
                     }
                     #[allow(unused_macros)]
@@ -65,7 +63,7 @@ fn literal(a: String, parent: &Ident) -> TokenStream {
     match len {
         0 => unreachable!(),
         // memcopy writes long-by-long (8 bytes) but pointer should be aligned.
-        // For 2 to 7 bytes, is mostly faster write byte-by-byte
+        // For 1 to 7 bytes, is mostly faster write byte-by-byte
         // https://github.com/torvalds/linux/blob/master/arch/alpha/lib/memcpy.c#L128
         1..=7 => {
             let range: TokenStream = b
