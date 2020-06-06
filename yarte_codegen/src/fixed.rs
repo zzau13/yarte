@@ -32,7 +32,7 @@ impl<'a, T: CodeGen> FixedCodeGen<'a, T> {
 
                     #[allow(unused_macros)]
                     macro_rules! __yarte_check_write {
-                        ($b:expr, $len:expr, { $($t:tt)+ }) => {
+                        ($len:expr, { $($t:tt)+ }) => {
                             if len!() < buf_cur + $len {
                                 return None;
                             } else {
@@ -43,34 +43,14 @@ impl<'a, T: CodeGen> FixedCodeGen<'a, T> {
                     #[allow(unused_macros)]
                     macro_rules! __yarte_write_bytes_long {
                         ($b:expr) => {
-                            __yarte_check_write!($b, $b.len(), {
+                            __yarte_check_write!($b.len(), {
                                 // Not use copy_from_slice for elide double checked
                                 std::ptr::copy_nonoverlapping($b.as_ptr(), buf_ptr!().add(buf_cur), $b.len());
                                 buf_cur += $b.len();
                             })
                         };
                     }
-                    // between 2-7 bytes
-                    #[allow(unused_macros)]
-                    macro_rules! __yarte_write_bytes_short {
-                        ($b:ident) => {
-                            __yarte_check_write!($b, $b.len(), {
-                                for i in 0..$b.len() {
-                                    buf_ptr!().add(buf_cur).write($b.as_ptr().add(i).read());
-                                    buf_cur += 1;
-                                }
-                            })
-                        };
-                    }
-                    #[allow(unused_macros)]
-                    macro_rules! __yarte_write_bytes_one {
-                        ($b:ident) => {
-                            __yarte_check_write!($b, 1, {
-                                buf_ptr!().add(buf_cur).write($b);
-                                buf_cur += 1;
-                            })
-                        };
-                    }
+
                     #nodes
                     Some(buf_cur)
                 }
@@ -84,22 +64,27 @@ fn literal(a: String, parent: &Ident) -> TokenStream {
     let b = a.as_bytes();
     match len {
         0 => unreachable!(),
-        1 => {
-            let b = b[0];
-            quote! {{
-                #[doc = #a]
-                const YARTE_BYTE: u8 = #b;
-                __yarte_write_bytes_one!(YARTE_BYTE);
-            }}
-        }
         // memcopy writes long-by-long (8 bytes) but pointer should be aligned.
         // For 2 to 7 bytes, is mostly faster write byte-by-byte
         // https://github.com/torvalds/linux/blob/master/arch/alpha/lib/memcpy.c#L128
-        2..=7 => {
+        1..=7 => {
+            let range: TokenStream = b
+                .iter()
+                .enumerate()
+                .map(|(i, b)| {
+                    quote! {
+                        buf_ptr!().add(buf_cur + #i).write(#b);
+                    }
+                })
+                .flatten()
+                .collect();
             quote! {{
                 #[doc = #a]
                 const YARTE_SLICE: [u8; #len] = [#(#b),*];
-                __yarte_write_bytes_short!(YARTE_SLICE);
+                __yarte_check_write!(#len, {
+                    #range
+                    buf_cur += #len;
+                })
             }}
         }
         _ => {
