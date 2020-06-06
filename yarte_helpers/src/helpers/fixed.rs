@@ -1,9 +1,27 @@
 // Based on https://github.com/utkarshkukreti/markup.rs/blob/master/markup/src/lib.rs
+use std::ptr::copy_nonoverlapping;
 use v_htmlescape::{v_escape, v_escape_char};
+
+macro_rules! buf_ptr {
+    ($buf:expr) => {
+        $buf as *mut [u8] as *mut u8
+    };
+}
+
+macro_rules! src_ptr {
+    ($buf:expr) => {
+        $buf as *const [u8] as *const u8
+    };
+}
 
 /// Render trait, used for wrap unsafe expressions `{{ ... }}` when it's in a html template
 pub trait RenderFixed {
-    fn render(&self, buf: &mut [u8]) -> Option<usize>;
+    /// Render in buffer will html escape the string type
+    ///
+    /// # Safety
+    /// Possible overlap if you have a chance to implement:
+    /// have a buffer reference in your data type
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize>;
 }
 
 macro_rules! str_display {
@@ -11,7 +29,7 @@ macro_rules! str_display {
         $(
             impl RenderFixed for &$ty {
                 #[inline(always)]
-                fn render(&self, buf: &mut [u8]) -> Option<usize> {
+                unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
                     v_escape(self.as_bytes(), buf)
                 }
             }
@@ -21,7 +39,7 @@ macro_rules! str_display {
 
 impl RenderFixed for String {
     #[inline(always)]
-    fn render(&self, buf: &mut [u8]) -> Option<usize> {
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
         v_escape(self.as_bytes(), buf)
     }
 }
@@ -37,7 +55,7 @@ macro_rules! itoa_display_0 {
         $(
             impl RenderFixed for $ty {
                 #[inline(always)]
-                fn render(&self, buf: &mut [u8]) -> Option<usize> {
+                unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
                     itoa::write(buf, *self).ok()
                 }
             }
@@ -50,7 +68,7 @@ macro_rules! itoa_display_1 {
         $(
             impl RenderFixed for &$ty {
                 #[inline(always)]
-                fn render(&self, buf: &mut [u8]) -> Option<usize> {
+                unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
                     itoa::write(buf, **self).ok()
                 }
             }
@@ -63,7 +81,7 @@ macro_rules! itoa_display_2 {
         $(
             impl RenderFixed for &&$ty {
                 #[inline(always)]
-                fn render(&self, buf: &mut [u8]) -> Option<usize> {
+                unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
                     itoa::write(buf, ***self).ok()
                 }
             }
@@ -76,7 +94,7 @@ macro_rules! itoa_display_3 {
         $(
             impl RenderFixed for &&&$ty {
                 #[inline(always)]
-                fn render(&self, buf: &mut [u8]) -> Option<usize> {
+                unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
                     itoa::write(buf, ****self).ok()
                 }
             }
@@ -89,7 +107,7 @@ macro_rules! itoa_display_4 {
         $(
             impl RenderFixed for &&&&$ty {
                 #[inline(always)]
-                fn render(&self, buf: &mut [u8]) -> Option<usize> {
+                unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
                     itoa::write(buf, *****self).ok()
                 }
             }
@@ -118,7 +136,7 @@ macro_rules! dtoa_display_0 {
         $(
             impl RenderFixed for $ty {
                 #[inline(always)]
-                fn render(&self, buf: &mut [u8]) -> Option<usize> {
+                unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
                     dtoa::write(buf, *self).ok()
                 }
             }
@@ -131,7 +149,7 @@ macro_rules! dtoa_display_1 {
         $(
             impl RenderFixed for &$ty {
                 #[inline(always)]
-                fn render(&self, buf: &mut [u8]) -> Option<usize> {
+                unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
                     dtoa::write(buf, **self).ok()
                 }
             }
@@ -144,7 +162,7 @@ macro_rules! dtoa_display_2 {
         $(
             impl RenderFixed for &&$ty {
                 #[inline(always)]
-                fn render(&self, buf: &mut [u8]) -> Option<usize> {
+                unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
                     dtoa::write(buf, ***self).ok()
                 }
             }
@@ -157,7 +175,7 @@ macro_rules! dtoa_display_3 {
         $(
             impl RenderFixed for &&&$ty {
                 #[inline(always)]
-                fn render(&self, buf: &mut [u8]) -> Option<usize> {
+                unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
                     dtoa::write(buf, ****self).ok()
                 }
             }
@@ -170,7 +188,7 @@ macro_rules! dtoa_display_4 {
         $(
             impl RenderFixed for &&&&$ty {
                 #[inline(always)]
-                fn render(&self, buf: &mut [u8]) -> Option<usize> {
+                unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
                     dtoa::write(buf, *****self).ok()
                 }
             }
@@ -195,77 +213,82 @@ dtoa_display! {
 
 impl RenderFixed for char {
     #[inline(always)]
-    fn render(&self, buf: &mut [u8]) -> Option<usize> {
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
         v_escape_char(*self, buf)
     }
 }
 
 impl RenderFixed for &char {
     #[inline(always)]
-    fn render(&self, buf: &mut [u8]) -> Option<usize> {
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
         v_escape_char(**self, buf)
     }
 }
 
 impl RenderFixed for &&char {
     #[inline(always)]
-    fn render(&self, buf: &mut [u8]) -> Option<usize> {
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
         v_escape_char(***self, buf)
     }
 }
 
 impl RenderFixed for &&&char {
     #[inline(always)]
-    fn render(&self, buf: &mut [u8]) -> Option<usize> {
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
         v_escape_char(****self, buf)
     }
 }
 
 impl RenderFixed for &&&&char {
     #[inline(always)]
-    fn render(&self, buf: &mut [u8]) -> Option<usize> {
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
         v_escape_char(*****self, buf)
     }
 }
 
 impl RenderFixed for bool {
     #[inline(always)]
-    fn render(&self, buf: &mut [u8]) -> Option<usize> {
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
         render_bool(*self, buf)
     }
 }
 
 impl RenderFixed for &bool {
     #[inline(always)]
-    fn render(&self, buf: &mut [u8]) -> Option<usize> {
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
         render_bool(**self, buf)
     }
 }
 
 impl RenderFixed for &&bool {
     #[inline(always)]
-    fn render(&self, buf: &mut [u8]) -> Option<usize> {
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
         render_bool(***self, buf)
     }
 }
 
 impl RenderFixed for &&&bool {
     #[inline(always)]
-    fn render(&self, buf: &mut [u8]) -> Option<usize> {
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
         render_bool(****self, buf)
     }
 }
 
 impl RenderFixed for &&&&bool {
     #[inline(always)]
-    fn render(&self, buf: &mut [u8]) -> Option<usize> {
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
         render_bool(*****self, buf)
     }
 }
 
-/// Render trait, used for wrap unsafe expressions `{{ ... }}` when it's in a html template
+/// Render trait, used for wrap safe expressions `{{{ ... }}}` or text
 pub trait RenderSafe {
-    fn render(&self, buf: &mut [u8]) -> Option<usize>;
+    /// Render in buffer
+    ///
+    /// # Safety
+    /// Possible overlap if you have a chance to implement:
+    /// have a buffer reference in your data type
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize>;
 }
 
 macro_rules! str_display {
@@ -273,11 +296,13 @@ macro_rules! str_display {
         $(
             impl RenderSafe for &$ty {
                 #[inline(always)]
-                fn render(&self, buf: &mut [u8]) -> Option<usize> {
+                unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
                     if buf.len() < self.len() {
                         None
                     } else {
-                        (&mut buf[..self.len()]).copy_from_slice(self.as_bytes());
+                        // Not use copy_from_slice for elide double checked
+                        // Make sure move buf pointer in next render
+                        copy_nonoverlapping(src_ptr!(self.as_bytes()), buf_ptr!(buf), self.len());
                         Some(self.len())
                     }
                 }
@@ -294,11 +319,13 @@ str_display!(
 
 impl RenderSafe for String {
     #[inline(always)]
-    fn render(&self, buf: &mut [u8]) -> Option<usize> {
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
         if buf.len() < self.len() {
             None
         } else {
-            (&mut buf[..self.len()]).copy_from_slice(self.as_bytes());
+            // Not use copy_from_slice for elide double checked
+            // Make sure move buf pointer in next render
+            copy_nonoverlapping(src_ptr!(self.as_bytes()), buf_ptr!(buf), self.len());
             Some(self.len())
         }
     }
@@ -309,7 +336,7 @@ macro_rules! itoa_display_0 {
         $(
             impl RenderSafe for $ty {
                 #[inline(always)]
-                fn render(&self, buf: &mut [u8]) -> Option<usize> {
+                unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
                     itoa::write(buf, *self).ok()
                 }
             }
@@ -322,7 +349,7 @@ macro_rules! itoa_display_1 {
         $(
             impl RenderSafe for &$ty {
                 #[inline(always)]
-                fn render(&self, buf: &mut [u8]) -> Option<usize> {
+                unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
                     itoa::write(buf, **self).ok()
                 }
             }
@@ -335,7 +362,7 @@ macro_rules! itoa_display_2 {
         $(
             impl RenderSafe for &&$ty {
                 #[inline(always)]
-                fn render(&self, buf: &mut [u8]) -> Option<usize> {
+                unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
                     itoa::write(buf, ***self).ok()
                 }
             }
@@ -348,7 +375,7 @@ macro_rules! itoa_display_3 {
         $(
             impl RenderSafe for &&&$ty {
                 #[inline(always)]
-                fn render(&self, buf: &mut [u8]) -> Option<usize> {
+                unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
                     itoa::write(buf, ****self).ok()
                 }
             }
@@ -361,7 +388,7 @@ macro_rules! itoa_display_4 {
         $(
             impl RenderSafe for &&&&$ty {
                 #[inline(always)]
-                fn render(&self, buf: &mut [u8]) -> Option<usize> {
+                unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
                     itoa::write(buf, *****self).ok()
                 }
             }
@@ -390,7 +417,7 @@ macro_rules! dtoa_display_0 {
         $(
             impl RenderSafe for $ty {
                 #[inline(always)]
-                fn render(&self, buf: &mut [u8]) -> Option<usize> {
+                unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
                     dtoa::write(buf, *self).ok()
                 }
             }
@@ -403,7 +430,7 @@ macro_rules! dtoa_display_1 {
         $(
             impl RenderSafe for &$ty {
                 #[inline(always)]
-                fn render(&self, buf: &mut [u8]) -> Option<usize> {
+                unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
                     dtoa::write(buf, **self).ok()
                 }
             }
@@ -416,7 +443,7 @@ macro_rules! dtoa_display_2 {
         $(
             impl RenderSafe for &&$ty {
                 #[inline(always)]
-                fn render(&self, buf: &mut [u8]) -> Option<usize> {
+                unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
                     dtoa::write(buf, ***self).ok()
                 }
             }
@@ -429,7 +456,7 @@ macro_rules! dtoa_display_3 {
         $(
             impl RenderSafe for &&&$ty {
                 #[inline(always)]
-                fn render(&self, buf: &mut [u8]) -> Option<usize> {
+                unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
                     dtoa::write(buf, ****self).ok()
                 }
             }
@@ -442,7 +469,7 @@ macro_rules! dtoa_display_4 {
         $(
             impl RenderSafe for &&&&$ty {
                 #[inline(always)]
-                fn render(&self, buf: &mut [u8]) -> Option<usize> {
+                unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
                     dtoa::write(buf, *****self).ok()
                 }
             }
@@ -467,75 +494,76 @@ dtoa_display! {
 
 impl RenderSafe for char {
     #[inline(always)]
-    fn render(&self, buf: &mut [u8]) -> Option<usize> {
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
         render_char(*self, buf)
     }
 }
 
 impl RenderSafe for &char {
     #[inline(always)]
-    fn render(&self, buf: &mut [u8]) -> Option<usize> {
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
         render_char(**self, buf)
     }
 }
 
 impl RenderSafe for &&char {
     #[inline(always)]
-    fn render(&self, buf: &mut [u8]) -> Option<usize> {
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
         render_char(***self, buf)
     }
 }
 
 impl RenderSafe for &&&char {
     #[inline(always)]
-    fn render(&self, buf: &mut [u8]) -> Option<usize> {
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
         render_char(****self, buf)
     }
 }
 
 impl RenderSafe for &&&&char {
     #[inline(always)]
-    fn render(&self, buf: &mut [u8]) -> Option<usize> {
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
         render_char(*****self, buf)
     }
 }
 
 impl RenderSafe for bool {
     #[inline(always)]
-    fn render(&self, buf: &mut [u8]) -> Option<usize> {
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
         render_bool(*self, buf)
     }
 }
 
 impl RenderSafe for &bool {
     #[inline(always)]
-    fn render(&self, buf: &mut [u8]) -> Option<usize> {
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
         render_bool(**self, buf)
     }
 }
 
 impl RenderSafe for &&bool {
     #[inline(always)]
-    fn render(&self, buf: &mut [u8]) -> Option<usize> {
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
         render_bool(***self, buf)
     }
 }
 
 impl RenderSafe for &&&bool {
     #[inline(always)]
-    fn render(&self, buf: &mut [u8]) -> Option<usize> {
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
         render_bool(****self, buf)
     }
 }
 
 impl RenderSafe for &&&&bool {
     #[inline(always)]
-    fn render(&self, buf: &mut [u8]) -> Option<usize> {
+    unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
         render_bool(*****self, buf)
     }
 }
 
 use std::io;
+
 struct Writer<'a> {
     buf: &'a mut [u8],
     len: usize,
@@ -559,7 +587,11 @@ impl<'a> io::Write for Writer<'a> {
         if self.buf.len() < buf.len() + self.len {
             Err(io::Error::from(io::ErrorKind::Other))
         } else {
-            (&mut self.buf[self.len..self.len + buf.len()]).copy_from_slice(buf);
+            // Not use copy_from_slice for elide double checked
+            // Make sure move buf pointer in next render
+            unsafe {
+                copy_nonoverlapping(src_ptr!(buf), buf_ptr!(self.buf).add(self.len), buf.len());
+            }
             self.len += buf.len();
             Ok(buf.len())
         }
@@ -579,7 +611,7 @@ mod json {
 
     impl<'a, S: Serialize> RenderFixed for Json<'a, S> {
         #[inline(always)]
-        fn render(&self, buf: &mut [u8]) -> Option<usize> {
+        unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
             let mut buf = Writer::new(buf);
             to_writer(&mut buf, self.0).ok()?;
             Some(buf.consume())
@@ -588,7 +620,7 @@ mod json {
 
     impl<'a, D: Serialize> RenderFixed for JsonPretty<'a, D> {
         #[inline(always)]
-        fn render(&self, buf: &mut [u8]) -> Option<usize> {
+        unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
             let mut buf = Writer::new(buf);
             to_writer_pretty(&mut buf, self.0).ok()?;
             Some(buf.consume())
@@ -597,7 +629,7 @@ mod json {
 
     impl<'a, S: Serialize> RenderSafe for Json<'a, S> {
         #[inline(always)]
-        fn render(&self, buf: &mut [u8]) -> Option<usize> {
+        unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
             let mut buf = Writer::new(buf);
             to_writer(&mut buf, self.0).ok()?;
             Some(buf.consume())
@@ -606,7 +638,7 @@ mod json {
 
     impl<'a, D: Serialize> RenderSafe for JsonPretty<'a, D> {
         #[inline(always)]
-        fn render(&self, buf: &mut [u8]) -> Option<usize> {
+        unsafe fn render(&self, buf: &mut [u8]) -> Option<usize> {
             let mut buf = Writer::new(buf);
             to_writer_pretty(&mut buf, self.0).ok()?;
             Some(buf.consume())
@@ -624,20 +656,24 @@ fn render_char(c: char, buf: &mut [u8]) -> Option<usize> {
 }
 
 #[inline(always)]
-fn render_bool(b: bool, buf: &mut [u8]) -> Option<usize> {
+unsafe fn render_bool(b: bool, buf: &mut [u8]) -> Option<usize> {
     const T: &[u8] = b"true";
     const F: &[u8] = b"false";
     if b {
         if buf.len() < T.len() {
             None
         } else {
-            buf.copy_from_slice(T);
+            // Not use copy_from_slice for elide double checked
+            // Make sure move buf pointer in next render
+            copy_nonoverlapping(src_ptr!(T), buf_ptr!(buf), T.len());
             Some(T.len())
         }
     } else if buf.len() < F.len() {
         None
     } else {
-        buf.copy_from_slice(F);
+        // Not use copy_from_slice for elide double checked
+        // Make sure move buf pointer in next render
+        copy_nonoverlapping(src_ptr!(F), buf_ptr!(buf), F.len());
         Some(F.len())
     }
 }
@@ -648,14 +684,16 @@ mod test {
 
     #[test]
     fn r_bool() {
-        let b = &mut [0; 4];
-        assert!(render_bool(true, b).is_some());
-        assert_eq!(&b[..], b"true");
-        let b = &mut [0; 5];
-        assert!(render_bool(false, b).is_some());
-        assert_eq!(&b[..], b"false");
-        let b = &mut [0; 4];
-        assert!(render_bool(false, b).is_none());
+        unsafe {
+            let b = &mut [0; 4];
+            assert!(render_bool(true, b).is_some());
+            assert_eq!(&b[..], b"true");
+            let b = &mut [0; 5];
+            assert!(render_bool(false, b).is_some());
+            assert_eq!(&b[..], b"false");
+            let b = &mut [0; 4];
+            assert!(render_bool(false, b).is_none());
+        }
     }
 
     #[test]
