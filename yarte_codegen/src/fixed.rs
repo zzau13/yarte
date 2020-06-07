@@ -78,7 +78,6 @@ fn literal(a: String, parent: &Ident) -> TokenStream {
                 .collect();
             quote! {{
                 #[doc = #a]
-                const YARTE_SLICE: [u8; #len] = [#(#b),*];
                 __yarte_check_write!(#len, {
                     #range
                     buf_cur += #len;
