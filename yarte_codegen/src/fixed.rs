@@ -71,7 +71,7 @@ fn literal(a: String, parent: &Ident) -> TokenStream {
                 .enumerate()
                 .map(|(i, b)| {
                     quote! {
-                        buf_ptr!().add(buf_cur + #i).write(#b);
+                        *buf_ptr!().add(buf_cur + #i) = #b;
                     }
                 })
                 .flatten()
