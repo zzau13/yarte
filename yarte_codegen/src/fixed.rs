@@ -65,21 +65,50 @@ fn literal(a: String, parent: &Ident) -> TokenStream {
         // memcopy writes 8 bytes but pointer should be aligned.
         // For 1 to 15 bytes, is mostly faster write byte-by-byte
         // https://github.com/torvalds/linux/blob/master/arch/ia64/lib/memcpy.S#L113-L118
-        1..=15 => {
-            let range: TokenStream = b
-                .iter()
-                .enumerate()
-                .map(|(i, b)| {
-                    quote! {
-                        *buf_ptr!().add(buf_cur + #i) = #b;
-                    }
-                })
-                .flatten()
-                .collect();
+        1..=7 => {
+            let range: TokenStream = write_bb(b);
             quote! {{
                 #[doc = #a]
                 __yarte_check_write!(#len, {
                     #range
+                    buf_cur += #len;
+                })
+            }}
+        }
+        // memcopy writes 8 bytes but pointer should be aligned.
+        // For 8 to 15 bytes, is mostly faster write 4 bytes
+        // https://github.com/torvalds/linux/blob/master/arch/ia64/lib/memcpy.S#L113-L118
+        8..=15 => {
+            let range: TokenStream = write_bb(b);
+            let range32: TokenStream = b
+                .chunks(4)
+                .enumerate()
+                .map(|(i, x)| {
+                    if x.len() == 4 {
+                        // Safe conversion because the chunk size is 4
+                        let x = unsafe { (x as *const [u8] as *const u32).read_unaligned() };
+                        let i = 4 * i;
+                        quote!(*(buf_ptr!().add(buf_cur + #i) as *mut u32) = #x;)
+                    } else {
+                        let mut tokens = TokenStream::new();
+                        for (j, x) in x.iter().enumerate() {
+                            let i = 4 * i + j;
+                            tokens.extend(quote!(*buf_ptr!().add(buf_cur + #i) = #x;));
+                        }
+                        tokens
+                    }
+                })
+                .flatten()
+                .collect();
+
+            quote! {{
+                #[doc = #a]
+                __yarte_check_write!(#len, {
+                    if (buf_ptr!() as usize).trailing_zeros() < 2 {
+                        #range
+                    } else {
+                        #range32
+                    }
                     buf_cur += #len;
                 })
             }}
@@ -94,6 +123,17 @@ fn literal(a: String, parent: &Ident) -> TokenStream {
     }
 }
 
+fn write_bb(b: &[u8]) -> TokenStream {
+    b.iter()
+        .enumerate()
+        .map(|(i, b)| {
+            quote! {
+                *buf_ptr!().add(buf_cur + #i) = #b;
+            }
+        })
+        .flatten()
+        .collect()
+}
 impl<'a, T: CodeGen> CodeGen for FixedCodeGen<'a, T> {
     fn gen(&mut self, v: Vec<HIR>) -> TokenStream {
         let mut tokens = TokenStream::new();
