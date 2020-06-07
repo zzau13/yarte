@@ -656,26 +656,45 @@ fn render_char(c: char, buf: &mut [u8]) -> Option<usize> {
     }
 }
 
-#[inline(always)]
+/// fast boolean render
 unsafe fn render_bool(b: bool, buf: &mut [u8]) -> Option<usize> {
-    const T: &[u8] = b"true";
-    const F: &[u8] = b"false";
+    #[repr(align(4))]
+    struct Aligned32<T>(pub T);
+    const T: Aligned32<[u8; 4]> = Aligned32([b't', b'r', b'u', b'e']);
+    const F: Aligned32<[u8; 4]> = Aligned32([b'f', b'a', b'l', b's']);
+    macro_rules! buf_ptr_u32 {
+        ($buf:ident) => {
+            $buf as *mut [u8] as *mut u32
+        };
+    }
     if b {
-        if buf.len() < T.len() {
+        if buf.len() < T.0.len() {
             None
         } else {
-            // Not use copy_from_slice for elide double checked
-            // Make sure move buf pointer in next render
-            copy_nonoverlapping(src_ptr!(T), buf_ptr!(buf), T.len());
-            Some(T.len())
+            if (buf_ptr!(buf) as usize) & 3 == 0 {
+                buf_ptr_u32!(buf).write(*(&T.0 as *const [u8] as *const u32));
+            } else {
+                buf_ptr!(buf).write(b't');
+                buf_ptr!(buf).add(1).write(b'r');
+                buf_ptr!(buf).add(2).write(b'u');
+                buf_ptr!(buf).add(3).write(b'e');
+            }
+            Some(T.0.len())
         }
-    } else if buf.len() < F.len() {
+    } else if buf.len() < F.0.len() + 1 {
         None
     } else {
-        // Not use copy_from_slice for elide double checked
-        // Make sure move buf pointer in next render
-        copy_nonoverlapping(src_ptr!(F), buf_ptr!(buf), F.len());
-        Some(F.len())
+        if (buf_ptr!(buf) as usize) & 3 == 0 {
+            buf_ptr_u32!(buf).write(*(&F.0 as *const [u8] as *const u32));
+            buf_ptr!(buf).add(4).write(b'e');
+        } else {
+            buf_ptr!(buf).write(b'f');
+            buf_ptr!(buf).add(1).write(b'a');
+            buf_ptr!(buf).add(2).write(b'l');
+            buf_ptr!(buf).add(3).write(b's');
+            buf_ptr!(buf).add(4).write(b'e');
+        }
+        Some(F.0.len() + 1)
     }
 }
 
