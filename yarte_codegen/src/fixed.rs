@@ -85,7 +85,8 @@ fn literal(a: String, parent: &Ident) -> TokenStream {
                 .enumerate()
                 .map(|(i, x)| {
                     if x.len() == 4 {
-                        // Safe conversion because the chunk size is 4
+                        // Safe conversion because the chunk size is 4 and, yes clippy, read unaligned
+                        #[allow(clippy::cast_ptr_alignment)]
                         let x = unsafe { (x as *const [u8] as *const u32).read_unaligned() };
                         let i = 4 * i;
                         quote!(*(buf_ptr!().add(buf_cur + #i) as *mut u32) = #x;)
