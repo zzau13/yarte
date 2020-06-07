@@ -668,13 +668,13 @@ unsafe fn render_bool(b: bool, buf: &mut [u8]) -> Option<usize> {
             None
         } else {
             if (buf_ptr!(buf) as usize).trailing_zeros() < 2 {
-                buf_ptr!(buf).write(b't');
-                buf_ptr!(buf).add(1).write(b'r');
-                buf_ptr!(buf).add(2).write(b'u');
-                buf_ptr!(buf).add(3).write(b'e');
+                *buf_ptr!(buf) = b't';
+                *buf_ptr!(buf).add(1) = b'r';
+                *buf_ptr!(buf).add(2) = b'u';
+                *buf_ptr!(buf).add(3) = b'e';
             } else {
-                //                             e  u  r  t
-                buf_ptr_u32!(buf).write(0x65_75_72_74);
+                // e_u_r_t
+                *buf_ptr_u32!(buf) = 0x65_75_72_74;
             }
             Some(4)
         }
@@ -682,15 +682,15 @@ unsafe fn render_bool(b: bool, buf: &mut [u8]) -> Option<usize> {
         None
     } else {
         if (buf_ptr!(buf) as usize).trailing_zeros() < 2 {
-            buf_ptr!(buf).write(b'f');
-            buf_ptr!(buf).add(1).write(b'a');
-            buf_ptr!(buf).add(2).write(b'l');
-            buf_ptr!(buf).add(3).write(b's');
-            buf_ptr!(buf).add(4).write(b'e');
+            *buf_ptr!(buf) = b'f';
+            *buf_ptr!(buf).add(1) = b'a';
+            *buf_ptr!(buf).add(2) = b'l';
+            *buf_ptr!(buf).add(3) = b's';
+            *buf_ptr!(buf).add(4) = b'e';
         } else {
-            //                             s  l  a  f
-            buf_ptr_u32!(buf).write(0x73_6C_61_66);
-            buf_ptr!(buf).add(4).write(b'e');
+            // s_l_a_f
+            *buf_ptr_u32!(buf) = 0x73_6C_61_66;
+            *buf_ptr!(buf).add(4) = b'e';
         }
         Some(5)
     }
