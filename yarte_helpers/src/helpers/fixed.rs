@@ -658,43 +658,41 @@ fn render_char(c: char, buf: &mut [u8]) -> Option<usize> {
 
 /// fast boolean render
 unsafe fn render_bool(b: bool, buf: &mut [u8]) -> Option<usize> {
-    #[repr(align(4))]
-    struct Aligned32<T>(pub T);
-    const T: Aligned32<[u8; 4]> = Aligned32([b't', b'r', b'u', b'e']);
-    const F: Aligned32<[u8; 4]> = Aligned32([b'f', b'a', b'l', b's']);
     macro_rules! buf_ptr_u32 {
         ($buf:ident) => {
             $buf as *mut [u8] as *mut u32
         };
     }
     if b {
-        if buf.len() < T.0.len() {
+        if buf.len() < 4 {
             None
         } else {
-            if (buf_ptr!(buf) as usize) & 3 == 0 {
-                buf_ptr_u32!(buf).write(*(&T.0 as *const [u8] as *const u32));
-            } else {
+            if (buf_ptr!(buf) as usize).trailing_zeros() < 2 {
                 buf_ptr!(buf).write(b't');
                 buf_ptr!(buf).add(1).write(b'r');
                 buf_ptr!(buf).add(2).write(b'u');
                 buf_ptr!(buf).add(3).write(b'e');
+            } else {
+                //                             e  u  r  t
+                buf_ptr_u32!(buf).write(0x65_75_72_74);
             }
-            Some(T.0.len())
+            Some(4)
         }
-    } else if buf.len() < F.0.len() + 1 {
+    } else if buf.len() < 5 {
         None
     } else {
-        if (buf_ptr!(buf) as usize) & 3 == 0 {
-            buf_ptr_u32!(buf).write(*(&F.0 as *const [u8] as *const u32));
-            buf_ptr!(buf).add(4).write(b'e');
-        } else {
+        if (buf_ptr!(buf) as usize).trailing_zeros() < 2 {
             buf_ptr!(buf).write(b'f');
             buf_ptr!(buf).add(1).write(b'a');
             buf_ptr!(buf).add(2).write(b'l');
             buf_ptr!(buf).add(3).write(b's');
             buf_ptr!(buf).add(4).write(b'e');
+        } else {
+            //                             s  l  a  f
+            buf_ptr_u32!(buf).write(0x73_6C_61_66);
+            buf_ptr!(buf).add(4).write(b'e');
         }
-        Some(F.0.len() + 1)
+        Some(5)
     }
 }
 
