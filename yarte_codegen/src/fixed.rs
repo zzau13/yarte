@@ -62,10 +62,10 @@ fn literal(a: String, parent: &Ident) -> TokenStream {
     let b = a.as_bytes();
     match len {
         0 => unreachable!(),
-        // memcopy writes long-by-long (8 bytes) but pointer should be aligned.
-        // For 1 to 7 bytes, is mostly faster write byte-by-byte
-        // https://github.com/torvalds/linux/blob/master/arch/alpha/lib/memcpy.c#L128
-        1..=7 => {
+        // memcopy writes 8 bytes but pointer should be aligned.
+        // For 1 to 15 bytes, is mostly faster write byte-by-byte
+        // https://github.com/torvalds/linux/blob/master/arch/ia64/lib/memcpy.S#L113-L118
+        1..=15 => {
             let range: TokenStream = b
                 .iter()
                 .enumerate()
