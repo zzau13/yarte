@@ -60,11 +60,11 @@ impl<'a, T: CodeGen> FixedCodeGen<'a, T> {
 fn literal(a: String, parent: &Ident) -> TokenStream {
     let len = a.len();
     let b = a.as_bytes();
+    // memcopy writes 8 bytes but pointer should be aligned.
+    // https://github.com/torvalds/linux/blob/master/arch/ia64/lib/memcpy.S#L113-L118
     match len {
         0 => unreachable!(),
-        // memcopy writes 8 bytes but pointer should be aligned.
-        // For 1 to 15 bytes, is mostly faster write byte-by-byte
-        // https://github.com/torvalds/linux/blob/master/arch/ia64/lib/memcpy.S#L113-L118
+        // For 1 to 7 bytes, is mostly faster write byte-by-byte
         1..=7 => {
             let range: TokenStream = write_bb(b);
             quote! {{
@@ -75,9 +75,8 @@ fn literal(a: String, parent: &Ident) -> TokenStream {
                 })
             }}
         }
-        // memcopy writes 8 bytes but pointer should be aligned.
-        // For 8 to 15 bytes, is mostly faster write 4 bytes
-        // https://github.com/torvalds/linux/blob/master/arch/ia64/lib/memcpy.S#L113-L118
+        // For 8 to 15 bytes, is mostly faster write 4 bytes by 4 bytes
+        // Duplicate data for min 6% and max 16% global performance
         8..=15 => {
             let range: TokenStream = write_bb(b);
             let range32: TokenStream = b
