@@ -19,8 +19,8 @@ travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]
-yarte_helpers = { version = "0.9.8", path = "../yarte_helpers", features = ["big-num-32"] }
-yarte_derive = { version = "0.9.8", path = "../yarte_derive", features = ["wasm-app"] }
+yarte_helpers = { version = "0.9.9", path = "../yarte_helpers", features = ["big-num-32"] }
+yarte_derive = { version = "0.9.9", path = "../yarte_derive", features = ["wasm-app"] }
 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

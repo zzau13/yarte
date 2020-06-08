@@ -76,7 +76,7 @@ fn literal(a: String, parent: &Ident) -> TokenStream {
             }}
         }
         // For 8 to 15 bytes, is mostly faster write 4 bytes by 4 bytes
-        // Duplicate data for min 6% and max 16% global performance
+        // Duplicate data for improve global performance
         8..=15 => {
             let range: TokenStream = write_bb(b);
             let range32: TokenStream = b
