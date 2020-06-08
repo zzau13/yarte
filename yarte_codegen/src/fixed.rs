@@ -108,6 +108,7 @@ fn literal(a: String, parent: &Ident) -> TokenStream {
                     if (buf_ptr!() as usize).trailing_zeros() < 2 {
                         #range
                     } else {
+                        debug_assert_eq!((buf_ptr!() as usize) % 4, 0);
                         #range32
                     }
                     buf_cur += #len;

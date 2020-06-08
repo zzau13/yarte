@@ -673,6 +673,7 @@ unsafe fn render_bool(b: bool, buf: &mut [u8]) -> Option<usize> {
                 *buf_ptr!(buf).add(2) = b'u';
                 *buf_ptr!(buf).add(3) = b'e';
             } else {
+                debug_assert_eq!((buf_ptr!(buf) as usize) % 4, 0);
                 // e_u_r_t
                 *buf_ptr_u32!(buf) = 0x65_75_72_74;
             }
@@ -688,6 +689,7 @@ unsafe fn render_bool(b: bool, buf: &mut [u8]) -> Option<usize> {
             *buf_ptr!(buf).add(3) = b's';
             *buf_ptr!(buf).add(4) = b'e';
         } else {
+            debug_assert_eq!((buf_ptr!(buf) as usize) % 4, 0);
             // s_l_a_f
             *buf_ptr_u32!(buf) = 0x73_6C_61_66;
             *buf_ptr!(buf).add(4) = b'e';
