@@ -46,3 +46,66 @@ fn test_escape() {
         "Hello, &lt;&gt;&amp;&quot;&#x27;&#x2f;!".as_bytes()
     );
 }
+
+#[derive(TemplateFixed)]
+#[template(path = "for")]
+struct ForTemplate<'a> {
+    strings: Vec<&'a str>,
+}
+
+#[test]
+fn test_for() {
+    let s = ForTemplate {
+        strings: vec!["foo", "bar", "baz"],
+    };
+    let mut buf: [u8; 64] = unsafe { MaybeUninit::uninit().assume_init() };
+    let b = unsafe { s.call(&mut buf) }.unwrap();
+    assert_eq!(&buf[..b], b"0. foo(first)1. bar2. baz");
+}
+
+#[derive(TemplateFixed)]
+#[template(path = "nested-for")]
+struct NestedForTemplate<'a> {
+    seqs: &'a [&'a [&'a str]],
+}
+
+#[test]
+fn test_nested_for() {
+    let alpha: &[&str] = &["foo", "bar", "baz"];
+    let numbers: &[&str] = &["bar", "baz"];
+    let seqs: &[&[&str]] = &[alpha, numbers];
+    let s = NestedForTemplate { seqs };
+    let mut buf: [u8; 64] = unsafe { MaybeUninit::uninit().assume_init() };
+    let b = unsafe { s.call(&mut buf) }.unwrap();
+    assert_eq!(&buf[..b], b"1\n  0foo1bar2baz2\n  0bar1baz");
+}
+
+#[derive(TemplateFixed)]
+#[template(path = "precedence-for")]
+struct PrecedenceTemplate<'a> {
+    strings: &'a [&'a str],
+}
+
+#[test]
+fn test_precedence_for() {
+    let strings: &[&str] = &["foo", "bar", "baz"];
+    let s = PrecedenceTemplate { strings };
+    let mut buf: [u8; 64] = unsafe { MaybeUninit::uninit().assume_init() };
+    let b = unsafe { s.call(&mut buf) }.unwrap();
+    assert_eq!(&buf[..b], b"0 ~ foo2bar1 ~ bar42 ~ baz6")
+}
+
+#[derive(TemplateFixed)]
+#[template(path = "for-range")]
+struct ForRangeTemplate {
+    init: i32,
+    end: i32,
+}
+
+#[test]
+fn test_for_range() {
+    let s = ForRangeTemplate { init: -1, end: 1 };
+    let mut buf: [u8; 64] = unsafe { MaybeUninit::uninit().assume_init() };
+    let b = unsafe { s.call(&mut buf) }.unwrap();
+    assert_eq!(&buf[..b], b"foo\nfoo\nbar\nbar\nfoo\nbar\nbar\n");
+}
