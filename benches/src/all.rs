@@ -12,18 +12,19 @@ criterion_group!(benches, functions);
 criterion_main!(benches);
 
 fn functions(c: &mut Criterion) {
+    c.bench_function("Unsafe Teams", max_size_teams);
     c.bench_function("Fixed Teams", teams_fixed);
     c.bench_function("Fixed Text Teams", teams_fixed_text);
     c.bench_function("Fixed Big Table", |b| big_table_fixed(b, 100));
     c.bench_function("Fixed Text Big Table", |b| big_table_fixed_text(b, 100));
-    c.bench_function("Formatter Big table", |b| big_table_fmt(b, 100));
-    c.bench_function("Unsafe Teams", max_size_teams);
     c.bench_function("Safe Unsafe Teams", safe_max_size_teams);
+    c.bench_function("Safe Unsafe Teams Memcpy", max_size_teams_escaped_memcpy);
     c.bench_function("Safe Escaped Unsafe Teams", safe_max_size_teams_escaped);
     c.bench_function("Teams", teams);
     c.bench_function("Teams io writer implements io::Write", teams_io_writer);
     c.bench_function("Teams Unescaped", teams_display);
     c.bench_function("Formatter Teams", teams_fmt);
+    c.bench_function("Formatter Big table", |b| big_table_fmt(b, 100));
     c.bench_function("Big table", |b| big_table(b, 100));
     c.bench_function("Big table io writer", |b| big_table_io_writer(b, 100));
     c.bench_function("Big table Unescaped", |b| big_table_display(b, 100));
@@ -337,6 +338,69 @@ fn max_size_teams(b: &mut criterion::Bencher) {
                 }
                 write_b!(b"\"><b>");
                 write_b!(v.name.as_bytes());
+
+                write_b!(b"</b>: ");
+                curr += itoa::write(
+                    slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr),
+                    v.score,
+                )
+                .expect("buffer overflow");
+                write_b!(b"</li>");
+            }
+            write_b!(b"</ul></body></html>");
+            let _ = slice::from_raw_parts(buf_ptr, curr).to_vec();
+        })
+    }
+}
+
+fn max_size_teams_escaped_memcpy(b: &mut criterion::Bencher) {
+    unsafe {
+        let teams = Teams {
+            year: 2015,
+            teams: build_teams(),
+        };
+        const LEN: usize = 256;
+
+        b.iter(|| {
+            let mut buf: [u8; LEN] = MaybeUninit::uninit().assume_init();
+            let mut curr = 0;
+            let buf_ptr = buf.as_mut_ptr();
+
+            macro_rules! write_b {
+                ($b:expr) => {
+                    std::ptr::copy_nonoverlapping(
+                        ($b as *const [u8] as *const u8),
+                        buf_ptr.add(curr),
+                        $b.len(),
+                    );
+                    curr += $b.len();
+                };
+            }
+
+            write_b!(b"<html><head><title>");
+            curr += itoa::write(
+                slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr),
+                teams.year,
+            )
+            .expect("buffer overflow");
+            write_b!(b"</title></head><body><h1>CSL ");
+            curr += itoa::write(
+                slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr),
+                teams.year,
+            )
+            .unwrap();
+            write_b!(b"</h1><ul>");
+            for (i, v) in teams.teams.iter().enumerate() {
+                write_b!(b"<li class=\"");
+                if i == 0 {
+                    write_b!(b"champion");
+                }
+                write_b!(b"\"><b>");
+                curr += v_escape(
+                    v.name.as_bytes(),
+                    slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr),
+                )
+                .expect("buffer overflow");
 
                 write_b!(b"</b>: ");
                 curr += itoa::write(

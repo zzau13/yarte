@@ -135,6 +135,7 @@ fn write_bb(b: &[u8]) -> TokenStream {
         .flatten()
         .collect()
 }
+
 impl<'a, T: CodeGen> CodeGen for FixedCodeGen<'a, T> {
     fn gen(&mut self, v: Vec<HIR>) -> TokenStream {
         let mut tokens = TokenStream::new();
