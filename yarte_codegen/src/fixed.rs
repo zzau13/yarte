@@ -61,7 +61,7 @@ fn literal(a: String, parent: &Ident) -> TokenStream {
     let len = a.len();
     let b = a.as_bytes();
     // https://github.com/torvalds/linux/blob/master/arch/x86/lib/memcpy_64.S
-    // https://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-optimization-manual.pdf
+    // https://software.intel.com/content/www/us/en/develop/download/intel-64-and-ia-32-architectures-optimization-reference-manual.html
     match len {
         0 => unreachable!(),
         // For 1 to 7 bytes, is mostly faster write byte-by-byte
