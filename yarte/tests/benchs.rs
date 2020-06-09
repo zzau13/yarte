@@ -1,7 +1,10 @@
+#![cfg(all(feature = "html-min", feature = "fixed"))]
 #![allow(clippy::into_iter_on_ref)]
-#![cfg(feature = "html-min")]
+#![allow(clippy::uninit_assumed_init)]
 
-use yarte::TemplateMin as Template;
+use std::mem::MaybeUninit;
+
+use yarte::{TemplateFixedMin as TemplateFixed, TemplateMin as Template};
 
 #[test]
 fn big_table() {
@@ -16,15 +19,16 @@ fn big_table() {
     }
 
     let table = BigTable { table };
-
-    assert_eq!(
-        table.call().unwrap(),
+    let expected =
         "<table><tr><td>0</td><td>1</td><td>2</td></tr><tr><td>0</td><td>1</td><td>2</td></\
-         tr><tr><td>0</td><td>1</td><td>2</td></tr></table>"
-    );
+         tr><tr><td>0</td><td>1</td><td>2</td></tr></table>";
+    assert_eq!(Template::call(&table).unwrap(), expected);
+    let mut buf: [u8; 256] = unsafe { MaybeUninit::uninit().assume_init() };
+    let b = unsafe { TemplateFixed::call(&table, &mut buf) }.unwrap();
+    assert_eq!(&buf[..b], expected.as_bytes());
 }
 
-#[derive(Template)]
+#[derive(Template, TemplateFixed)]
 #[template(path = "big-table")]
 struct BigTable {
     table: Vec<Vec<usize>>,
@@ -54,16 +58,17 @@ fn teams() {
             },
         ],
     };
-    assert_eq!(
-        teams.call().unwrap(),
-        "<html><head><title>2015</title></head><body><h1>CSL 2015</h1><ul><li \
+    let expected = "<html><head><title>2015</title></head><body><h1>CSL 2015</h1><ul><li \
          class=\"champion\"><b>Jiangsu</b>: 43</li><li class=\"\"><b>Beijing</b>: 27</li><li \
          class=\"\"><b>Guangzhou</b>: 22</li><li class=\"\"><b>Shandong</b>: \
-         12</li></ul></body></html>"
-    );
+         12</li></ul></body></html>";
+    assert_eq!(Template::call(&teams).unwrap(), expected);
+    let mut buf: [u8; 256] = unsafe { MaybeUninit::uninit().assume_init() };
+    let b = unsafe { TemplateFixed::call(&teams, &mut buf) }.unwrap();
+    assert_eq!(&buf[..b], expected.as_bytes());
 }
 
-#[derive(Template)]
+#[derive(Template, TemplateFixed)]
 #[template(path = "teams")]
 struct Teams {
     year: u16,

@@ -14,6 +14,8 @@ mod html;
 mod text;
 pub mod wasm;
 
+#[cfg(all(feature = "fixed", feature = "html-min"))]
+pub use self::fixed::html_min::HTMLMinFixedCodeGen;
 #[cfg(feature = "fixed")]
 pub use self::fixed::{FixedCodeGen, HTMLFixedCodeGen, TextFixedCodeGen};
 #[cfg(feature = "html-min")]

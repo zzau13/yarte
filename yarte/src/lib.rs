@@ -14,7 +14,7 @@ pub use yarte_helpers::{
     recompile, Error, Result,
 };
 
-/// Template trait, will implement by derive like `Display`
+/// Template trait, will implement by derive `fmt::Display`
 pub trait TemplateTrait: fmt::Display {
     /// which will write this template
     fn call(&self) -> Result<String> {
@@ -50,6 +50,7 @@ pub mod aw {
 }
 
 #[cfg(feature = "fixed")]
+/// Template trait
 pub trait TemplateFixedTrait {
     /// Writes to buffer
     ///
@@ -66,3 +67,8 @@ pub use yarte_helpers::helpers::{RenderFixed, RenderSafe};
 pub use TemplateFixedTrait as TemplateFixed;
 #[cfg(feature = "fixed")]
 pub use TemplateFixedTrait as TemplateFixedText;
+
+#[cfg(all(feature = "fixed", feature = "html-min"))]
+pub use yarte_derive::TemplateFixedMin;
+#[cfg(all(feature = "fixed", feature = "html-min"))]
+pub use TemplateFixedTrait as TemplateFixedMin;

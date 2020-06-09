@@ -206,3 +206,21 @@ impl CodeGen for HTMLFixedCodeGen {
         gen(self, v, parent)
     }
 }
+
+#[cfg(feature = "html-min")]
+pub mod html_min {
+    use super::*;
+    use yarte_dom::DOMFmt;
+
+    pub struct HTMLMinFixedCodeGen(pub &'static str);
+    impl EachCodeGen for HTMLMinFixedCodeGen {}
+    impl IfElseCodeGen for HTMLMinFixedCodeGen {}
+
+    impl CodeGen for HTMLMinFixedCodeGen {
+        fn gen(&mut self, v: Vec<HIR>) -> TokenStream {
+            let parent = self.0;
+            let dom: DOMFmt = v.into();
+            gen(self, dom.0, parent)
+        }
+    }
+}
