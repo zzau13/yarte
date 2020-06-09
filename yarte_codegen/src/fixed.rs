@@ -60,8 +60,8 @@ impl<'a, T: CodeGen> FixedCodeGen<'a, T> {
 fn literal(a: String, parent: &Ident) -> TokenStream {
     let len = a.len();
     let b = a.as_bytes();
-    // memcopy writes 8 bytes but pointer should be aligned.
-    // https://github.com/torvalds/linux/blob/master/arch/ia64/lib/memcpy.S#L113-L118
+    // https://github.com/torvalds/linux/blob/master/arch/x86/lib/memcpy_64.S
+    // https://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-optimization-manual.pdf
     match len {
         0 => unreachable!(),
         // For 1 to 7 bytes, is mostly faster write byte-by-byte
