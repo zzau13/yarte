@@ -19,21 +19,21 @@ fn functions(c: &mut Criterion) {
     c.bench_function("Raw Escaped Teams byte-by-byte", raws_teams_escaped);
     c.bench_function("Raw Escaped Teams Memcpy", raw_teams_escaped_memcpy);
     c.bench_function("Fixed Teams", fixed_teams);
-
     c.bench_function("Teams", teams);
     c.bench_function("Teams io writer implements io::Write", io_termcolor_teams);
     c.bench_function("Teams Unescaped", teams_text);
     c.bench_function("Formatter Teams", fmt_teams);
 
     // Big table
-    c.bench_function("Raw Big table byte-by-byte", |b| raw_big_table(b, 100));
-    c.bench_function("Raw Big table Memcpy", |b| raw_big_table_memcpy(b, 100));
-    c.bench_function("Fixed Big Table", |b| fixed_big_table(b, 100));
-    c.bench_function("Fixed Text Big Table", |b| fixed_text_big_table(b, 100));
-    c.bench_function("Formatter Big table", |b| fmt_big_table(b, 100));
-    c.bench_function("Big table", |b| big_table(b, 100));
-    c.bench_function("Big table io writer", |b| io_big_table(b, 100));
-    c.bench_function("Big table Unescaped", |b| big_table_text(b, 100));
+    const SIZE: usize = 100;
+    c.bench_function("Raw Big table byte-by-byte", |b| raw_big_table(b, SIZE));
+    c.bench_function("Raw Big table Memcpy", |b| raw_big_table_memcpy(b, SIZE));
+    c.bench_function("Fixed Big Table", |b| fixed_big_table(b, SIZE));
+    c.bench_function("Fixed Text Big Table", |b| fixed_text_big_table(b, SIZE));
+    c.bench_function("Formatter Big table", |b| fmt_big_table(b, SIZE));
+    c.bench_function("Big table", |b| big_table(b, SIZE));
+    c.bench_function("Big table io writer", |b| io_big_table(b, SIZE));
+    c.bench_function("Big table Unescaped", |b| big_table_text(b, SIZE));
     // TODO: add Techempower fortunes cases
 }
 
