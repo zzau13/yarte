@@ -12,6 +12,10 @@ criterion_group!(benches, functions);
 criterion_main!(benches);
 
 fn functions(c: &mut Criterion) {
+    // 15 bytes
+    c.bench_function("15 bytes byte-by-byte", write_15_bytes);
+    c.bench_function("15 bytes Memcpy", write_15_bytes_memcpy);
+
     // Teams
     c.bench_function("Raw Teams byte-by-byte", raw_teams);
     c.bench_function("Raw Teams Memcpy", raws_teams_memcpy);
@@ -486,13 +490,13 @@ fn raw_teams_escaped_memcpy(b: &mut criterion::Bencher) {
                 slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr),
                 teams.year,
             )
-            .expect("buffer overflow");
+                .expect("buffer overflow");
             write_b!(b"</title></head><body><h1>CSL ");
             curr += itoa::write(
                 slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr),
                 teams.year,
             )
-            .unwrap();
+                .unwrap();
             write_b!(b"</h1><ul>");
             for (i, v) in teams.teams.iter().enumerate() {
                 write_b!(b"<li class=\"");
@@ -504,14 +508,14 @@ fn raw_teams_escaped_memcpy(b: &mut criterion::Bencher) {
                     v.name.as_bytes(),
                     slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr),
                 )
-                .expect("buffer overflow");
+                    .expect("buffer overflow");
 
                 write_b!(b"</b>: ");
                 curr += itoa::write(
                     slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr),
                     v.score,
                 )
-                .expect("buffer overflow");
+                    .expect("buffer overflow");
                 write_b!(b"</li>");
             }
             write_b!(b"</ul></body></html>");
@@ -683,13 +687,64 @@ fn raws_teams_escaped(b: &mut criterion::Bencher) {
                     v.name.as_bytes(),
                     slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr),
                 )
-                .expect("buffer overflow");
+                    .expect("buffer overflow");
                 write_b!(b"</b>: ");
                 write_u16!(v.score);
                 write_b!(b"</li>");
             }
             write_b!(b"</ul></body></html>");
             let _ = slice::from_raw_parts(buf_ptr, curr).to_vec();
+        })
+    }
+}
+
+fn write_15_bytes(b: &mut criterion::Bencher) {
+    unsafe {
+        b.iter(|| {
+            const LEN: usize = 15 * 256;
+            let mut buf: [u8; LEN] = MaybeUninit::uninit().assume_init();
+            let mut curr = 0;
+            let buf_ptr = buf.as_mut_ptr();
+            for _ in 0..256 {
+                *buf_ptr.add(curr) = 22;
+                *buf_ptr.add(curr + 1) = 22;
+                *buf_ptr.add(curr + 2) = 22;
+                *buf_ptr.add(curr + 3) = 22;
+                *buf_ptr.add(curr + 4) = 22;
+                *buf_ptr.add(curr + 5) = 22;
+                *buf_ptr.add(curr + 6) = 22;
+                *buf_ptr.add(curr + 7) = 22;
+                *buf_ptr.add(curr + 8) = 22;
+                *buf_ptr.add(curr + 9) = 22;
+                *buf_ptr.add(curr +  10) = 22;
+                *buf_ptr.add(curr +  11) = 22;
+                *buf_ptr.add(curr +  12) = 22;
+                *buf_ptr.add(curr + 13) = 22;
+                *buf_ptr.add(curr +  14) = 22;
+                curr += 15;
+            }
+            let _ = &buf[..curr].to_vec();
+        })
+    }
+}
+
+fn write_15_bytes_memcpy(b: &mut criterion::Bencher) {
+    unsafe {
+        b.iter(|| {
+            const LEN: usize = 15 * 256;
+            let mut buf: [u8; LEN] = MaybeUninit::uninit().assume_init();
+            let mut curr = 0;
+            let buf_ptr = buf.as_mut_ptr();
+            for _ in 0..256 {
+                const B: [u8; 15] = [22; 15];
+                std::ptr::copy_nonoverlapping(
+                    &B as *const [u8] as *const u8,
+                buf_ptr.add(curr),
+                    15
+                );
+                curr += 15;
+            }
+            let _ = &buf[..curr].to_vec();
         })
     }
 }
