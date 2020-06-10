@@ -12,31 +12,32 @@ criterion_group!(benches, functions);
 criterion_main!(benches);
 
 fn functions(c: &mut Criterion) {
-    c.bench_function("Raw Teams byte-by-byte", safe_max_size_teams);
-    c.bench_function("Raw Teams Memcpy", safe_max_size_teams_memcpy);
-    c.bench_function("Fixed Text Teams", teams_fixed_text);
-    c.bench_function(
-        "Raw Escaped Teams byte-by-byte",
-        safe_max_size_teams_escaped,
-    );
-    c.bench_function("Raw Escaped Teams Memcpy", max_size_teams_escaped_memcpy);
-    c.bench_function("Fixed Teams", teams_fixed);
-    c.bench_function("Raw Big table byte-by-byte", |b| max_size_big_table(b, 100));
-    c.bench_function("Raw Big table Memcpy", |b| {
-        max_size_big_table_memcpy(b, 100)
-    });
-    c.bench_function("Fixed Big Table", |b| big_table_fixed(b, 100));
-    c.bench_function("Fixed Text Big Table", |b| big_table_fixed_text(b, 100));
+    // Teams
+    c.bench_function("Raw Teams byte-by-byte", raw_teams);
+    c.bench_function("Raw Teams Memcpy", raws_teams_memcpy);
+    c.bench_function("Fixed Text Teams", fixed_text_teams);
+    c.bench_function("Raw Escaped Teams byte-by-byte", raws_teams_escaped);
+    c.bench_function("Raw Escaped Teams Memcpy", raw_teams_escaped_memcpy);
+    c.bench_function("Fixed Teams", fixed_teams);
+
     c.bench_function("Teams", teams);
-    c.bench_function("Teams io writer implements io::Write", teams_io_writer);
-    c.bench_function("Teams Unescaped", teams_display);
-    c.bench_function("Formatter Teams", teams_fmt);
-    c.bench_function("Formatter Big table", |b| big_table_fmt(b, 100));
+    c.bench_function("Teams io writer implements io::Write", io_termcolor_teams);
+    c.bench_function("Teams Unescaped", teams_text);
+    c.bench_function("Formatter Teams", fmt_teams);
+
+    // Big table
+    c.bench_function("Raw Big table byte-by-byte", |b| raw_big_table(b, 100));
+    c.bench_function("Raw Big table Memcpy", |b| raw_big_table_memcpy(b, 100));
+    c.bench_function("Fixed Big Table", |b| fixed_big_table(b, 100));
+    c.bench_function("Fixed Text Big Table", |b| fixed_text_big_table(b, 100));
+    c.bench_function("Formatter Big table", |b| fmt_big_table(b, 100));
     c.bench_function("Big table", |b| big_table(b, 100));
-    c.bench_function("Big table io writer", |b| big_table_io_writer(b, 100));
-    c.bench_function("Big table Unescaped", |b| big_table_display(b, 100));
+    c.bench_function("Big table io writer", |b| io_big_table(b, 100));
+    c.bench_function("Big table Unescaped", |b| big_table_text(b, 100));
+    // TODO: add Techempower fortunes cases
 }
 
+// Helpers
 fn build_big_table(size: usize) -> Vec<Vec<usize>> {
     let mut table = Vec::with_capacity(size);
     for _ in 0..size {
@@ -71,11 +72,40 @@ fn build_teams() -> Vec<Team> {
     ]
 }
 
-fn big_table(b: &mut criterion::Bencher, size: usize) {
-    let t = BigTable {
-        table: build_big_table(size),
+struct Team {
+    name: String,
+    score: u8,
+}
+
+// Yarte
+#[derive(Template)]
+#[template(path = "teams")]
+struct Teams {
+    year: u16,
+    teams: Vec<Team>,
+}
+
+fn teams(b: &mut criterion::Bencher) {
+    let teams = Teams {
+        year: 2015,
+        teams: build_teams(),
     };
-    b.iter(|| t.call().unwrap());
+    b.iter(|| teams.call().unwrap());
+}
+
+#[derive(TemplateText)]
+#[template(path = "teams")]
+struct TeamsDisplay {
+    year: u16,
+    teams: Vec<Team>,
+}
+
+fn teams_text(b: &mut criterion::Bencher) {
+    let teams = TeamsDisplay {
+        year: 2015,
+        teams: build_teams(),
+    };
+    b.iter(|| teams.call().unwrap());
 }
 
 #[derive(Template)]
@@ -84,8 +114,8 @@ struct BigTable {
     table: Vec<Vec<usize>>,
 }
 
-fn big_table_display(b: &mut criterion::Bencher, size: usize) {
-    let t = BigTableDisplay {
+fn big_table(b: &mut criterion::Bencher, size: usize) {
+    let t = BigTable {
         table: build_big_table(size),
     };
     b.iter(|| t.call().unwrap());
@@ -97,99 +127,14 @@ struct BigTableDisplay {
     table: Vec<Vec<usize>>,
 }
 
-fn big_table_fmt(b: &mut criterion::Bencher, size: usize) {
-    let t = BigTableFmt {
+fn big_table_text(b: &mut criterion::Bencher, size: usize) {
+    let t = BigTableDisplay {
         table: build_big_table(size),
     };
-    let mut buf = String::with_capacity(t.to_string().len());
-    b.iter(|| {
-        buf.clear();
-        write!(buf, "{}", t).unwrap();
-    });
+    b.iter(|| t.call().unwrap());
 }
 
-struct BigTableFmt {
-    table: Vec<Vec<usize>>,
-}
-
-impl Display for BigTableFmt {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        f.write_str("<table>")?;
-        for i in &self.table {
-            f.write_str("<tr>")?;
-            for j in i {
-                f.write_str("<td>")?;
-                j.fmt(f)?;
-                f.write_str("</td>")?;
-            }
-            f.write_str("</tr>")?;
-        }
-        f.write_str("</table>")
-    }
-}
-
-struct Team {
-    name: String,
-    score: u8,
-}
-
-fn teams(b: &mut criterion::Bencher) {
-    let teams = Teams {
-        year: 2015,
-        teams: build_teams(),
-    };
-    b.iter(|| teams.call().unwrap());
-}
-
-#[derive(Template)]
-#[template(path = "teams")]
-struct Teams {
-    year: u16,
-    teams: Vec<Team>,
-}
-
-fn teams_display(b: &mut criterion::Bencher) {
-    let teams = TeamsDisplay {
-        year: 2015,
-        teams: build_teams(),
-    };
-    b.iter(|| teams.call().unwrap());
-}
-
-#[derive(TemplateFixed)]
-#[template(path = "big-table")]
-struct BigTableF {
-    table: Vec<Vec<usize>>,
-}
-
-fn big_table_fixed(b: &mut criterion::Bencher, size: usize) {
-    let t = BigTableF {
-        table: build_big_table(size),
-    };
-    b.iter(|| {
-        let mut buf: [u8; 109915] = unsafe { MaybeUninit::uninit().assume_init() };
-        let b = unsafe { t.call(&mut buf) }.unwrap();
-        let _ = &buf[..b].to_vec();
-    });
-}
-
-#[derive(TemplateFixedText)]
-#[template(path = "big-table")]
-struct BigTableFT {
-    table: Vec<Vec<usize>>,
-}
-
-fn big_table_fixed_text(b: &mut criterion::Bencher, size: usize) {
-    let t = BigTableFT {
-        table: build_big_table(size),
-    };
-    b.iter(|| {
-        let mut buf: [u8; 109915] = unsafe { MaybeUninit::uninit().assume_init() };
-        let b = unsafe { t.call(&mut buf) }.unwrap();
-        let _ = &buf[..b].to_vec();
-    });
-}
-
+// Fixed
 #[derive(TemplateFixed)]
 #[template(path = "teams")]
 struct TeamsF {
@@ -197,7 +142,7 @@ struct TeamsF {
     teams: Vec<Team>,
 }
 
-fn teams_fixed(b: &mut criterion::Bencher) {
+fn fixed_teams(b: &mut criterion::Bencher) {
     let teams = TeamsF {
         year: 2015,
         teams: build_teams(),
@@ -216,7 +161,7 @@ struct TeamsFT {
     teams: Vec<Team>,
 }
 
-fn teams_fixed_text(b: &mut criterion::Bencher) {
+fn fixed_text_teams(b: &mut criterion::Bencher) {
     let teams = TeamsFT {
         year: 2015,
         teams: build_teams(),
@@ -228,14 +173,42 @@ fn teams_fixed_text(b: &mut criterion::Bencher) {
     });
 }
 
-#[derive(TemplateText)]
-#[template(path = "teams")]
-struct TeamsDisplay {
-    year: u16,
-    teams: Vec<Team>,
+#[derive(TemplateFixed)]
+#[template(path = "big-table")]
+struct BigTableF {
+    table: Vec<Vec<usize>>,
 }
 
-fn teams_fmt(b: &mut criterion::Bencher) {
+fn fixed_big_table(b: &mut criterion::Bencher, size: usize) {
+    let t = BigTableF {
+        table: build_big_table(size),
+    };
+    b.iter(|| {
+        let mut buf: [u8; 109915] = unsafe { MaybeUninit::uninit().assume_init() };
+        let b = unsafe { t.call(&mut buf) }.unwrap();
+        let _ = &buf[..b].to_vec();
+    });
+}
+
+#[derive(TemplateFixedText)]
+#[template(path = "big-table")]
+struct BigTableFT {
+    table: Vec<Vec<usize>>,
+}
+
+fn fixed_text_big_table(b: &mut criterion::Bencher, size: usize) {
+    let t = BigTableFT {
+        table: build_big_table(size),
+    };
+    b.iter(|| {
+        let mut buf: [u8; 109915] = unsafe { MaybeUninit::uninit().assume_init() };
+        let b = unsafe { t.call(&mut buf) }.unwrap();
+        let _ = &buf[..b].to_vec();
+    });
+}
+
+// Fmt
+fn fmt_teams(b: &mut criterion::Bencher) {
     let teams = TeamsFmt {
         year: 2015,
         teams: build_teams(),
@@ -275,10 +248,40 @@ impl Display for TeamsFmt {
     }
 }
 
-fn io_writer_big_table<W: std::io::Write>(
-    f: &mut W,
-    table: &Vec<Vec<usize>>,
-) -> std::io::Result<()> {
+fn fmt_big_table(b: &mut criterion::Bencher, size: usize) {
+    let t = BigTableFmt {
+        table: build_big_table(size),
+    };
+    let mut buf = String::with_capacity(t.to_string().len());
+    b.iter(|| {
+        buf.clear();
+        write!(buf, "{}", t).unwrap();
+    });
+}
+
+struct BigTableFmt {
+    table: Vec<Vec<usize>>,
+}
+
+impl Display for BigTableFmt {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        f.write_str("<table>")?;
+        for i in &self.table {
+            f.write_str("<tr>")?;
+            for j in i {
+                f.write_str("<td>")?;
+                j.fmt(f)?;
+                f.write_str("</td>")?;
+            }
+            f.write_str("</tr>")?;
+        }
+        f.write_str("</table>")
+    }
+}
+
+// Io write
+#[inline]
+fn _io_big_table<W: std::io::Write>(f: &mut W, table: &Vec<Vec<usize>>) -> std::io::Result<()> {
     f.write_all(b"<table>")?;
     for i in table {
         f.write_all(b"<tr>")?;
@@ -292,18 +295,77 @@ fn io_writer_big_table<W: std::io::Write>(
     f.write_all(b"</table>")
 }
 
-fn big_table_io_writer(b: &mut criterion::Bencher, size: usize) {
+fn io_big_table(b: &mut criterion::Bencher, size: usize) {
     let table = build_big_table(size);
     let mut buf = vec![];
-    let _ = io_writer_big_table(&mut buf, &table);
+    let _ = _io_big_table(&mut buf, &table);
     let mut buf = Vec::with_capacity(buf.len());
     b.iter(|| {
         buf.clear();
-        let _ = io_writer_big_table(&mut buf, &table);
+        let _ = _io_big_table(&mut buf, &table);
     });
 }
 
-fn max_size_big_table_memcpy(b: &mut criterion::Bencher, size: usize) {
+// Version of `termcolor`
+struct TeamsWriter<W>(pub W);
+
+impl<W: io::Write> io::Write for TeamsWriter<W> {
+    #[inline]
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.0.write(buf)
+    }
+
+    #[inline]
+    fn flush(&mut self) -> io::Result<()> {
+        self.0.flush()
+    }
+}
+
+impl<W: std::io::Write> TeamsWriter<W> {
+    fn write_str(&mut self, s: &str) -> io::Result<()> {
+        use std::io::Write;
+        self.write_all(s.as_bytes())
+    }
+
+    #[inline]
+    fn io_writer_teams(&mut self, Teams { year, teams }: &Teams) -> std::io::Result<()> {
+        use std::io::Write;
+        self.write_str("<html><head><title>")?;
+        write!(self, "{}", year)?;
+        self.write_str("</title></head><body><h1>CSL ")?;
+        write!(self, "{}", year)?;
+        self.write_str("</h1><ul>")?;
+        for (i, v) in teams.iter().enumerate() {
+            self.write_str("<li class=\"")?;
+            if i == 0 {
+                self.write_str("champion")?;
+            }
+            self.write_str("\"><b>")?;
+            write!(self, "{}", v.name)?;
+            self.write_str("</b>: ")?;
+            write!(self, "{}", v.score)?;
+            self.write_str("</li>")?;
+        }
+        self.write_str("</ul></body></html>")
+    }
+}
+
+fn io_termcolor_teams(b: &mut criterion::Bencher) {
+    let teams = Teams {
+        year: 2015,
+        teams: build_teams(),
+    };
+    let mut buf = TeamsWriter(vec![]);
+    let _ = buf.io_writer_teams(&teams);
+    let len = buf.0.len();
+    b.iter(|| {
+        let mut buf = TeamsWriter(Vec::with_capacity(len));
+        let _ = buf.io_writer_teams(&teams);
+    });
+}
+
+// Raw
+fn raw_big_table_memcpy(b: &mut criterion::Bencher, size: usize) {
     unsafe {
         let table = build_big_table(size);
         const LEN: usize = 109915;
@@ -348,7 +410,7 @@ fn max_size_big_table_memcpy(b: &mut criterion::Bencher, size: usize) {
     }
 }
 
-fn max_size_big_table(b: &mut criterion::Bencher, size: usize) {
+fn raw_big_table(b: &mut criterion::Bencher, size: usize) {
     unsafe {
         let table = build_big_table(size);
         const LEN: usize = 109915;
@@ -391,7 +453,7 @@ fn max_size_big_table(b: &mut criterion::Bencher, size: usize) {
     }
 }
 
-fn max_size_teams_escaped_memcpy(b: &mut criterion::Bencher) {
+fn raw_teams_escaped_memcpy(b: &mut criterion::Bencher) {
     unsafe {
         let teams = Teams {
             year: 2015,
@@ -458,7 +520,7 @@ fn max_size_teams_escaped_memcpy(b: &mut criterion::Bencher) {
     }
 }
 
-fn safe_max_size_teams(b: &mut criterion::Bencher) {
+fn raw_teams(b: &mut criterion::Bencher) {
     unsafe {
         let teams = Teams {
             year: 2015,
@@ -514,7 +576,7 @@ fn safe_max_size_teams(b: &mut criterion::Bencher) {
     }
 }
 
-fn safe_max_size_teams_memcpy(b: &mut criterion::Bencher) {
+fn raws_teams_memcpy(b: &mut criterion::Bencher) {
     unsafe {
         let teams = Teams {
             year: 2015,
@@ -572,7 +634,7 @@ fn safe_max_size_teams_memcpy(b: &mut criterion::Bencher) {
     }
 }
 
-fn safe_max_size_teams_escaped(b: &mut criterion::Bencher) {
+fn raws_teams_escaped(b: &mut criterion::Bencher) {
     unsafe {
         let teams = Teams {
             year: 2015,
@@ -630,62 +692,4 @@ fn safe_max_size_teams_escaped(b: &mut criterion::Bencher) {
             let _ = slice::from_raw_parts(buf_ptr, curr).to_vec();
         })
     }
-}
-
-// Version of `termcolor`
-struct TeamsWriter<W>(pub W);
-
-impl<W: io::Write> io::Write for TeamsWriter<W> {
-    #[inline]
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.0.write(buf)
-    }
-
-    #[inline]
-    fn flush(&mut self) -> io::Result<()> {
-        self.0.flush()
-    }
-}
-
-impl<W: std::io::Write> TeamsWriter<W> {
-    fn write_str(&mut self, s: &str) -> io::Result<()> {
-        use std::io::Write;
-        self.write_all(s.as_bytes())
-    }
-
-    #[inline]
-    fn io_writer_teams(&mut self, Teams { year, teams }: &Teams) -> std::io::Result<()> {
-        use std::io::Write;
-        self.write_str("<html><head><title>")?;
-        write!(self, "{}", year)?;
-        self.write_str("</title></head><body><h1>CSL ")?;
-        write!(self, "{}", year)?;
-        self.write_str("</h1><ul>")?;
-        for (i, v) in teams.iter().enumerate() {
-            self.write_str("<li class=\"")?;
-            if i == 0 {
-                self.write_str("champion")?;
-            }
-            self.write_str("\"><b>")?;
-            write!(self, "{}", v.name)?;
-            self.write_str("</b>: ")?;
-            write!(self, "{}", v.score)?;
-            self.write_str("</li>")?;
-        }
-        self.write_str("</ul></body></html>")
-    }
-}
-
-fn teams_io_writer(b: &mut criterion::Bencher) {
-    let teams = Teams {
-        year: 2015,
-        teams: build_teams(),
-    };
-    let mut buf = TeamsWriter(vec![]);
-    let _ = buf.io_writer_teams(&teams);
-    let len = buf.0.len();
-    b.iter(|| {
-        let mut buf = TeamsWriter(Vec::with_capacity(len));
-        let _ = buf.io_writer_teams(&teams);
-    });
 }
