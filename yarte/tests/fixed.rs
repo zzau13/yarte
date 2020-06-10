@@ -122,5 +122,5 @@ fn test_unaligned() {
     let s = UnAlignedBool { f: true };
     let mut buf: [u8; OUT_L3 * 10] = unsafe { MaybeUninit::uninit().assume_init() };
     let b = unsafe { s.call(&mut buf) }.unwrap();
-    assert_eq!(&buf[..b], "atruefalse".repeat(OUT_L3).as_bytes());
+    assert_eq!(buf[..b].to_vec(), "atruefalse".repeat(OUT_L3).into_bytes());
 }
