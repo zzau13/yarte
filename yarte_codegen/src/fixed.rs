@@ -117,7 +117,7 @@ fn literal(a: String, parent: &Ident) -> TokenStream {
         _ => {
             quote! {{
                 #[doc = #a]
-                const YARTE_SLICE: #parent::Aligned64<[u8; #len]> = #parent::Aligned64([#(#b),*]);
+                const YARTE_SLICE: #parent::Aligned256<[u8; #len]> = #parent::Aligned256([#(#b),*]);
                 __yarte_write_bytes_long!(YARTE_SLICE.0);
             }}
         }

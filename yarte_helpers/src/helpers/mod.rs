@@ -1,5 +1,7 @@
 pub mod io_fmt;
-pub mod memcpy;
+
+#[repr(align(32))]
+pub struct Aligned256<T>(pub T);
 
 #[cfg(feature = "big-num-32")]
 pub mod big_num_32;

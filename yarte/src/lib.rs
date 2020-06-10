@@ -10,7 +10,7 @@ use std::fmt::{self, Write};
 
 pub use yarte_helpers::at_helpers::*;
 pub use yarte_helpers::{
-    helpers::{io_fmt::IoFmt, memcpy::*, Render},
+    helpers::{io_fmt::IoFmt, Aligned256, Render},
     recompile, Error, Result,
 };
 
