@@ -64,8 +64,8 @@ fn literal(a: String, parent: &Ident) -> TokenStream {
     // https://software.intel.com/content/www/us/en/develop/download/intel-64-and-ia-32-architectures-optimization-reference-manual.html
     match len {
         0 => unreachable!(),
-        // For 1 to 7 bytes, is mostly faster write byte-by-byte
-        1..=7 => {
+        // For 1 to 3 bytes, is mostly faster write byte-by-byte
+        1..=3 => {
             let range: TokenStream = write_bb(b);
             quote! {{
                 #[doc = #a]
@@ -75,43 +75,11 @@ fn literal(a: String, parent: &Ident) -> TokenStream {
                 })
             }}
         }
-        // For 8 to 15 bytes, is mostly faster write 4 bytes by 4 bytes
-        // Duplicate data for improve global performance
-        8..=15 => {
-            let range: TokenStream = write_bb(b);
-            let range32: TokenStream = b
-                .chunks(4)
-                .enumerate()
-                .map(|(i, x)| {
-                    if x.len() == 4 {
-                        // Safe conversion because the chunk size is 4 and, yes clippy, read unaligned
-                        #[allow(clippy::cast_ptr_alignment)]
-                        let x = unsafe { (x as *const [u8] as *const u32).read_unaligned() };
-                        let i = 4 * i;
-                        quote!(*(buf_ptr!().add(buf_cur + #i) as *mut u32) = #x;)
-                    } else {
-                        let mut tokens = TokenStream::new();
-                        for (j, x) in x.iter().enumerate() {
-                            let i = 4 * i + j;
-                            tokens.extend(quote!(*buf_ptr!().add(buf_cur + #i) = #x;));
-                        }
-                        tokens
-                    }
-                })
-                .flatten()
-                .collect();
-
+        4..=15 => {
             quote! {{
                 #[doc = #a]
-                __yarte_check_write!(#len, {
-                    if (buf_ptr!() as usize).trailing_zeros() < 2 {
-                        #range
-                    } else {
-                        debug_assert_eq!((buf_ptr!() as usize) % 4, 0);
-                        #range32
-                    }
-                    buf_cur += #len;
-                })
+                const YARTE_SLICE: [u8; #len] = [#(#b),*];
+                __yarte_write_bytes_long!(YARTE_SLICE);
             }}
         }
         _ => {
@@ -161,7 +129,6 @@ impl CodeGen for TextFixedCodeGen {
                 Local(a) => quote!(#a),
                 Lit(a) => literal(a, &parent),
                 Safe(a) | Expr(a) => {
-                    // TODO: check slice builder, raw or cut
                     quote!(buf_cur += #parent::RenderSafe::render(&(#a), &mut buf[buf_cur..])?;)
                 }
                 Each(a) => self.gen_each(*a),
@@ -183,10 +150,8 @@ where
         tokens.extend(match i {
             Local(a) => quote!(#a),
             Lit(a) => literal(a, &parent),
-            // TODO: check slice builder, raw or cut
             Safe(a) => quote!(buf_cur += #parent::RenderSafe::render(&(#a), &mut buf[buf_cur..])?;),
             Expr(a) => {
-                // TODO: check slice builder, raw or cut
                 quote!(buf_cur += #parent::RenderFixed::render(&(#a), &mut buf[buf_cur..])?;)
             }
             Each(a) => codegen.gen_each(*a),
