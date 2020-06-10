@@ -710,6 +710,7 @@ fn raws_teams_escaped(b: &mut criterion::Bencher) {
 }
 
 // 15 bytes
+// TODO: check memset unaligned
 const STEPS: usize = 256;
 #[derive(TemplateFixed)]
 #[template(src = "{{# each 0..STEPS }}{{ \"a\" * 15 }}{{/each }}")]

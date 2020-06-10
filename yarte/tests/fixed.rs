@@ -109,3 +109,18 @@ fn test_for_range() {
     let b = unsafe { s.call(&mut buf) }.unwrap();
     assert_eq!(&buf[..b], b"foo\nfoo\nbar\nbar\nfoo\nbar\nbar\n");
 }
+
+const OUT_L3: usize = 50 * 1024;
+#[derive(TemplateFixed)]
+#[template(src = "{{# each 0..OUT_L3 }}a{{ super::f }}{{ !super::f }}{{/ each}} ")]
+struct UnAlignedBool {
+    f: bool,
+}
+
+#[test]
+fn test_unaligned() {
+    let s = UnAlignedBool { f: true };
+    let mut buf: [u8; OUT_L3 * 10] = unsafe { MaybeUninit::uninit().assume_init() };
+    let b = unsafe { s.call(&mut buf) }.unwrap();
+    assert_eq!(&buf[..b], "atruefalse".repeat(OUT_L3).as_bytes());
+}

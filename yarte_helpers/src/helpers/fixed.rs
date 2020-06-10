@@ -667,33 +667,16 @@ unsafe fn render_bool(b: bool, buf: &mut [u8]) -> Option<usize> {
         if buf.len() < 4 {
             None
         } else {
-            if (buf_ptr!(buf) as usize).trailing_zeros() < 2 {
-                *buf_ptr!(buf) = b't';
-                *buf_ptr!(buf).add(1) = b'r';
-                *buf_ptr!(buf).add(2) = b'u';
-                *buf_ptr!(buf).add(3) = b'e';
-            } else {
-                debug_assert_eq!((buf_ptr!(buf) as usize) % 4, 0);
-                // e_u_r_t
-                *buf_ptr_u32!(buf) = 0x65_75_72_74;
-            }
+            // e_u_r_t
+            *buf_ptr_u32!(buf) = 0x65_75_72_74;
             Some(4)
         }
     } else if buf.len() < 5 {
         None
     } else {
-        if (buf_ptr!(buf) as usize).trailing_zeros() < 2 {
-            *buf_ptr!(buf) = b'f';
-            *buf_ptr!(buf).add(1) = b'a';
-            *buf_ptr!(buf).add(2) = b'l';
-            *buf_ptr!(buf).add(3) = b's';
-            *buf_ptr!(buf).add(4) = b'e';
-        } else {
-            debug_assert_eq!((buf_ptr!(buf) as usize) % 4, 0);
-            // s_l_a_f
-            *buf_ptr_u32!(buf) = 0x73_6C_61_66;
-            *buf_ptr!(buf).add(4) = b'e';
-        }
+        // s_l_a_f
+        *buf_ptr_u32!(buf) = 0x73_6C_61_66;
+        *buf_ptr!(buf).add(4) = b'e';
         Some(5)
     }
 }
