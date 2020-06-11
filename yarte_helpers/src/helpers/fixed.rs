@@ -657,7 +657,7 @@ fn render_char(c: char, buf: &mut [u8]) -> Option<usize> {
 }
 
 /// fast boolean render
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[cfg(target_arch = "x86_64")]
 unsafe fn render_bool(b: bool, buf: &mut [u8]) -> Option<usize> {
     macro_rules! buf_ptr_u32 {
         ($buf:ident) => {
@@ -683,7 +683,7 @@ unsafe fn render_bool(b: bool, buf: &mut [u8]) -> Option<usize> {
 }
 
 /// fast boolean render
-#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+#[cfg(not(target_arch = "x86_64"))]
 unsafe fn render_bool(b: bool, buf: &mut [u8]) -> Option<usize> {
     macro_rules! buf_ptr_u32 {
         ($buf:ident) => {
