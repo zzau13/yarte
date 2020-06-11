@@ -29,6 +29,8 @@ fn main() {
     unsafe {
         render_bool(true, &mut [0; 8]).unwrap();
         render_bool(false, &mut [0; 8]).unwrap();
-        render_bool(true, &mut [0; 8]).unwrap();
+        if render_bool(true, &mut [0; 0]).is_some() {
+            panic!()
+        }
     }
 }
