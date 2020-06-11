@@ -9,6 +9,7 @@ workspace = ".."
 
 [dependencies]
 yarte = { path = "../yarte", version = "*", features = ["html-min", "fixed"]  }
+bytes = "0.5"
 
 [build-dependencies]
 yarte = { path = "../yarte", version = "*" }
