@@ -3,7 +3,7 @@ All struct and function in this crate -- crate those based on the real crates --
 All celebrity code are impersonated.
 The following program contains coarse language and due to its content it should not be used by anyone.
 
-# Yarte [![Latest version](https://img.shields.io/crates/v/yarte.svg)](https://crates.io/crates/yarte) [![Build Status](https://travis-ci.org/botika/yarte.svg?branch=master)](https://travis-ci.org/botika/yarte) [![Financial Contributors on Open Collective](https://opencollective.com/yarte/all/badge.svg?label=financial+contributors)](https://opencollective.com/yarte)
+# Yarte [![Latest version](https://img.shields.io/crates/v/yarte.svg)](https://crates.io/crates/yarte) [![Build Status](https://travis-ci.org/botika/yarte.svg?branch=master)](https://travis-ci.org/botika/yarte)
 Yarte stands for **Y**et **A**nother **R**ust **T**emplate **E**ngine, 
 is the fastest template engine. Uses a Handlebars-like syntax, 
 well-known and intuitive for most developers. Yarte is an optimized, and easy-to-use 

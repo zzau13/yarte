@@ -1,6 +1,6 @@
 [package]
 name = "yarte_hir"
-version = "0.9.9"
+version = "0.9.10"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "Intermediate representation for yarte"
 categories = ["template-engine", "web-programming", "gui"]
@@ -20,8 +20,8 @@ maintenance = { status = "actively-developed" }
 wasm-app = []
 
 [dependencies]
-yarte_helpers = { version = "0.9.9", path = "../yarte_helpers" }
-yarte_parser = { version = "0.9.9", path = "../yarte_parser" }
+yarte_helpers = { version = "0.9.10", path = "../yarte_helpers" }
+yarte_parser = { version = "0.9.10", path = "../yarte_parser" }
 
 v_eval = "0.6"
 v_htmlescape = "0.6"
