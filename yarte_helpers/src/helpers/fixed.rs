@@ -657,6 +657,7 @@ fn render_char(c: char, buf: &mut [u8]) -> Option<usize> {
 }
 
 /// fast boolean render
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 unsafe fn render_bool(b: bool, buf: &mut [u8]) -> Option<usize> {
     macro_rules! buf_ptr_u32 {
         ($buf:ident) => {
@@ -677,6 +678,29 @@ unsafe fn render_bool(b: bool, buf: &mut [u8]) -> Option<usize> {
         // s_l_a_f
         *buf_ptr_u32!(buf) = 0x73_6C_61_66;
         *buf_ptr!(buf).add(4) = b'e';
+        Some(5)
+    }
+}
+
+/// fast boolean render
+#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+unsafe fn render_bool(b: bool, buf: &mut [u8]) -> Option<usize> {
+    macro_rules! buf_ptr_u32 {
+        ($buf:ident) => {
+            $buf as *mut [u8] as *mut u32
+        };
+    }
+    if b {
+        if buf.len() < 4 {
+            None
+        } else {
+            (&mut buf[..4]).copy_from_slice(b"true");
+            Some(4)
+        }
+    } else if buf.len() < 5 {
+        None
+    } else {
+        (&mut buf[..5]).copy_from_slice(b"false");
         Some(5)
     }
 }
