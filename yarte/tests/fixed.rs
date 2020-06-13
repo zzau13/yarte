@@ -41,7 +41,7 @@ fn test_escape() {
     let s = EscapeTemplate { name: "<>&\"" };
     let mut buf: [u8; 64] = unsafe { MaybeUninit::uninit().assume_init() };
     let b = unsafe { s.call(&mut buf) }.unwrap();
-    assert_eq!(&buf[..b], "Hello, &lt;&gt;&amp;&quot;!".as_bytes());
+    assert_eq!(&buf[..b], b"Hello, &lt;&gt;&amp;&quot;!");
 }
 
 #[derive(TemplateFixed)]
