@@ -44,12 +44,9 @@ fn test_variables() {
 
 #[test]
 fn test_escape() {
-    let name = "<>&\"'/";
+    let name = "<>&\"";
 
-    assert_eq!(
-        "Hello, &lt;&gt;&amp;&quot;&#x27;&#x2f;!",
-        yformat_html!("{{> hello }}")
-    );
+    assert_eq!("Hello, &lt;&gt;&amp;&quot;!", yformat_html!("{{> hello }}"));
 }
 
 #[test]
