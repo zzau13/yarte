@@ -433,7 +433,7 @@ struct RawStaticTemplate;
 #[test]
 fn test_raw_static() {
     let t = RawStaticTemplate;
-    assert_eq!(t.call().unwrap(), "{{R }} {{&#x2f;R}}");
+    assert_eq!(t.call().unwrap(), "{{R }} {{/R}}");
 }
 
 fn hello() -> &'static str {

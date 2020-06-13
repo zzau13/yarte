@@ -66,9 +66,9 @@ struct EscapeTemplate<'a> {
 
 #[test]
 fn test_escape() {
-    let s = EscapeTemplate { name: "<>&\"'/" };
+    let s = EscapeTemplate { name: "<>&\"" };
 
-    assert_eq!(s.call().unwrap(), "Hello, &lt;&gt;&amp;&quot;&#x27;&#x2f;!");
+    assert_eq!(s.call().unwrap(), "Hello, &lt;&gt;&amp;&quot;!");
 }
 
 #[derive(TemplateText)]

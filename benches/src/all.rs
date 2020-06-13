@@ -17,6 +17,11 @@ fn functions(c: &mut Criterion) {
     c.bench_function("3 bytes Memcpy", write_3_bytes_memcpy);
     c.bench_function("3 bytes", write_3_bytes);
 
+    // 4 bytes
+    c.bench_function("4 bytes byte-by-byte", write_4_bytes_bb);
+    c.bench_function("4 bytes Memcpy", write_4_bytes_memcpy);
+    c.bench_function("4 bytes", write_4_bytes);
+
     // 7 bytes
     c.bench_function("7 bytes byte-by-byte", write_7_bytes_bb);
     c.bench_function("7 bytes Memcpy", write_7_bytes_memcpy);
@@ -833,6 +838,72 @@ fn write_7_bytes_bb(b: &mut criterion::Bencher) {
 
 fn write_7_bytes_memcpy(b: &mut criterion::Bencher) {
     const BYTES: usize = 7;
+    unsafe {
+        b.iter(|| {
+            const LEN: usize = BYTES * STEPS;
+            let mut buf: [u8; LEN] = MaybeUninit::uninit().assume_init();
+            let mut curr = 0;
+            let buf_ptr = buf.as_mut_ptr();
+            for _ in 0..STEPS {
+                if LEN < curr + BYTES {
+                    panic!("buffer overflow");
+                } else {
+                    const B: [u8; BYTES] = [b'a'; BYTES];
+                    std::ptr::copy_nonoverlapping(
+                        &B as *const [u8] as *const u8,
+                        buf_ptr.add(curr),
+                        BYTES,
+                    );
+                    curr += BYTES;
+                }
+            }
+            let _ = &buf[..curr].to_vec();
+        })
+    }
+}
+
+// 4 bytes
+#[derive(TemplateFixed)]
+#[template(src = "{{# each 0..STEPS }}{{ \"a\" * 4 }}{{/each }}")]
+struct Fixed4b;
+
+fn write_4_bytes(b: &mut criterion::Bencher) {
+    unsafe {
+        b.iter(|| {
+            const LEN: usize = 4 * STEPS;
+            let mut buf: [u8; LEN] = MaybeUninit::uninit().assume_init();
+            let curr = TemplateFixed::call(&Fixed4b, &mut buf).unwrap();
+            let _ = &buf[..curr].to_vec();
+        })
+    }
+}
+
+fn write_4_bytes_bb(b: &mut criterion::Bencher) {
+    const BYTES: usize = 4;
+    unsafe {
+        b.iter(|| {
+            const LEN: usize = BYTES * STEPS;
+            let mut buf: [u8; LEN] = MaybeUninit::uninit().assume_init();
+            let mut curr = 0;
+            let buf_ptr = buf.as_mut_ptr();
+            for _ in 0..STEPS {
+                if LEN < curr + BYTES {
+                    panic!("buffer overflow");
+                } else {
+                    *buf_ptr.add(curr) = b'a';
+                    *buf_ptr.add(curr + 1) = b'a';
+                    *buf_ptr.add(curr + 2) = b'a';
+                    *buf_ptr.add(curr + 3) = b'a';
+                    curr += BYTES;
+                }
+            }
+            let _ = &buf[..curr].to_vec();
+        })
+    }
+}
+
+fn write_4_bytes_memcpy(b: &mut criterion::Bencher) {
+    const BYTES: usize = 4;
     unsafe {
         b.iter(|| {
             const LEN: usize = BYTES * STEPS;
