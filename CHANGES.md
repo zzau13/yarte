@@ -1,4 +1,25 @@
 # Changes
+## [0.10.0] (2020-06-15)
+## Added
+- `TemplateFixedTrait` for render to `&mut [u8]`
+- Use `dtoa` and `itoa` for render number
+- Escape char
+
+## Update
+- `v_htmlescape` to 0.7
+
+## [0.9.0] (2020-05-05)
+## Added
+- compile error at derive struct
+
+## Update
+- `v_eval` to 0.5
+- use `proc_macro2` force fallback
+
+## Fixed
+- default recursion at 128
+- change attribute `recursion-limit` to `recursion`
+
 ## [0.8.0] (2020-04-24)
 ## Added
 - `{{ @json obj }}` and `{{ @json_pretty obj }}` @helpers 
