@@ -867,6 +867,7 @@ fn write_7_bytes_memcpy(b: &mut criterion::Bencher) {
 #[template(src = "{{# each 0..STEPS }}{{ \"a\" * 4 }}{{/each }}")]
 struct Fixed4b;
 
+// TODO: unalign and check
 fn write_4_bytes(b: &mut criterion::Bencher) {
     unsafe {
         b.iter(|| {

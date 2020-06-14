@@ -656,52 +656,21 @@ fn render_char(c: char, buf: &mut [u8]) -> Option<usize> {
     }
 }
 
-/// fast boolean render
-#[cfg(target_arch = "x86_64")]
 unsafe fn render_bool(b: bool, buf: &mut [u8]) -> Option<usize> {
-    macro_rules! buf_ptr_u32 {
-        ($buf:ident) => {
-            $buf as *mut [u8] as *mut u32
-        };
-    }
+    const T: &[u8] = b"true";
+    const F: &[u8] = b"false";
     if b {
-        if buf.len() < 4 {
+        if buf.len() < T.len() {
             None
         } else {
-            // e_u_r_t
-            *buf_ptr_u32!(buf) = 0x65_75_72_74;
-            Some(4)
+            copy_nonoverlapping(T.as_ptr(), buf.as_mut_ptr(), T.len());
+            Some(T.len())
         }
-    } else if buf.len() < 5 {
+    } else if buf.len() < F.len() {
         None
     } else {
-        // s_l_a_f
-        *buf_ptr_u32!(buf) = 0x73_6C_61_66;
-        *buf_ptr!(buf).add(4) = b'e';
-        Some(5)
-    }
-}
-
-/// fast boolean render
-#[cfg(not(target_arch = "x86_64"))]
-unsafe fn render_bool(b: bool, buf: &mut [u8]) -> Option<usize> {
-    macro_rules! buf_ptr_u32 {
-        ($buf:ident) => {
-            $buf as *mut [u8] as *mut u32
-        };
-    }
-    if b {
-        if buf.len() < 4 {
-            None
-        } else {
-            (&mut buf[..4]).copy_from_slice(b"true");
-            Some(4)
-        }
-    } else if buf.len() < 5 {
-        None
-    } else {
-        (&mut buf[..5]).copy_from_slice(b"false");
-        Some(5)
+        copy_nonoverlapping(F.as_ptr(), buf.as_mut_ptr(), F.len());
+        Some(F.len())
     }
 }
 

@@ -10,6 +10,7 @@
 //! This module contains functionality for managing the DOM, including adding/removing nodes.
 //!
 //! It can be used by a parser to create the DOM graph structure in memory.
+#![allow(clippy::manual_non_exhaustive)]
 use std::{borrow::Cow, fmt, ops::Deref};
 
 use markup5ever::{
