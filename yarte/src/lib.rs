@@ -53,10 +53,7 @@ pub mod aw {
 /// Template trait
 pub trait TemplateFixedTrait {
     /// Writes to buffer
-    ///
-    /// # Safety
-    /// Return None before buffer overruns but write up there
-    fn call(&self, buf: &mut [std::mem::MaybeUninit<u8>]) -> Option<&[u8]>;
+    fn call<'call>(&self, buf: &'call mut [std::mem::MaybeUninit<u8>]) -> Option<&'call [u8]>;
 }
 
 #[cfg(feature = "fixed")]

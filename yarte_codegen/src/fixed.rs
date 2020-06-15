@@ -27,7 +27,7 @@ impl<'a, T: CodeGen> FixedCodeGen<'a, T> {
         tokens.extend(self.s.implement_head(
             quote!(yarte::TemplateFixedTrait),
             &quote!(
-                fn call(&self, buf: &mut [std::mem::MaybeUninit<u8>]) -> Option<&[u8]> {
+                fn call<'call>(&self, buf: &'call mut [std::mem::MaybeUninit<u8>]) -> Option<&'call [u8]> {
                     unsafe {
                     #[allow(unused_import)]
                     use #parent::*;
