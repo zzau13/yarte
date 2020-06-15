@@ -21,6 +21,6 @@
 pub use yarte_derive::{yformat, yformat_html};
 pub use yarte_helpers::{
     at_helpers::*,
-    helpers::{display_fn::DisplayFn, Render},
+    helpers::{display_fn::DisplayFn, Render, RenderA},
     recompile, Error, Result,
 };
