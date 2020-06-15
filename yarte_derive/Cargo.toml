@@ -24,6 +24,7 @@ wasm-app = ["yarte_hir/wasm-app", "yarte_codegen/wasm-app"]
 html-min = ["yarte_codegen/html-min"]
 wasm-server = ["yarte_codegen/wasm-server"]
 fixed = ["yarte_codegen/fixed", "yarte_helpers/fixed"]
+bytes = ["fixed", "yarte_codegen/bytes"]
 
 [dependencies]
 yarte_codegen = { version = "0.10.0", path = "../yarte_codegen" }

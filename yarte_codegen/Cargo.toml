@@ -17,10 +17,11 @@ travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [features]
-wasm-app = ["indexmap", "heck", "yarte_hir/wasm-app", "yarte_dom/wasm-app"]
-html-min = ["yarte_dom", "yarte_html"]
-wasm-server = ["yarte_dom", "yarte_html"]
+bytes = ["fixed"]
 fixed = []
+html-min = ["yarte_dom", "yarte_html"]
+wasm-app = ["indexmap", "heck", "yarte_hir/wasm-app", "yarte_dom/wasm-app"]
+wasm-server = ["yarte_dom", "yarte_html"]
 
 [dependencies]
 yarte_helpers = { version = "0.10.0", path = "../yarte_helpers" }

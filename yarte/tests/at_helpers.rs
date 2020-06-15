@@ -50,6 +50,7 @@ mod json {
     #[cfg(feature = "fixed")]
     mod fixed {
         use super::*;
+        use std::mem::MaybeUninit;
         use yarte::{TemplateFixed, TemplateFixedText};
 
         #[derive(TemplateFixed)]
@@ -65,7 +66,7 @@ mod json {
         }
 
         #[derive(TemplateFixedText)]
-        #[template(src = "{{ @json f }}")]
+        #[template(src = "{{ @json f }}", print = "code")]
         struct JsonTemplateFT {
             f: Json,
         }
@@ -80,24 +81,33 @@ mod json {
         fn json() {
             let f = Json { f: 1 };
             let t = JsonTemplateF { f };
-            let mut buf: [u8; 1024] = unsafe { std::mem::MaybeUninit::uninit().assume_init() };
-            let b = unsafe { t.call(&mut buf) }.unwrap();
-            assert_eq!(serde_json::to_vec(&f).unwrap(), buf[..b].to_vec());
+
+            let mut buf = [MaybeUninit::uninit(); 1024];
+            assert_eq!(
+                serde_json::to_string(&f).unwrap().as_bytes(),
+                t.call(&mut buf).unwrap()
+            );
 
             let t = JsonPrettyTemplateF { f };
-            let mut buf: [u8; 1024] = unsafe { std::mem::MaybeUninit::uninit().assume_init() };
-            let b = unsafe { t.call(&mut buf) }.unwrap();
-            assert_eq!(serde_json::to_vec_pretty(&f).unwrap(), buf[..b].to_vec());
+            let mut buf = [MaybeUninit::uninit(); 1024];
+            assert_eq!(
+                serde_json::to_string_pretty(&f).unwrap().as_bytes(),
+                t.call(&mut buf).unwrap()
+            );
 
             let t = JsonTemplateFT { f };
-            let mut buf: [u8; 1024] = unsafe { std::mem::MaybeUninit::uninit().assume_init() };
-            let b = unsafe { t.call(&mut buf) }.unwrap();
-            assert_eq!(serde_json::to_vec(&f).unwrap(), buf[..b].to_vec());
+            let mut buf = [MaybeUninit::uninit(); 1024];
+            assert_eq!(
+                serde_json::to_string(&f).unwrap().as_bytes(),
+                t.call(&mut buf).unwrap()
+            );
 
             let t = JsonPrettyTemplateFT { f };
-            let mut buf: [u8; 1024] = unsafe { std::mem::MaybeUninit::uninit().assume_init() };
-            let b = unsafe { t.call(&mut buf) }.unwrap();
-            assert_eq!(serde_json::to_vec_pretty(&f).unwrap(), buf[..b].to_vec());
+            let mut buf = [MaybeUninit::uninit(); 1024];
+            assert_eq!(
+                serde_json::to_string_pretty(&f).unwrap().as_bytes(),
+                t.call(&mut buf).unwrap()
+            );
         }
     }
 }

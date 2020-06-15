@@ -6,6 +6,7 @@ use yarte_hir::{Each, IfElse, HIR};
 
 #[macro_use]
 mod macros;
+mod bytes;
 #[cfg(feature = "fixed")]
 mod fixed;
 mod fmt;
@@ -14,6 +15,8 @@ mod html;
 mod text;
 pub mod wasm;
 
+#[cfg(feature = "bytes")]
+pub use self::bytes::BytesCodeGen;
 #[cfg(all(feature = "fixed", feature = "html-min"))]
 pub use self::fixed::html_min::HTMLMinFixedCodeGen;
 #[cfg(feature = "fixed")]

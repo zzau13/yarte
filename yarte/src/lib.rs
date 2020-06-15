@@ -56,13 +56,13 @@ pub trait TemplateFixedTrait {
     ///
     /// # Safety
     /// Return None before buffer overruns but write up there
-    unsafe fn call(&self, buf: &mut [u8]) -> Option<usize>;
+    fn call(&self, buf: &mut [std::mem::MaybeUninit<u8>]) -> Option<&[u8]>;
 }
 
 #[cfg(feature = "fixed")]
 pub use yarte_derive::{TemplateFixed, TemplateFixedText};
 #[cfg(feature = "fixed")]
-pub use yarte_helpers::helpers::{RenderFixed, RenderSafe};
+pub use yarte_helpers::helpers::{RenderFixed, RenderFixedA, RenderSafe, RenderSafeA};
 #[cfg(feature = "fixed")]
 pub use TemplateFixedTrait as TemplateFixed;
 #[cfg(feature = "fixed")]
@@ -72,3 +72,20 @@ pub use TemplateFixedTrait as TemplateFixedText;
 pub use yarte_derive::TemplateFixedMin;
 #[cfg(all(feature = "fixed", feature = "html-min"))]
 pub use TemplateFixedTrait as TemplateFixedMin;
+
+#[cfg(feature = "bytes_buff")]
+/// Template trait
+pub trait TemplateBytesTrait {
+    /// Writes to buffer and return it freeze
+    fn call(&self, capacity: usize) -> Option<bytes::Bytes>;
+}
+
+#[cfg(feature = "bytes_buff")]
+pub use yarte_derive::{TemplateBytes, TemplateBytesText};
+#[cfg(feature = "bytes_buff")]
+pub use TemplateBytesTrait as TemplateBytes;
+#[cfg(feature = "bytes_buff")]
+pub use TemplateBytesTrait as TemplateBytesText;
+
+#[cfg(feature = "bytes_buff")]
+pub use bytes::{BufMut, Bytes, BytesMut};

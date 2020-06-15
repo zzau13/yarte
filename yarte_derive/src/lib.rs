@@ -69,6 +69,7 @@ pub fn template_ptr(input: TokenStream) -> TokenStream {
         Box::new(yarte_codegen::FixedCodeGen::new(
             yarte_codegen::TextFixedCodeGen("yarte"),
             s,
+            "yarte",
         ))
     }
 
@@ -85,10 +86,47 @@ pub fn template_ptr(input: TokenStream) -> TokenStream {
 
 #[proc_macro_derive(TemplateFixed, attributes(template))]
 #[cfg(feature = "fixed")]
-/// Implements TemplateTrait with html escape functionality
+/// Implements TemplateFixedTrait with html escape functionality
 pub fn template_html_ptr(input: TokenStream) -> TokenStream {
     fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
         Box::new(yarte_codegen::FixedCodeGen::new(
+            yarte_codegen::HTMLFixedCodeGen("yarte"),
+            s,
+            "yarte",
+        ))
+    }
+    let i = &syn::parse(input).unwrap();
+    build!(i, get_codegen, Default::default())
+}
+
+#[proc_macro_derive(TemplateBytesText, attributes(template))]
+#[cfg(feature = "bytes")]
+/// Implements TemplateBytesTrait without html escape functionality
+pub fn template_bytes(input: TokenStream) -> TokenStream {
+    fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
+        Box::new(yarte_codegen::BytesCodeGen::new(
+            yarte_codegen::TextFixedCodeGen("yarte"),
+            s,
+        ))
+    }
+
+    let i = &syn::parse(input).unwrap();
+    build!(
+        i,
+        get_codegen,
+        HIROptions {
+            is_text: true,
+            ..Default::default()
+        }
+    )
+}
+
+#[proc_macro_derive(TemplateBytes, attributes(template))]
+#[cfg(feature = "bytes")]
+/// Implements TemplateBytesTrait with html escape functionality
+pub fn template_html_bytes(input: TokenStream) -> TokenStream {
+    fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
+        Box::new(yarte_codegen::BytesCodeGen::new(
             yarte_codegen::HTMLFixedCodeGen("yarte"),
             s,
         ))
@@ -106,6 +144,7 @@ pub fn template_html_min_ptr(input: TokenStream) -> TokenStream {
         Box::new(yarte_codegen::FixedCodeGen::new(
             yarte_codegen::HTMLMinFixedCodeGen("yarte"),
             s,
+            "yarte",
         ))
     }
     let i = &syn::parse(input).unwrap();

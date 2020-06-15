@@ -8,22 +8,31 @@ use crate::{CodeGen, EachCodeGen, IfElseCodeGen};
 pub struct FixedCodeGen<'a, T: CodeGen> {
     codegen: T,
     s: &'a Struct<'a>,
+    parent: Ident,
 }
 
 impl<'a, T: CodeGen> FixedCodeGen<'a, T> {
-    pub fn new<'n>(codegen: T, s: &'n Struct) -> FixedCodeGen<'n, T> {
-        FixedCodeGen { codegen, s }
+    pub fn new<'n>(codegen: T, s: &'n Struct, parent: &'static str) -> FixedCodeGen<'n, T> {
+        FixedCodeGen {
+            codegen,
+            s,
+            parent: format_ident!("{}", parent),
+        }
     }
 
     #[inline]
     fn template(&mut self, nodes: Vec<HIR>, tokens: &mut TokenStream) {
         let nodes = self.codegen.gen(nodes);
+        let parent = &self.parent;
         tokens.extend(self.s.implement_head(
             quote!(yarte::TemplateFixedTrait),
             &quote!(
-                unsafe fn call(&self, buf: &mut [u8]) -> Option<usize> {
+                fn call(&self, buf: &mut [std::mem::MaybeUninit<u8>]) -> Option<&[u8]> {
+                    unsafe {
+                    #[allow(unused_import)]
+                    use #parent::*;
                     macro_rules! buf_ptr {
-                        () => { buf as *mut [u8] as * mut u8 };
+                        () => { buf as *mut _ as * mut u8 };
                     }
                     macro_rules! len {
                         () => { buf.len() };
@@ -43,14 +52,15 @@ impl<'a, T: CodeGen> FixedCodeGen<'a, T> {
                         ($b:expr) => {
                             __yarte_check_write!($b.len(), {
                                 // Not use copy_from_slice for elide double checked
-                                std::ptr::copy_nonoverlapping((&$b as *const [u8] as *const u8), buf_ptr!().add(buf_cur), $b.len());
+                                std::ptr::copy_nonoverlapping((&$b as *const _ as *const u8), buf_ptr!().add(buf_cur), $b.len());
                                 buf_cur += $b.len();
                             })
                         };
                     }
 
                     #nodes
-                    Some(buf_cur)
+                    Some(std::slice::from_raw_parts(buf as *const _ as *const u8, buf_cur))
+                    }
                 }
             ),
         ));
@@ -129,7 +139,7 @@ impl CodeGen for TextFixedCodeGen {
                 Local(a) => quote!(#a),
                 Lit(a) => literal(a, &parent),
                 Safe(a) | Expr(a) => {
-                    quote!(buf_cur += #parent::RenderSafe::render(&(#a), &mut buf[buf_cur..])?;)
+                    quote!(buf_cur += &(#a).__render_it_safe(&mut buf[buf_cur..])?;)
                 }
                 Each(a) => self.gen_each(*a),
                 IfElse(a) => self.gen_if_else(*a),
@@ -150,10 +160,8 @@ where
         tokens.extend(match i {
             Local(a) => quote!(#a),
             Lit(a) => literal(a, &parent),
-            Safe(a) => quote!(buf_cur += #parent::RenderSafe::render(&(#a), &mut buf[buf_cur..])?;),
-            Expr(a) => {
-                quote!(buf_cur += #parent::RenderFixed::render(&(#a), &mut buf[buf_cur..])?;)
-            }
+            Safe(a) => quote!(buf_cur += &(#a).__render_it_safe(&mut buf[buf_cur..])?;),
+            Expr(a) => quote!(buf_cur += &(#a).__render_it(&mut buf[buf_cur..])?;),
             Each(a) => codegen.gen_each(*a),
             IfElse(a) => codegen.gen_if_else(*a),
         })
