@@ -6,7 +6,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 
 use itoa;
 use v_htmlescape::v_escape;
-use yarte::{Template, TemplateBytes, TemplateFixed, TemplateFixedText, TemplateText};
+use yarte::{Template, TemplateBytes, TemplateBytesText, TemplateFixed, TemplateFixedText, TemplateText};
 
 criterion_group!(benches, functions);
 criterion_main!(benches);
@@ -21,6 +21,7 @@ fn functions(c: &mut Criterion) {
     c.bench_function("Raw Teams byte-by-byte", raw_teams);
     c.bench_function("Raw Teams Memcpy", raws_teams_memcpy);
     c.bench_function("Fixed Text Teams", fixed_text_teams);
+    c.bench_function("Bytes Text Teams", bytes_text_teams);
     c.bench_function("Raw Escaped Teams byte-by-byte", raws_teams_escaped);
     c.bench_function("Raw Escaped Teams Memcpy", raw_teams_escaped_memcpy);
     c.bench_function("Fixed Teams", fixed_teams);
@@ -35,7 +36,9 @@ fn functions(c: &mut Criterion) {
     c.bench_function("Raw Big table byte-by-byte", |b| raw_big_table(b, SIZE));
     c.bench_function("Raw Big table Memcpy", |b| raw_big_table_memcpy(b, SIZE));
     c.bench_function("Fixed Big Table", |b| fixed_big_table(b, SIZE));
+    c.bench_function("Bytes Big Table", |b| bytes_big_table(b, SIZE));
     c.bench_function("Fixed Text Big Table", |b| fixed_text_big_table(b, SIZE));
+    c.bench_function("Bytes Text Big Table", |b| bytes_text_big_table(b, SIZE));
     c.bench_function("Formatter Big table", |b| fmt_big_table(b, SIZE));
     c.bench_function("Big table", |b| big_table(b, SIZE));
     c.bench_function("Big table io writer", |b| io_big_table(b, SIZE));
@@ -153,6 +156,53 @@ fn bytes_teams(b: &mut criterion::Bencher) {
         teams: build_teams(),
     };
     b.iter(|| teams.call(2048).unwrap());
+}
+
+#[derive(TemplateBytesText)]
+#[template(path = "teams")]
+struct TeamsBT {
+    year: u16,
+    teams: Vec<Team>,
+}
+
+fn bytes_text_teams(b: &mut criterion::Bencher) {
+    let teams = TeamsBT {
+        year: 2015,
+        teams: build_teams(),
+    };
+    b.iter(|| {
+        let _ = teams.call(2048).unwrap();
+    });
+}
+
+#[derive(TemplateBytes)]
+#[template(path = "big-table")]
+struct BigTableB {
+    table: Vec<Vec<usize>>,
+}
+
+fn bytes_big_table(b: &mut criterion::Bencher, size: usize) {
+    let t = BigTableB {
+        table: build_big_table(size),
+    };
+    b.iter(|| {
+        let _ = t.call(109915).unwrap();
+    });
+}
+
+#[derive(TemplateBytesText)]
+#[template(path = "big-table")]
+struct BigTableBT {
+    table: Vec<Vec<usize>>,
+}
+
+fn bytes_text_big_table(b: &mut criterion::Bencher, size: usize) {
+    let t = BigTableBT {
+        table: build_big_table(size),
+    };
+    b.iter(|| {
+        let _ = t.call(109915).unwrap();
+    });
 }
 
 // Fixed
