@@ -1,7 +1,7 @@
 //! Yarte stands for **Y**et **A**nother **R**ust **T**emplate **E**ngine,
 //! is the fastest template engine. Uses a Handlebars-like syntax,
 //! well known and intuitive for most developers. Yarte is an optimized, and easy-to-use
-//! rust crate, can create logic around their templates using using conditionals, loops,
+//! rust crate, can create logic around their templates using conditionals, loops,
 //! rust code and templates composition.
 //!
 //! [Yarte book](https://yarte.netlify.com)
