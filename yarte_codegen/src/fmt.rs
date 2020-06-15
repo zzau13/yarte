@@ -1,5 +1,5 @@
-use proc_macro2::TokenStream;
-use quote::quote;
+use proc_macro2::{Ident, TokenStream};
+use quote::{format_ident, quote};
 
 use yarte_hir::{Struct, HIR};
 
@@ -8,11 +8,16 @@ use crate::CodeGen;
 pub struct FmtCodeGen<'a, T: CodeGen> {
     codegen: T,
     s: &'a Struct<'a>,
+    parent: Ident,
 }
 
 impl<'a, T: CodeGen> FmtCodeGen<'a, T> {
-    pub fn new<'n>(codegen: T, s: &'n Struct) -> FmtCodeGen<'n, T> {
-        FmtCodeGen { codegen, s }
+    pub fn new<'n>(codegen: T, s: &'n Struct, parent: &'static str) -> FmtCodeGen<'n, T> {
+        FmtCodeGen {
+            codegen,
+            s,
+            parent: format_ident!("{}", parent),
+        }
     }
 
     #[inline]
@@ -30,8 +35,13 @@ impl<'a, T: CodeGen> FmtCodeGen<'a, T> {
         let nodes = self.codegen.gen(nodes);
         // heuristic based on https://github.com/lfairy/maud
         let size_hint = nodes.to_string().len();
+        let parent = &self.parent;
         let func = quote!(
             fn fmt(&self, _fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+                #[allow(unused_imports)]
+                use std::fmt::Display;
+                #[allow(unused_imports)]
+                use #parent::*;
                 #nodes
                 Ok(())
             }

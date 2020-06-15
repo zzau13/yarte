@@ -37,7 +37,7 @@ macro_rules! build {
 /// Implements TemplateTrait without html escape functionality
 pub fn template(input: TokenStream) -> TokenStream {
     fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
-        Box::new(FmtCodeGen::new(TextCodeGen, s))
+        Box::new(FmtCodeGen::new(TextCodeGen, s, "yarte"))
     }
 
     let i = &syn::parse(input).unwrap();
@@ -55,7 +55,7 @@ pub fn template(input: TokenStream) -> TokenStream {
 /// Implements TemplateTrait with html escape functionality
 pub fn template_html(input: TokenStream) -> TokenStream {
     fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
-        Box::new(FmtCodeGen::new(HTMLCodeGen("yarte"), s))
+        Box::new(FmtCodeGen::new(HTMLCodeGen, s, "yarte"))
     }
     let i = &syn::parse(input).unwrap();
     build!(i, get_codegen, Default::default())
@@ -175,7 +175,7 @@ pub fn template_html_min_bytes(input: TokenStream) -> TokenStream {
 /// Implements TemplateTrait with html minifier
 pub fn template_html_min(input: TokenStream) -> TokenStream {
     fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
-        Box::new(FmtCodeGen::new(yarte_codegen::HTMLMinCodeGen("yarte"), s))
+        Box::new(FmtCodeGen::new(yarte_codegen::HTMLMinCodeGen, s, "yarte"))
     }
     let i = &syn::parse(input).unwrap();
     build!(i, get_codegen, Default::default())
@@ -213,6 +213,7 @@ pub fn template_wasm_server(input: TokenStream) -> TokenStream {
         Box::new(FmtCodeGen::new(
             yarte_codegen::server::WASMCodeGen::new(s),
             s,
+            "yarte",
         ))
     }
     let i = &syn::parse(input).unwrap();
@@ -224,7 +225,7 @@ pub fn template_wasm_server(input: TokenStream) -> TokenStream {
 pub fn yformat_html(i: TokenStream) -> TokenStream {
     const PARENT: &str = "yarte_format";
     fn get_codegen<'a>(_s: &'a Struct<'a>) -> Box<dyn CodeGen + 'a> {
-        Box::new(yarte_codegen::FnFmtCodeGen::new(HTMLCodeGen(PARENT)))
+        Box::new(yarte_codegen::FnFmtCodeGen::new(HTMLCodeGen, PARENT))
     }
 
     let src: syn::LitStr = syn::parse(i).unwrap();
@@ -250,7 +251,7 @@ pub fn yformat_html(i: TokenStream) -> TokenStream {
 pub fn yformat(i: TokenStream) -> TokenStream {
     const PARENT: &str = "yarte_format";
     fn get_codegen<'a>(_s: &'a Struct<'a>) -> Box<dyn CodeGen + 'a> {
-        Box::new(yarte_codegen::FnFmtCodeGen::new(TextCodeGen))
+        Box::new(yarte_codegen::FnFmtCodeGen::new(TextCodeGen, PARENT))
     }
 
     let src: syn::LitStr = syn::parse(i).unwrap();
