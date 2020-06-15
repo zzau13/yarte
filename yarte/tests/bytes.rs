@@ -1,4 +1,4 @@
-#![cfg(feature = "byts_buff")]
+#![cfg(feature = "bytes_buff")]
 #![allow(clippy::uninit_assumed_init)]
 
 use bytes::Bytes;
@@ -16,7 +16,7 @@ impl ToBytes for &'static str {
 }
 
 #[derive(TemplateBytes)]
-#[template(path = "simple")]
+#[template(path = "simple", print = "code")]
 struct VariablesTemplate<'a> {
     strvar: &'a str,
     num: i64,
@@ -61,7 +61,7 @@ fn test_for() {
     let s = ForTemplate {
         strings: vec!["foo", "bar", "baz"],
     };
-    assert_eq!(s.call(64).unwrap(), ". foo(first)1. bar2. baz".byteb());
+    assert_eq!(s.call(64).unwrap(), "0. foo(first)1. bar2. baz".byteb());
 }
 
 #[derive(TemplateBytes)]

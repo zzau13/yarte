@@ -107,6 +107,7 @@ pub fn template_bytes(input: TokenStream) -> TokenStream {
         Box::new(yarte_codegen::BytesCodeGen::new(
             yarte_codegen::TextFixedCodeGen("yarte"),
             s,
+            "yarte",
         ))
     }
 
@@ -129,6 +130,7 @@ pub fn template_html_bytes(input: TokenStream) -> TokenStream {
         Box::new(yarte_codegen::BytesCodeGen::new(
             yarte_codegen::HTMLFixedCodeGen("yarte"),
             s,
+            "yarte",
         ))
     }
     let i = &syn::parse(input).unwrap();
