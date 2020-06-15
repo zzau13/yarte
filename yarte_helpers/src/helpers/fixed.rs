@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::io;
 use std::mem::MaybeUninit;
 use std::ptr::copy_nonoverlapping;

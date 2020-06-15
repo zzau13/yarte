@@ -6,7 +6,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 
 use itoa;
 use v_htmlescape::v_escape;
-use yarte::{Template, TemplateFixed, TemplateFixedText, TemplateText, TemplateBytes};
+use yarte::{Template, TemplateBytes, TemplateFixed, TemplateFixedText, TemplateText};
 
 criterion_group!(benches, functions);
 criterion_main!(benches);
@@ -148,13 +148,11 @@ struct TeamsB {
 }
 
 fn bytes_teams(b: &mut criterion::Bencher) {
-    let teams = TeamsF {
+    let teams = TeamsB {
         year: 2015,
         teams: build_teams(),
     };
-    b.iter(|| {
-        teams.call(2048).unwrap()
-    });
+    b.iter(|| teams.call(2048).unwrap());
 }
 
 // Fixed
@@ -171,7 +169,10 @@ fn fixed_teams(b: &mut criterion::Bencher) {
         teams: build_teams(),
     };
     b.iter(|| {
-        let _ = teams.call(&mut [MaybeUninit::uninit(); 2048]).unwrap().to_vec();
+        let _ = teams
+            .call(&mut [MaybeUninit::uninit(); 2048])
+            .unwrap()
+            .to_vec();
     });
 }
 
@@ -188,7 +189,10 @@ fn fixed_text_teams(b: &mut criterion::Bencher) {
         teams: build_teams(),
     };
     b.iter(|| {
-        let _ = teams.call(&mut [MaybeUninit::uninit(); 2048]).unwrap().to_vec();
+        let _ = teams
+            .call(&mut [MaybeUninit::uninit(); 2048])
+            .unwrap()
+            .to_vec();
     });
 }
 
@@ -203,7 +207,10 @@ fn fixed_big_table(b: &mut criterion::Bencher, size: usize) {
         table: build_big_table(size),
     };
     b.iter(|| {
-        let _ = t.call(&mut [MaybeUninit::uninit(); 109915]).unwrap().to_vec();
+        let _ = t
+            .call(&mut [MaybeUninit::uninit(); 109915])
+            .unwrap()
+            .to_vec();
     });
 }
 
@@ -218,7 +225,10 @@ fn fixed_text_big_table(b: &mut criterion::Bencher, size: usize) {
         table: build_big_table(size),
     };
     b.iter(|| {
-        let _ = t.call(&mut [MaybeUninit::uninit(); 109915]).unwrap().to_vec();
+        let _ = t
+            .call(&mut [MaybeUninit::uninit(); 109915])
+            .unwrap()
+            .to_vec();
     });
 }
 
@@ -710,6 +720,7 @@ fn raws_teams_escaped(b: &mut criterion::Bencher) {
 }
 
 // 3 bytes
+const STEPS: usize = 256;
 #[derive(TemplateFixed)]
 #[template(src = "{{# each 0..STEPS }}{{ \"a\" * 3 }}{{/each }}")]
 struct Fixed3b;
@@ -717,7 +728,9 @@ struct Fixed3b;
 fn write_3_bytes(b: &mut criterion::Bencher) {
     b.iter(|| {
         const LEN: usize = 3 * STEPS;
-        let _ = TemplateFixed::call(&Fixed3b, &mut [MaybeUninit::uninit(); LEN]).unwrap().to_vec();
+        let _ = TemplateFixed::call(&Fixed3b, &mut [MaybeUninit::uninit(); LEN])
+            .unwrap()
+            .to_vec();
     })
 }
 
