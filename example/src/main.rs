@@ -3,9 +3,8 @@ use std::collections::HashMap;
 use std::io::{stdout, Write};
 use std::thread;
 
-use bytes::{BufMut, BytesMut};
-
-use yarte::{Template, TemplateFixedMin, TemplateMin};
+use std::mem::MaybeUninit;
+use yarte::{Template, TemplateBytesMin, TemplateFixedMin, TemplateMin};
 
 #[derive(Template)]
 #[template(path = "index")]
@@ -22,6 +21,12 @@ struct IndexTemplateMin {
 #[derive(TemplateFixedMin)]
 #[template(path = "index_fixed")]
 struct IndexTemplateF {
+    query: HashMap<&'static str, &'static str>,
+}
+
+#[derive(TemplateBytesMin)]
+#[template(path = "index_fixed")]
+struct IndexTemplateB {
     query: HashMap<&'static str, &'static str>,
 }
 
@@ -43,23 +48,24 @@ fn main() {
         }
     );
 
-    let mut buf = BytesMut::with_capacity(2048);
-    unsafe {
-        // MaybeUninit
-        let size = IndexTemplateF { query }
-            .call(buf.bytes_mut())
-            .unwrap()
-            .len();
-        // bound init data
-        buf.advance_mut(size);
-    }
-    // Freeze
-    let buf = buf.freeze();
-    // Send to another thread
+    println!("\nFixed Min:");
+    stdout()
+        .lock()
+        .write_all(
+            IndexTemplateF {
+                query: query.clone(),
+            }
+            .call(&mut [MaybeUninit::uninit(); 2048])
+            .unwrap(),
+        )
+        .unwrap();
+    println!();
+
+    let buf = IndexTemplateB { query }.call(2048).unwrap();
     thread::spawn(move || {
-        println!("\nFixed Min:");
-        let _ = stdout().lock().write(&buf);
-        println!()
+        println!("\nBytes Min:");
+        stdout().lock().write_all(&buf).unwrap();
+        println!();
     })
     .join()
     .unwrap();

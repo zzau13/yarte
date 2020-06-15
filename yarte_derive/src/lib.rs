@@ -138,12 +138,28 @@ pub fn template_html_bytes(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_derive(TemplateFixedMin, attributes(template))]
-#[cfg(feature = "html-min")]
+#[cfg(all(feature = "html-min", feature = "fixed"))]
 /// # Work in Progress
 /// Implements TemplateTrait with html minifier
 pub fn template_html_min_ptr(input: TokenStream) -> TokenStream {
     fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
         Box::new(yarte_codegen::FixedCodeGen::new(
+            yarte_codegen::HTMLMinFixedCodeGen("yarte"),
+            s,
+            "yarte",
+        ))
+    }
+    let i = &syn::parse(input).unwrap();
+    build!(i, get_codegen, Default::default())
+}
+
+#[proc_macro_derive(TemplateBytesMin, attributes(template))]
+#[cfg(all(feature = "html-min", feature = "bytes"))]
+/// # Work in Progress
+/// Implements TemplateTrait with html minifier
+pub fn template_html_min_bytes(input: TokenStream) -> TokenStream {
+    fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
+        Box::new(yarte_codegen::BytesCodeGen::new(
             yarte_codegen::HTMLMinFixedCodeGen("yarte"),
             s,
             "yarte",

@@ -6,7 +6,9 @@ use criterion::{criterion_group, criterion_main, Criterion};
 
 use itoa;
 use v_htmlescape::v_escape;
-use yarte::{Template, TemplateBytes, TemplateBytesText, TemplateFixed, TemplateFixedText, TemplateText};
+use yarte::{
+    Template, TemplateBytes, TemplateBytesText, TemplateFixed, TemplateFixedText, TemplateText,
+};
 
 criterion_group!(benches, functions);
 criterion_main!(benches);
