@@ -33,7 +33,8 @@ impl<T: CodeGen> CodeGen for FnFmtCodeGen<T> {
         let parent = &self.parent;
         quote! {
             {
-                use std::fmt::Write;
+                #[allow(unused_imports)]
+                use std::fmt::{Write, Display};
                 #[allow(unused_imports)]
                 use #parent::*;
                 let mut buf = String::with_capacity(#size_hint);
