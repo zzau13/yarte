@@ -16,4 +16,4 @@ mod markup;
 #[cfg(feature = "fixed")]
 pub use fixed::{RenderFixed, RenderFixedA, RenderSafe, RenderSafeA};
 #[cfg(feature = "markup")]
-pub use markup::Render;
+pub use markup::{Render, RenderA};
