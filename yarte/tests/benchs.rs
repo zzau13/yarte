@@ -23,9 +23,10 @@ fn big_table() {
         "<table><tr><td>0</td><td>1</td><td>2</td></tr><tr><td>0</td><td>1</td><td>2</td></\
          tr><tr><td>0</td><td>1</td><td>2</td></tr></table>";
     assert_eq!(Template::call(&table).unwrap(), expected);
-    let mut buf: [u8; 256] = unsafe { MaybeUninit::uninit().assume_init() };
-    let b = unsafe { TemplateFixed::call(&table, &mut buf) }.unwrap();
-    assert_eq!(&buf[..b], expected.as_bytes());
+    assert_eq!(
+        TemplateFixed::call(&table, &mut [MaybeUninit::uninit(); 256]).unwrap(),
+        expected.as_bytes()
+    );
 }
 
 #[derive(Template, TemplateFixed)]
@@ -63,9 +64,10 @@ fn teams() {
          class=\"\"><b>Guangzhou</b>: 22</li><li class=\"\"><b>Shandong</b>: \
          12</li></ul></body></html>";
     assert_eq!(Template::call(&teams).unwrap(), expected);
-    let mut buf: [u8; 256] = unsafe { MaybeUninit::uninit().assume_init() };
-    let b = unsafe { TemplateFixed::call(&teams, &mut buf) }.unwrap();
-    assert_eq!(&buf[..b], expected.as_bytes());
+    assert_eq!(
+        TemplateFixed::call(&teams, &mut [MaybeUninit::uninit(); 256]).unwrap(),
+        expected.as_bytes()
+    );
 }
 
 #[derive(Template, TemplateFixed)]

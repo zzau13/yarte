@@ -15,9 +15,10 @@ struct IfTemplate {
 fn test_if() {
     let t = IfTemplate { cond: true };
     assert_eq!("&amp;", Template::call(&t).unwrap());
-    let mut buf: [u8; 64] = unsafe { MaybeUninit::uninit().assume_init() };
-    let b = unsafe { TemplateFixed::call(&t, &mut buf) }.unwrap();
-    assert_eq!(b"&amp;", &buf[..b]);
+    assert_eq!(
+        b"&amp;",
+        TemplateFixed::call(&t, &mut [MaybeUninit::uninit(); 64]).unwrap()
+    );
 }
 
 #[derive(Template, TemplateFixed)]
@@ -30,9 +31,10 @@ struct IndexTemplate<'a> {
 fn test_index() {
     let t = IndexTemplate { arr: vec!["&"] };
     assert_eq!("&amp;", Template::call(&t).unwrap());
-    let mut buf: [u8; 64] = unsafe { MaybeUninit::uninit().assume_init() };
-    let b = unsafe { TemplateFixed::call(&t, &mut buf) }.unwrap();
-    assert_eq!(b"&amp;", &buf[..b]);
+    assert_eq!(
+        b"&amp;",
+        TemplateFixed::call(&t, &mut [MaybeUninit::uninit(); 64]).unwrap()
+    );
 }
 
 #[derive(Template, TemplateFixed)]
@@ -46,9 +48,10 @@ fn test_slice() {
     let arr: &[&str] = &["&"];
     let t = SliceTemplate { arr };
     assert_eq!("&amp;", Template::call(&t).unwrap());
-    let mut buf: [u8; 64] = unsafe { MaybeUninit::uninit().assume_init() };
-    let b = unsafe { TemplateFixed::call(&t, &mut buf) }.unwrap();
-    assert_eq!(b"&amp;", &buf[..b]);
+    assert_eq!(
+        b"&amp;",
+        TemplateFixed::call(&t, &mut [MaybeUninit::uninit(); 64]).unwrap()
+    );
 }
 
 fn repeat(s: &str, i: usize) -> String {
@@ -65,9 +68,10 @@ struct CallTemplate<'a> {
 fn test_call() {
     let t = CallTemplate { s: "&" };
     assert_eq!("&amp;&amp;", Template::call(&t).unwrap());
-    let mut buf: [u8; 64] = unsafe { MaybeUninit::uninit().assume_init() };
-    let b = unsafe { TemplateFixed::call(&t, &mut buf) }.unwrap();
-    assert_eq!(b"&amp;&amp;", &buf[..b]);
+    assert_eq!(
+        b"&amp;&amp;",
+        TemplateFixed::call(&t, &mut [MaybeUninit::uninit(); 64]).unwrap()
+    );
 }
 
 #[derive(Template, TemplateFixed)]
@@ -78,9 +82,10 @@ struct ArrayTemplate;
 fn test_array() {
     let t = ArrayTemplate;
     assert_eq!("&amp;", Template::call(&t).unwrap());
-    let mut buf: [u8; 64] = unsafe { MaybeUninit::uninit().assume_init() };
-    let b = unsafe { TemplateFixed::call(&t, &mut buf) }.unwrap();
-    assert_eq!(b"&amp;", &buf[..b]);
+    assert_eq!(
+        b"&amp;",
+        TemplateFixed::call(&t, &mut [MaybeUninit::uninit(); 64]).unwrap()
+    );
 }
 
 #[derive(Template, TemplateFixed)]
@@ -91,9 +96,10 @@ struct TupleTemplate;
 fn test_tuple() {
     let t = TupleTemplate;
     assert_eq!("&amp;", Template::call(&t).unwrap());
-    let mut buf: [u8; 64] = unsafe { MaybeUninit::uninit().assume_init() };
-    let b = unsafe { TemplateFixed::call(&t, &mut buf) }.unwrap();
-    assert_eq!(b"&amp;", &buf[..b]);
+    assert_eq!(
+        b"&amp;",
+        TemplateFixed::call(&t, &mut [MaybeUninit::uninit(); 64]).unwrap()
+    );
 }
 
 struct Debuggable<T>(T)

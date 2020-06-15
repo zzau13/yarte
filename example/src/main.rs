@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::io::{stdout, Write};
 use std::thread;
 
-use bytes::BytesMut;
+use bytes::{BufMut, BytesMut};
 
 use yarte::{Template, TemplateFixedMin, TemplateMin};
 
@@ -45,11 +45,13 @@ fn main() {
 
     let mut buf = BytesMut::with_capacity(2048);
     unsafe {
-        // Maybe uninit
-        buf.set_len(2048);
-        let size = IndexTemplateF { query }.call(&mut buf).unwrap();
+        // MaybeUninit
+        let size = IndexTemplateF { query }
+            .call(buf.bytes_mut())
+            .unwrap()
+            .len();
         // bound init data
-        buf.set_len(size);
+        buf.advance_mut(size);
     }
     // Freeze
     let buf = buf.freeze();

@@ -23,10 +23,12 @@ wasm = ["json", "yarte_derive/wasm-server"]
 json = ["yarte_helpers/json"]
 html-min = ["yarte_derive/html-min"]
 fixed = ["yarte_helpers/fixed", "yarte_derive/fixed"]
+bytes_buff = ["fixed", "yarte_derive/bytes", "bytes"]
 
 [dependencies]
 yarte_derive = { version = "0.10.0", path = "../yarte_derive" }
 yarte_helpers = { version = "0.10.0", path = "../yarte_helpers" }
+bytes = { version = "0.5", optional = true }
 
 [dev-dependencies]
 trybuild = { version = "1.0", features = ["diff"] }

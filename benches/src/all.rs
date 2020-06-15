@@ -6,7 +6,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 
 use itoa;
 use v_htmlescape::v_escape;
-use yarte::{Template, TemplateFixed, TemplateFixedText, TemplateText};
+use yarte::{Template, TemplateFixed, TemplateFixedText, TemplateText, TemplateBytes};
 
 criterion_group!(benches, functions);
 criterion_main!(benches);
@@ -16,11 +16,6 @@ fn functions(c: &mut Criterion) {
     c.bench_function("3 bytes byte-by-byte", write_3_bytes_bb);
     c.bench_function("3 bytes Memcpy", write_3_bytes_memcpy);
     c.bench_function("3 bytes", write_3_bytes);
-
-    // 4 bytes
-    c.bench_function("4 bytes byte-by-byte", write_4_bytes_bb);
-    c.bench_function("4 bytes Memcpy", write_4_bytes_memcpy);
-    c.bench_function("4 bytes", write_4_bytes);
 
     // 7 bytes
     c.bench_function("7 bytes byte-by-byte", write_7_bytes_bb);
@@ -39,6 +34,7 @@ fn functions(c: &mut Criterion) {
     c.bench_function("Raw Escaped Teams byte-by-byte", raws_teams_escaped);
     c.bench_function("Raw Escaped Teams Memcpy", raw_teams_escaped_memcpy);
     c.bench_function("Fixed Teams", fixed_teams);
+    c.bench_function("Bytes Teams", bytes_teams);
     c.bench_function("Teams", teams);
     c.bench_function("Teams io writer implements io::Write", io_termcolor_teams);
     c.bench_function("Teams Unescaped", teams_text);
@@ -54,7 +50,6 @@ fn functions(c: &mut Criterion) {
     c.bench_function("Big table", |b| big_table(b, SIZE));
     c.bench_function("Big table io writer", |b| io_big_table(b, SIZE));
     c.bench_function("Big table Unescaped", |b| big_table_text(b, SIZE));
-    // TODO: add Techempower fortunes cases
 }
 
 // Helpers
@@ -152,6 +147,24 @@ fn big_table_text(b: &mut criterion::Bencher, size: usize) {
         table: build_big_table(size),
     };
     b.iter(|| t.call().unwrap());
+}
+
+// Bytes
+#[derive(TemplateBytes)]
+#[template(path = "teams")]
+struct TeamsB {
+    year: u16,
+    teams: Vec<Team>,
+}
+
+fn bytes_teams(b: &mut criterion::Bencher) {
+    let teams = TeamsF {
+        year: 2015,
+        teams: build_teams(),
+    };
+    b.iter(|| {
+        teams.call(2048).unwrap()
+    });
 }
 
 // Fixed
@@ -838,73 +851,6 @@ fn write_7_bytes_bb(b: &mut criterion::Bencher) {
 
 fn write_7_bytes_memcpy(b: &mut criterion::Bencher) {
     const BYTES: usize = 7;
-    unsafe {
-        b.iter(|| {
-            const LEN: usize = BYTES * STEPS;
-            let mut buf: [u8; LEN] = MaybeUninit::uninit().assume_init();
-            let mut curr = 0;
-            let buf_ptr = buf.as_mut_ptr();
-            for _ in 0..STEPS {
-                if LEN < curr + BYTES {
-                    panic!("buffer overflow");
-                } else {
-                    const B: [u8; BYTES] = [b'a'; BYTES];
-                    std::ptr::copy_nonoverlapping(
-                        &B as *const [u8] as *const u8,
-                        buf_ptr.add(curr),
-                        BYTES,
-                    );
-                    curr += BYTES;
-                }
-            }
-            let _ = &buf[..curr].to_vec();
-        })
-    }
-}
-
-// 4 bytes
-#[derive(TemplateFixed)]
-#[template(src = "{{# each 0..STEPS }}{{ \"a\" * 4 }}{{/each }}")]
-struct Fixed4b;
-
-// TODO: unalign and check
-fn write_4_bytes(b: &mut criterion::Bencher) {
-    unsafe {
-        b.iter(|| {
-            const LEN: usize = 4 * STEPS;
-            let mut buf: [u8; LEN] = MaybeUninit::uninit().assume_init();
-            let curr = TemplateFixed::call(&Fixed4b, &mut buf).unwrap();
-            let _ = &buf[..curr].to_vec();
-        })
-    }
-}
-
-fn write_4_bytes_bb(b: &mut criterion::Bencher) {
-    const BYTES: usize = 4;
-    unsafe {
-        b.iter(|| {
-            const LEN: usize = BYTES * STEPS;
-            let mut buf: [u8; LEN] = MaybeUninit::uninit().assume_init();
-            let mut curr = 0;
-            let buf_ptr = buf.as_mut_ptr();
-            for _ in 0..STEPS {
-                if LEN < curr + BYTES {
-                    panic!("buffer overflow");
-                } else {
-                    *buf_ptr.add(curr) = b'a';
-                    *buf_ptr.add(curr + 1) = b'a';
-                    *buf_ptr.add(curr + 2) = b'a';
-                    *buf_ptr.add(curr + 3) = b'a';
-                    curr += BYTES;
-                }
-            }
-            let _ = &buf[..curr].to_vec();
-        })
-    }
-}
-
-fn write_4_bytes_memcpy(b: &mut criterion::Bencher) {
-    const BYTES: usize = 4;
     unsafe {
         b.iter(|| {
             const LEN: usize = BYTES * STEPS;
