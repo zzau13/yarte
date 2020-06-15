@@ -80,12 +80,16 @@ pub trait TemplateBytesTrait {
     fn call(&self, capacity: usize) -> Option<bytes::Bytes>;
 }
 
+#[cfg(all(feature = "bytes_buff", feature = "html-min"))]
+pub use yarte_derive::TemplateBytesMin;
 #[cfg(feature = "bytes_buff")]
 pub use yarte_derive::{TemplateBytes, TemplateBytesText};
 #[cfg(feature = "bytes_buff")]
 pub use TemplateBytesTrait as TemplateBytes;
 #[cfg(feature = "bytes_buff")]
 pub use TemplateBytesTrait as TemplateBytesText;
+#[cfg(all(feature = "bytes_buff", feature = "html-min"))]
+pub use TemplateBytesTrait as TemplateBytesMin;
 
 #[cfg(feature = "bytes_buff")]
 pub use bytes::{BufMut, Bytes, BytesMut};

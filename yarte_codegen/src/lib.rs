@@ -6,6 +6,7 @@ use yarte_hir::{Each, IfElse, HIR};
 
 #[macro_use]
 mod macros;
+#[cfg(feature = "bytes")]
 mod bytes;
 #[cfg(feature = "fixed")]
 mod fixed;
