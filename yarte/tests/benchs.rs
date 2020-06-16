@@ -24,7 +24,7 @@ fn big_table() {
          tr><tr><td>0</td><td>1</td><td>2</td></tr></table>";
     assert_eq!(Template::call(&table).unwrap(), expected);
     assert_eq!(
-        TemplateFixed::call(&table, &mut [MaybeUninit::uninit(); 256]).unwrap(),
+        unsafe { TemplateFixed::call(&table, &mut [MaybeUninit::uninit(); 256]) }.unwrap(),
         expected.as_bytes()
     );
 }
@@ -65,7 +65,7 @@ fn teams() {
          12</li></ul></body></html>";
     assert_eq!(Template::call(&teams).unwrap(), expected);
     assert_eq!(
-        TemplateFixed::call(&teams, &mut [MaybeUninit::uninit(); 256]).unwrap(),
+        unsafe { TemplateFixed::call(&teams, &mut [MaybeUninit::uninit(); 256]) }.unwrap(),
         expected.as_bytes()
     );
 }

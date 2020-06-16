@@ -17,7 +17,7 @@ fn test_if() {
     assert_eq!("&amp;", Template::call(&t).unwrap());
     assert_eq!(
         b"&amp;",
-        TemplateFixed::call(&t, &mut [MaybeUninit::uninit(); 64]).unwrap()
+        unsafe { TemplateFixed::call(&t, &mut [MaybeUninit::uninit(); 64]) }.unwrap()
     );
 }
 
@@ -33,7 +33,7 @@ fn test_index() {
     assert_eq!("&amp;", Template::call(&t).unwrap());
     assert_eq!(
         b"&amp;",
-        TemplateFixed::call(&t, &mut [MaybeUninit::uninit(); 64]).unwrap()
+        unsafe { TemplateFixed::call(&t, &mut [MaybeUninit::uninit(); 64]) }.unwrap()
     );
 }
 
@@ -50,7 +50,7 @@ fn test_slice() {
     assert_eq!("&amp;", Template::call(&t).unwrap());
     assert_eq!(
         b"&amp;",
-        TemplateFixed::call(&t, &mut [MaybeUninit::uninit(); 64]).unwrap()
+        unsafe { TemplateFixed::call(&t, &mut [MaybeUninit::uninit(); 64]) }.unwrap()
     );
 }
 
@@ -70,7 +70,7 @@ fn test_call() {
     assert_eq!("&amp;&amp;", Template::call(&t).unwrap());
     assert_eq!(
         b"&amp;&amp;",
-        TemplateFixed::call(&t, &mut [MaybeUninit::uninit(); 64]).unwrap()
+        unsafe { TemplateFixed::call(&t, &mut [MaybeUninit::uninit(); 64]) }.unwrap()
     );
 }
 
@@ -84,7 +84,7 @@ fn test_array() {
     assert_eq!("&amp;", Template::call(&t).unwrap());
     assert_eq!(
         b"&amp;",
-        TemplateFixed::call(&t, &mut [MaybeUninit::uninit(); 64]).unwrap()
+        unsafe { TemplateFixed::call(&t, &mut [MaybeUninit::uninit(); 64]) }.unwrap()
     );
 }
 
@@ -98,7 +98,7 @@ fn test_tuple() {
     assert_eq!("&amp;", Template::call(&t).unwrap());
     assert_eq!(
         b"&amp;",
-        TemplateFixed::call(&t, &mut [MaybeUninit::uninit(); 64]).unwrap()
+        unsafe { TemplateFixed::call(&t, &mut [MaybeUninit::uninit(); 64]) }.unwrap()
     );
 }
 

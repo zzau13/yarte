@@ -52,10 +52,12 @@ fn main() {
     stdout()
         .lock()
         .write_all(
-            IndexTemplateF {
-                query: query.clone(),
+            unsafe {
+                IndexTemplateF {
+                    query: query.clone(),
+                }
+                .call(&mut [MaybeUninit::uninit(); 2048])
             }
-            .call(&mut [MaybeUninit::uninit(); 2048])
             .unwrap(),
         )
         .unwrap();

@@ -20,9 +20,8 @@ fn test_variables() {
         num: 42,
         i18n: "Iñtërnâtiônàlizætiøn".to_string(),
     };
-    let mut buf = [MaybeUninit::uninit(); 128];
     assert_eq!(
-        s.call(&mut buf).unwrap(),
+        unsafe { s.call(&mut [MaybeUninit::uninit(); 128]) }.unwrap(),
         "hello world, foo\nwith number: 42\nIñtërnâtiônàlizætiøn is important\nin vars too: \
          Iñtërnâtiônàlizætiøn"
             .as_bytes()
@@ -38,8 +37,10 @@ struct EscapeTemplate<'a> {
 #[test]
 fn test_escape() {
     let s = EscapeTemplate { name: "<>&\"" };
-    let mut buf = [MaybeUninit::uninit(); 64];
-    assert_eq!(s.call(&mut buf).unwrap(), b"Hello, &lt;&gt;&amp;&quot;!");
+    assert_eq!(
+        unsafe { s.call(&mut [MaybeUninit::uninit(); 64]) }.unwrap(),
+        b"Hello, &lt;&gt;&amp;&quot;!"
+    );
 }
 
 #[derive(TemplateFixed)]
@@ -53,8 +54,10 @@ fn test_for() {
     let s = ForTemplate {
         strings: vec!["foo", "bar", "baz"],
     };
-    let mut buf = [MaybeUninit::uninit(); 64];
-    assert_eq!(s.call(&mut buf).unwrap(), b"0. foo(first)1. bar2. baz");
+    assert_eq!(
+        unsafe { s.call(&mut [MaybeUninit::uninit(); 64]) }.unwrap(),
+        b"0. foo(first)1. bar2. baz"
+    );
 }
 
 #[derive(TemplateFixed)]
@@ -69,8 +72,10 @@ fn test_nested_for() {
     let numbers: &[&str] = &["bar", "baz"];
     let seqs: &[&[&str]] = &[alpha, numbers];
     let s = NestedForTemplate { seqs };
-    let mut buf = [MaybeUninit::uninit(); 64];
-    assert_eq!(s.call(&mut buf).unwrap(), b"1\n  0foo1bar2baz2\n  0bar1baz");
+    assert_eq!(
+        unsafe { s.call(&mut [MaybeUninit::uninit(); 64]) }.unwrap(),
+        b"1\n  0foo1bar2baz2\n  0bar1baz"
+    );
 }
 
 #[derive(TemplateFixed)]
@@ -83,8 +88,10 @@ struct PrecedenceTemplate<'a> {
 fn test_precedence_for() {
     let strings: &[&str] = &["foo", "bar", "baz"];
     let s = PrecedenceTemplate { strings };
-    let mut buf = [MaybeUninit::uninit(); 64];
-    assert_eq!(s.call(&mut buf).unwrap(), b"0 ~ foo2bar1 ~ bar42 ~ baz6")
+    assert_eq!(
+        unsafe { s.call(&mut [MaybeUninit::uninit(); 64]) }.unwrap(),
+        b"0 ~ foo2bar1 ~ bar42 ~ baz6"
+    )
 }
 
 #[derive(TemplateFixed)]
@@ -97,9 +104,8 @@ struct ForRangeTemplate {
 #[test]
 fn test_for_range() {
     let s = ForRangeTemplate { init: -1, end: 1 };
-    let mut buf = [MaybeUninit::uninit(); 64];
     assert_eq!(
-        s.call(&mut buf).unwrap(),
+        unsafe { s.call(&mut [MaybeUninit::uninit(); 64]) }.unwrap(),
         b"foo\nfoo\nbar\nbar\nfoo\nbar\nbar\n"
     );
 }
@@ -114,9 +120,8 @@ struct UnAlignedBool {
 #[test]
 fn test_unaligned() {
     let s = UnAlignedBool { f: true };
-    let mut buf = [MaybeUninit::uninit(); OUT_L3 * 10];
     assert_eq!(
-        s.call(&mut buf).unwrap(),
+        unsafe { s.call(&mut [MaybeUninit::uninit(); OUT_L3 * 10]) }.unwrap(),
         "atruefalse".repeat(OUT_L3).as_bytes()
     );
 }

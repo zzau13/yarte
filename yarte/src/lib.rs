@@ -53,7 +53,17 @@ pub mod aw {
 /// Template trait
 pub trait TemplateFixedTrait {
     /// Writes to buffer
-    fn call<'call>(&self, buf: &'call mut [std::mem::MaybeUninit<u8>]) -> Option<&'call [u8]>;
+    ///
+    /// # Safety
+    /// Not respect the lifetime bounds it's possible borrow mut when it's borrow
+    /// ```rust,ignore
+    /// # const N: usize = 1;
+    /// let buf = TemplateFixedTrait::call(&mut [MaybeUninit::uninit(); N]).expect("buffer overflow");
+    /// ```
+    unsafe fn call<'call>(
+        &self,
+        buf: &'call mut [std::mem::MaybeUninit<u8>],
+    ) -> Option<&'call [u8]>;
 }
 
 #[cfg(feature = "fixed")]
