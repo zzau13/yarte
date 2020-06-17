@@ -66,4 +66,3 @@ impl Sealed for f64 {
         raw::format64(self, result)
     }
 }
-
