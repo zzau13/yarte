@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
-use std::io;
 use core::mem::MaybeUninit;
 use core::ptr::copy_nonoverlapping;
 use core::slice::from_raw_parts_mut;
+use std::io;
 
 use v_htmlescape::{v_escape, v_escape_char};
 
@@ -248,6 +248,7 @@ impl $t for $f {
     };
 }
 
+#[rustfmt::skip]
 ryu_display!(
     f32, RenderFixed,
     f64, RenderFixed,
