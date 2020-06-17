@@ -15,6 +15,12 @@ macro_rules! lookup {
     };
 }
 
+macro_rules! write_ascii {
+    ($b:ident, $n:expr) => {
+        *$b = $n as u8 + 0x30;
+    };
+}
+
 /// write integer smaller than 10000
 #[inline]
 unsafe fn write_small(n: u16, buf: *mut u8) -> usize {
@@ -22,19 +28,18 @@ unsafe fn write_small(n: u16, buf: *mut u8) -> usize {
 
     if n < 100 {
         if n < 10 {
-            *buf = n as u8 + 0x30;
+            write_ascii!(buf, n);
             1
         } else {
             ptr::copy_nonoverlapping(lookup!(n), buf, 2);
             2
         }
     } else if n < 1000 {
-        *buf = (n / 100) as u8 + 0x30;
+        write_ascii!(buf, n / 100);
         ptr::copy_nonoverlapping(lookup!(n % 100), buf.add(1), 2);
         3
     } else {
-        ptr::copy_nonoverlapping(lookup!(n / 100), buf, 2);
-        ptr::copy_nonoverlapping(lookup!(n % 100), buf.add(2), 2);
+        write_small_pad(n, buf);
         4
     }
 }
@@ -50,16 +55,14 @@ unsafe fn write_small_pad(n: u16, buf: *mut u8) {
 
 unsafe fn write_u8(n: u8, buf: *mut u8) -> usize {
     if n < 10 {
-        *buf = n + 0x30;
+        write_ascii!(buf, n);
         1
     } else if n < 100 {
         ptr::copy_nonoverlapping(lookup!(n), buf, 2);
         2
     } else {
-        let d1 = n / 100;
-        let d2 = n % 100;
-        *buf = d1 + 0x30;
-        ptr::copy_nonoverlapping(lookup!(d2), buf.add(1), 2);
+        write_ascii!(buf, n / 100);
+        ptr::copy_nonoverlapping(lookup!(n % 100), buf.add(1), 2);
         3
     }
 }
@@ -67,7 +70,7 @@ unsafe fn write_u8(n: u8, buf: *mut u8) -> usize {
 unsafe fn write_u16(n: u16, buf: *mut u8) -> usize {
     if n < 100 {
         if n < 10 {
-            *buf = n as u8 + 0x30;
+            write_ascii!(buf, n);
             1
         } else {
             ptr::copy_nonoverlapping(lookup!(n), buf, 2);
@@ -75,28 +78,21 @@ unsafe fn write_u16(n: u16, buf: *mut u8) -> usize {
         }
     } else if n < 10000 {
         if n < 1000 {
-            let d1 = (n / 100) as u8;
-            let d2 = n % 100;
-            *buf = d1 + 0x30;
-            ptr::copy_nonoverlapping(lookup!(d2), buf.add(1), 2);
+            write_ascii!(buf, (n / 100) as u8);
+            ptr::copy_nonoverlapping(lookup!(n % 100), buf.add(1), 2);
             3
         } else {
-            let d1 = n / 100;
-            let d2 = n % 100;
-            ptr::copy_nonoverlapping(lookup!(d1), buf, 2);
-            ptr::copy_nonoverlapping(lookup!(d2), buf.add(2), 2);
+            write_small_pad(n, buf);
             4
         }
     } else {
-        let b = (n / 10000) as u8; // 1 to 6
-        let c = n % 10000;
-
-        *buf = b + 0x30;
-        write_small_pad(c, buf.add(1));
+        write_ascii!(buf, (n / 10000) as u8);
+        write_small_pad(n % 10000, buf.add(1));
         5
     }
 }
 
+// TODO: check
 unsafe fn write_u32(mut n: u32, buf: *mut u8) -> usize {
     if n < 10000 {
         write_small(n as u16, buf)
@@ -128,6 +124,7 @@ unsafe fn write_u32(mut n: u32, buf: *mut u8) -> usize {
     }
 }
 
+// TODO: check
 unsafe fn write_u64(mut n: u64, buf: *mut u8) -> usize {
     if n < 10000 {
         write_small(n as u16, buf)
