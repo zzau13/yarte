@@ -340,15 +340,13 @@ impl<'a> LoweringContext<'a> {
                         Json => {
                             let mut arg = args.t()[0].clone();
                             self.visit_expr_mut(&mut arg);
-                            let parent = format_ident!("{}", self.opt.parent);
-                            let expr = parse2(quote!(#parent::Json(&(#arg)))).unwrap();
+                            let expr = parse2(quote!((&(#arg).__as_json()))).unwrap();
                             self.buf_w.push(Writable::Expr(Box::new(expr), false))
                         }
                         JsonPretty => {
                             let mut arg = args.t()[0].clone();
                             self.visit_expr_mut(&mut arg);
-                            let parent = format_ident!("{}", self.opt.parent);
-                            let expr = parse2(quote!(#parent::JsonPretty(&(#arg)))).unwrap();
+                            let expr = parse2(quote!(&(#arg).__as_json_pretty())).unwrap();
                             self.buf_w.push(Writable::Expr(Box::new(expr), false))
                         }
                     }

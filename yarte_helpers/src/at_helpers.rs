@@ -8,7 +8,38 @@ pub mod json {
     use crate::helpers::io_fmt::IoFmt;
 
     pub struct Json<'a, T: Serialize>(pub &'a T);
+
+    pub trait AsJson {
+        fn __as_json(&self) -> Json<'_, Self>
+        where
+            Self: Serialize + Sized;
+    }
+
+    impl<'a, S: Serialize> AsJson for S {
+        fn __as_json(&self) -> Json<'_, Self>
+        where
+            Self: Serialize + Sized,
+        {
+            Json(self)
+        }
+    }
+
     pub struct JsonPretty<'a, T: Serialize>(pub &'a T);
+
+    pub trait AsJsonPretty {
+        fn __as_json_pretty(&self) -> JsonPretty<'_, Self>
+        where
+            Self: Serialize + Sized;
+    }
+
+    impl<'a, S: Serialize> AsJsonPretty for S {
+        fn __as_json_pretty(&self) -> JsonPretty<'_, Self>
+        where
+            Self: Serialize + Sized,
+        {
+            JsonPretty(self)
+        }
+    }
 
     impl<'a, S: Serialize> Display for Json<'a, S> {
         #[inline(always)]
