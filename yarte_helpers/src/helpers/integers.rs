@@ -1,3 +1,4 @@
+// based on [`sailfish`](https://github.com/Kogia-sima/sailfish) and [`itoa`](https://github.com/dtolnay/itoa)
 #![allow(clippy::many_single_char_names)]
 use std::ptr;
 
