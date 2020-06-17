@@ -66,7 +66,7 @@ mod json {
         }
 
         #[derive(TemplateFixedText)]
-        #[template(src = "{{ @json f }}")]
+        #[template(src = "{{ @json &&&f }}")]
         struct JsonTemplateFT {
             f: Json,
         }
