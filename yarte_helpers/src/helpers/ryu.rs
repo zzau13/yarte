@@ -19,7 +19,7 @@ impl Sealed for f32 {
     }
 
     #[cold]
-    #[cfg_attr(feature = "no-panic", inline)]
+    #[inline]
     fn format_nonfinite(self) -> &'static str {
         const MANTISSA_MASK: u32 = 0x007fffff;
         const SIGN_MASK: u32 = 0x80000000;
@@ -47,7 +47,7 @@ impl Sealed for f64 {
     }
 
     #[cold]
-    #[cfg_attr(feature = "no-panic", inline)]
+    #[inline]
     fn format_nonfinite(self) -> &'static str {
         const MANTISSA_MASK: u64 = 0x000fffffffffffff;
         const SIGN_MASK: u64 = 0x8000000000000000;
@@ -66,3 +66,4 @@ impl Sealed for f64 {
         raw::format64(self, result)
     }
 }
+
