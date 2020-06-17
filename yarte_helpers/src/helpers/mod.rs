@@ -18,3 +18,5 @@ mod markup;
 pub use fixed::{RenderFixed, RenderFixedA, RenderSafe, RenderSafeA};
 #[cfg(feature = "markup")]
 pub use markup::{Render, RenderA};
+#[cfg(feature = "ryu-ad")]
+pub mod ryu;
