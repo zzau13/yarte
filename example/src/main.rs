@@ -49,18 +49,14 @@ fn main() {
     );
 
     println!("\nFixed Min:");
-    stdout()
-        .lock()
-        .write_all(
-            unsafe {
-                IndexTemplateF {
-                    query: query.clone(),
-                }
-                .call(&mut [MaybeUninit::uninit(); 2048])
-            }
-            .unwrap(),
-        )
-        .unwrap();
+    unsafe {
+        IndexTemplateF {
+            query: query.clone(),
+        }
+        .call(&mut [MaybeUninit::uninit(); 2048])
+    }
+    .and_then(|b| stdout().lock().write_all(b).ok())
+    .unwrap();
     println!();
 
     let buf = IndexTemplateB { query }.call(2048).unwrap();
