@@ -291,7 +291,7 @@ impl<'a> WASMCodeGen<'a> {
             })
             .collect();
         let mut buff = buff.drain(..);
-        let tokens = buff.next().unwrap_or(quote!());
+        let tokens = buff.next().unwrap_or_default();
         buff.fold(tokens, |mut acc, t| {
             acc.extend(quote!(|| #t));
             acc

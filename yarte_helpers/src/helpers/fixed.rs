@@ -69,7 +69,7 @@ macro_rules! str_display {
             impl RenderFixed for $ty {
                 #[inline(always)]
                 unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
-                    v_escape(self.as_bytes(), from_raw_parts_mut(buf_ptr!(buf), buf.len()))
+                    v_escape(self.as_bytes(), buf)
                 }
             }
         )*
@@ -105,6 +105,24 @@ itoa_display! {
     i8 i16 i32 i64 isize
 }
 
+macro_rules! itoa128_display {
+    ($($ty:ty)*) => {
+        $(
+            impl RenderFixed for $ty {
+                #[inline(always)]
+                unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
+                    itoa::write(from_raw_parts_mut(buf_ptr!(buf), buf.len()), *self).ok()
+                }
+            }
+        )*
+    };
+}
+
+#[rustfmt::skip]
+itoa128_display! {
+    u128 i128
+}
+
 macro_rules! dtoa_display {
     ($($ty:ty)*) => {
         $(
@@ -126,7 +144,7 @@ dtoa_display! {
 impl RenderFixed for char {
     #[inline(always)]
     unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
-        v_escape_char(*self, from_raw_parts_mut(buf_ptr!(buf), buf.len()))
+        v_escape_char(*self, buf)
     }
 }
 
@@ -194,6 +212,24 @@ macro_rules! itoa_display {
 itoa_display! {
     u8 u16 u32 u64 usize
     i8 i16 i32 i64 isize
+}
+
+macro_rules! itoa128_display {
+    ($($ty:ty)*) => {
+        $(
+            impl RenderSafe for $ty {
+                #[inline(always)]
+                unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
+                    itoa::write(from_raw_parts_mut(buf_ptr!(buf), buf.len()), *self).ok()
+                }
+            }
+        )*
+    };
+}
+
+#[rustfmt::skip]
+itoa128_display! {
+    u128 i128
 }
 
 // TODO: check ryu
