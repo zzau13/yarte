@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter, Result, Write};
 use std::mem::MaybeUninit;
 use std::{io, slice};
 
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion, black_box};
 
 use itoa;
 use v_htmlescape::v_escape;
@@ -173,7 +173,7 @@ fn bytes_text_teams(b: &mut criterion::Bencher) {
         teams: build_teams(),
     };
     b.iter(|| {
-        let _ = teams.call(2048).unwrap();
+        teams.call(2048).unwrap()
     });
 }
 
@@ -188,7 +188,7 @@ fn bytes_big_table(b: &mut criterion::Bencher, size: usize) {
         table: build_big_table(size),
     };
     b.iter(|| {
-        let _ = t.call(109915).unwrap();
+        t.call(109915).unwrap()
     });
 }
 
@@ -203,7 +203,7 @@ fn bytes_text_big_table(b: &mut criterion::Bencher, size: usize) {
         table: build_big_table(size),
     };
     b.iter(|| {
-        let _ = t.call(109915).unwrap();
+        t.call(109915).unwrap()
     });
 }
 
@@ -221,10 +221,9 @@ fn fixed_teams(b: &mut criterion::Bencher) {
         teams: build_teams(),
     };
     b.iter(|| {
-        let _ = teams
-            .call(&mut [MaybeUninit::uninit(); 2048])
-            .unwrap()
-            .to_vec();
+        black_box(unsafe { teams
+            .call(&mut [MaybeUninit::uninit(); 2048]) }
+            .unwrap());
     });
 }
 
@@ -241,10 +240,9 @@ fn fixed_text_teams(b: &mut criterion::Bencher) {
         teams: build_teams(),
     };
     b.iter(|| {
-        let _ = teams
-            .call(&mut [MaybeUninit::uninit(); 2048])
-            .unwrap()
-            .to_vec();
+        black_box(unsafe { teams
+            .call(&mut [MaybeUninit::uninit(); 2048]) }
+            .unwrap());
     });
 }
 
@@ -259,10 +257,9 @@ fn fixed_big_table(b: &mut criterion::Bencher, size: usize) {
         table: build_big_table(size),
     };
     b.iter(|| {
-        let _ = t
-            .call(&mut [MaybeUninit::uninit(); 109915])
-            .unwrap()
-            .to_vec();
+        black_box(unsafe { t
+            .call(&mut [MaybeUninit::uninit(); 109915]) }
+            .unwrap());
     });
 }
 
@@ -277,10 +274,9 @@ fn fixed_text_big_table(b: &mut criterion::Bencher, size: usize) {
         table: build_big_table(size),
     };
     b.iter(|| {
-        let _ = t
-            .call(&mut [MaybeUninit::uninit(); 109915])
-            .unwrap()
-            .to_vec();
+        black_box(unsafe { t
+            .call(&mut [MaybeUninit::uninit(); 109915]) }
+            .unwrap());
     });
 }
 
@@ -376,10 +372,11 @@ fn io_big_table(b: &mut criterion::Bencher, size: usize) {
     let table = build_big_table(size);
     let mut buf = vec![];
     let _ = _io_big_table(&mut buf, &table);
-    let mut buf = Vec::with_capacity(buf.len());
+    let len = buf.len();
     b.iter(|| {
-        buf.clear();
-        let _ = _io_big_table(&mut buf, &table);
+        let mut buf = Vec::with_capacity(len);
+        _io_big_table(&mut buf, &table).unwrap();
+        buf
     });
 }
 
@@ -437,7 +434,8 @@ fn io_termcolor_teams(b: &mut criterion::Bencher) {
     let len = buf.0.len();
     b.iter(|| {
         let mut buf = TeamsWriter(Vec::with_capacity(len));
-        let _ = buf.io_writer_teams(&teams);
+        buf.io_writer_teams(&teams).unwrap();
+        buf
     });
 }
 
@@ -482,7 +480,7 @@ fn raw_big_table_memcpy(b: &mut criterion::Bencher, size: usize) {
                 write_b!(b"</tr>");
             }
             write_b!(b"</table>");
-            let _ = slice::from_raw_parts(buf_ptr!(), curr).to_vec();
+            black_box(slice::from_raw_parts(buf_ptr!(), curr));
         });
     }
 }
@@ -525,7 +523,7 @@ fn raw_big_table(b: &mut criterion::Bencher, size: usize) {
                 write_b!(b"</tr>");
             }
             write_b!(b"</table>");
-            let _ = slice::from_raw_parts(buf_ptr!(), curr).to_vec();
+            black_box(slice::from_raw_parts(buf_ptr!(), curr));
         });
     }
 }
@@ -592,7 +590,7 @@ fn raw_teams_escaped_memcpy(b: &mut criterion::Bencher) {
                 write_b!(b"</li>");
             }
             write_b!(b"</ul></body></html>");
-            let _ = slice::from_raw_parts(buf_ptr, curr).to_vec();
+            black_box(slice::from_raw_parts(buf_ptr, curr));
         })
     }
 }
@@ -648,7 +646,7 @@ fn raw_teams(b: &mut criterion::Bencher) {
                 write_b!(b"</li>");
             }
             write_b!(b"</ul></body></html>");
-            let _ = slice::from_raw_parts(buf_ptr, curr).to_vec();
+            black_box(slice::from_raw_parts(buf_ptr, curr));
         })
     }
 }
@@ -706,7 +704,7 @@ fn raws_teams_memcpy(b: &mut criterion::Bencher) {
                 write_b!(b"</li>");
             }
             write_b!(b"</ul></body></html>");
-            let _ = slice::from_raw_parts(buf_ptr, curr).to_vec();
+            black_box(slice::from_raw_parts(buf_ptr, curr));
         })
     }
 }
@@ -766,7 +764,7 @@ fn raws_teams_escaped(b: &mut criterion::Bencher) {
                 write_b!(b"</li>");
             }
             write_b!(b"</ul></body></html>");
-            let _ = slice::from_raw_parts(buf_ptr, curr).to_vec();
+            black_box(slice::from_raw_parts(buf_ptr, curr));
         })
     }
 }
@@ -780,9 +778,8 @@ struct Fixed3b;
 fn write_3_bytes(b: &mut criterion::Bencher) {
     b.iter(|| {
         const LEN: usize = 3 * STEPS;
-        let _ = TemplateFixed::call(&Fixed3b, &mut [MaybeUninit::uninit(); LEN])
-            .unwrap()
-            .to_vec();
+        black_box(unsafe { TemplateFixed::call(&Fixed3b, &mut [MaybeUninit::uninit(); LEN]) }
+            .unwrap());
     })
 }
 
@@ -804,7 +801,7 @@ fn write_3_bytes_bb(b: &mut criterion::Bencher) {
                     curr += BYTES;
                 }
             }
-            let _ = &buf[..curr].to_vec();
+            black_box(&buf[..curr]);
         })
     }
 }
@@ -830,7 +827,7 @@ fn write_3_bytes_memcpy(b: &mut criterion::Bencher) {
                     curr += BYTES;
                 }
             }
-            let _ = &buf[..curr].to_vec();
+            black_box(&buf[..curr]);
         })
     }
 }

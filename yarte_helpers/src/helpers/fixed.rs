@@ -87,7 +87,12 @@ macro_rules! itoa_display {
             impl RenderFixed for $ty {
                 #[inline(always)]
                 unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
-                    itoa::write(from_raw_parts_mut(buf_ptr!(buf), buf.len()), *self).ok()
+                    use super::integers::Integer;
+                    if buf.len() < Self::MAX_LEN {
+                        None
+                    } else {
+                        Some((*self).write_to(buf as *mut _ as *mut u8))
+                    }
                 }
             }
         )*
@@ -96,8 +101,8 @@ macro_rules! itoa_display {
 
 #[rustfmt::skip]
 itoa_display! {
-    u8 u16 u32 u64 u128 usize
-    i8 i16 i32 i64 i128 isize
+    u8 u16 u32 u64 usize
+    i8 i16 i32 i64 isize
 }
 
 macro_rules! dtoa_display {
@@ -173,7 +178,12 @@ macro_rules! itoa_display {
             impl RenderSafe for $ty {
                 #[inline(always)]
                 unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
-                    itoa::write(from_raw_parts_mut(buf_ptr!(buf), buf.len()), *self).ok()
+                    use super::integers::Integer;
+                    if buf.len() < Self::MAX_LEN {
+                        None
+                    } else {
+                        Some((*self).write_to(buf as *mut _ as *mut u8))
+                    }
                 }
             }
         )*
@@ -182,8 +192,8 @@ macro_rules! itoa_display {
 
 #[rustfmt::skip]
 itoa_display! {
-    u8 u16 u32 u64 u128 usize
-    i8 i16 i32 i64 i128 isize
+    u8 u16 u32 u64 usize
+    i8 i16 i32 i64 isize
 }
 
 // TODO: check ryu

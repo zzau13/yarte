@@ -1,4 +1,5 @@
 pub mod io_fmt;
+pub mod integers;
 
 #[repr(align(32))]
 pub struct Aligned256<T>(pub T);
