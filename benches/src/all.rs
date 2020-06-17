@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter, Result, Write};
 use std::mem::MaybeUninit;
 use std::{io, slice};
 
-use criterion::{criterion_group, criterion_main, Criterion, black_box};
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 use itoa;
 use v_htmlescape::v_escape;
@@ -172,9 +172,7 @@ fn bytes_text_teams(b: &mut criterion::Bencher) {
         year: 2015,
         teams: build_teams(),
     };
-    b.iter(|| {
-        teams.call(2048).unwrap()
-    });
+    b.iter(|| teams.call(2048).unwrap());
 }
 
 #[derive(TemplateBytes)]
@@ -187,9 +185,7 @@ fn bytes_big_table(b: &mut criterion::Bencher, size: usize) {
     let t = BigTableB {
         table: build_big_table(size),
     };
-    b.iter(|| {
-        t.call(109915).unwrap()
-    });
+    b.iter(|| t.call(109915).unwrap());
 }
 
 #[derive(TemplateBytesText)]
@@ -202,9 +198,7 @@ fn bytes_text_big_table(b: &mut criterion::Bencher, size: usize) {
     let t = BigTableBT {
         table: build_big_table(size),
     };
-    b.iter(|| {
-        t.call(109915).unwrap()
-    });
+    b.iter(|| t.call(109915).unwrap());
 }
 
 // Fixed
@@ -221,9 +215,7 @@ fn fixed_teams(b: &mut criterion::Bencher) {
         teams: build_teams(),
     };
     b.iter(|| {
-        black_box(unsafe { teams
-            .call(&mut [MaybeUninit::uninit(); 2048]) }
-            .unwrap());
+        black_box(unsafe { teams.call(&mut [MaybeUninit::uninit(); 2048]) }.unwrap());
     });
 }
 
@@ -240,9 +232,7 @@ fn fixed_text_teams(b: &mut criterion::Bencher) {
         teams: build_teams(),
     };
     b.iter(|| {
-        black_box(unsafe { teams
-            .call(&mut [MaybeUninit::uninit(); 2048]) }
-            .unwrap());
+        black_box(unsafe { teams.call(&mut [MaybeUninit::uninit(); 2048]) }.unwrap());
     });
 }
 
@@ -257,9 +247,7 @@ fn fixed_big_table(b: &mut criterion::Bencher, size: usize) {
         table: build_big_table(size),
     };
     b.iter(|| {
-        black_box(unsafe { t
-            .call(&mut [MaybeUninit::uninit(); 109915]) }
-            .unwrap());
+        black_box(unsafe { t.call(&mut [MaybeUninit::uninit(); 109915]) }.unwrap());
     });
 }
 
@@ -274,9 +262,7 @@ fn fixed_text_big_table(b: &mut criterion::Bencher, size: usize) {
         table: build_big_table(size),
     };
     b.iter(|| {
-        black_box(unsafe { t
-            .call(&mut [MaybeUninit::uninit(); 109915]) }
-            .unwrap());
+        black_box(unsafe { t.call(&mut [MaybeUninit::uninit(); 109915]) }.unwrap());
     });
 }
 
@@ -537,7 +523,7 @@ fn raw_teams_escaped_memcpy(b: &mut criterion::Bencher) {
         const LEN: usize = 256;
 
         b.iter(|| {
-            let mut buf: [u8; LEN] = MaybeUninit::uninit().assume_init();
+            let buf = &mut [MaybeUninit::uninit(); LEN];
             let mut curr = 0;
             let buf_ptr = buf.as_mut_ptr();
 
@@ -547,8 +533,8 @@ fn raw_teams_escaped_memcpy(b: &mut criterion::Bencher) {
                         panic!("buffer overflow");
                     } else {
                         std::ptr::copy_nonoverlapping(
-                            ($b as *const [u8] as *const u8),
-                            buf_ptr.add(curr),
+                            ($b as *const _ as *const u8),
+                            buf_ptr.add(curr) as *mut u8,
                             $b.len(),
                         );
                         curr += $b.len();
@@ -558,13 +544,13 @@ fn raw_teams_escaped_memcpy(b: &mut criterion::Bencher) {
 
             write_b!(b"<html><head><title>");
             curr += itoa::write(
-                slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr),
+                slice::from_raw_parts_mut(buf_ptr.add(curr) as *mut u8, LEN - curr),
                 teams.year,
             )
             .expect("buffer overflow");
             write_b!(b"</title></head><body><h1>CSL ");
             curr += itoa::write(
-                slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr),
+                slice::from_raw_parts_mut(buf_ptr.add(curr) as *mut u8, LEN - curr),
                 teams.year,
             )
             .unwrap();
@@ -575,22 +561,22 @@ fn raw_teams_escaped_memcpy(b: &mut criterion::Bencher) {
                     write_b!(b"champion");
                 }
                 write_b!(b"\"><b>");
-                curr += v_escape(
-                    v.name.as_bytes(),
-                    slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr),
-                )
-                .expect("buffer overflow");
+                curr += v_escape(v.name.as_bytes(), &mut buf[curr..]).expect("buffer overflow");
 
                 write_b!(b"</b>: ");
                 curr += itoa::write(
-                    slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr),
+                    slice::from_raw_parts_mut(buf_ptr.add(curr) as *mut u8, LEN - curr),
                     v.score,
                 )
                 .expect("buffer overflow");
                 write_b!(b"</li>");
             }
             write_b!(b"</ul></body></html>");
-            black_box(slice::from_raw_parts(buf_ptr, curr));
+
+            black_box(slice::from_raw_parts(
+                buf_ptr as *const _ as *const u8,
+                curr,
+            ));
         })
     }
 }
@@ -646,6 +632,7 @@ fn raw_teams(b: &mut criterion::Bencher) {
                 write_b!(b"</li>");
             }
             write_b!(b"</ul></body></html>");
+
             black_box(slice::from_raw_parts(buf_ptr, curr));
         })
     }
@@ -718,7 +705,7 @@ fn raws_teams_escaped(b: &mut criterion::Bencher) {
         const LEN: usize = 256;
 
         b.iter(|| {
-            let mut buf: [u8; LEN] = MaybeUninit::uninit().assume_init();
+            let buf = &mut [MaybeUninit::uninit(); LEN];
             let mut curr = 0;
             let buf_ptr = buf.as_mut_ptr();
 
@@ -728,7 +715,7 @@ fn raws_teams_escaped(b: &mut criterion::Bencher) {
                         panic!("buffer overflow");
                     } else {
                         for i in $b {
-                            buf_ptr.add(curr).write(*i);
+                            buf_ptr.add(curr).write(MaybeUninit::new(*i));
                             curr += 1;
                         }
                     }
@@ -737,9 +724,14 @@ fn raws_teams_escaped(b: &mut criterion::Bencher) {
 
             macro_rules! write_u16 {
                 ($n:expr) => {
-                    curr +=
-                        itoa::write(slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr), $n)
-                            .expect("buffer overflow");
+                    curr += itoa::write(
+                        slice::from_raw_parts_mut(
+                            buf_ptr.add(curr) as *mut _ as *mut u8,
+                            LEN - curr,
+                        ),
+                        $n,
+                    )
+                    .expect("buffer overflow");
                 };
             }
 
@@ -754,17 +746,16 @@ fn raws_teams_escaped(b: &mut criterion::Bencher) {
                     write_b!(b"champion");
                 }
                 write_b!(b"\"><b>");
-                curr += v_escape(
-                    v.name.as_bytes(),
-                    slice::from_raw_parts_mut(buf_ptr.add(curr), LEN - curr),
-                )
-                .expect("buffer overflow");
+                curr += v_escape(v.name.as_bytes(), &mut buf[curr..]).expect("buffer overflow");
                 write_b!(b"</b>: ");
                 write_u16!(v.score);
                 write_b!(b"</li>");
             }
             write_b!(b"</ul></body></html>");
-            black_box(slice::from_raw_parts(buf_ptr, curr));
+            black_box(slice::from_raw_parts(
+                buf_ptr as *const _ as *const u8,
+                curr,
+            ));
         })
     }
 }
@@ -778,8 +769,9 @@ struct Fixed3b;
 fn write_3_bytes(b: &mut criterion::Bencher) {
     b.iter(|| {
         const LEN: usize = 3 * STEPS;
-        black_box(unsafe { TemplateFixed::call(&Fixed3b, &mut [MaybeUninit::uninit(); LEN]) }
-            .unwrap());
+        black_box(
+            unsafe { TemplateFixed::call(&Fixed3b, &mut [MaybeUninit::uninit(); LEN]) }.unwrap(),
+        );
     })
 }
 
