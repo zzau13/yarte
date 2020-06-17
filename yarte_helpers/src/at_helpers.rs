@@ -15,7 +15,7 @@ pub mod json {
             Self: Serialize + Sized;
     }
 
-    impl<'a, S: Serialize> AsJson for S {
+    impl<S> AsJson for S {
         fn __as_json(&self) -> Json<'_, Self>
         where
             Self: Serialize + Sized,
@@ -32,7 +32,7 @@ pub mod json {
             Self: Serialize + Sized;
     }
 
-    impl<'a, S: Serialize> AsJsonPretty for S {
+    impl<S> AsJsonPretty for S {
         fn __as_json_pretty(&self) -> JsonPretty<'_, Self>
         where
             Self: Serialize + Sized,
