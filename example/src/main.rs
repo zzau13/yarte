@@ -8,26 +8,20 @@ use yarte::{Template, TemplateBytesMin, TemplateFixedMin, TemplateMin};
 
 #[derive(Template)]
 #[template(path = "index")]
-struct IndexTemplate {
-    query: HashMap<&'static str, &'static str>,
+struct IndexTemplate<'a> {
+    query: &'a HashMap<&'static str, &'static str>,
 }
 
 #[derive(TemplateMin)]
 #[template(path = "index")]
-struct IndexTemplateMin {
-    query: HashMap<&'static str, &'static str>,
+struct IndexTemplateMin<'a> {
+    query: &'a HashMap<&'static str, &'static str>,
 }
 
-#[derive(TemplateFixedMin)]
+#[derive(TemplateFixedMin, TemplateBytesMin)]
 #[template(path = "index_fixed")]
-struct IndexTemplateF {
-    query: HashMap<&'static str, &'static str>,
-}
-
-#[derive(TemplateBytesMin)]
-#[template(path = "index_fixed")]
-struct IndexTemplateB {
-    query: HashMap<&'static str, &'static str>,
+struct IndexTemplateF<'a> {
+    query: &'a HashMap<&'static str, &'static str>,
 }
 
 fn main() {
@@ -35,24 +29,14 @@ fn main() {
     query.insert("name", "new");
     query.insert("lastname", "user");
 
-    println!(
-        "Fmt:\n{}",
-        IndexTemplate {
-            query: query.clone()
-        }
-    );
-    println!(
-        "\nFmt Min:\n{}",
-        IndexTemplateMin {
-            query: query.clone()
-        }
-    );
+    println!("Fmt:\n{}", IndexTemplate { query: &query });
+    println!("\nFmt Min:\n{}", IndexTemplateMin { query: &query });
 
     unsafe {
-        IndexTemplateF {
-            query: query.clone(),
-        }
-        .call(&mut [MaybeUninit::uninit(); 2048])
+        TemplateFixedMin::call(
+            &IndexTemplateF { query: &query },
+            &mut [MaybeUninit::uninit(); 2048],
+        )
     }
     .and_then(|b| {
         println!("\nFixed Min:");
@@ -62,7 +46,7 @@ fn main() {
     })
     .unwrap();
 
-    let buf = IndexTemplateB { query }.call(2048).unwrap();
+    let buf = TemplateBytesMin::call(&IndexTemplateF { query: &query }, 2048).unwrap();
     thread::spawn(move || {
         println!("\nBytes Min:");
         stdout().lock().write_all(&buf).unwrap();
