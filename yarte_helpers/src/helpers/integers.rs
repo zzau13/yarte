@@ -1,6 +1,7 @@
+#![allow(clippy::many_single_char_names)]
 use std::ptr;
 
-const DEC_DIGITS_LUT: &'static [u8] = b"\
+const DEC_DIGITS_LUT: &[u8] = b"\
       0001020304050607080910111213141516171819\
       2021222324252627282930313233343536373839\
       4041424344454647484950515253545556575859\
@@ -26,16 +27,14 @@ unsafe fn write_small(n: u16, buf: *mut u8) -> usize {
             ptr::copy_nonoverlapping(lookup!(n), buf, 2);
             2
         }
+    } else if n < 1000 {
+        *buf = (n / 100) as u8 + 0x30;
+        ptr::copy_nonoverlapping(lookup!(n % 100), buf.add(1), 2);
+        3
     } else {
-        if n < 1000 {
-            *buf = (n / 100) as u8 + 0x30;
-            ptr::copy_nonoverlapping(lookup!(n % 100), buf.add(1), 2);
-            3
-        } else {
-            ptr::copy_nonoverlapping(lookup!(n / 100), buf, 2);
-            ptr::copy_nonoverlapping(lookup!(n % 100), buf.add(2), 2);
-            4
-        }
+        ptr::copy_nonoverlapping(lookup!(n / 100), buf, 2);
+        ptr::copy_nonoverlapping(lookup!(n % 100), buf.add(2), 2);
+        4
     }
 }
 
@@ -184,6 +183,10 @@ unsafe fn write_u64(mut n: u64, buf: *mut u8) -> usize {
 
 pub trait Integer {
     const MAX_LEN: usize;
+    /// Write
+    ///
+    /// # Safety
+    /// Internal library NOT USE
     unsafe fn write_to(self, buf: *mut u8) -> usize;
 }
 
@@ -294,9 +297,8 @@ mod tests {
     make_test!(test_u8, u8, 0, 1, 9, 10, 99, 100, 254, 255);
     make_test!(test_u16, u16, 0, 9, 10, 99, 100, 999, 1000, 9999, 10000, 65535);
     make_test!(
-        test_u32, u32, 0, 9, 10, 99, 100, 999, 1000, 9999, 10000, 99999, 100000, 999999,
-        1000000, 9999999, 10000000, 99999999, 100000000, 999999999, 1000000000,
-        4294967295
+        test_u32, u32, 0, 9, 10, 99, 100, 999, 1000, 9999, 10000, 99999, 100000, 999999, 1000000,
+        9999999, 10000000, 99999999, 100000000, 999999999, 1000000000, 4294967295
     );
     make_test!(
         test_u64,
