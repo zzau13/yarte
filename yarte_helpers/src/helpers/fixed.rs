@@ -1,11 +1,13 @@
 #![allow(dead_code)]
 
 use std::io;
-use std::mem::MaybeUninit;
-use std::ptr::copy_nonoverlapping;
-use std::slice::from_raw_parts_mut;
+use core::mem::MaybeUninit;
+use core::ptr::copy_nonoverlapping;
+use core::slice::from_raw_parts_mut;
 
 use v_htmlescape::{v_escape, v_escape_char};
+
+use super::ryu::Sealed;
 
 macro_rules! buf_ptr {
     ($buf:expr) => {
@@ -19,6 +21,7 @@ macro_rules! src_ptr {
     };
 }
 
+// TODO: bound to Copy
 /// Render trait, used for wrap unsafe expressions `{{ ... }}` when it's in a html template
 pub trait RenderFixed {
     /// Render in buffer will html escape the string type
@@ -123,24 +126,6 @@ itoa128_display! {
     u128 i128
 }
 
-macro_rules! dtoa_display {
-    ($($ty:ty)*) => {
-        $(
-            impl RenderFixed for $ty {
-                #[inline(always)]
-                unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
-                    dtoa::write(from_raw_parts_mut(buf_ptr!(buf), buf.len()), *self).ok()
-                }
-            }
-        )*
-    };
-}
-
-#[rustfmt::skip]
-dtoa_display! {
-    f32 f64
-}
-
 impl RenderFixed for char {
     #[inline(always)]
     unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
@@ -232,24 +217,43 @@ itoa128_display! {
     u128 i128
 }
 
-// TODO: check ryu
-macro_rules! dtoa_display {
-    ($($ty:ty)*) => {
-        $(
-            impl RenderSafe for $ty {
-                #[inline(always)]
-                unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
-                    dtoa::write(from_raw_parts_mut(buf_ptr!(buf), buf.len()), *self).ok()
-                }
+// https://github.com/dtolnay/ryu/blob/1.0.5/src/buffer/mod.rs#L23
+const MAX_SIZE_FLOAT: usize = 24;
+
+macro_rules! ryu_display {
+    ($f:ty, $t:ty) => {
+impl $t for $f {
+    #[inline(always)]
+    unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
+        let b = *self;
+        if b.is_infinite() {
+            let b = b.format_nonfinite();
+            if buf.len() < b.len() {
+                None
+            } else {
+                copy_nonoverlapping(b.as_ptr(), buf_ptr!(buf), b.len());
+                Some(buf.len())
             }
-        )*
+        } else if buf.len() < MAX_SIZE_FLOAT {
+            None
+        } else {
+            Some(b.write_to_ryu_buffer(buf_ptr!(buf)))
+        }
+    }
+}
+    };
+    ($f:ty, $t:ty, $($r:tt)+) => {
+        ryu_display!($f, $t);
+        ryu_display!($($r)+);
     };
 }
 
-#[rustfmt::skip]
-dtoa_display! {
-    f32 f64
-}
+ryu_display!(
+    f32, RenderFixed,
+    f64, RenderFixed,
+    f32, RenderSafe,
+    f64, RenderSafe
+);
 
 impl RenderSafe for char {
     #[inline(always)]
