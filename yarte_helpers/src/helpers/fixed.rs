@@ -21,7 +21,6 @@ macro_rules! src_ptr {
     };
 }
 
-// TODO: bound to Copy
 /// Render trait, used for wrap unsafe expressions `{{ ... }}` when it's in a html template
 pub trait RenderFixed {
     /// Render in buffer will html escape the string type
@@ -29,7 +28,7 @@ pub trait RenderFixed {
     /// # Safety
     /// Possible overlap if you have a chance to implement:
     /// have a buffer reference in your data type
-    unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize>;
+    unsafe fn render(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize>;
 }
 
 /// Auto ref trait
@@ -39,13 +38,13 @@ pub trait RenderFixedA {
     /// # Safety
     /// Possible overlap if you have a chance to implement:
     /// have a buffer reference in your data type
-    unsafe fn __render_it(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize>;
+    unsafe fn __render_it(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize>;
 }
 
-impl<T: RenderFixed + ?Sized> RenderFixedA for T {
+impl<T: RenderFixed + Copy + ?Sized> RenderFixedA for T {
     #[inline(always)]
-    unsafe fn __render_it(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
-        RenderFixed::render(self, buf)
+    unsafe fn __render_it(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
+        self.render(buf)
     }
 }
 
@@ -56,13 +55,13 @@ pub trait RenderSafeA {
     /// # Safety
     /// Possible overlap if you have a chance to implement:
     /// have a buffer reference in your data type
-    unsafe fn __render_it_safe(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize>;
+    unsafe fn __render_it_safe(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize>;
 }
 
-impl<T: RenderSafe + ?Sized> RenderSafeA for T {
+impl<T: RenderSafe + Copy + ?Sized> RenderSafeA for T {
     #[inline(always)]
-    unsafe fn __render_it_safe(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
-        RenderSafe::render(self, buf)
+    unsafe fn __render_it_safe(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
+        self.render(buf)
     }
 }
 
@@ -71,7 +70,7 @@ macro_rules! str_display {
         $(
             impl RenderFixed for $ty {
                 #[inline(always)]
-                unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
+                unsafe fn render(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
                     v_escape(self.as_bytes(), buf)
                 }
             }
@@ -81,7 +80,7 @@ macro_rules! str_display {
 
 #[rustfmt::skip]
 str_display!(
-    str String
+    &str &String
 );
 
 macro_rules! itoa_display {
@@ -89,12 +88,12 @@ macro_rules! itoa_display {
         $(
             impl RenderFixed for $ty {
                 #[inline(always)]
-                unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
+                unsafe fn render(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
                     use super::integers::Integer;
                     if buf.len() < Self::MAX_LEN {
                         None
                     } else {
-                        Some((*self).write_to(buf as *mut _ as *mut u8))
+                        Some(self.write_to(buf as *mut _ as *mut u8))
                     }
                 }
             }
@@ -111,9 +110,9 @@ itoa_display! {
 macro_rules! itoa128_display {
     ($($ty:ty)*) => {
         $(
-            impl RenderFixed for $ty {
+            impl RenderFixed for &$ty {
                 #[inline(always)]
-                unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
+                unsafe fn render(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
                     itoa::write(from_raw_parts_mut(buf_ptr!(buf), buf.len()), *self).ok()
                 }
             }
@@ -128,15 +127,15 @@ itoa128_display! {
 
 impl RenderFixed for char {
     #[inline(always)]
-    unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
-        v_escape_char(*self, buf)
+    unsafe fn render(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
+        v_escape_char(self, buf)
     }
 }
 
 impl RenderFixed for bool {
     #[inline(always)]
-    unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
-        render_bool(*self, buf)
+    unsafe fn render(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
+        render_bool(self, buf)
     }
 }
 
@@ -147,7 +146,7 @@ pub trait RenderSafe {
     /// # Safety
     /// Possible overlap if you have a chance to implement:
     /// have a buffer reference in your data type
-    unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize>;
+    unsafe fn render(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize>;
 }
 
 macro_rules! str_display {
@@ -155,7 +154,7 @@ macro_rules! str_display {
         $(
             impl RenderSafe for $ty {
                 #[inline(always)]
-                unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
+                unsafe fn render(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
                     if buf.len() < self.len() {
                         None
                     } else {
@@ -172,7 +171,7 @@ macro_rules! str_display {
 
 #[rustfmt::skip]
 str_display!(
-    str String
+    &str &String
 );
 
 macro_rules! itoa_display {
@@ -180,12 +179,12 @@ macro_rules! itoa_display {
         $(
             impl RenderSafe for $ty {
                 #[inline(always)]
-                unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
+                unsafe fn render(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
                     use super::integers::Integer;
                     if buf.len() < Self::MAX_LEN {
                         None
                     } else {
-                        Some((*self).write_to(buf as *mut _ as *mut u8))
+                        Some(self.write_to(buf as *mut _ as *mut u8))
                     }
                 }
             }
@@ -202,9 +201,9 @@ itoa_display! {
 macro_rules! itoa128_display {
     ($($ty:ty)*) => {
         $(
-            impl RenderSafe for $ty {
+            impl RenderSafe for &$ty {
                 #[inline(always)]
-                unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
+                unsafe fn render(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
                     itoa::write(from_raw_parts_mut(buf_ptr!(buf), buf.len()), *self).ok()
                 }
             }
@@ -224,10 +223,9 @@ macro_rules! ryu_display {
     ($f:ty, $t:ty) => {
 impl $t for $f {
     #[inline(always)]
-    unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
-        let b = *self;
-        if b.is_infinite() {
-            let b = b.format_nonfinite();
+    unsafe fn render(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
+        if self.is_infinite() {
+            let b = self.format_nonfinite();
             if buf.len() < b.len() {
                 None
             } else {
@@ -237,7 +235,7 @@ impl $t for $f {
         } else if buf.len() < MAX_SIZE_FLOAT {
             None
         } else {
-            Some(b.write_to_ryu_buffer(buf_ptr!(buf)))
+            Some(self.write_to_ryu_buffer(buf_ptr!(buf)))
         }
     }
 }
@@ -258,15 +256,15 @@ ryu_display!(
 
 impl RenderSafe for char {
     #[inline(always)]
-    unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
-        render_char(*self, buf)
+    unsafe fn render(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
+        render_char(self, buf)
     }
 }
 
 impl RenderSafe for bool {
     #[inline(always)]
-    unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
-        render_bool(*self, buf)
+    unsafe fn render(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
+        render_bool(self, buf)
     }
 }
 
@@ -316,7 +314,7 @@ mod json {
 
     impl<'a, S: Serialize> RenderFixed for Json<'a, S> {
         #[inline(always)]
-        unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
+        unsafe fn render(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
             let mut buf = Writer::new(buf);
             to_writer(&mut buf, self.0).ok()?;
             Some(buf.consume())
@@ -325,7 +323,7 @@ mod json {
 
     impl<'a, D: Serialize> RenderFixed for JsonPretty<'a, D> {
         #[inline(always)]
-        unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
+        unsafe fn render(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
             let mut buf = Writer::new(buf);
             to_writer_pretty(&mut buf, self.0).ok()?;
             Some(buf.consume())
@@ -334,7 +332,7 @@ mod json {
 
     impl<'a, S: Serialize> RenderSafe for Json<'a, S> {
         #[inline(always)]
-        unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
+        unsafe fn render(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
             let mut buf = Writer::new(buf);
             to_writer(&mut buf, self.0).ok()?;
             Some(buf.consume())
@@ -343,7 +341,7 @@ mod json {
 
     impl<'a, D: Serialize> RenderSafe for JsonPretty<'a, D> {
         #[inline(always)]
-        unsafe fn render(&self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
+        unsafe fn render(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
             let mut buf = Writer::new(buf);
             to_writer_pretty(&mut buf, self.0).ok()?;
             Some(buf.consume())

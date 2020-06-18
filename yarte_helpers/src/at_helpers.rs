@@ -7,6 +7,7 @@ pub mod json {
 
     use crate::helpers::io_fmt::IoFmt;
 
+    #[derive(Clone, Copy)]
     pub struct Json<'a, T: Serialize>(pub &'a T);
 
     pub trait AsJson {
@@ -24,6 +25,7 @@ pub mod json {
         }
     }
 
+    #[derive(Clone, Copy)]
     pub struct JsonPretty<'a, T: Serialize>(pub &'a T);
 
     pub trait AsJsonPretty {

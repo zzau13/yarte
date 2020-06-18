@@ -60,6 +60,7 @@ pub trait TemplateFixedTrait {
     /// # const N: usize = 1;
     /// let buf = TemplateFixedTrait::call(&mut [MaybeUninit::uninit(); N]).expect("buffer overflow");
     /// ```
+    // TODO: consume function `ccall` for elide reference small types
     unsafe fn call<'call>(
         &self,
         buf: &'call mut [std::mem::MaybeUninit<u8>],
@@ -84,6 +85,7 @@ pub use TemplateFixedTrait as TemplateFixedMin;
 /// Template trait
 pub trait TemplateBytesTrait {
     /// Writes to buffer and return it freeze
+    // TODO: consume function `ccall` for elide reference small types
     fn call(&self, capacity: usize) -> Option<bytes::Bytes>;
 }
 
