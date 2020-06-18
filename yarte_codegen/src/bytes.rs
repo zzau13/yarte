@@ -64,6 +64,44 @@ impl<'a, T: CodeGen> BytesCodeGen<'a, T> {
                     }
                     Some(bytes_mut.freeze())
                 }
+
+                fn ccall(self, capacity: usize) -> Option<#parent::Bytes> {
+                    use #parent::*;
+                    let mut bytes_mut = #parent::BytesMut::with_capacity(capacity);
+                    let buf = #parent::BufMut::bytes_mut(&mut bytes_mut);
+                    let mut buf_cur = 0;
+                    unsafe {
+                        macro_rules! buf_ptr {
+                            () => { buf as *mut _ as * mut u8 };
+                        }
+                        macro_rules! len {
+                            () => { buf.len() };
+                        }
+
+                        #[allow(unused_macros)]
+                        macro_rules! __yarte_check_write {
+                            ($len:expr, $write:block) => {
+                                if len!() < buf_cur + $len {
+                                    return None;
+                                } else $write
+                            };
+                        }
+                        #[allow(unused_macros)]
+                        macro_rules! __yarte_write_bytes_long {
+                            ($b:expr) => {
+                                __yarte_check_write!($b.len(), {
+                                    // Not use copy_from_slice for elide double checked
+                                    std::ptr::copy_nonoverlapping((&$b as *const _ as *const u8), buf_ptr!().add(buf_cur), $b.len());
+                                    buf_cur += $b.len();
+                                })
+                            };
+                        }
+
+                        #nodes
+                        #parent::BufMut::advance_mut(&mut bytes_mut, buf_cur)
+                    }
+                    Some(bytes_mut.freeze())
+                }
             ),
         ));
     }
