@@ -1,8 +1,9 @@
-// based on [`sailfish`](https://github.com/Kogia-sima/sailfish) and [`itoa`](https://github.com/dtolnay/itoa)
+// based on https://github.com/miloyip/itoa-benchmark
 #![allow(clippy::many_single_char_names)]
+use super::v_integer::u32toa_sse2;
 use std::ptr;
 
-const DEC_DIGITS_LUT: &[u8] = b"\
+pub(crate) static DIGITS_LUT: &[u8] = b"\
       0001020304050607080910111213141516171819\
       2021222324252627282930313233343536373839\
       4041424344454647484950515253545556575859\
@@ -11,7 +12,7 @@ const DEC_DIGITS_LUT: &[u8] = b"\
 
 macro_rules! lookup {
     ($idx:expr) => {
-        DEC_DIGITS_LUT.as_ptr().add(($idx as usize) << 1)
+        DIGITS_LUT.as_ptr().add(($idx as usize) << 1)
     };
 }
 
@@ -92,7 +93,8 @@ unsafe fn write_u16(n: u16, buf: *mut u8) -> usize {
     }
 }
 
-// TODO: check
+// TODO: check, make benchmarks
+#[allow(dead_code)]
 unsafe fn write_u32(mut n: u32, buf: *mut u8) -> usize {
     if n < 10000 {
         write_small(n as u16, buf)
@@ -219,7 +221,7 @@ macro_rules! impl_integer {
 
 impl_integer!(u8, i8, u8, write_u8, 3);
 impl_integer!(u16, i16, u16, write_u16, 5);
-impl_integer!(u32, i32, u32, write_u32, 10);
+impl_integer!(u32, i32, u32, u32toa_sse2, 10);
 impl_integer!(u64, i64, u64, write_u64, 20);
 
 #[cfg(target_pointer_width = "16")]
@@ -270,6 +272,36 @@ mod tests {
         }
     }
 
+    // random test
+    #[test]
+    fn test_u32_random() {
+        use super::Integer;
+        use std::time::{SystemTime, UNIX_EPOCH};
+        let mut buf = Vec::with_capacity(u64::MAX_LEN);
+
+        let mut state = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as u32;
+        for _ in 0..1_000 {
+            // xorshift
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+        }
+        for _ in 0..10_000_000 {
+            // xorshift
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+
+            unsafe {
+                let l = state.write_to(buf.as_mut_ptr());
+                buf.set_len(l);
+                assert_eq!(std::str::from_utf8_unchecked(&*buf), format!("{}", state));
+            }
+        }
+    }
     macro_rules! make_test {
         ($name:ident, $type:ty, $($value:expr),*) => {
             #[test]

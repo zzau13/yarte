@@ -1,5 +1,6 @@
 pub mod integers;
 pub mod io_fmt;
+pub mod v_integer;
 
 #[repr(align(32))]
 #[cfg(target_pointer_width = "64")]
