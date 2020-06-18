@@ -60,11 +60,20 @@ pub trait TemplateFixedTrait {
     /// # const N: usize = 1;
     /// let buf = TemplateFixedTrait::call(&mut [MaybeUninit::uninit(); N]).expect("buffer overflow");
     /// ```
-    // TODO: consume function `ccall` for elide reference small types
     unsafe fn call<'call>(
         &self,
         buf: &'call mut [std::mem::MaybeUninit<u8>],
     ) -> Option<&'call [u8]>;
+
+    /// Writes to buffer and drop
+    ///
+    /// # Safety
+    /// Not respect the lifetime bounds it's possible borrow mut when it's borrow
+    /// ```rust,ignore
+    /// # const N: usize = 1;
+    /// let buf = TemplateFixedTrait::ccall(&mut [MaybeUninit::uninit(); N]).expect("buffer overflow");
+    /// ```
+    unsafe fn ccall(self, buf: &mut [std::mem::MaybeUninit<u8>]) -> Option<&[u8]>;
 }
 
 #[cfg(feature = "fixed")]
@@ -85,8 +94,9 @@ pub use TemplateFixedTrait as TemplateFixedMin;
 /// Template trait
 pub trait TemplateBytesTrait {
     /// Writes to buffer and return it freeze
-    // TODO: consume function `ccall` for elide reference small types
     fn call(&self, capacity: usize) -> Option<bytes::Bytes>;
+    /// Writes to buffer and return it freeze and drop
+    fn ccall(self, capacity: usize) -> Option<bytes::Bytes>;
 }
 
 #[cfg(all(feature = "bytes_buff", feature = "html-min"))]

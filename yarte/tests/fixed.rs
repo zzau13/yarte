@@ -26,6 +26,31 @@ fn test_variables() {
          Iñtërnâtiônàlizætiøn"
             .as_bytes()
     );
+    assert_eq!(
+        unsafe { s.ccall(&mut [MaybeUninit::uninit(); 128]) }.unwrap(),
+        "hello world, foo\nwith number: 42\nIñtërnâtiônàlizætiøn is important\nin vars too: \
+         Iñtërnâtiônàlizætiøn"
+            .as_bytes()
+    );
+}
+
+#[derive(TemplateFixed)]
+#[template(src = "{{ (&&&&&&&&&n) }}{{ n }}{{ n }}")]
+struct AutoCopy {
+    n: usize,
+}
+
+#[test]
+fn test_auto_copy() {
+    let s = AutoCopy { n: 0 };
+    assert_eq!(
+        unsafe { s.call(&mut [MaybeUninit::uninit(); 128]) }.unwrap(),
+        b"000"
+    );
+    assert_eq!(
+        unsafe { s.ccall(&mut [MaybeUninit::uninit(); 128]) }.unwrap(),
+        b"000"
+    );
 }
 
 #[derive(TemplateFixed)]

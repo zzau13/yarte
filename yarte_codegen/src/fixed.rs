@@ -62,6 +62,42 @@ impl<'a, T: CodeGen> FixedCodeGen<'a, T> {
                     Some(std::slice::from_raw_parts(buf as *const _ as *const u8, buf_cur))
                     }
                 }
+
+                unsafe fn ccall(self, buf: &mut [std::mem::MaybeUninit<u8>]) -> Option<&[u8]> {
+                    unsafe {
+                    #[allow(unused_import)]
+                    use #parent::*;
+                    macro_rules! buf_ptr {
+                        () => { buf as *mut _ as * mut u8 };
+                    }
+                    macro_rules! len {
+                        () => { buf.len() };
+                    }
+                    let mut buf_cur = 0;
+
+                    #[allow(unused_macros)]
+                    macro_rules! __yarte_check_write {
+                        ($len:expr, $write:block) => {
+                            if len!() < buf_cur + $len {
+                                return None;
+                            } else $write
+                        };
+                    }
+                    #[allow(unused_macros)]
+                    macro_rules! __yarte_write_bytes_long {
+                        ($b:expr) => {
+                            __yarte_check_write!($b.len(), {
+                                // Not use copy_from_slice for elide double checked
+                                std::ptr::copy_nonoverlapping((&$b as *const _ as *const u8), buf_ptr!().add(buf_cur), $b.len());
+                                buf_cur += $b.len();
+                            })
+                        };
+                    }
+
+                    #nodes
+                    Some(std::slice::from_raw_parts(buf as *const _ as *const u8, buf_cur))
+                    }
+                }
             ),
         ));
     }
