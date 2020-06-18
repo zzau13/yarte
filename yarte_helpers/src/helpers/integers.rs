@@ -277,7 +277,7 @@ mod tests {
     fn test_u32_random() {
         use super::Integer;
         use std::time::{SystemTime, UNIX_EPOCH};
-        let mut buf = Vec::with_capacity(u64::MAX_LEN);
+        let mut buf = Vec::with_capacity(u32::MAX_LEN);
 
         let mut state = SystemTime::now()
             .duration_since(UNIX_EPOCH)
