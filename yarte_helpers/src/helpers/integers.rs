@@ -256,7 +256,7 @@ mod tests {
 
         let mut state = 88172645463325252u64;
 
-        for _ in 0..100 {
+        for _ in 0..1_000_000 {
             // xorshift
             state ^= state << 13;
             state ^= state >> 7;
