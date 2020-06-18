@@ -110,10 +110,10 @@ itoa_display! {
 macro_rules! itoa128_display {
     ($($ty:ty)*) => {
         $(
-            impl RenderFixed for &$ty {
+            impl RenderFixed for $ty {
                 #[inline(always)]
                 unsafe fn render(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
-                    itoa::write(from_raw_parts_mut(buf_ptr!(buf), buf.len()), *self).ok()
+                    itoa::write(from_raw_parts_mut(buf_ptr!(buf), buf.len()), self).ok()
                 }
             }
         )*
@@ -201,10 +201,10 @@ itoa_display! {
 macro_rules! itoa128_display {
     ($($ty:ty)*) => {
         $(
-            impl RenderSafe for &$ty {
+            impl RenderSafe for $ty {
                 #[inline(always)]
                 unsafe fn render(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
-                    itoa::write(from_raw_parts_mut(buf_ptr!(buf), buf.len()), *self).ok()
+                    itoa::write(from_raw_parts_mut(buf_ptr!(buf), buf.len()), self).ok()
                 }
             }
         )*
