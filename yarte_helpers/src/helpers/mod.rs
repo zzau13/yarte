@@ -25,18 +25,13 @@ pub use markup::{Render, RenderA};
 #[cfg(feature = "ryu-ad")]
 pub mod ryu;
 
-pub trait IntoCopyIterator {
-    type Item;
-    type Iterator: Iterator<Item = Self::Item>;
-    fn __into_citer(self) -> Self::Iterator;
+pub trait IntoCopyIterator: IntoIterator {
+    fn __into_citer(self) -> <Self as IntoIterator>::IntoIter;
 }
 
 impl<I: IntoIterator + Sized> IntoCopyIterator for I {
-    type Item = <Self as IntoIterator>::Item;
-    type Iterator = <Self as IntoIterator>::IntoIter;
-
     #[inline]
-    fn __into_citer(self) -> Self::Iterator {
+    fn __into_citer(self) -> <Self as IntoIterator>::IntoIter {
         self.into_iter()
     }
 }
