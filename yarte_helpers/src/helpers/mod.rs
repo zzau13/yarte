@@ -27,7 +27,7 @@ pub trait IntoCopyIterator {
     fn __into_citer(self) -> Self::Iterator;
 }
 
-impl<T: Copy + ?Sized, I: IntoIterator<Item = T> + Sized> IntoCopyIterator for I {
+impl<T: Copy, I: IntoIterator<Item = T> + Sized> IntoCopyIterator for I {
     type Item = <Self as IntoIterator>::Item;
     type Iterator = <Self as IntoIterator>::IntoIter;
 

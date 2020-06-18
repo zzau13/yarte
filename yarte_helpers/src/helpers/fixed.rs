@@ -41,7 +41,7 @@ pub trait RenderFixedA {
     unsafe fn __render_it(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize>;
 }
 
-impl<T: RenderFixed + Copy + ?Sized> RenderFixedA for T {
+impl<T: RenderFixed + Copy> RenderFixedA for T {
     #[inline(always)]
     unsafe fn __render_it(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
         self.render(buf)
@@ -58,7 +58,7 @@ pub trait RenderSafeA {
     unsafe fn __render_it_safe(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize>;
 }
 
-impl<T: RenderSafe + Copy + ?Sized> RenderSafeA for T {
+impl<T: RenderSafe + Copy> RenderSafeA for T {
     #[inline(always)]
     unsafe fn __render_it_safe(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
         self.render(buf)
