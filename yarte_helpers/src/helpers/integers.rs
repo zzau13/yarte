@@ -1,6 +1,7 @@
 // based on https://github.com/miloyip/itoa-benchmark
 #![allow(clippy::many_single_char_names)]
-use super::v_integer::u32toa_sse2;
+#[cfg(target_arch = "x86_64")]
+use super::v_integer::write_u32;
 use std::ptr;
 
 pub(crate) static DIGITS_LUT: &[u8] = b"\
@@ -94,7 +95,7 @@ unsafe fn write_u16(n: u16, buf: *mut u8) -> usize {
 }
 
 // TODO: check, make benchmarks
-#[allow(dead_code)]
+#[cfg(not(target_arch = "x86_64"))]
 unsafe fn write_u32(mut n: u32, buf: *mut u8) -> usize {
     if n < 10000 {
         write_small(n as u16, buf)
@@ -221,7 +222,7 @@ macro_rules! impl_integer {
 
 impl_integer!(u8, i8, u8, write_u8, 3);
 impl_integer!(u16, i16, u16, write_u16, 5);
-impl_integer!(u32, i32, u32, u32toa_sse2, 10);
+impl_integer!(u32, i32, u32, write_u32, 10);
 impl_integer!(u64, i64, u64, write_u64, 20);
 
 #[cfg(target_pointer_width = "16")]
@@ -235,7 +236,6 @@ impl_integer!(usize, isize, u64, write_u64, 20);
 
 #[cfg(test)]
 mod tests {
-    // comprehenisive test
     #[test]
     fn test_i8_all() {
         use super::Integer;
@@ -250,7 +250,6 @@ mod tests {
         }
     }
 
-    // random test
     #[test]
     fn test_u64_random() {
         use super::Integer;
@@ -272,7 +271,6 @@ mod tests {
         }
     }
 
-    // random test
     #[test]
     fn test_u32_random() {
         use super::Integer;
@@ -283,13 +281,7 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs() as u32;
-        for _ in 0..1_000 {
-            // xorshift
-            state ^= state << 13;
-            state ^= state >> 7;
-            state ^= state << 17;
-        }
-        for _ in 0..10_000_000 {
+        for _ in 0..10_000_000u32 {
             // xorshift
             state ^= state << 13;
             state ^= state >> 7;
