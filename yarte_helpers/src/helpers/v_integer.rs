@@ -79,7 +79,7 @@ unsafe fn shift_digits_sse2(a: __m128i, digit: u8) -> __m128i {
     }
 }
 
-pub unsafe fn u32toa_sse2(value: u32, buf: *mut u8) -> usize {
+pub unsafe fn write_u32(value: u32, buf: *mut u8) -> usize {
     if value < 10000 {
         if value >= 1000 {
             let d1 = ((value / 100) << 1) as usize;
