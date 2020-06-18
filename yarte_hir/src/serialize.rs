@@ -109,7 +109,7 @@ where
                     MethodCall(ExprMethodCall {
                         receiver, method, ..
                     }) => {
-                        assert_eq!(method.to_string(), "into_iter");
+                        assert_eq!(method.to_string(), "__into_citer");
                         if let Paren(ExprParen { expr, .. }) = &**receiver {
                             if let Reference(ExprReference { expr, .. }) = &**expr {
                                 if let Paren(ExprParen { expr, .. }) = &**expr {

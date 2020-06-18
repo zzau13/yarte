@@ -514,14 +514,14 @@ impl<'a> LoweringContext<'a> {
             let args = if let syn::Expr::Range(..) = args {
                 syn::parse2::<syn::Expr>(quote!(((#args).enumerate()))).unwrap()
             } else {
-                syn::parse2::<syn::Expr>(quote!(((&(#args)).into_iter().enumerate()))).unwrap()
+                syn::parse2::<syn::Expr>(quote!(((&(#args)).__into_citer().enumerate()))).unwrap()
             };
             (args, syn::parse2::<syn::Expr>(quote!((#i, #v))).unwrap())
         } else {
             let args = if let syn::Expr::Range(..) = args {
                 args
             } else {
-                syn::parse2::<syn::Expr>(quote!(((&(#args)).into_iter()))).unwrap()
+                syn::parse2::<syn::Expr>(quote!(((&(#args)).__into_citer()))).unwrap()
             };
             (args, syn::parse2::<syn::Expr>(quote!(#v)).unwrap())
         };

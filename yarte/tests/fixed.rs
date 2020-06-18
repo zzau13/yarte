@@ -150,3 +150,20 @@ fn test_unaligned() {
         "atruefalse".repeat(OUT_L3).as_bytes()
     );
 }
+
+#[derive(TemplateFixed)]
+#[template(src = "{{# each n }}{{ this }}{{/each }}{{# each n }}{{ this }}{{/each }}")]
+struct ForTemplateC {
+    n: Vec<u16>,
+}
+
+#[test]
+fn test_forc() {
+    let s = ForTemplateC {
+        n: vec![1, 2, 3, 4],
+    };
+    assert_eq!(
+        unsafe { s.ccall(&mut [MaybeUninit::uninit(); 128]) }.unwrap(),
+        "1234".repeat(2).as_bytes()
+    );
+}
