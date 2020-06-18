@@ -2,6 +2,10 @@ pub mod integers;
 pub mod io_fmt;
 
 #[repr(align(32))]
+#[cfg(target_pointer_width = "64")]
+pub struct Aligned256<T>(pub T);
+
+#[cfg(not(target_pointer_width = "64"))]
 pub struct Aligned256<T>(pub T);
 
 #[cfg(feature = "big-num-32")]
@@ -27,7 +31,7 @@ pub trait IntoCopyIterator {
     fn __into_citer(self) -> Self::Iterator;
 }
 
-impl<T: Copy, I: IntoIterator<Item = T> + Sized> IntoCopyIterator for I {
+impl<I: IntoIterator + Sized> IntoCopyIterator for I {
     type Item = <Self as IntoIterator>::Item;
     type Iterator = <Self as IntoIterator>::IntoIter;
 
