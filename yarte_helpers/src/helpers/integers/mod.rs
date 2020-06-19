@@ -1,6 +1,4 @@
 // based on https://github.com/miloyip/itoa-benchmark
-#![allow(dead_code)]
-use std::ptr;
 
 #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 mod v_integer;
@@ -14,41 +12,6 @@ static DIGITS_LUT: &[u8] = b"\
       4041424344454647484950515253545556575859\
       6061626364656667686970717273747576777879\
       8081828384858687888990919293949596979899";
-
-macro_rules! lookup {
-    ($idx:expr) => {
-        DIGITS_LUT.as_ptr().add(($idx as usize) << 1)
-    };
-}
-
-macro_rules! write_ascii {
-    ($b:ident, $n:expr) => {
-        *$b = $n as u8 + 0x30;
-    };
-}
-
-/// write integer smaller than 10000
-#[inline]
-unsafe fn write_small(n: u16, buf: *mut u8) -> usize {
-    debug_assert!(n < 10000);
-
-    if n < 100 {
-        if n < 10 {
-            write_ascii!(buf, n);
-            1
-        } else {
-            ptr::copy_nonoverlapping(lookup!(n), buf, 2);
-            2
-        }
-    } else if n < 1000 {
-        write_ascii!(buf, n / 100);
-        ptr::copy_nonoverlapping(lookup!(n % 100), buf.add(1), 2);
-        3
-    } else {
-        write_small_pad(n, buf);
-        4
-    }
-}
 
 #[inline]
 unsafe fn write_less10k(value: u16, buf: *mut u8) -> usize {
@@ -82,6 +45,7 @@ unsafe fn write_less10k(value: u16, buf: *mut u8) -> usize {
 }
 
 #[inline]
+#[allow(dead_code)]
 unsafe fn write_10kk_100kk(value: u32, buf: *mut u8) {
     debug_assert!(value < 100_000_000);
     // value = bbbbcccc
@@ -158,15 +122,6 @@ unsafe fn write_10k_100kk(value: u32, buf: *mut u8) -> usize {
         *buf.add(7) = DIGITS_LUT[d4 + 1];
         8
     }
-}
-
-/// write integer smaller with 0 padding
-#[inline]
-unsafe fn write_small_pad(n: u16, buf: *mut u8) {
-    debug_assert!(n < 10000);
-
-    ptr::copy_nonoverlapping(lookup!(n / 100), buf, 2);
-    ptr::copy_nonoverlapping(lookup!(n % 100), buf.add(2), 2);
 }
 
 unsafe fn write_u8(value: u8, buf: *mut u8) -> usize {
