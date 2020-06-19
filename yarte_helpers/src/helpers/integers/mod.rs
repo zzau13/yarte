@@ -267,7 +267,7 @@ detect_fn!(write_u32, u32);
 #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 detect_fn!(write_u64, u64);
 #[cfg(not(any(target_arch = "x86_64", target_arch = "x86")))]
-pub use fallback::*;
+use fallback::*;
 
 pub trait Integer {
     const MAX_LEN: usize;
