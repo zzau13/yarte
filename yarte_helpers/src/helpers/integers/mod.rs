@@ -1,10 +1,14 @@
 // based on https://github.com/miloyip/itoa-benchmark
-#![allow(clippy::many_single_char_names)]
-#[cfg(target_arch = "x86_64")]
-use super::v_integer::write_u32;
+
 use std::ptr;
 
-pub(crate) static DIGITS_LUT: &[u8] = b"\
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+mod v_integer;
+
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+use v_integer::write_u32;
+
+static DIGITS_LUT: &[u8] = b"\
       0001020304050607080910111213141516171819\
       2021222324252627282930313233343536373839\
       4041424344454647484950515253545556575859\
@@ -76,14 +80,14 @@ unsafe fn write_u8(value: u8, buf: *mut u8) -> usize {
 unsafe fn write_u16(value: u16, buf: *mut u8) -> usize {
     if value >= 10000 {
         let c = value % 10000;
-        let d3 = ((c / 100) << 1) as usize;
-        let d4 = ((c % 100) << 1) as usize;
+        let d1 = ((c / 100) << 1) as usize;
+        let d2 = ((c % 100) << 1) as usize;
 
         *buf = (value / 10000) as u8 + b'0';
-        *buf.add(1) = DIGITS_LUT[d3];
-        *buf.add(2) = DIGITS_LUT[d3 + 1];
-        *buf.add(3) = DIGITS_LUT[d4];
-        *buf.add(4) = DIGITS_LUT[d4 + 1];
+        *buf.add(1) = DIGITS_LUT[d1];
+        *buf.add(2) = DIGITS_LUT[d1 + 1];
+        *buf.add(3) = DIGITS_LUT[d2];
+        *buf.add(4) = DIGITS_LUT[d2 + 1];
         5
     } else if value >= 1000 {
         let d1 = ((value / 100) << 1) as usize;
@@ -110,36 +114,125 @@ unsafe fn write_u16(value: u16, buf: *mut u8) -> usize {
     }
 }
 
-// TODO: re implement
-#[cfg(not(target_arch = "x86_64"))]
-unsafe fn write_u32(mut n: u32, buf: *mut u8) -> usize {
-    if n < 10000 {
-        write_small(n as u16, buf)
-    } else if n < 100000000 {
-        let b = n / 10000;
-        let c = n % 10000;
+#[cfg(not(any(target_arch = "x86_64", target_arch = "x86")))]
+unsafe fn write_u32(value: u32, buf: *mut u8) -> usize {
+    if value >= 100_000_000 {
+        // value = aabbbbbbbb in decimal
+        let a = value / 100_000_000; // 1 to 42
+        let value = value % 100_000_000;
 
-        let l = write_small(b as u16, buf);
-        write_small_pad(c as u16, buf.add(l));
-        l + 4
-    } else {
-        let a = n / 100000000; // 1 to 42
-        n %= 100000000;
-
-        let l = if a >= 10 {
-            ptr::copy_nonoverlapping(lookup!(a), buf, 2);
+        let o = if a >= 10 {
+            let i = (a << 1) as usize;
+            *buf = DIGITS_LUT[i];
+            *buf.add(1) = DIGITS_LUT[i + 1];
             2
         } else {
-            *buf = a as u8 + 0x30;
+            *buf = a as u8 + b'0';
             1
         };
 
-        let b = n / 10000;
-        let c = n % 10000;
+        // value = bbbbcccc
+        let b = value / 10000;
+        let c = value % 10000;
 
-        write_small_pad(b as u16, buf.add(l));
-        write_small_pad(c as u16, buf.add(l + 4));
-        l + 8
+        let d1 = ((b / 100) << 1) as usize;
+        let d2 = ((b % 100) << 1) as usize;
+        let d3 = ((c / 100) << 1) as usize;
+        let d4 = ((c % 100) << 1) as usize;
+
+        *buf.add(o) = DIGITS_LUT[d1];
+        *buf.add(1 + o) = DIGITS_LUT[d1 + 1];
+        *buf.add(2 + o) = DIGITS_LUT[d2];
+        *buf.add(3 + o) = DIGITS_LUT[d2 + 1];
+        *buf.add(4 + o) = DIGITS_LUT[d3];
+        *buf.add(5 + o) = DIGITS_LUT[d3 + 1];
+        *buf.add(6 + o) = DIGITS_LUT[d4];
+        *buf.add(7 + o) = DIGITS_LUT[d4 + 1];
+        8 + o
+    } else if value >= 10_000_000 {
+        // value = bbbbcccc
+        let b = value / 10000;
+        let c = value % 10000;
+
+        let d1 = ((b / 100) << 1) as usize;
+        let d2 = ((b % 100) << 1) as usize;
+        let d3 = ((c / 100) << 1) as usize;
+        let d4 = ((c % 100) << 1) as usize;
+        *buf = DIGITS_LUT[d1];
+        *buf.add(1) = DIGITS_LUT[d1 + 1];
+        *buf.add(2) = DIGITS_LUT[d2];
+        *buf.add(3) = DIGITS_LUT[d2 + 1];
+        *buf.add(4) = DIGITS_LUT[d3];
+        *buf.add(5) = DIGITS_LUT[d3 + 1];
+        *buf.add(6) = DIGITS_LUT[d4];
+        *buf.add(7) = DIGITS_LUT[d4 + 1];
+        8
+    } else if value >= 1_000_000 {
+        // value = bbbbcccc
+        let b = value / 10000;
+        let c = value % 10000;
+
+        let d2 = ((b % 100) << 1) as usize;
+        let d3 = ((c / 100) << 1) as usize;
+        let d4 = ((c % 100) << 1) as usize;
+        *buf = (b / 100) as u8 + 0x30;
+        *buf.add(1) = DIGITS_LUT[d2];
+        *buf.add(2) = DIGITS_LUT[d2 + 1];
+        *buf.add(3) = DIGITS_LUT[d3];
+        *buf.add(4) = DIGITS_LUT[d3 + 1];
+        *buf.add(5) = DIGITS_LUT[d4];
+        *buf.add(6) = DIGITS_LUT[d4 + 1];
+        7
+    } else if value >= 100000 {
+        // value = bbbbcccc
+        let b = value / 10000;
+        let c = value % 10000;
+
+        let d2 = ((b % 100) << 1) as usize;
+        let d3 = ((c / 100) << 1) as usize;
+        let d4 = ((c % 100) << 1) as usize;
+        *buf = DIGITS_LUT[d2];
+        *buf.add(1) = DIGITS_LUT[d2 + 1];
+        *buf.add(2) = DIGITS_LUT[d3];
+        *buf.add(3) = DIGITS_LUT[d3 + 1];
+        *buf.add(4) = DIGITS_LUT[d4];
+        *buf.add(5) = DIGITS_LUT[d4 + 1];
+        6
+    } else if value >= 10000 {
+        // value = bbbbcccc
+        let b = value / 10000;
+        let c = value % 10000;
+
+        let d3 = ((c / 100) << 1) as usize;
+        let d4 = ((c % 100) << 1) as usize;
+        *buf = (b % 100) as u8 + 0x30;
+        *buf.add(1) = DIGITS_LUT[d3];
+        *buf.add(2) = DIGITS_LUT[d3 + 1];
+        *buf.add(3) = DIGITS_LUT[d4];
+        *buf.add(4) = DIGITS_LUT[d4 + 1];
+        5
+    } else if value >= 1_000 {
+        let d1 = ((value / 100) << 1) as usize;
+        let d2 = ((value % 100) << 1) as usize;
+        *buf = DIGITS_LUT[d1];
+        *buf.add(1) = DIGITS_LUT[d1 + 1];
+        *buf.add(2) = DIGITS_LUT[d2];
+        *buf.add(3) = DIGITS_LUT[d2 + 1];
+        4
+    } else if value >= 100 {
+        let d2 = ((value % 100) << 1) as usize;
+        *buf = (value / 100) as u8 + b'0';
+        *buf.add(1) = DIGITS_LUT[d2];
+        *buf.add(2) = DIGITS_LUT[d2 + 1];
+        3
+    } else if value >= 10 {
+        let d2 = (value << 1) as usize;
+        *buf = DIGITS_LUT[d2];
+        *buf.add(1) = DIGITS_LUT[d2 + 1];
+        2
+    } else {
+        *buf = value as u8 + b'0';
+        1
     }
 }
 
@@ -222,14 +315,12 @@ macro_rules! impl_integer {
             const MAX_LEN: usize = $max_len + 1;
 
             #[inline]
-            unsafe fn write_to(self, mut buf: *mut u8) -> usize {
+            unsafe fn write_to(self, buf: *mut u8) -> usize {
                 if self >= 0 {
                     $func(self as $conv, buf)
                 } else {
                     *buf = b'-';
-                    buf = buf.add(1);
-                    let n = (!(self as $conv)).wrapping_add(1);
-                    $func(n, buf) + 1
+                    $func((!(self as $conv)).wrapping_add(1), buf.add(1)) + 1
                 }
             }
         }

@@ -1,15 +1,23 @@
 #![allow(dead_code)]
 #![allow(clippy::missing_safety_doc)]
 #![allow(clippy::cast_ptr_alignment)]
-#![cfg(target_arch = "x86_64")]
+
+#[cfg(target_arch = "x86")]
+use std::arch::x86::{
+    __m128i, _mm_add_epi8, _mm_cvtsi32_si128, _mm_mul_epu32, _mm_mulhi_epu16, _mm_mullo_epi16,
+    _mm_packus_epi16, _mm_setzero_si128, _mm_slli_epi64, _mm_srli_epi64, _mm_srli_si128,
+    _mm_storel_epi64, _mm_sub_epi16, _mm_sub_epi32, _mm_unpacklo_epi16, _mm_unpacklo_epi32,
+};
+#[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::{
     __m128i, _mm_add_epi8, _mm_cvtsi32_si128, _mm_mul_epu32, _mm_mulhi_epu16, _mm_mullo_epi16,
     _mm_packus_epi16, _mm_setzero_si128, _mm_slli_epi64, _mm_srli_epi64, _mm_srli_si128,
     _mm_storel_epi64, _mm_sub_epi16, _mm_sub_epi32, _mm_unpacklo_epi16, _mm_unpacklo_epi32,
 };
+
 use std::mem::transmute;
 
-use super::integers::DIGITS_LUT;
+use super::DIGITS_LUT;
 
 #[repr(align(16))]
 struct A16<T>(pub T);
