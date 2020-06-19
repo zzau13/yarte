@@ -55,46 +55,62 @@ unsafe fn write_small_pad(n: u16, buf: *mut u8) {
     ptr::copy_nonoverlapping(lookup!(n % 100), buf.add(2), 2);
 }
 
-unsafe fn write_u8(n: u8, buf: *mut u8) -> usize {
-    if n < 10 {
-        write_ascii!(buf, n);
-        1
-    } else if n < 100 {
-        ptr::copy_nonoverlapping(lookup!(n), buf, 2);
+unsafe fn write_u8(value: u8, buf: *mut u8) -> usize {
+    if value >= 100 {
+        let d2 = ((value % 100) << 1) as usize;
+        *buf = (value / 100) as u8 + b'0';
+        *buf.add(1) = DIGITS_LUT[d2];
+        *buf.add(2) = DIGITS_LUT[d2 + 1];
+        3
+    } else if value >= 10 {
+        let d2 = (value << 1) as usize;
+        *buf = DIGITS_LUT[d2];
+        *buf.add(1) = DIGITS_LUT[d2 + 1];
         2
     } else {
-        write_ascii!(buf, n / 100);
-        ptr::copy_nonoverlapping(lookup!(n % 100), buf.add(1), 2);
-        3
+        *buf = value as u8 + b'0';
+        1
     }
 }
 
-unsafe fn write_u16(n: u16, buf: *mut u8) -> usize {
-    if n < 100 {
-        if n < 10 {
-            write_ascii!(buf, n);
-            1
-        } else {
-            ptr::copy_nonoverlapping(lookup!(n), buf, 2);
-            2
-        }
-    } else if n < 10000 {
-        if n < 1000 {
-            write_ascii!(buf, (n / 100) as u8);
-            ptr::copy_nonoverlapping(lookup!(n % 100), buf.add(1), 2);
-            3
-        } else {
-            write_small_pad(n, buf);
-            4
-        }
-    } else {
-        write_ascii!(buf, (n / 10000) as u8);
-        write_small_pad(n % 10000, buf.add(1));
+unsafe fn write_u16(value: u16, buf: *mut u8) -> usize {
+    if value >= 10000 {
+        let c = value % 10000;
+        let d3 = ((c / 100) << 1) as usize;
+        let d4 = ((c % 100) << 1) as usize;
+
+        *buf = ((value / 10000) % 100) as u8 + 0x30;
+        *buf.add(1) = DIGITS_LUT[d3];
+        *buf.add(2) = DIGITS_LUT[d3 + 1];
+        *buf.add(3) = DIGITS_LUT[d4];
+        *buf.add(4) = DIGITS_LUT[d4 + 1];
         5
+    } else if value >= 1000 {
+        let d1 = ((value / 100) << 1) as usize;
+        let d2 = ((value % 100) << 1) as usize;
+        *buf = DIGITS_LUT[d1];
+        *buf.add(1) = DIGITS_LUT[d1 + 1];
+        *buf.add(2) = DIGITS_LUT[d2];
+        *buf.add(3) = DIGITS_LUT[d2 + 1];
+        4
+    } else if value >= 100 {
+        let d2 = ((value % 100) << 1) as usize;
+        *buf = (value / 100) as u8 + b'0';
+        *buf.add(1) = DIGITS_LUT[d2];
+        *buf.add(2) = DIGITS_LUT[d2 + 1];
+        3
+    } else if value >= 10 {
+        let d2 = (value << 1) as usize;
+        *buf = DIGITS_LUT[d2];
+        *buf.add(1) = DIGITS_LUT[d2 + 1];
+        2
+    } else {
+        *buf = value as u8 + b'0';
+        1
     }
 }
 
-// TODO: check, make benchmarks
+// TODO: re implement
 #[cfg(not(target_arch = "x86_64"))]
 unsafe fn write_u32(mut n: u32, buf: *mut u8) -> usize {
     if n < 10000 {
@@ -242,6 +258,34 @@ mod tests {
         let mut buf = Vec::with_capacity(i8::MAX_LEN);
 
         for n in std::i8::MIN..=std::i8::MAX {
+            unsafe {
+                let l = n.write_to(buf.as_mut_ptr());
+                buf.set_len(l);
+                assert_eq!(std::str::from_utf8_unchecked(&*buf), format!("{}", n));
+            }
+        }
+        for n in std::u8::MIN..=std::u8::MAX {
+            unsafe {
+                let l = n.write_to(buf.as_mut_ptr());
+                buf.set_len(l);
+                assert_eq!(std::str::from_utf8_unchecked(&*buf), format!("{}", n));
+            }
+        }
+    }
+
+    #[test]
+    fn test_16_all() {
+        use super::Integer;
+        let mut buf = Vec::with_capacity(i16::MAX_LEN);
+
+        for n in std::i16::MIN..=std::i16::MAX {
+            unsafe {
+                let l = n.write_to(buf.as_mut_ptr());
+                buf.set_len(l);
+                assert_eq!(std::str::from_utf8_unchecked(&*buf), format!("{}", n));
+            }
+        }
+        for n in std::u16::MIN..=std::u16::MAX {
             unsafe {
                 let l = n.write_to(buf.as_mut_ptr());
                 buf.set_len(l);
