@@ -199,11 +199,11 @@ pub unsafe fn write_u32(value: u32, buf: *mut u8) -> usize {
 }
 
 pub unsafe fn write_u64(value: u64, buf: *mut u8) -> usize {
-    if value >= 10_000_000_000_000_000 {
+    if value > 10_000_000_000_000_000 - 1 {
         let a = (value / 10000000000000000) as u32; // 1 to 1844
         let value = value % 10000000000000000;
 
-        let o = if a >= 10_000 {
+        let o = if a > 10_000 - 1 {
             // value = bbbbcccc
             let b = a / 10_000;
             let c = a % 10_000;
@@ -216,7 +216,7 @@ pub unsafe fn write_u64(value: u64, buf: *mut u8) -> usize {
             *buf.add(3) = DIGITS_LUT[d4];
             *buf.add(4) = DIGITS_LUT[d4 + 1];
             5
-        } else if a >= 1_000 {
+        } else if a > 1_000 - 1 {
             let d1 = ((a / 100) << 1) as usize;
             let d2 = ((a % 100) << 1) as usize;
             *buf = DIGITS_LUT[d1];
@@ -224,13 +224,13 @@ pub unsafe fn write_u64(value: u64, buf: *mut u8) -> usize {
             *buf.add(2) = DIGITS_LUT[d2];
             *buf.add(3) = DIGITS_LUT[d2 + 1];
             4
-        } else if a >= 100 {
+        } else if a > 100 - 1 {
             let d2 = ((a % 100) << 1) as usize;
             *buf = (a / 100) as u8 + b'0';
             *buf.add(1) = DIGITS_LUT[d2];
             *buf.add(2) = DIGITS_LUT[d2 + 1];
             3
-        } else if a >= 10 {
+        } else if a > 10 - 1 {
             let d2 = (a << 1) as usize;
             *buf = DIGITS_LUT[d2];
             *buf.add(1) = DIGITS_LUT[d2 + 1];
@@ -255,7 +255,7 @@ pub unsafe fn write_u64(value: u64, buf: *mut u8) -> usize {
         // unsafe make sure length of slice is greeter than 16 bytes
         _mm_storeu_si128(buf.add(o) as *mut __m128i, va);
         16 + o
-    } else if value >= 100_000_000 {
+    } else if value > 100_000_000 - 1 {
         // value = aabbbbbbbb in decimal
         let a = (value / 100_000_000) as u32;
         let b = (value % 100_000_000) as u32;
@@ -276,7 +276,7 @@ pub unsafe fn write_u64(value: u64, buf: *mut u8) -> usize {
         // unsafe make sure length of slice is greeter than 16 bytes
         _mm_storeu_si128(buf as *mut __m128i, shift_digits_sse2(va, digits as u8));
         16 - digits as usize
-    } else if value >= 10_000_000 {
+    } else if value > 10_000_000 - 1 {
         // value = bbbbcccc
         let b = value / 10_000;
         let c = value % 10_000;
@@ -294,7 +294,7 @@ pub unsafe fn write_u64(value: u64, buf: *mut u8) -> usize {
         *buf.add(6) = DIGITS_LUT[d4];
         *buf.add(7) = DIGITS_LUT[d4 + 1];
         8
-    } else if value >= 1_000_000 {
+    } else if value > 1_000_000 - 1 {
         // value = bbbbcccc
         let b = value / 10_000;
         let c = value % 10_000;
@@ -310,7 +310,7 @@ pub unsafe fn write_u64(value: u64, buf: *mut u8) -> usize {
         *buf.add(5) = DIGITS_LUT[d4];
         *buf.add(6) = DIGITS_LUT[d4 + 1];
         7
-    } else if value >= 100_000 {
+    } else if value > 100_000 - 1 {
         // value = bbbbcccc
         let b = value / 10_000;
         let c = value % 10_000;
@@ -325,7 +325,7 @@ pub unsafe fn write_u64(value: u64, buf: *mut u8) -> usize {
         *buf.add(4) = DIGITS_LUT[d4];
         *buf.add(5) = DIGITS_LUT[d4 + 1];
         6
-    } else if value >= 10_000 {
+    } else if value > 10_000 - 1 {
         // value = bbbbcccc
         let b = value / 10_000;
         let c = value % 10_000;
@@ -338,7 +338,7 @@ pub unsafe fn write_u64(value: u64, buf: *mut u8) -> usize {
         *buf.add(3) = DIGITS_LUT[d4];
         *buf.add(4) = DIGITS_LUT[d4 + 1];
         5
-    } else if value >= 1_000 {
+    } else if value > 1_000 - 1 {
         let d1 = ((value / 100) << 1) as usize;
         let d2 = ((value % 100) << 1) as usize;
         *buf = DIGITS_LUT[d1];
@@ -346,13 +346,13 @@ pub unsafe fn write_u64(value: u64, buf: *mut u8) -> usize {
         *buf.add(2) = DIGITS_LUT[d2];
         *buf.add(3) = DIGITS_LUT[d2 + 1];
         4
-    } else if value >= 100 {
+    } else if value > 100 - 1 {
         let d2 = ((value % 100) << 1) as usize;
         *buf = (value / 100) as u8 + b'0';
         *buf.add(1) = DIGITS_LUT[d2];
         *buf.add(2) = DIGITS_LUT[d2 + 1];
         3
-    } else if value >= 10 {
+    } else if value > 10 - 1 {
         let d2 = (value << 1) as usize;
         *buf = DIGITS_LUT[d2];
         *buf.add(1) = DIGITS_LUT[d2 + 1];
