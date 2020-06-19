@@ -344,6 +344,8 @@ impl_integer!(usize, isize, u64, write_u64, 20);
 
 #[cfg(test)]
 mod tests {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
     #[test]
     fn test_i8_all() {
         use super::Integer;
@@ -390,10 +392,26 @@ mod tests {
     fn test_u64_random() {
         use super::Integer;
         let mut buf = Vec::with_capacity(u64::MAX_LEN);
+        let mut state = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u64;
+
+        for _ in 0..10_000_000 {
+            // xorshift
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+
+            unsafe {
+                let l = state.write_to(buf.as_mut_ptr());
+                buf.set_len(l);
+                assert_eq!(std::str::from_utf8_unchecked(&*buf), format!("{}", state));
+            }
+        }
 
         let mut state = 88172645463325252u64;
-
-        for _ in 0..1_000_000 {
+        for _ in 0..10_000_000 {
             // xorshift
             state ^= state << 13;
             state ^= state >> 7;
@@ -410,13 +428,26 @@ mod tests {
     #[test]
     fn test_u32_random() {
         use super::Integer;
-        use std::time::{SystemTime, UNIX_EPOCH};
         let mut buf = Vec::with_capacity(u32::MAX_LEN);
 
         let mut state = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
-            .as_secs() as u32;
+            .as_nanos() as u32;
+        for _ in 0..10_000_000u32 {
+            // xorshift
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+
+            unsafe {
+                let l = state.write_to(buf.as_mut_ptr());
+                buf.set_len(l);
+                assert_eq!(std::str::from_utf8_unchecked(&*buf), format!("{}", state));
+            }
+        }
+
+        let mut state = 88172645463325252u64 as u32;
         for _ in 0..10_000_000u32 {
             // xorshift
             state ^= state << 13;
@@ -430,6 +461,7 @@ mod tests {
             }
         }
     }
+
     macro_rules! make_test {
         ($name:ident, $type:ty, $($value:expr),*) => {
             #[test]
