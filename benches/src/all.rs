@@ -22,6 +22,7 @@ fn functions(c: &mut Criterion) {
     // i8
     c.bench_function("i8: 0", write_i8_0);
     c.bench_function("i8: max", write_i8_max);
+    c.bench_function("i8: min", write_i8_min);
 
     // u8
     c.bench_function("u8: 0", write_u8_0);
@@ -30,6 +31,7 @@ fn functions(c: &mut Criterion) {
     // i16
     c.bench_function("i16: 0", write_i16_0);
     c.bench_function("i16: max", write_i16_max);
+    c.bench_function("i16: min", write_i16_min);
 
     // i32
     c.bench_function("i32: 0", write_i32_0);
@@ -903,6 +905,18 @@ fn write_i8_max(b: &mut criterion::Bencher) {
     })
 }
 
+fn write_i8_min(b: &mut criterion::Bencher) {
+    b.iter(|| {
+        const LEN: usize = 4;
+        black_box(
+            unsafe {
+                TemplateFixed::ccall(NumI8 { n: std::i8::MIN }, &mut [MaybeUninit::uninit(); LEN])
+            }
+                .unwrap(),
+        );
+    })
+}
+
 #[derive(TemplateFixed)]
 #[template(src = "{{ n }}")]
 struct NumI16 {
@@ -930,6 +944,21 @@ fn write_i16_max(b: &mut criterion::Bencher) {
                 )
             }
             .unwrap(),
+        );
+    })
+}
+
+fn write_i16_min(b: &mut criterion::Bencher) {
+    b.iter(|| {
+        const LEN: usize = 6;
+        black_box(
+            unsafe {
+                TemplateFixed::ccall(
+                    NumI16 { n: std::i16::MIN },
+                    &mut [MaybeUninit::uninit(); LEN],
+                )
+            }
+                .unwrap(),
         );
     })
 }
@@ -972,7 +1001,7 @@ fn write_i32_middle(b: &mut criterion::Bencher) {
             unsafe {
                 TemplateFixed::ccall(
                     NumI32 {
-                        n: std::i32::MAX / 2000,
+                        n: std::i32::MAX.wrapping_shr(15),
                     },
                     &mut [MaybeUninit::uninit(); LEN],
                 )
@@ -1020,7 +1049,7 @@ fn write_i64_middle(b: &mut criterion::Bencher) {
             unsafe {
                 TemplateFixed::ccall(
                     NumI64 {
-                        n: std::i64::MAX / 2000,
+                        n: std::i64::MAX.wrapping_shr(33),
                     },
                     &mut [MaybeUninit::uninit(); LEN],
                 )
