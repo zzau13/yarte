@@ -82,10 +82,32 @@ unsafe fn write_less10k(value: u16, buf: *mut u8) -> usize {
 }
 
 #[inline]
+unsafe fn write_10kk_100kk(value: u32, buf: *mut u8) {
+    debug_assert!(value < 100_000_000);
+    // value = bbbbcccc
+    let b = value / 10_000;
+    let c = value % 10_000;
+
+    let d1 = ((b / 100) << 1) as usize;
+    let d2 = ((b % 100) << 1) as usize;
+    let d3 = ((c / 100) << 1) as usize;
+    let d4 = ((c % 100) << 1) as usize;
+
+    *buf = DIGITS_LUT[d1];
+    *buf.add(1) = DIGITS_LUT[d1 + 1];
+    *buf.add(2) = DIGITS_LUT[d2];
+    *buf.add(3) = DIGITS_LUT[d2 + 1];
+    *buf.add(4) = DIGITS_LUT[d3];
+    *buf.add(5) = DIGITS_LUT[d3 + 1];
+    *buf.add(6) = DIGITS_LUT[d4];
+    *buf.add(7) = DIGITS_LUT[d4 + 1];
+}
+
+#[inline]
 unsafe fn write_10k_100kk(value: u32, buf: *mut u8) -> usize {
     debug_assert!(value < 100_000_000);
     debug_assert!(value >= 10_000);
-    // value = bbbbcccc
+    // value = bbbb_cccc
     let b = value / 10000;
     let c = value % 10000;
 
@@ -94,7 +116,6 @@ unsafe fn write_10k_100kk(value: u32, buf: *mut u8) -> usize {
 
     if value < 10_000_000 {
         if value > 1_000_000 - 1 {
-            // value = bbbbcccc
             let d2 = ((b % 100) << 1) as usize;
 
             *buf = (b / 100) as u8 + 0x30;
@@ -106,7 +127,6 @@ unsafe fn write_10k_100kk(value: u32, buf: *mut u8) -> usize {
             *buf.add(6) = DIGITS_LUT[d4 + 1];
             7
         } else if value > 100000 - 1 {
-            // value = bbbbcccc
             let d2 = ((b % 100) << 1) as usize;
 
             *buf = DIGITS_LUT[d2];
@@ -125,7 +145,6 @@ unsafe fn write_10k_100kk(value: u32, buf: *mut u8) -> usize {
             5
         }
     } else {
-        // value = bbbbcccc
         let d1 = ((b / 100) << 1) as usize;
         let d2 = ((b % 100) << 1) as usize;
 
@@ -228,81 +247,36 @@ unsafe fn write_u32(value: u32, buf: *mut u8) -> usize {
             *buf = a as u8 + b'0';
             1
         };
-        // value = bbbbcccc
-        let b = value / 10000;
-        let c = value % 10000;
-
-        let d1 = ((b / 100) << 1) as usize;
-        let d2 = ((b % 100) << 1) as usize;
-        let d3 = ((c / 100) << 1) as usize;
-        let d4 = ((c % 100) << 1) as usize;
-
-        *buf.add(o) = DIGITS_LUT[d1];
-        *buf.add(1 + o) = DIGITS_LUT[d1 + 1];
-        *buf.add(2 + o) = DIGITS_LUT[d2];
-        *buf.add(3 + o) = DIGITS_LUT[d2 + 1];
-        *buf.add(4 + o) = DIGITS_LUT[d3];
-        *buf.add(5 + o) = DIGITS_LUT[d3 + 1];
-        *buf.add(6 + o) = DIGITS_LUT[d4];
-        *buf.add(7 + o) = DIGITS_LUT[d4 + 1];
-
+        write_10kk_100kk(value, buf.add(o));
         8 + o
     }
 }
 
-// TODO: check
 #[cfg(not(any(target_arch = "x86_64", target_arch = "x86")))]
-unsafe fn write_u64(mut n: u64, buf: *mut u8) -> usize {
-    if n < 10000 {
-        write_small(n as u16, buf)
-    } else if n < 100000000 {
-        let n = n as u32;
-        let b = n / 10000;
-        let c = n % 10000;
-
-        let l = write_small(b as u16, buf);
-        write_small_pad(c as u16, buf.add(l));
-        l + 4
-    } else if n < 10000000000000000 {
-        let v0 = n / 100000000;
-        let v1 = (n % 100000000) as u32;
-
-        let l = if v0 < 10000 {
-            write_small(v0 as u16, buf)
+unsafe fn write_u64(value: u64, buf: *mut u8) -> usize {
+    if value < 10_000 {
+        write_less10k(value as u16, buf)
+    } else if value < 100_000_000 {
+        write_10k_100kk(value as u32, buf)
+    } else if value < 100_00_000_000_000_000 {
+        // value = aaaa_aaaa_bbbb_bbbb in decimal
+        let a = (value / 100_000_000) as u32;
+        let o = if a < 10_000 {
+            write_less10k(a as u16, buf)
         } else {
-            let b0 = v0 / 10000;
-            let c0 = v0 % 10000;
-            let l = write_small(b0 as u16, buf);
-            write_small_pad(c0 as u16, buf.add(l));
-            l + 4
+            write_10k_100kk(a, buf)
         };
 
-        let b1 = v1 / 10000;
-        let c1 = v1 % 10000;
-
-        write_small_pad(b1 as u16, buf.add(l));
-        write_small_pad(c1 as u16, buf.add(l + 4));
-
-        l + 8
+        write_10kk_100kk((value % 100_000_000) as u32, buf.add(o));
+        8 + o
     } else {
-        let a = n / 10000000000000000; // 1 to 1844
-        n %= 10000000000000000;
+        let a = (value / 10_000_000_000_000_000) as u16; // 1 to 1844
+        let value = value % 10_000_000_000_000_000;
 
-        let v0 = (n / 100000000) as u32;
-        let v1 = (n % 100000000) as u32;
-
-        let b0 = v0 / 10000;
-        let c0 = v0 % 10000;
-
-        let b1 = v1 / 10000;
-        let c1 = v1 % 10000;
-
-        let l = write_small(a as u16, buf);
-        write_small_pad(b0 as u16, buf.add(l));
-        write_small_pad(c0 as u16, buf.add(l + 4));
-        write_small_pad(b1 as u16, buf.add(l + 8));
-        write_small_pad(c1 as u16, buf.add(l + 12));
-        l + 16
+        let o = write_less10k(a, buf);
+        write_10kk_100kk((value / 100_000_000) as u32, buf.add(o));
+        write_10kk_100kk((value % 100_000_000) as u32, buf.add(o + 8));
+        16 + o
     }
 }
 
