@@ -3,9 +3,6 @@
 #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 mod v_integer;
 
-#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
-use v_integer::{write_u32, write_u64};
-
 static DIGITS_LUT: &[u8] = b"\
       0001020304050607080910111213141516171819\
       2021222324252627282930313233343536373839\
@@ -182,58 +179,95 @@ unsafe fn write_u16(value: u16, buf: *mut u8) -> usize {
     }
 }
 
-#[cfg(not(any(target_arch = "x86_64", target_arch = "x86")))]
-unsafe fn write_u32(value: u32, buf: *mut u8) -> usize {
-    if value < 10_000 {
-        write_less10k(value as u16, buf)
-    } else if value < 100_000_000 {
-        write_10k_100kk(value, buf)
-    } else {
-        // value = aabbbbbbbb in decimal
-        let a = value / 100_000_000; // 1 to 42
-        let value = value % 100_000_000;
+mod fallback {
+    use super::*;
 
-        let o = if a >= 10 {
-            let i = (a << 1) as usize;
-            *buf = DIGITS_LUT[i];
-            *buf.add(1) = DIGITS_LUT[i + 1];
-            2
+    pub unsafe fn write_u32(value: u32, buf: *mut u8) -> usize {
+        if value < 10_000 {
+            write_less10k(value as u16, buf)
+        } else if value < 100_000_000 {
+            write_10k_100kk(value, buf)
         } else {
-            *buf = a as u8 + b'0';
-            1
-        };
-        write_10kk_100kk(value, buf.add(o));
-        8 + o
+            // value = aabbbbbbbb in decimal
+            let a = value / 100_000_000; // 1 to 42
+            let value = value % 100_000_000;
+
+            let o = if a >= 10 {
+                let i = (a << 1) as usize;
+                *buf = DIGITS_LUT[i];
+                *buf.add(1) = DIGITS_LUT[i + 1];
+                2
+            } else {
+                *buf = a as u8 + b'0';
+                1
+            };
+            write_10kk_100kk(value, buf.add(o));
+            8 + o
+        }
+    }
+
+    pub unsafe fn write_u64(value: u64, buf: *mut u8) -> usize {
+        if value < 10_000 {
+            write_less10k(value as u16, buf)
+        } else if value < 100_000_000 {
+            write_10k_100kk(value as u32, buf)
+        } else if value < 10_000_000_000_000_000 {
+            // value = aaaa_aaaa_bbbb_bbbb in decimal
+            let a = (value / 100_000_000) as u32;
+            let o = if a < 10_000 {
+                write_less10k(a as u16, buf)
+            } else {
+                write_10k_100kk(a, buf)
+            };
+
+            write_10kk_100kk((value % 100_000_000) as u32, buf.add(o));
+            8 + o
+        } else {
+            let a = (value / 10_000_000_000_000_000) as u16; // 1 to 1844
+            let value = value % 10_000_000_000_000_000;
+
+            let o = write_less10k(a, buf);
+            write_10kk_100kk((value / 100_000_000) as u32, buf.add(o));
+            write_10kk_100kk((value % 100_000_000) as u32, buf.add(o + 8));
+            16 + o
+        }
     }
 }
 
-#[cfg(not(any(target_arch = "x86_64", target_arch = "x86")))]
-unsafe fn write_u64(value: u64, buf: *mut u8) -> usize {
-    if value < 10_000 {
-        write_less10k(value as u16, buf)
-    } else if value < 100_000_000 {
-        write_10k_100kk(value as u32, buf)
-    } else if value < 100_00_000_000_000_000 {
-        // value = aaaa_aaaa_bbbb_bbbb in decimal
-        let a = (value / 100_000_000) as u32;
-        let o = if a < 10_000 {
-            write_less10k(a as u16, buf)
-        } else {
-            write_10k_100kk(a, buf)
-        };
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+macro_rules! detect_fn {
+    ($name:ident, $t:ty) => {
+        // https://github.com/BurntSushi/rust-memchr/blob/master/src/x86/mod.rs#L9-L29
+        unsafe fn $name(value: $t, buf: *mut u8) -> usize {
+            use std::mem;
+            use std::sync::atomic::{AtomicUsize, Ordering};
+            static mut FN: fn($t, *mut u8) -> usize = detect;
 
-        write_10kk_100kk((value % 100_000_000) as u32, buf.add(o));
-        8 + o
-    } else {
-        let a = (value / 10_000_000_000_000_000) as u16; // 1 to 1844
-        let value = value % 10_000_000_000_000_000;
+            fn detect(value: $t, buf: *mut u8) -> usize {
+                let fun = if is_x86_feature_detected!("sse2") {
+                    v_integer::$name as usize
+                } else {
+                    fallback::$name as usize
+                };
 
-        let o = write_less10k(a, buf);
-        write_10kk_100kk((value / 100_000_000) as u32, buf.add(o));
-        write_10kk_100kk((value % 100_000_000) as u32, buf.add(o + 8));
-        16 + o
-    }
+                let slot = unsafe { &*(&FN as *const _ as *const AtomicUsize) };
+                slot.store(fun as usize, Ordering::Relaxed);
+                unsafe { mem::transmute::<usize, fn($t, *mut u8) -> usize>(fun)(value, buf) }
+            }
+
+            let slot = &*(&FN as *const _ as *const AtomicUsize);
+            let fun = slot.load(Ordering::Relaxed);
+            mem::transmute::<usize, fn($t, *mut u8) -> usize>(fun)(value, buf)
+        }
+    };
 }
+
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+detect_fn!(write_u32, u32);
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+detect_fn!(write_u64, u64);
+#[cfg(not(any(target_arch = "x86_64", target_arch = "x86")))]
+pub use fallback::*;
 
 pub trait Integer {
     const MAX_LEN: usize;
@@ -377,7 +411,7 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos() as u32;
-        for _ in 0..10_000_000u32 {
+        for _ in 0..10_000_000 {
             // xorshift
             state ^= state << 13;
             state ^= state >> 7;
@@ -391,7 +425,7 @@ mod tests {
         }
 
         let mut state = 88172645463325252u64 as u32;
-        for _ in 0..10_000_000u32 {
+        for _ in 0..10_000_000 {
             // xorshift
             state ^= state << 13;
             state ^= state >> 7;
@@ -429,53 +463,25 @@ mod tests {
     // boundary tests
     make_test!(test_u8, u8, 0, 1, 9, 10, 99, 100, 254, 255);
     make_test!(test_u16, u16, 0, 9, 10, 99, 100, 999, 1000, 9999, 10000, 65535);
+    #[rustfmt::skip]
     make_test!(
-        test_u32, u32, 0, 9, 10, 99, 100, 999, 1000, 9999, 10000, 99999, 100000, 999999, 1000000,
-        9999999, 10000000, 99999999, 100000000, 999999999, 1000000000, 4294967295
+        test_u32,
+        u32,
+        0, 9, 10, 99, 100, 999, 1000, 9999, 10000, 99999, 100000, 999999, 1000000, 9999999,
+        10000000, 99999999, 100000000, 999999999, 1000000000, 4294967295, std::u32::MAX,
+        std::u32::MIN
     );
+    #[rustfmt::skip]
     make_test!(
         test_u64,
         u64,
-        0,
-        9,
-        10,
-        99,
-        100,
-        999,
-        1000,
-        9999,
-        10000,
-        99999,
-        100000,
-        999999,
-        1000000,
-        9999999,
-        10000000,
-        99999999,
-        100000000,
-        999999999,
-        1000000000,
-        9999999999,
-        10000000000,
-        99999999999,
-        100000000000,
-        999999999999,
-        1000000000000,
-        9999999999999,
-        10000000000000,
-        99999999999999,
-        100000000000000,
-        999999999999999,
-        1000000000000000,
-        9999999999999999,
-        10000000000000000,
-        99999999999999999,
-        100000000000000000,
-        999999999999999999,
-        1000000000000000000,
-        9999999999999999999,
-        10000000000000000000,
-        18446744073709551615
+        0, 9, 10, 99, 100, 999, 1000, 9999, 10000, 99999, 100000, 999999, 1000000, 9999999,
+        10000000, 99999999, 100000000, 999999999, 1000000000, 9999999999, 10000000000, 99999999999,
+        100000000000, 999999999999, 1000000000000, 9999999999999, 10000000000000, 99999999999999,
+        100000000000000, 999999999999999, 1000000000000000, 9999999999999999, 10000000000000000,
+        99999999999999999, 100000000000000000, 999999999999999999, 1000000000000000000,
+        9999999999999999999, 10000000000000000000, 18446744073709551615, 88172645463325252,
+        std::u64::MAX, std::u64::MIN
     );
 
     make_test!(test_i8, i8, std::i8::MIN, std::i8::MAX);
