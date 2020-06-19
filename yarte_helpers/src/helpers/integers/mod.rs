@@ -1,12 +1,12 @@
 // based on https://github.com/miloyip/itoa-benchmark
-
+#![allow(dead_code)]
 use std::ptr;
 
 #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 mod v_integer;
 
 #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
-use v_integer::write_u32;
+use v_integer::{write_u32, write_u64};
 
 static DIGITS_LUT: &[u8] = b"\
       0001020304050607080910111213141516171819\
@@ -60,25 +60,47 @@ unsafe fn write_small_pad(n: u16, buf: *mut u8) {
 }
 
 unsafe fn write_u8(value: u8, buf: *mut u8) -> usize {
-    if value >= 100 {
-        let d2 = ((value % 100) << 1) as usize;
-        *buf = (value / 100) as u8 + b'0';
-        *buf.add(1) = DIGITS_LUT[d2];
-        *buf.add(2) = DIGITS_LUT[d2 + 1];
-        3
-    } else if value >= 10 {
+    if value < 10 {
+        *buf = value as u8 + b'0';
+        1
+    } else if value < 100 {
         let d2 = (value << 1) as usize;
         *buf = DIGITS_LUT[d2];
         *buf.add(1) = DIGITS_LUT[d2 + 1];
         2
     } else {
-        *buf = value as u8 + b'0';
-        1
+        let d2 = ((value % 100) << 1) as usize;
+        *buf = (value / 100) as u8 + b'0';
+        *buf.add(1) = DIGITS_LUT[d2];
+        *buf.add(2) = DIGITS_LUT[d2 + 1];
+        3
     }
 }
 
 unsafe fn write_u16(value: u16, buf: *mut u8) -> usize {
-    if value >= 10000 {
+    if value < 10 {
+        *buf = value as u8 + b'0';
+        1
+    } else if value < 100 {
+        let d2 = (value << 1) as usize;
+        *buf = DIGITS_LUT[d2];
+        *buf.add(1) = DIGITS_LUT[d2 + 1];
+        2
+    } else if value < 1000 {
+        let d2 = ((value % 100) << 1) as usize;
+        *buf = (value / 100) as u8 + b'0';
+        *buf.add(1) = DIGITS_LUT[d2];
+        *buf.add(2) = DIGITS_LUT[d2 + 1];
+        3
+    } else if value < 10000 {
+        let d1 = ((value / 100) << 1) as usize;
+        let d2 = ((value % 100) << 1) as usize;
+        *buf = DIGITS_LUT[d1];
+        *buf.add(1) = DIGITS_LUT[d1 + 1];
+        *buf.add(2) = DIGITS_LUT[d2];
+        *buf.add(3) = DIGITS_LUT[d2 + 1];
+        4
+    } else {
         let c = value % 10000;
         let d1 = ((c / 100) << 1) as usize;
         let d2 = ((c % 100) << 1) as usize;
@@ -89,28 +111,6 @@ unsafe fn write_u16(value: u16, buf: *mut u8) -> usize {
         *buf.add(3) = DIGITS_LUT[d2];
         *buf.add(4) = DIGITS_LUT[d2 + 1];
         5
-    } else if value >= 1000 {
-        let d1 = ((value / 100) << 1) as usize;
-        let d2 = ((value % 100) << 1) as usize;
-        *buf = DIGITS_LUT[d1];
-        *buf.add(1) = DIGITS_LUT[d1 + 1];
-        *buf.add(2) = DIGITS_LUT[d2];
-        *buf.add(3) = DIGITS_LUT[d2 + 1];
-        4
-    } else if value >= 100 {
-        let d2 = ((value % 100) << 1) as usize;
-        *buf = (value / 100) as u8 + b'0';
-        *buf.add(1) = DIGITS_LUT[d2];
-        *buf.add(2) = DIGITS_LUT[d2 + 1];
-        3
-    } else if value >= 10 {
-        let d2 = (value << 1) as usize;
-        *buf = DIGITS_LUT[d2];
-        *buf.add(1) = DIGITS_LUT[d2 + 1];
-        2
-    } else {
-        *buf = value as u8 + b'0';
-        1
     }
 }
 
@@ -237,6 +237,7 @@ unsafe fn write_u32(value: u32, buf: *mut u8) -> usize {
 }
 
 // TODO: check
+#[cfg(not(any(target_arch = "x86_64", target_arch = "x86")))]
 unsafe fn write_u64(mut n: u64, buf: *mut u8) -> usize {
     if n < 10000 {
         write_small(n as u16, buf)
