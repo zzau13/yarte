@@ -79,7 +79,7 @@ unsafe fn write_u16(value: u16, buf: *mut u8) -> usize {
         let d3 = ((c / 100) << 1) as usize;
         let d4 = ((c % 100) << 1) as usize;
 
-        *buf = ((value / 10000) % 100) as u8 + 0x30;
+        *buf = (value / 10000) as u8 + b'0';
         *buf.add(1) = DIGITS_LUT[d3];
         *buf.add(2) = DIGITS_LUT[d3 + 1];
         *buf.add(3) = DIGITS_LUT[d4];
