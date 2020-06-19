@@ -88,81 +88,10 @@ unsafe fn shift_digits_sse2(a: __m128i, digit: u8) -> __m128i {
 }
 
 pub unsafe fn write_u32(value: u32, buf: *mut u8) -> usize {
-    if value < 10000 {
-        if value >= 1000 {
-            let d1 = ((value / 100) << 1) as usize;
-            let d2 = ((value % 100) << 1) as usize;
-            *buf = DIGITS_LUT[d1];
-            *buf.add(1) = DIGITS_LUT[d1 + 1];
-            *buf.add(2) = DIGITS_LUT[d2];
-            *buf.add(3) = DIGITS_LUT[d2 + 1];
-            4
-        } else if value >= 100 {
-            let d2 = ((value % 100) << 1) as usize;
-            *buf = (value / 100) as u8 + b'0';
-            *buf.add(1) = DIGITS_LUT[d2];
-            *buf.add(2) = DIGITS_LUT[d2 + 1];
-            3
-        } else if value >= 10 {
-            let d2 = (value << 1) as usize;
-            *buf = DIGITS_LUT[d2];
-            *buf.add(1) = DIGITS_LUT[d2 + 1];
-            2
-        } else {
-            *buf = value as u8 + b'0';
-            1
-        }
-    } else if value < 100000000 {
-        // value = bbbbcccc
-        let b = value / 10000;
-        let c = value % 10000;
-
-        let d3 = ((c / 100) << 1) as usize;
-        let d4 = ((c % 100) << 1) as usize;
-
-        if value >= 10000000 {
-            let d1 = ((b / 100) << 1) as usize;
-            let d2 = ((b % 100) << 1) as usize;
-            *buf = DIGITS_LUT[d1];
-            *buf.add(1) = DIGITS_LUT[d1 + 1];
-            *buf.add(2) = DIGITS_LUT[d2];
-            *buf.add(3) = DIGITS_LUT[d2 + 1];
-            *buf.add(4) = DIGITS_LUT[d3];
-            *buf.add(5) = DIGITS_LUT[d3 + 1];
-            *buf.add(6) = DIGITS_LUT[d4];
-            *buf.add(7) = DIGITS_LUT[d4 + 1];
-            8
-        } else if value >= 1000000 {
-            let d2 = ((b % 100) << 1) as usize;
-            *buf = (b / 100) as u8 + 0x30;
-            *buf.add(1) = DIGITS_LUT[d2];
-            *buf.add(2) = DIGITS_LUT[d2 + 1];
-            *buf.add(3) = DIGITS_LUT[d3];
-            *buf.add(4) = DIGITS_LUT[d3 + 1];
-            *buf.add(5) = DIGITS_LUT[d4];
-            *buf.add(6) = DIGITS_LUT[d4 + 1];
-            7
-        } else if value >= 100000 {
-            let d2 = ((b % 100) << 1) as usize;
-            *buf = DIGITS_LUT[d2];
-            *buf.add(1) = DIGITS_LUT[d2 + 1];
-            *buf.add(2) = DIGITS_LUT[d3];
-            *buf.add(3) = DIGITS_LUT[d3 + 1];
-            *buf.add(4) = DIGITS_LUT[d4];
-            *buf.add(5) = DIGITS_LUT[d4 + 1];
-            6
-        } else {
-            *buf = (b % 100) as u8 + 0x30;
-            *buf.add(1) = DIGITS_LUT[d3];
-            *buf.add(2) = DIGITS_LUT[d3 + 1];
-            *buf.add(3) = DIGITS_LUT[d4];
-            *buf.add(4) = DIGITS_LUT[d4 + 1];
-            5
-        }
-    } else {
+    if value >= 100_000_000 {
         // value = aabbbbbbbb in decimal
-        let a = value / 100000000; // 1 to 42
-        let value = value % 100000000;
+        let a = value / 100_000_000; // 1 to 42
+        let value = value % 100_000_000;
 
         let o = if a >= 10 {
             let i = (a << 1) as usize;
@@ -182,5 +111,89 @@ pub unsafe fn write_u32(value: u32, buf: *mut u8) -> usize {
         let result = _mm_srli_si128(ba, 8);
         _mm_storel_epi64(buf.add(o) as *mut __m128i, result);
         8 + o
+    } else if value >= 10_000_000 {
+        // value = bbbbcccc
+        let b = value / 10_000;
+        let c = value % 10_000;
+
+        let d1 = ((b / 100) << 1) as usize;
+        let d2 = ((b % 100) << 1) as usize;
+        let d3 = ((c / 100) << 1) as usize;
+        let d4 = ((c % 100) << 1) as usize;
+        *buf = DIGITS_LUT[d1];
+        *buf.add(1) = DIGITS_LUT[d1 + 1];
+        *buf.add(2) = DIGITS_LUT[d2];
+        *buf.add(3) = DIGITS_LUT[d2 + 1];
+        *buf.add(4) = DIGITS_LUT[d3];
+        *buf.add(5) = DIGITS_LUT[d3 + 1];
+        *buf.add(6) = DIGITS_LUT[d4];
+        *buf.add(7) = DIGITS_LUT[d4 + 1];
+        8
+    } else if value >= 1_000_000 {
+        // value = bbbbcccc
+        let b = value / 10_000;
+        let c = value % 10_000;
+
+        let d2 = ((b % 100) << 1) as usize;
+        let d3 = ((c / 100) << 1) as usize;
+        let d4 = ((c % 100) << 1) as usize;
+        *buf = (b / 100) as u8 + 0x30;
+        *buf.add(1) = DIGITS_LUT[d2];
+        *buf.add(2) = DIGITS_LUT[d2 + 1];
+        *buf.add(3) = DIGITS_LUT[d3];
+        *buf.add(4) = DIGITS_LUT[d3 + 1];
+        *buf.add(5) = DIGITS_LUT[d4];
+        *buf.add(6) = DIGITS_LUT[d4 + 1];
+        7
+    } else if value >= 100_000 {
+        // value = bbbbcccc
+        let b = value / 10_000;
+        let c = value % 10_000;
+
+        let d2 = ((b % 100) << 1) as usize;
+        let d3 = ((c / 100) << 1) as usize;
+        let d4 = ((c % 100) << 1) as usize;
+        *buf = DIGITS_LUT[d2];
+        *buf.add(1) = DIGITS_LUT[d2 + 1];
+        *buf.add(2) = DIGITS_LUT[d3];
+        *buf.add(3) = DIGITS_LUT[d3 + 1];
+        *buf.add(4) = DIGITS_LUT[d4];
+        *buf.add(5) = DIGITS_LUT[d4 + 1];
+        6
+    } else if value >= 10_000 {
+        // value = bbbbcccc
+        let b = value / 10_000;
+        let c = value % 10_000;
+
+        let d3 = ((c / 100) << 1) as usize;
+        let d4 = ((c % 100) << 1) as usize;
+        *buf = (b % 100) as u8 + 0x30;
+        *buf.add(1) = DIGITS_LUT[d3];
+        *buf.add(2) = DIGITS_LUT[d3 + 1];
+        *buf.add(3) = DIGITS_LUT[d4];
+        *buf.add(4) = DIGITS_LUT[d4 + 1];
+        5
+    } else if value >= 1_000 {
+        let d1 = ((value / 100) << 1) as usize;
+        let d2 = ((value % 100) << 1) as usize;
+        *buf = DIGITS_LUT[d1];
+        *buf.add(1) = DIGITS_LUT[d1 + 1];
+        *buf.add(2) = DIGITS_LUT[d2];
+        *buf.add(3) = DIGITS_LUT[d2 + 1];
+        4
+    } else if value >= 100 {
+        let d2 = ((value % 100) << 1) as usize;
+        *buf = (value / 100) as u8 + b'0';
+        *buf.add(1) = DIGITS_LUT[d2];
+        *buf.add(2) = DIGITS_LUT[d2 + 1];
+        3
+    } else if value >= 10 {
+        let d2 = (value << 1) as usize;
+        *buf = DIGITS_LUT[d2];
+        *buf.add(1) = DIGITS_LUT[d2 + 1];
+        2
+    } else {
+        *buf = value as u8 + b'0';
+        1
     }
 }
