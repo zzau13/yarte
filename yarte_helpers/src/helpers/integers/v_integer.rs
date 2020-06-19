@@ -200,8 +200,8 @@ pub unsafe fn write_u32(value: u32, buf: *mut u8) -> usize {
 
 pub unsafe fn write_u64(value: u64, buf: *mut u8) -> usize {
     if value > 10_000_000_000_000_000 - 1 {
-        let a = (value / 10000000000000000) as u32; // 1 to 1844
-        let value = value % 10000000000000000;
+        let a = (value / 10_000_000_000_000_000) as u32; // 1 to 1844
+        let value = value % 10_000_000_000_000_000;
 
         let o = if a > 10_000 - 1 {
             // value = bbbbcccc

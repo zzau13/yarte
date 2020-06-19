@@ -19,6 +19,28 @@ fn functions(c: &mut Criterion) {
     c.bench_function("3 bytes Memcpy", write_3_bytes_memcpy);
     c.bench_function("3 bytes", write_3_bytes);
 
+    // i8
+    c.bench_function("i8: 0", write_i8_0);
+    c.bench_function("i8: max", write_i8_max);
+
+    // u8
+    c.bench_function("u8: 0", write_u8_0);
+    c.bench_function("u8: max", write_u8_max);
+
+    // i16
+    c.bench_function("i16: 0", write_i16_0);
+    c.bench_function("i16: max", write_i16_max);
+
+    // i32
+    c.bench_function("i32: 0", write_i32_0);
+    c.bench_function("i32: max", write_i32_max);
+    c.bench_function("i32: middle", write_i32_middle);
+
+    // i64
+    c.bench_function("i64: 0", write_i64_0);
+    c.bench_function("i64: max", write_i64_max);
+    c.bench_function("i64: middle", write_i64_middle);
+
     // Teams
     c.bench_function("Raw Teams byte-by-byte", raw_teams);
     c.bench_function("Raw Teams Memcpy", raws_teams_memcpy);
@@ -822,4 +844,188 @@ fn write_3_bytes_memcpy(b: &mut criterion::Bencher) {
             black_box(&buf[..curr]);
         })
     }
+}
+
+// Number
+#[derive(TemplateFixed)]
+#[template(src = "{{ n }}")]
+struct NumU8 {
+    n: u8,
+}
+
+fn write_u8_0(b: &mut criterion::Bencher) {
+    b.iter(|| {
+        const LEN: usize = 4;
+        black_box(
+            unsafe { TemplateFixed::ccall(NumU8 { n: 0 }, &mut [MaybeUninit::uninit(); LEN]) }
+                .unwrap(),
+        );
+    })
+}
+
+fn write_u8_max(b: &mut criterion::Bencher) {
+    b.iter(|| {
+        const LEN: usize = 4;
+        black_box(
+            unsafe {
+                TemplateFixed::ccall(NumU8 { n: std::u8::MAX }, &mut [MaybeUninit::uninit(); LEN])
+            }
+            .unwrap(),
+        );
+    })
+}
+
+#[derive(TemplateFixed)]
+#[template(src = "{{ n }}")]
+struct NumI8 {
+    n: i8,
+}
+
+fn write_i8_0(b: &mut criterion::Bencher) {
+    b.iter(|| {
+        const LEN: usize = 4;
+        black_box(
+            unsafe { TemplateFixed::ccall(NumI8 { n: 0 }, &mut [MaybeUninit::uninit(); LEN]) }
+                .unwrap(),
+        );
+    })
+}
+
+fn write_i8_max(b: &mut criterion::Bencher) {
+    b.iter(|| {
+        const LEN: usize = 4;
+        black_box(
+            unsafe {
+                TemplateFixed::ccall(NumI8 { n: std::i8::MAX }, &mut [MaybeUninit::uninit(); LEN])
+            }
+            .unwrap(),
+        );
+    })
+}
+
+#[derive(TemplateFixed)]
+#[template(src = "{{ n }}")]
+struct NumI16 {
+    n: i16,
+}
+
+fn write_i16_0(b: &mut criterion::Bencher) {
+    b.iter(|| {
+        const LEN: usize = 6;
+        black_box(
+            unsafe { TemplateFixed::ccall(NumI16 { n: 0 }, &mut [MaybeUninit::uninit(); LEN]) }
+                .unwrap(),
+        );
+    })
+}
+
+fn write_i16_max(b: &mut criterion::Bencher) {
+    b.iter(|| {
+        const LEN: usize = 6;
+        black_box(
+            unsafe {
+                TemplateFixed::ccall(
+                    NumI16 { n: std::i16::MAX },
+                    &mut [MaybeUninit::uninit(); LEN],
+                )
+            }
+            .unwrap(),
+        );
+    })
+}
+
+#[derive(TemplateFixed)]
+#[template(src = "{{ n }}")]
+struct NumI32 {
+    n: i32,
+}
+
+fn write_i32_0(b: &mut criterion::Bencher) {
+    b.iter(|| {
+        const LEN: usize = 11;
+        black_box(
+            unsafe { TemplateFixed::ccall(NumI32 { n: 0 }, &mut [MaybeUninit::uninit(); LEN]) }
+                .unwrap(),
+        );
+    })
+}
+
+fn write_i32_max(b: &mut criterion::Bencher) {
+    b.iter(|| {
+        const LEN: usize = 11;
+        black_box(
+            unsafe {
+                TemplateFixed::ccall(
+                    NumI32 { n: std::i32::MAX },
+                    &mut [MaybeUninit::uninit(); LEN],
+                )
+            }
+            .unwrap(),
+        );
+    })
+}
+
+fn write_i32_middle(b: &mut criterion::Bencher) {
+    b.iter(|| {
+        const LEN: usize = 11;
+        black_box(
+            unsafe {
+                TemplateFixed::ccall(
+                    NumI32 {
+                        n: std::i32::MAX / 2000,
+                    },
+                    &mut [MaybeUninit::uninit(); LEN],
+                )
+            }
+            .unwrap(),
+        );
+    })
+}
+
+#[derive(TemplateFixed)]
+#[template(src = "{{ n }}")]
+struct NumI64 {
+    n: i64,
+}
+
+fn write_i64_0(b: &mut criterion::Bencher) {
+    b.iter(|| {
+        const LEN: usize = 21;
+        black_box(
+            unsafe { TemplateFixed::ccall(NumI64 { n: 0 }, &mut [MaybeUninit::uninit(); LEN]) }
+                .unwrap(),
+        );
+    })
+}
+
+fn write_i64_max(b: &mut criterion::Bencher) {
+    b.iter(|| {
+        const LEN: usize = 21;
+        black_box(
+            unsafe {
+                TemplateFixed::ccall(
+                    NumI64 { n: std::i64::MAX },
+                    &mut [MaybeUninit::uninit(); LEN],
+                )
+            }
+            .unwrap(),
+        );
+    })
+}
+
+fn write_i64_middle(b: &mut criterion::Bencher) {
+    b.iter(|| {
+        const LEN: usize = 21;
+        black_box(
+            unsafe {
+                TemplateFixed::ccall(
+                    NumI64 {
+                        n: std::i64::MAX / 2000,
+                    },
+                    &mut [MaybeUninit::uninit(); LEN],
+                )
+            }
+            .unwrap(),
+        );
+    })
 }
