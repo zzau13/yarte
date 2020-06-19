@@ -112,13 +112,17 @@ pub unsafe fn write_u32(value: u32, buf: *mut u8) -> usize {
             1
         };
 
-        let b = convert8digits_sse2(value);
-        let ba = _mm_add_epi8(
-            _mm_packus_epi16(_mm_setzero_si128(), b),
-            transmute(K_ASCII_ZERO),
+        _mm_storel_epi64(
+            buf.add(o) as *mut __m128i,
+            _mm_srli_si128(
+                _mm_add_epi8(
+                    _mm_packus_epi16(_mm_setzero_si128(), convert8digits_sse2(value)),
+                    transmute(K_ASCII_ZERO),
+                ),
+                8,
+            ),
         );
-        let result = _mm_srli_si128(ba, 8);
-        _mm_storel_epi64(buf.add(o) as *mut __m128i, result);
+
         8 + o
     }
 }
@@ -131,45 +135,43 @@ pub unsafe fn write_u64(value: u64, buf: *mut u8) -> usize {
         write_10k_100kk(value as u32, buf)
     } else if value < 10_000_000_000_000_000 {
         // value = aabbbbbbbb in decimal
-        let a = (value / 100_000_000) as u32;
-        let b = (value % 100_000_000) as u32;
-
-        // TODO: to avx
-        let a = convert8digits_sse2(a);
-        let b = convert8digits_sse2(b);
 
         // Convert to ascii
-        let va = _mm_add_epi8(_mm_packus_epi16(a, b), transmute(K_ASCII_ZERO));
+        let va = _mm_add_epi8(
+            _mm_packus_epi16(
+                convert8digits_sse2((value / 100_000_000) as u32),
+                convert8digits_sse2((value % 100_000_000) as u32),
+            ),
+            transmute(K_ASCII_ZERO),
+        );
 
         // Count number of digit
-        let mask = _mm_movemask_epi8(_mm_cmpeq_epi8(va, transmute(K_ASCII_ZERO)));
-        let digits = (!mask | 0x80_00).trailing_zeros();
+        let digits = (!_mm_movemask_epi8(_mm_cmpeq_epi8(va, transmute(K_ASCII_ZERO))) | 0x80_00)
+            .trailing_zeros();
         debug_assert!(digits <= 8);
 
         // Shift digits to the beginning
         // unsafe make sure length of slice is greeter than 16 bytes
         _mm_storeu_si128(buf as *mut __m128i, shift_digits_sse2(va, digits as u8));
+
         16 - digits as usize
     } else {
-        let a = (value / 10_000_000_000_000_000) as u16; // 1 to 1844
+        let o = write_less10k((value / 10_000_000_000_000_000) as u16, buf); // 1 to 1844
         let value = value % 10_000_000_000_000_000;
 
-        let o = write_less10k(a, buf);
-
         // value = aaaa_aaaa_bbbb_bbbb in decimal
-        let a = (value / 100_000_000) as u32;
-        let b = (value % 100_000_000) as u32;
-
-        // TODO: to avx
-        let a = convert8digits_sse2(a);
-        let b = convert8digits_sse2(b);
-
-        // Convert to ascii
-        let va = _mm_add_epi8(_mm_packus_epi16(a, b), transmute(K_ASCII_ZERO));
-
         // Shift digits to the beginning
         // unsafe make sure length of slice is greeter than 16 bytes
-        _mm_storeu_si128(buf.add(o) as *mut __m128i, va);
+        _mm_storeu_si128(
+            buf.add(o) as *mut __m128i,
+            _mm_add_epi8(
+                _mm_packus_epi16(
+                    convert8digits_sse2((value / 100_000_000) as u32),
+                    convert8digits_sse2((value % 100_000_000) as u32),
+                ),
+                transmute(K_ASCII_ZERO),
+            ),
+        );
         16 + o
     }
 }
