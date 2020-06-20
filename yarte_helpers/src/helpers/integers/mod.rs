@@ -374,7 +374,7 @@ mod tests {
             .unwrap()
             .as_nanos() as u64;
 
-        for _ in 0..10_000_000 {
+        for _ in 0..5_000_000 {
             // xorshift
             state ^= state << 13;
             state ^= state >> 7;
@@ -388,7 +388,7 @@ mod tests {
         }
 
         let mut state = 88172645463325252u64;
-        for _ in 0..10_000_000 {
+        for _ in 0..5_000_000 {
             // xorshift
             state ^= state << 13;
             state ^= state >> 7;
