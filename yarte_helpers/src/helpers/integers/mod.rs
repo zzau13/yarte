@@ -235,37 +235,53 @@ mod fallback {
 }
 
 #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
-macro_rules! detect_fn {
-    ($name:ident, $t:ty) => {
-        // https://github.com/BurntSushi/rust-memchr/blob/master/src/x86/mod.rs#L9-L29
-        unsafe fn $name(value: $t, buf: *mut u8) -> usize {
-            use std::mem;
-            use std::sync::atomic::{AtomicUsize, Ordering};
-            static mut FN: fn($t, *mut u8) -> usize = detect;
+unsafe fn write_u32(value: u32, buf: *mut u8) -> usize {
+    use std::mem;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    static mut FN: fn(u32, *mut u8) -> usize = detect;
 
-            fn detect(value: $t, buf: *mut u8) -> usize {
-                let fun = if is_x86_feature_detected!("sse2") {
-                    v_integer::$name as usize
-                } else {
-                    fallback::$name as usize
-                };
+    fn detect(value: u32, buf: *mut u8) -> usize {
+        let fun = if is_x86_feature_detected!("sse2") {
+            v_integer::write_u32 as usize
+        } else {
+            fallback::write_u32 as usize
+        };
 
-                let slot = unsafe { &*(&FN as *const _ as *const AtomicUsize) };
-                slot.store(fun as usize, Ordering::Relaxed);
-                unsafe { mem::transmute::<usize, fn($t, *mut u8) -> usize>(fun)(value, buf) }
-            }
+        let slot = unsafe { &*(&FN as *const _ as *const AtomicUsize) };
+        slot.store(fun as usize, Ordering::Relaxed);
+        unsafe { mem::transmute::<usize, fn(u32, *mut u8) -> usize>(fun)(value, buf) }
+    }
 
-            let slot = &*(&FN as *const _ as *const AtomicUsize);
-            let fun = slot.load(Ordering::Relaxed);
-            mem::transmute::<usize, fn($t, *mut u8) -> usize>(fun)(value, buf)
-        }
-    };
+    let slot = &*(&FN as *const _ as *const AtomicUsize);
+    let fun = slot.load(Ordering::Relaxed);
+    mem::transmute::<usize, fn(u32, *mut u8) -> usize>(fun)(value, buf)
 }
 
 #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
-detect_fn!(write_u32, u32);
-#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
-detect_fn!(write_u64, u64);
+unsafe fn write_u64(value: u64, buf: *mut u8) -> usize {
+    use std::mem;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    static mut FN: fn(u64, *mut u8) -> usize = detect;
+
+    fn detect(value: u64, buf: *mut u8) -> usize {
+        let fun = if is_x86_feature_detected!("avx2") {
+            v_integer::write_u64_avx as usize
+        } else if is_x86_feature_detected!("sse2") {
+            v_integer::write_u64_sse as usize
+        } else {
+            fallback::write_u64 as usize
+        };
+
+        let slot = unsafe { &*(&FN as *const _ as *const AtomicUsize) };
+        slot.store(fun as usize, Ordering::Relaxed);
+        unsafe { mem::transmute::<usize, fn(u64, *mut u8) -> usize>(fun)(value, buf) }
+    }
+
+    let slot = &*(&FN as *const _ as *const AtomicUsize);
+    let fun = slot.load(Ordering::Relaxed);
+    mem::transmute::<usize, fn(u64, *mut u8) -> usize>(fun)(value, buf)
+}
+
 #[cfg(not(any(target_arch = "x86_64", target_arch = "x86")))]
 use fallback::*;
 
