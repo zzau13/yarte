@@ -100,12 +100,12 @@ pub fn template_html_ptr(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_derive(TemplateBytesText, attributes(template))]
-#[cfg(feature = "bytes")]
+#[cfg(feature = "bytes-buf")]
 /// Implements TemplateBytesTrait without html escape functionality
 pub fn template_bytes(input: TokenStream) -> TokenStream {
     fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
         Box::new(yarte_codegen::BytesCodeGen::new(
-            yarte_codegen::TextFixedCodeGen("yarte"),
+            yarte_codegen::TextBytesCodeGen,
             s,
             "yarte",
         ))
@@ -123,12 +123,12 @@ pub fn template_bytes(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_derive(TemplateBytes, attributes(template))]
-#[cfg(feature = "bytes")]
+#[cfg(feature = "bytes-buf")]
 /// Implements TemplateBytesTrait with html escape functionality
 pub fn template_html_bytes(input: TokenStream) -> TokenStream {
     fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
         Box::new(yarte_codegen::BytesCodeGen::new(
-            yarte_codegen::HTMLFixedCodeGen("yarte"),
+            yarte_codegen::HTMLBytesCodeGen,
             s,
             "yarte",
         ))
@@ -154,13 +154,13 @@ pub fn template_html_min_ptr(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_derive(TemplateBytesMin, attributes(template))]
-#[cfg(all(feature = "html-min", feature = "bytes"))]
+#[cfg(all(feature = "html-min", feature = "bytes-buf"))]
 /// # Work in Progress
 /// Implements TemplateTrait with html minifier
 pub fn template_html_min_bytes(input: TokenStream) -> TokenStream {
     fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
         Box::new(yarte_codegen::BytesCodeGen::new(
-            yarte_codegen::HTMLMinFixedCodeGen("yarte"),
+            yarte_codegen::HTMLMinBytesCodeGen,
             s,
             "yarte",
         ))

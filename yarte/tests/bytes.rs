@@ -31,7 +31,7 @@ fn test_variables() {
         i18n: "Iñtërnâtiônàlizætiøn".to_string(),
     };
     assert_eq!(
-        s.call(128).unwrap(),
+        s.call(128)
         "hello world, foo\nwith number: 42\nIñtërnâtiônàlizætiøn is important\nin vars too: \
          Iñtërnâtiônàlizætiøn"
             .byteb()
@@ -47,7 +47,7 @@ struct EscapeTemplate<'a> {
 #[test]
 fn test_escape() {
     let s = EscapeTemplate { name: "<>&\"" };
-    assert_eq!(s.call(64).unwrap(), "Hello, &lt;&gt;&amp;&quot;!".byteb());
+    assert_eq!(s.call(64), "Hello, &lt;&gt;&amp;&quot;!".byteb());
 }
 
 #[derive(TemplateBytes)]
@@ -61,7 +61,7 @@ fn test_for() {
     let s = ForTemplate {
         strings: vec!["foo", "bar", "baz"],
     };
-    assert_eq!(s.call(64).unwrap(), "0. foo(first)1. bar2. baz".byteb());
+    assert_eq!(s.call(64), "0. foo(first)1. bar2. baz".byteb());
 }
 
 #[derive(TemplateBytes)]
@@ -76,8 +76,5 @@ fn test_nested_for() {
     let numbers: &[&str] = &["bar", "baz"];
     let seqs: &[&[&str]] = &[alpha, numbers];
     let s = NestedForTemplate { seqs };
-    assert_eq!(
-        s.call(64).unwrap(),
-        "1\n  0foo1bar2baz2\n  0bar1baz".byteb()
-    );
+    assert_eq!(s.call(64), "1\n  0foo1bar2baz2\n  0bar1baz".byteb());
 }

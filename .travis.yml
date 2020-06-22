@@ -30,4 +30,8 @@ script:
       cd yarte_wasm_app && wasm-pack test --node && cd ..
     fi
   - cargo test --all-features --all -- --nocapture
-  - cd yarte && cargo test -- --nocapture && cd ..
+  - |
+    cd yarte && cargo test -- --nocapture \
+    && cargo test --features bytes-buf    \
+    && cargo test --features fixed        \
+    && cd ..

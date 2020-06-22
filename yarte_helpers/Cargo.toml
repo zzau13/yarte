@@ -17,17 +17,18 @@ big-num-32 = []
 config = ["serde", "toml"]
 default = ["markup", "config"]
 display-fn = []
-fixed = ["v_htmlescape", "itoa", "ryu-ad"]
 json = ["serde", "serde_json"]
-markup = ["v_htmlescape", "itoa", "dtoa"]
 ryu-ad = ["ryu"]
+fixed = ["v_htmlescape", "itoa", "ryu-ad"]
+markup = ["v_htmlescape", "itoa", "dtoa"]
+bytes-buf = ["bytes", "v_htmlescape", "itoa", "ryu-ad"]
 
 [badges]
 travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]
-v_htmlescape = { version = "0.8", optional = true }
+v_htmlescape = { version = "0.9", optional = true }
 itoa = { version = "0.4", features = ["i128"], optional = true }
 dtoa = { version = "0.4", optional = true }
 ryu = { version = "1.0", optional = true }
@@ -35,6 +36,8 @@ ryu = { version = "1.0", optional = true }
 serde = { version = "1.0", features = ["derive"], optional = true }
 toml = { version = "0.5", optional = true }
 serde_json = { version = "1.0", optional = true }
+
+bytes = { version = "0.5", optional = true }
 
 [dev-dependencies]
 serde_json = "1.0"

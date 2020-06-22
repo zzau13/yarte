@@ -13,15 +13,19 @@ pub mod big_num_32;
 #[cfg(feature = "display-fn")]
 pub mod display_fn;
 
+#[cfg(feature = "bytes-buf")]
+mod bytes;
 #[cfg(feature = "fixed")]
 mod fixed;
 #[cfg(feature = "markup")]
 mod markup;
 
+#[cfg(feature = "bytes-buf")]
+pub use self::bytes::{RenderBytes, RenderBytesA, RenderBytesSafe, RenderBytesSafeA};
 #[cfg(feature = "fixed")]
-pub use fixed::{RenderFixed, RenderFixedA, RenderSafe, RenderSafeA};
+pub use self::fixed::{RenderFixed, RenderFixedA, RenderSafe, RenderSafeA};
 #[cfg(feature = "markup")]
-pub use markup::{Render, RenderA};
+pub use self::markup::{Render, RenderA};
 #[cfg(feature = "ryu-ad")]
 pub mod ryu;
 
