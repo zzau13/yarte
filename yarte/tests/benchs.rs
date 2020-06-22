@@ -1,10 +1,14 @@
-#![cfg(all(feature = "html-min", feature = "fixed"))]
+#![cfg(all(feature = "html-min", feature = "fixed", feature = "bytes-buf"))]
 #![allow(clippy::into_iter_on_ref)]
 #![allow(clippy::uninit_assumed_init)]
 
 use std::mem::MaybeUninit;
 
-use yarte::{TemplateFixedMin as TemplateFixed, TemplateMin as Template};
+use bytes::Bytes;
+
+use yarte::{
+    TemplateBytesMin as TemplateBytes, TemplateFixedMin as TemplateFixed, TemplateMin as Template,
+};
 
 #[test]
 fn big_table() {
@@ -27,9 +31,10 @@ fn big_table() {
         unsafe { TemplateFixed::call(&table, &mut [MaybeUninit::uninit(); 256]) }.unwrap(),
         expected.as_bytes()
     );
+    assert_eq!(TemplateBytes::ccall(table, 0), Bytes::from(expected))
 }
 
-#[derive(Template, TemplateFixed)]
+#[derive(Template, TemplateFixed, TemplateBytes)]
 #[template(path = "big-table")]
 struct BigTable {
     table: Vec<Vec<usize>>,
@@ -68,9 +73,10 @@ fn teams() {
         unsafe { TemplateFixed::call(&teams, &mut [MaybeUninit::uninit(); 256]) }.unwrap(),
         expected.as_bytes()
     );
+    assert_eq!(TemplateBytes::ccall(teams, 0), Bytes::from(expected))
 }
 
-#[derive(Template, TemplateFixed)]
+#[derive(Template, TemplateFixed, TemplateBytes)]
 #[template(path = "teams")]
 struct Teams {
     year: u16,

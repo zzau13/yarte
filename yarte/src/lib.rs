@@ -41,14 +41,6 @@ pub use yarte_derive::TemplateWasmServer;
 #[cfg(feature = "wasm")]
 pub use TemplateTrait as TemplateWasmServer;
 
-#[cfg(feature = "with-actix-web")]
-pub mod aw {
-    pub use actix_web::{
-        error::ErrorInternalServerError, Error, HttpRequest, HttpResponse, Responder,
-    };
-    pub use futures::future::{err, ok, Ready};
-}
-
 #[cfg(feature = "fixed")]
 /// Template trait
 pub trait TemplateFixedTrait {
@@ -90,25 +82,34 @@ pub use yarte_derive::TemplateFixedMin;
 #[cfg(all(feature = "fixed", feature = "html-min"))]
 pub use TemplateFixedTrait as TemplateFixedMin;
 
-#[cfg(feature = "bytes_buff")]
+#[cfg(feature = "bytes-buf")]
 /// Template trait
 pub trait TemplateBytesTrait {
     /// Writes to buffer and return it freeze
-    fn call(&self, capacity: usize) -> Option<bytes::Bytes>;
+    ///
+    /// # Panics
+    /// Render length overflows usize
+    fn call(&self, capacity: usize) -> bytes::Bytes;
     /// Writes to buffer and return it freeze and drop
-    fn ccall(self, capacity: usize) -> Option<bytes::Bytes>;
+    ///
+    /// # Panics
+    /// Render length overflows usize
+    fn ccall(self, capacity: usize) -> bytes::Bytes;
 }
 
-#[cfg(all(feature = "bytes_buff", feature = "html-min"))]
+#[cfg(all(feature = "bytes-buf", feature = "html-min"))]
 pub use yarte_derive::TemplateBytesMin;
-#[cfg(feature = "bytes_buff")]
+#[cfg(feature = "bytes-buf")]
 pub use yarte_derive::{TemplateBytes, TemplateBytesText};
-#[cfg(feature = "bytes_buff")]
+#[cfg(feature = "bytes-buf")]
 pub use TemplateBytesTrait as TemplateBytes;
-#[cfg(feature = "bytes_buff")]
+#[cfg(feature = "bytes-buf")]
 pub use TemplateBytesTrait as TemplateBytesText;
-#[cfg(all(feature = "bytes_buff", feature = "html-min"))]
+#[cfg(all(feature = "bytes-buf", feature = "html-min"))]
 pub use TemplateBytesTrait as TemplateBytesMin;
 
-#[cfg(feature = "bytes_buff")]
+#[cfg(feature = "bytes-buf")]
+pub use yarte_helpers::helpers::{RenderBytes, RenderBytesA, RenderBytesSafe, RenderBytesSafeA};
+
+#[cfg(feature = "bytes-buf")]
 pub use bytes::{BufMut, Bytes, BytesMut};

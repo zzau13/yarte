@@ -5,7 +5,7 @@ use std::{io, slice};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 use itoa;
-use v_htmlescape::v_escape;
+use v_htmlescape::f_escape;
 use yarte::{
     Template, TemplateBytes, TemplateBytesText, TemplateFixed, TemplateFixedText, TemplateText,
 };
@@ -181,7 +181,7 @@ fn bytes_teams(b: &mut criterion::Bencher) {
         year: 2015,
         teams: build_teams(),
     };
-    b.iter(|| teams.call(2048).unwrap());
+    b.iter(|| teams.call(2048));
 }
 
 #[derive(TemplateBytesText)]
@@ -196,7 +196,7 @@ fn bytes_text_teams(b: &mut criterion::Bencher) {
         year: 2015,
         teams: build_teams(),
     };
-    b.iter(|| teams.call(2048).unwrap());
+    b.iter(|| teams.call(2048));
 }
 
 #[derive(TemplateBytes)]
@@ -209,7 +209,7 @@ fn bytes_big_table(b: &mut criterion::Bencher, size: usize) {
     let t = BigTableB {
         table: build_big_table(size),
     };
-    b.iter(|| t.call(109915).unwrap());
+    b.iter(|| t.call(109915));
 }
 
 #[derive(TemplateBytesText)]
@@ -222,7 +222,7 @@ fn bytes_text_big_table(b: &mut criterion::Bencher, size: usize) {
     let t = BigTableBT {
         table: build_big_table(size),
     };
-    b.iter(|| t.call(109915).unwrap());
+    b.iter(|| t.call(109915));
 }
 
 // Fixed
@@ -585,7 +585,7 @@ fn raw_teams_escaped_memcpy(b: &mut criterion::Bencher) {
                     write_b!(b"champion");
                 }
                 write_b!(b"\"><b>");
-                curr += v_escape(v.name.as_bytes(), &mut buf[curr..]).expect("buffer overflow");
+                curr += f_escape(v.name.as_bytes(), &mut buf[curr..]).expect("buffer overflow");
 
                 write_b!(b"</b>: ");
                 curr += itoa::write(
@@ -770,7 +770,7 @@ fn raws_teams_escaped(b: &mut criterion::Bencher) {
                     write_b!(b"champion");
                 }
                 write_b!(b"\"><b>");
-                curr += v_escape(v.name.as_bytes(), &mut buf[curr..]).expect("buffer overflow");
+                curr += f_escape(v.name.as_bytes(), &mut buf[curr..]).expect("buffer overflow");
                 write_b!(b"</b>: ");
                 write_u16!(v.score);
                 write_b!(b"</li>");
@@ -912,7 +912,7 @@ fn write_i8_min(b: &mut criterion::Bencher) {
             unsafe {
                 TemplateFixed::ccall(NumI8 { n: std::i8::MIN }, &mut [MaybeUninit::uninit(); LEN])
             }
-                .unwrap(),
+            .unwrap(),
         );
     })
 }
@@ -958,7 +958,7 @@ fn write_i16_min(b: &mut criterion::Bencher) {
                     &mut [MaybeUninit::uninit(); LEN],
                 )
             }
-                .unwrap(),
+            .unwrap(),
         );
     })
 }

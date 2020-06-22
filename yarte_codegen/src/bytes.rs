@@ -3,7 +3,8 @@ use quote::{format_ident, quote};
 
 use yarte_hir::{Struct, HIR};
 
-use crate::CodeGen;
+use crate::EachCodeGen;
+use crate::{CodeGen, IfElseCodeGen};
 
 pub struct BytesCodeGen<'a, T: CodeGen> {
     codegen: T,
@@ -27,80 +28,18 @@ impl<'a, T: CodeGen> BytesCodeGen<'a, T> {
         tokens.extend(self.s.implement_head(
             quote!(#parent::TemplateBytesTrait),
             &quote!(
-                fn call(&self, capacity: usize) -> Option<#parent::Bytes> {
+                fn call(&self, capacity: usize) -> #parent::Bytes {
                     use #parent::*;
                     let mut bytes_mut = #parent::BytesMut::with_capacity(capacity);
-                    let buf = #parent::BufMut::bytes_mut(&mut bytes_mut);
-                    let mut buf_cur = 0;
-                    unsafe {
-                        macro_rules! buf_ptr {
-                            () => { buf as *mut _ as * mut u8 };
-                        }
-                        macro_rules! len {
-                            () => { buf.len() };
-                        }
-
-                        #[allow(unused_macros)]
-                        macro_rules! __yarte_check_write {
-                            ($len:expr, $write:block) => {
-                                if len!() < buf_cur + $len {
-                                    return None;
-                                } else $write
-                            };
-                        }
-                        #[allow(unused_macros)]
-                        macro_rules! __yarte_write_bytes_long {
-                            ($b:expr) => {
-                                __yarte_check_write!($b.len(), {
-                                    // Not use copy_from_slice for elide double checked
-                                    std::ptr::copy_nonoverlapping((&$b as *const _ as *const u8), buf_ptr!().add(buf_cur), $b.len());
-                                    buf_cur += $b.len();
-                                })
-                            };
-                        }
-
-                        #nodes
-                        #parent::BufMut::advance_mut(&mut bytes_mut, buf_cur)
-                    }
-                    Some(bytes_mut.freeze())
+                    #nodes
+                    bytes_mut.freeze()
                 }
 
-                fn ccall(self, capacity: usize) -> Option<#parent::Bytes> {
+                fn ccall(self, capacity: usize) -> #parent::Bytes {
                     use #parent::*;
                     let mut bytes_mut = #parent::BytesMut::with_capacity(capacity);
-                    let buf = #parent::BufMut::bytes_mut(&mut bytes_mut);
-                    let mut buf_cur = 0;
-                    unsafe {
-                        macro_rules! buf_ptr {
-                            () => { buf as *mut _ as * mut u8 };
-                        }
-                        macro_rules! len {
-                            () => { buf.len() };
-                        }
-
-                        #[allow(unused_macros)]
-                        macro_rules! __yarte_check_write {
-                            ($len:expr, $write:block) => {
-                                if len!() < buf_cur + $len {
-                                    return None;
-                                } else $write
-                            };
-                        }
-                        #[allow(unused_macros)]
-                        macro_rules! __yarte_write_bytes_long {
-                            ($b:expr) => {
-                                __yarte_check_write!($b.len(), {
-                                    // Not use copy_from_slice for elide double checked
-                                    std::ptr::copy_nonoverlapping((&$b as *const _ as *const u8), buf_ptr!().add(buf_cur), $b.len());
-                                    buf_cur += $b.len();
-                                })
-                            };
-                        }
-
-                        #nodes
-                        #parent::BufMut::advance_mut(&mut bytes_mut, buf_cur)
-                    }
-                    Some(bytes_mut.freeze())
+                    #nodes
+                    bytes_mut.freeze()
                 }
             ),
         ));
@@ -114,5 +53,74 @@ impl<'a, T: CodeGen> CodeGen for BytesCodeGen<'a, T> {
         self.template(v, &mut tokens);
 
         tokens
+    }
+}
+
+pub struct TextBytesCodeGen;
+
+impl EachCodeGen for TextBytesCodeGen {}
+impl IfElseCodeGen for TextBytesCodeGen {}
+
+impl CodeGen for TextBytesCodeGen {
+    fn gen(&mut self, v: Vec<HIR>) -> TokenStream {
+        let mut tokens = TokenStream::new();
+        for i in v {
+            use HIR::*;
+            tokens.extend(match i {
+                Local(a) => quote!(#a),
+                Lit(a) => quote!(bytes_mut.extend_from_slice(#a.as_bytes());),
+                Safe(a) | Expr(a) => quote!(&(#a).__render_itb_safe(&mut bytes_mut);),
+                Each(a) => self.gen_each(*a),
+                IfElse(a) => self.gen_if_else(*a),
+            });
+        }
+        tokens
+    }
+}
+
+fn gen<C>(codegen: &mut C, v: Vec<HIR>) -> TokenStream
+where
+    C: CodeGen + EachCodeGen + IfElseCodeGen,
+{
+    let mut tokens = TokenStream::new();
+    for i in v {
+        use HIR::*;
+        tokens.extend(match i {
+            Local(a) => quote!(#a),
+            Lit(a) => quote!(bytes_mut.extend_from_slice(#a.as_bytes());),
+            Safe(a) => quote!(&(#a).__render_itb_safe(&mut bytes_mut);),
+            Expr(a) => quote!(&(#a).__render_itb(&mut bytes_mut);),
+            Each(a) => codegen.gen_each(*a),
+            IfElse(a) => codegen.gen_if_else(*a),
+        })
+    }
+    tokens
+}
+
+pub struct HTMLBytesCodeGen;
+
+impl EachCodeGen for HTMLBytesCodeGen {}
+
+impl IfElseCodeGen for HTMLBytesCodeGen {}
+impl CodeGen for HTMLBytesCodeGen {
+    fn gen(&mut self, v: Vec<HIR>) -> TokenStream {
+        gen(self, v)
+    }
+}
+
+#[cfg(feature = "html-min")]
+pub mod html_min {
+    use super::*;
+    use yarte_dom::DOMFmt;
+
+    pub struct HTMLMinBytesCodeGen;
+    impl EachCodeGen for HTMLMinBytesCodeGen {}
+    impl IfElseCodeGen for HTMLMinBytesCodeGen {}
+
+    impl CodeGen for HTMLMinBytesCodeGen {
+        fn gen(&mut self, v: Vec<HIR>) -> TokenStream {
+            let dom: DOMFmt = v.into();
+            gen(self, dom.0)
+        }
     }
 }

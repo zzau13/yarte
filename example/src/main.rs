@@ -18,10 +18,16 @@ struct IndexTemplateMin<'a> {
     query: &'a HashMap<&'static str, &'static str>,
 }
 
-#[derive(TemplateFixedMin, TemplateBytesMin)]
+#[derive(TemplateFixedMin)]
 #[template(path = "index_fixed")]
 struct IndexTemplateF<'a> {
     query: &'a HashMap<&'static str, &'static str>,
+}
+
+#[derive(TemplateBytesMin)]
+#[template(path = "index_bytes")]
+struct IndexTemplateB<'a> {
+    query: Option<(&'a str, &'a str)>,
 }
 
 fn main() {
@@ -46,7 +52,14 @@ fn main() {
     })
     .unwrap();
 
-    let buf = TemplateBytesMin::call(&IndexTemplateF { query: &query }, 2048).unwrap();
+    let buf = TemplateBytesMin::ccall(
+        IndexTemplateB {
+            query: query
+                .get("name")
+                .and_then(|name| query.get("lastname").map(|lastname| (*name, *lastname))),
+        },
+        2048,
+    );
     thread::spawn(move || {
         println!("\nBytes Min:");
         stdout().lock().write_all(&buf).unwrap();

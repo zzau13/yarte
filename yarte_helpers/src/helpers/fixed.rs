@@ -5,7 +5,7 @@ use core::ptr::copy_nonoverlapping;
 use core::slice::from_raw_parts_mut;
 use std::io;
 
-use v_htmlescape::{v_escape, v_escape_char};
+use v_htmlescape::{f_escape, f_escape_char};
 
 use super::ryu::Sealed;
 
@@ -31,7 +31,7 @@ pub trait RenderFixed {
     unsafe fn render(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize>;
 }
 
-/// Auto ref trait
+/// Auto copy/deref trait
 pub trait RenderFixedA {
     /// Render in buffer will html escape the string type
     ///
@@ -48,9 +48,9 @@ impl<T: RenderFixed + Copy> RenderFixedA for T {
     }
 }
 
-/// Auto ref trait
+/// Auto copy/deref trait
 pub trait RenderSafeA {
-    /// Render in buffer will html escape the string type
+    /// Render in buffer
     ///
     /// # Safety
     /// Possible overlap if you have a chance to implement:
@@ -71,7 +71,7 @@ macro_rules! str_display {
             impl RenderFixed for $ty {
                 #[inline(always)]
                 unsafe fn render(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
-                    v_escape(self.as_bytes(), buf)
+                    f_escape(self.as_bytes(), buf)
                 }
             }
         )*
@@ -128,7 +128,7 @@ itoa128_display! {
 impl RenderFixed for char {
     #[inline(always)]
     unsafe fn render(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
-        v_escape_char(self, buf)
+        f_escape_char(self, buf)
     }
 }
 

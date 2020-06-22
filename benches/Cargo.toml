@@ -8,9 +8,9 @@ edition = "2018"
 members = ["."]
 
 [dependencies]
-yarte = { path = "../yarte", version = "*", features = ["fixed", "bytes_buff"] }
+yarte = { path = "../yarte", version = "*", features = ["fixed", "bytes-buf"] }
 itoa = "0.4"
-v_htmlescape = "0.8"
+v_htmlescape = "0.9"
 
 [build-dependencies]
 yarte = { path = "../yarte", version = "*" }
