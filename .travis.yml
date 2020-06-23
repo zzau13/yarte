@@ -34,4 +34,6 @@ script:
     cd yarte && cargo test -- --nocapture \
     && cargo test --features bytes-buf    \
     && cargo test --features fixed        \
+    && cd ../example                      \
+    && cargo run --release                \
     && cd ..

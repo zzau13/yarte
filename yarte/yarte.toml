@@ -1,0 +1,9 @@
+# root dir of templates
+[main]
+dir = "templates"
+
+# Alias for partials. In call, change the start of partial path with one of this, if exist.
+[partials]
+alias = "example/deep/more/deep"
+doc = "example/deep/more/doc"
+card = "example/deep/more/card"
