@@ -1,0 +1,16 @@
+{{!
+    Form: What is your name?
+!}}
+{{> ../deep/welcome id = "welcome", tag = "h1", tail = '!' ~}}
+<div>
+    <h3>What is your name?</h3>
+    <form>
+        {{! Input name !}}
+        Name: <input type="text" name="name" /><br/>
+        {{! Input last name !}}
+        Last name: <input type="text" name="lastname"/><br/>
+        <p>
+            <input type="submit">
+        </p>
+    </form>
+</div>

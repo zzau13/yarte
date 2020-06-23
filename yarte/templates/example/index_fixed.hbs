@@ -1,0 +1,8 @@
+{{#> base title = "Actix web" }}
+    {{~#if let Some(name) = query.get("name") }}
+        {{ let lastname = query.get("lastname")? }}
+        {{> card/hi ~}}
+    {{ else ~}}
+        {{> card/form ~}}
+    {{/if ~}}
+{{/base }}
