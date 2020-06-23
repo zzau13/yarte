@@ -20,7 +20,7 @@ HTML templates using conditionals, loops, rust code and template composition.
 - Emit snipped annotations at error
 
 ### Is it really the fastest?
-See it for yourself in the [benchmarks][bench]!
+See it for yourself in the [TechEmpower benchmarks][bench] with [`ntex`][ntex]!
 
 ## Documentation
 In order to  fully understand Yarte's capabilities take a look at the following documentation:
@@ -33,8 +33,9 @@ In order to  fully understand Yarte's capabilities take a look at the following 
 Yarte is based on all previous templates engines, syntax as well as its documentation 
 is highly influenced by [Handlebars][handlebars]. 
 
-[bench]: https://github.com/botika/template-bench-rs#results
-[handlebars]: https://handlebarsjs.com/ 
+[bench]: https://tfb-status.techempower.com/
+[handlebars]: https://handlebarsjs.com/
+[ntex]: https://github.com/ntex-rs/ntex
 
 ## Contributing
 
