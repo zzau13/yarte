@@ -32,7 +32,7 @@ yarte_helpers = { version = "0.11.0", path = "../yarte_helpers" }
 yarte_hir = { version = "0.11.0", path = "../yarte_hir" }
 yarte_parser = { version = "0.11.0", path = "../yarte_parser" }
 
-prettyprint = "0.8"
+bat = "0.15"
 
 proc-macro2 = "1.0"
 quote = "1.0"
