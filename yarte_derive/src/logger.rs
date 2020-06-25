@@ -5,7 +5,7 @@ use std::{
     process::{Command, Stdio},
 };
 
-use prettyprint::{PagingMode, PrettyPrinter};
+use bat::{PagingMode, PrettyPrinter};
 
 use yarte_helpers::{config::PrintOption, definitely_not_nightly};
 
@@ -48,7 +48,7 @@ fn logger(s: &str, path: String, option: &PrintOption) {
         s.push('\n');
     }
 
-    let mut builder = PrettyPrinter::default();
+    let mut builder = PrettyPrinter::new();
     builder.language("rust");
     builder.header(option.header.unwrap_or(true));
     builder.grid(option.grid.unwrap_or(false));
@@ -61,22 +61,20 @@ fn logger(s: &str, path: String, option: &PrintOption) {
         }
     }));
 
-    let printer = if let Some(theme) = option.theme {
-        builder.theme(theme);
-        let printer = builder.build().unwrap();
-        let themes = printer.get_themes();
-        if themes.get(theme).is_none() {
-            let msg: Vec<String> = themes.keys().map(|x| format!("{:?}", x)).collect();
+    if let Some(theme) = option.theme {
+        if builder.themes().find(|x| *x == theme).is_none() {
+            let msg: Vec<String> = builder.themes().map(|x| format!("{:?}", x)).collect();
             eprintln!("Themes: {}", msg.join(",\n        "));
+        } else {
+            builder.theme(theme);
         }
-        printer
     } else {
         builder.theme(DEFAULT_THEME);
-        builder.build().unwrap()
     };
 
     // Ignore any errors.
-    let _ = printer.string_with_header(s, path);
+    builder.input_from_bytes_with_name(s.as_bytes(), path);
+    let _ = builder.print();
 }
 
 fn which_rustfmt() -> Option<PathBuf> {
