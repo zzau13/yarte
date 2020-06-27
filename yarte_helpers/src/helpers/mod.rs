@@ -1,5 +1,10 @@
 pub mod integers;
 pub mod io_fmt;
+#[cfg(feature = "json")]
+mod ser_json;
+
+#[cfg(feature = "json")]
+pub use ser_json::to_bytes;
 
 #[repr(align(32))]
 #[cfg(target_pointer_width = "64")]

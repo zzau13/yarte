@@ -5,6 +5,9 @@ const NAN: &str = "NaN";
 const INFINITY: &str = "inf";
 const NEG_INFINITY: &str = "-inf";
 
+// https://github.com/dtolnay/ryu/blob/1.0.5/src/buffer/mod.rs#L23
+pub const MAX_SIZE_FLOAT: usize = 24;
+
 pub(crate) trait Sealed: Copy {
     fn is_nonfinite(self) -> bool;
     fn format_nonfinite(self) -> &'static str;
