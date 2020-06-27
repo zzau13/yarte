@@ -564,7 +564,7 @@ struct MapKeySerializer<'a> {
 
 #[inline]
 fn key_must_be_a_string() -> Error {
-    ser::Error::custom("key_must_be_a_string")
+    ser::Error::custom("key must be a string")
 }
 
 impl<'a> ser::Serializer for MapKeySerializer<'a> {
