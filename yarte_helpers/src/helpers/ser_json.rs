@@ -3,14 +3,13 @@
 //! Serialize a Rust data structure into JSON data.
 
 use std::fmt::{self, Display};
-use std::mem::MaybeUninit;
 
 use serde::ser::{self, Impossible, Serialize};
 use serde::serde_if_integer128;
 
 use bytes::{BufMut, Bytes, BytesMut};
 
-use v_jsonescape::{b_escape, b_escape_char};
+use v_jsonescape::{b_escape, b_escape_char, fallback};
 
 use crate::helpers::bytes::RenderBytesSafe;
 use crate::helpers::ryu::{Sealed, MAX_SIZE_FLOAT};
@@ -60,7 +59,7 @@ impl Serializer {
     }
 }
 
-// TODO: any error? or not?
+// TODO: any error? or not? all json serializer errors can check in compile time by type
 type Result<T> = std::result::Result<T, Error>;
 
 impl<'a> ser::Serializer for &'a mut Serializer {
@@ -226,7 +225,8 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         _variant_index: u32,
         variant: &'static str,
     ) -> Result<()> {
-        self.serialize_str(variant)
+        serialize_str_short(variant, &mut self.buf);
+        Ok(())
     }
 
     /// Serialize newtypes without an object wrapper.
@@ -251,7 +251,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     {
         begin_object(&mut self.buf);
         begin_object_key(true, &mut self.buf);
-        self.serialize_str(variant)?;
+        serialize_str_short(variant, &mut self.buf);
         end_object_key(&mut self.buf);
         begin_object_value(&mut self.buf);
         value.serialize(&mut *self)?;
@@ -302,7 +302,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     ) -> Result<Self::SerializeTupleVariant> {
         begin_object(&mut self.buf);
         begin_object_key(true, &mut self.buf);
-        self.serialize_str(variant)?;
+        serialize_str_short(variant, &mut self.buf);
         end_object_key(&mut self.buf);
         begin_object_value(&mut self.buf);
         self.serialize_seq(Some(len))
@@ -341,7 +341,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     ) -> Result<Self::SerializeStructVariant> {
         begin_object(&mut self.buf);
         begin_object_key(true, &mut self.buf);
-        self.serialize_str(variant)?;
+        serialize_str_short(variant, &mut self.buf);
         end_object_key(&mut self.buf);
         begin_object_value(&mut self.buf);
         self.serialize_map(Some(len))
@@ -654,7 +654,7 @@ impl<'a> ser::Serializer for MapKeySerializer<'a> {
     }
 
     fn serialize_char(self, value: char) -> Result<()> {
-        self.ser.serialize_str(&value.to_string())
+        self.ser.serialize_char(value)
     }
 
     serde_if_integer128! {
@@ -782,7 +782,9 @@ fn render_null(buf: &mut bytes::BytesMut) {
 #[inline]
 fn begin_string(buf: &mut BytesMut) {
     buf.reserve(1);
-    buf.bytes_mut()[0] = MaybeUninit::new(b'"');
+    // Safety: previous reserve 1 and size_t of MaybeUninit<u8> it's equal to size_t of u8
+    unsafe { *buf_ptr!(buf.bytes_mut()) = b'"' };
+    // Safety: previous write 1
     unsafe { buf.advance_mut(1) };
 }
 
@@ -794,14 +796,18 @@ fn end_string(buf: &mut BytesMut) {
 #[inline]
 fn begin_array(buf: &mut BytesMut) {
     buf.reserve(1);
-    buf.bytes_mut()[0] = MaybeUninit::new(b'[');
+    // Safety: previous reserve 1 and size_t of MaybeUninit<u8> it's equal to size_t of u8
+    unsafe { *buf_ptr!(buf.bytes_mut()) = b'[' };
+    // Safety: previous write 1
     unsafe { buf.advance_mut(1) };
 }
 
 #[inline]
 fn end_array(buf: &mut BytesMut) {
     buf.reserve(1);
-    buf.bytes_mut()[0] = MaybeUninit::new(b']');
+    // Safety: previous reserve 1 and size_t of MaybeUninit<u8> it's equal to size_t of u8
+    unsafe { *buf_ptr!(buf.bytes_mut()) = b']' };
+    // Safety: previous write 1
     unsafe { buf.advance_mut(1) };
 }
 
@@ -811,7 +817,9 @@ fn end_array(buf: &mut BytesMut) {
 fn begin_array_value(first: bool, buf: &mut BytesMut) {
     if !first {
         buf.reserve(1);
-        buf.bytes_mut()[0] = MaybeUninit::new(b',');
+        // Safety: previous reserve 1 and size_t of MaybeUninit<u8> it's equal to size_t of u8
+        unsafe { *buf_ptr!(buf.bytes_mut()) = b',' };
+        // Safety: previous write 1
         unsafe { buf.advance_mut(1) };
     }
 }
@@ -825,14 +833,18 @@ fn end_array_value(_buf: &mut BytesMut) {}
 #[inline]
 fn begin_object(buf: &mut BytesMut) {
     buf.reserve(1);
-    buf.bytes_mut()[0] = MaybeUninit::new(b'{');
+    // Safety: previous reserve 1 and size_t of MaybeUninit<u8> it's equal to size_t of u8
+    unsafe { *buf_ptr!(buf.bytes_mut()) = b'{' };
+    // Safety: previous write 1
     unsafe { buf.advance_mut(1) };
 }
 
 #[inline]
 fn end_object(buf: &mut BytesMut) {
     buf.reserve(1);
-    buf.bytes_mut()[0] = MaybeUninit::new(b'}');
+    // Safety: previous reserve 1 and size_t of MaybeUninit<u8> it's equal to size_t of u8
+    unsafe { *buf_ptr!(buf.bytes_mut()) = b'}' };
+    // Safety: previous write 1
     unsafe { buf.advance_mut(1) };
 }
 
@@ -840,7 +852,9 @@ fn end_object(buf: &mut BytesMut) {
 fn begin_object_key(first: bool, buf: &mut BytesMut) {
     if !first {
         buf.reserve(1);
-        buf.bytes_mut()[0] = MaybeUninit::new(b',');
+        // Safety: previous reserve 1 and size_t of MaybeUninit<u8> it's equal to size_t of u8
+        unsafe { *buf_ptr!(buf.bytes_mut()) = b',' };
+        // Safety: previous write 1
         unsafe { buf.advance_mut(1) };
     }
 }
@@ -851,12 +865,21 @@ fn end_object_key(_buf: &mut BytesMut) {}
 #[inline]
 fn begin_object_value(buf: &mut BytesMut) {
     buf.reserve(1);
-    buf.bytes_mut()[0] = MaybeUninit::new(b':');
+    // Safety: previous reserve 1 and size_t of MaybeUninit<u8> it's equal to size_t of u8
+    unsafe { *buf_ptr!(buf.bytes_mut()) = b':' };
+    // Safety: previous write 1
     unsafe { buf.advance_mut(1) };
 }
 
 #[inline]
 fn end_object_value(_buf: &mut BytesMut) {}
+
+#[inline]
+fn serialize_str_short(value: &str, buf: &mut BytesMut) {
+    begin_string(buf);
+    fallback::b_escape(value.as_bytes(), buf);
+    end_string(buf);
+}
 
 pub fn to_bytes<T: Serialize + ?Sized>(capacity: usize, value: &T) -> Result<Bytes> {
     let mut ser = Serializer::new(capacity);

@@ -17,7 +17,7 @@ big-num-32 = []
 config = ["serde", "toml"]
 default = ["markup", "config"]
 display-fn = []
-json = ["serde", "serde_json"]
+json = ["bytes", "serde", "serde_json", "v_jsonescape", "ryu-ad"]
 ryu-ad = ["ryu"]
 fixed = ["v_htmlescape", "itoa", "ryu-ad"]
 markup = ["v_htmlescape", "itoa", "dtoa"]
@@ -29,7 +29,7 @@ maintenance = { status = "actively-developed" }
 
 [dependencies]
 v_htmlescape = { version = "0.9", optional = true }
-v_jsonescape = { git = "https://github.com/botika/v_escape", branch = "json" }
+v_jsonescape = { git = "https://github.com/botika/v_escape", branch = "json", optional = true }
 itoa = { version = "0.4", features = ["i128"], optional = true }
 dtoa = { version = "0.4", optional = true }
 ryu = { version = "1.0", optional = true }
