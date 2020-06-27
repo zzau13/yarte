@@ -6,7 +6,7 @@ use std::mem::transmute;
 use bytes::{BufMut, BytesMut};
 use v_htmlescape::{b_escape, b_escape_char};
 
-use super::ryu::Sealed;
+use super::ryu::{Sealed, MAX_SIZE_FLOAT};
 
 macro_rules! buf_ptr {
     ($buf:expr) => {
@@ -199,9 +199,6 @@ itoa128_display! {
     u128 i128
 }
 
-// https://github.com/dtolnay/ryu/blob/1.0.5/src/buffer/mod.rs#L23
-const MAX_SIZE_FLOAT: usize = 24;
-
 macro_rules! ryu_display {
     ($f:ty, $t:ty) => {
 impl $t for $f {
@@ -319,7 +316,7 @@ fn render_char(c: char, buf: &mut BytesMut) {
     unsafe { buf.advance_mut(len) }
 }
 
-fn render_bool(b: bool, buf: &mut BytesMut) {
+pub(crate) fn render_bool(b: bool, buf: &mut BytesMut) {
     const T: &[u8] = b"true";
     const F: &[u8] = b"false";
     if b {
