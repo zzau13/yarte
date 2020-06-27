@@ -1,5 +1,5 @@
 // adapted from [`serde-json`](https://github.com/serde-rs/json)
-
+#![cfg(feature = "json")]
 #![allow(
     clippy::excessive_precision,
     clippy::float_cmp,
