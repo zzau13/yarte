@@ -261,3 +261,75 @@ fn test_tuple() {
         "{\"tuple\":[0,2,0,1]}",
     )])
 }
+
+// Adapted from [`simd-json-derive`](https://github.com/simd-lite/simd-json-derive)
+#[test]
+fn unnamed1() {
+    #[derive(Serialize, PartialEq, Debug)]
+    struct Bla(u8);
+    let b = Bla(1);
+    let e = r#"1"#;
+    test_encode_ok(&[(b, e)]);
+}
+
+#[test]
+fn unnamed2() {
+    #[derive(Serialize, PartialEq, Debug)]
+    struct Bla(u8, u16);
+    let b = Bla(1, 2);
+    let e = r#"[1,2]"#;
+    test_encode_ok(&[(b, e)]);
+}
+
+#[test]
+fn named() {
+    #[derive(Serialize, PartialEq, Debug)]
+    struct Bla {
+        f1: u8,
+        f2: String,
+    };
+
+    let b = Bla {
+        f1: 1,
+        f2: "snot".into(),
+    };
+
+    let e = r#"{"f1":1,"f2":"snot"}"#;
+    test_encode_ok(&[(b, e)]);
+}
+
+#[test]
+fn unnamed1_lifetime() {
+    #[derive(Serialize, PartialEq, Debug)]
+    struct BlaU1L<'a>(&'a str);
+    let b = BlaU1L("snot");
+
+    let e = r#""snot""#;
+    test_encode_ok(&[(b, e)]);
+}
+#[test]
+fn unnamed2_lifetime() {
+    #[derive(Serialize, PartialEq, Debug)]
+    struct BlaU2L<'a, 'b>(&'a str, &'b str);
+    let b = BlaU2L("hello", "world");
+
+    let e = r#"["hello","world"]"#;
+    test_encode_ok(&[(b, e)]);
+}
+
+#[test]
+fn named_lifetime() {
+    #[derive(Serialize, PartialEq, Debug)]
+    struct BlaN2L<'a, 'b> {
+        f1: &'a str,
+        f2: &'b str,
+    };
+
+    let b = BlaN2L {
+        f1: "snot",
+        f2: "badger",
+    };
+
+    let e = r#"{"f1":"snot","f2":"badger"}"#;
+    test_encode_ok(&[(b, e)]);
+}
