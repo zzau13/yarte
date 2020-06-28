@@ -270,15 +270,13 @@ impl<'a> io::Write for Writer<'a> {
 mod json {
     use super::*;
     use crate::at_helpers::{Json, JsonPretty};
-    // use crate::helpers::json::{Serialize, to_bytes_mut};
-    use serde_json::{to_writer, to_writer_pretty};
+    use crate::helpers::json::{self, to_bytes_mut};
+    use serde_json::to_writer_pretty;
 
-    // TODO: why this not works and serde version works
-    impl<'a, S: serde::Serialize> RenderBytes for Json<'a, S> {
+    impl<'a, S: json::Serialize> RenderBytes for Json<'a, S> {
         #[inline(always)]
         fn render(self, buf: &mut BytesMut) {
-            // to_bytes_mut(self.0, buf)
-            to_writer(&mut Writer::new(buf), self.0).expect("Infallible serializable json struct");
+            to_bytes_mut(self.0, buf)
         }
     }
 
@@ -292,12 +290,10 @@ mod json {
         }
     }
 
-    // TODO: why this not works and serde version works
-    impl<'a, S: serde::Serialize> RenderBytesSafe for Json<'a, S> {
+    impl<'a, S: json::Serialize> RenderBytesSafe for Json<'a, S> {
         #[inline(always)]
         fn render(self, buf: &mut BytesMut) {
-            // to_bytes_mut(self.0, buf)
-            to_writer(&mut Writer::new(buf), self.0).expect("Infallible serializable json struct");
+            to_bytes_mut(self.0, buf)
         }
     }
 
