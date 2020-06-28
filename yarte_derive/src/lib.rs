@@ -13,6 +13,8 @@ use yarte_hir::{generate, visit_derive, HIROptions, Print, Struct};
 use yarte_parser::{emitter, parse, parse_partials, source_map, Partial};
 
 mod logger;
+#[cfg(feature = "json")]
+mod ser_json;
 
 use self::logger::log;
 
@@ -218,6 +220,14 @@ pub fn template_wasm_server(input: TokenStream) -> TokenStream {
     }
     let i = &syn::parse(input).unwrap();
     build!(i, get_codegen, Default::default())
+}
+
+#[proc_macro_derive(Serialize)]
+#[cfg(feature = "json")]
+pub fn serialize_json(i: TokenStream) -> TokenStream {
+    let i = syn::parse(i).unwrap();
+    let tokens = ser_json::serialize_json(i);
+    tokens.into()
 }
 
 #[proc_macro]

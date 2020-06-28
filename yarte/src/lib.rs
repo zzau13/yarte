@@ -115,4 +115,6 @@ pub use yarte_helpers::helpers::{RenderBytes, RenderBytesA, RenderBytesSafe, Ren
 pub use bytes::{BufMut, Bytes, BytesMut};
 
 #[cfg(feature = "json")]
-pub use yarte_helpers::helpers::{to_bytes, to_bytes_mut};
+pub use yarte_derive::Serialize;
+#[cfg(feature = "json")]
+pub use yarte_helpers::helpers::json::{Serialize, *};

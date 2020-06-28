@@ -8,36 +8,36 @@ pub mod json {
     use crate::helpers::io_fmt::IoFmt;
 
     #[derive(Clone, Copy)]
-    pub struct Json<'a, T: Serialize>(pub &'a T);
+    pub struct Json<'a, T>(pub &'a T);
 
     pub trait AsJson {
         fn __as_json(&self) -> Json<'_, Self>
         where
-            Self: Serialize + Sized;
+            Self: Sized;
     }
 
     impl<S> AsJson for S {
         fn __as_json(&self) -> Json<'_, Self>
         where
-            Self: Serialize + Sized,
+            Self: Sized,
         {
             Json(self)
         }
     }
 
     #[derive(Clone, Copy)]
-    pub struct JsonPretty<'a, T: Serialize>(pub &'a T);
+    pub struct JsonPretty<'a, T>(pub &'a T);
 
     pub trait AsJsonPretty {
         fn __as_json_pretty(&self) -> JsonPretty<'_, Self>
         where
-            Self: Serialize + Sized;
+            Self: Sized;
     }
 
     impl<S> AsJsonPretty for S {
         fn __as_json_pretty(&self) -> JsonPretty<'_, Self>
         where
-            Self: Serialize + Sized,
+            Self: Sized,
         {
             JsonPretty(self)
         }
@@ -50,7 +50,7 @@ pub mod json {
         }
     }
 
-    impl<'a, D: Serialize> Display for JsonPretty<'a, D> {
+    impl<'a, S: Serialize> Display for JsonPretty<'a, S> {
         #[inline(always)]
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             to_writer_pretty(IoFmt::new(f), self.0).map_err(|_| fmt::Error)

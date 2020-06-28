@@ -204,7 +204,7 @@ macro_rules! ryu_display {
 impl $t for $f {
     #[inline(always)]
      fn render(self, buf: &mut BytesMut)  {
-        if self.is_infinite() {
+        if self.is_nonfinite() {
             buf.extend_from_slice(self.format_nonfinite().as_bytes());
         } else {
             buf.reserve(MAX_SIZE_FLOAT);
@@ -270,20 +270,19 @@ impl<'a> io::Write for Writer<'a> {
 mod json {
     use super::*;
     use crate::at_helpers::{Json, JsonPretty};
-    use crate::helpers::to_bytes_mut;
-    use serde::Serialize;
-    use serde_json::to_writer_pretty;
+    // use crate::helpers::json::{Serialize, to_bytes_mut};
+    use serde_json::{to_writer, to_writer_pretty};
 
-    impl<'a, S: Serialize> RenderBytes for Json<'a, S> {
-        /// # Panics
-        /// Can't panics at json serializer error
+    // TODO: why this not works and serde version works
+    impl<'a, S: serde::Serialize> RenderBytes for Json<'a, S> {
         #[inline(always)]
         fn render(self, buf: &mut BytesMut) {
-            to_bytes_mut(self.0, buf).expect("Infallible serializable json struct");
+            // to_bytes_mut(self.0, buf)
+            to_writer(&mut Writer::new(buf), self.0).expect("Infallible serializable json struct");
         }
     }
 
-    impl<'a, D: Serialize> RenderBytes for JsonPretty<'a, D> {
+    impl<'a, D: serde::Serialize> RenderBytes for JsonPretty<'a, D> {
         /// # Panics
         /// Can't panics at json serializer error
         #[inline(always)]
@@ -293,16 +292,16 @@ mod json {
         }
     }
 
-    impl<'a, S: Serialize> RenderBytesSafe for Json<'a, S> {
-        /// # Panics
-        /// Can't panics at json serializer error
+    // TODO: why this not works and serde version works
+    impl<'a, S: serde::Serialize> RenderBytesSafe for Json<'a, S> {
         #[inline(always)]
         fn render(self, buf: &mut BytesMut) {
-            to_bytes_mut(self.0, buf).expect("Infallible serializable json struct");
+            // to_bytes_mut(self.0, buf)
+            to_writer(&mut Writer::new(buf), self.0).expect("Infallible serializable json struct");
         }
     }
 
-    impl<'a, D: Serialize> RenderBytesSafe for JsonPretty<'a, D> {
+    impl<'a, D: serde::Serialize> RenderBytesSafe for JsonPretty<'a, D> {
         /// # Panics
         /// Can't panics at json serializer error
         #[inline(always)]

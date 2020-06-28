@@ -1,10 +1,5 @@
 pub mod integers;
 pub mod io_fmt;
-#[cfg(feature = "json")]
-mod ser_json;
-
-#[cfg(feature = "json")]
-pub use ser_json::{to_bytes, to_bytes_mut};
 
 #[repr(align(32))]
 #[cfg(target_pointer_width = "64")]
@@ -24,6 +19,8 @@ mod bytes;
 mod fixed;
 #[cfg(feature = "markup")]
 mod markup;
+#[cfg(feature = "json")]
+mod ser_json;
 
 #[cfg(feature = "bytes-buf")]
 pub use self::bytes::{RenderBytes, RenderBytesA, RenderBytesSafe, RenderBytesSafeA};
@@ -33,6 +30,15 @@ pub use self::fixed::{RenderFixed, RenderFixedA, RenderSafe, RenderSafeA};
 pub use self::markup::{Render, RenderA};
 #[cfg(feature = "ryu-ad")]
 pub mod ryu;
+
+#[cfg(feature = "json")]
+// TODO:
+pub mod json {
+    pub use super::ser_json::{
+        end_array_object, end_object, end_object_object, to_bytes, to_bytes_mut, write_comma,
+        Serialize,
+    };
+}
 
 pub trait IntoCopyIterator: IntoIterator {
     fn __into_citer(self) -> <Self as IntoIterator>::IntoIter;

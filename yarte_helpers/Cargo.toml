@@ -17,7 +17,7 @@ big-num-32 = []
 config = ["serde", "toml"]
 default = ["markup", "config"]
 display-fn = []
-json = ["bytes", "serde", "serde_json", "v_jsonescape", "ryu-ad"]
+json = ["bytes", "chrono", "serde", "serde_json", "v_jsonescape", "ryu-ad"]
 ryu-ad = ["ryu"]
 fixed = ["v_htmlescape", "itoa", "ryu-ad"]
 markup = ["v_htmlescape", "itoa", "dtoa"]
@@ -33,6 +33,7 @@ v_jsonescape = { version = "0.1", optional = true }
 itoa = { version = "0.4", features = ["i128"], optional = true }
 dtoa = { version = "0.4", optional = true }
 ryu = { version = "1.0", optional = true }
+chrono = { version = "0.4", optional = true }
 
 serde = { version = "1.0", features = ["derive"], optional = true }
 toml = { version = "0.5", optional = true }
