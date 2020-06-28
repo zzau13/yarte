@@ -224,7 +224,7 @@ macro_rules! ryu_display {
 impl $t for $f {
     #[inline(always)]
     unsafe fn render(self, buf: &mut [MaybeUninit<u8>]) -> Option<usize> {
-        if self.is_infinite() {
+        if self.is_nonfinite() {
             let b = self.format_nonfinite();
             if buf.len() < b.len() {
                 None

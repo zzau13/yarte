@@ -25,12 +25,14 @@ html-min = ["yarte_codegen/html-min"]
 wasm-server = ["yarte_codegen/wasm-server"]
 fixed = ["yarte_codegen/fixed", "yarte_helpers/fixed"]
 bytes-buf = ["yarte_codegen/bytes-buf", "yarte_helpers/bytes-buf"]
+json = ["v_jsonescape", "yarte_helpers/json"]
 
 [dependencies]
 yarte_codegen = { version = "0.11.1", path = "../yarte_codegen" }
 yarte_helpers = { version = "0.11.1", path = "../yarte_helpers" }
 yarte_hir = { version = "0.11.1", path = "../yarte_hir" }
 yarte_parser = { version = "0.11.1", path = "../yarte_parser" }
+v_jsonescape = { version = "0.1", optional = true }
 
 bat = "0.15"
 
