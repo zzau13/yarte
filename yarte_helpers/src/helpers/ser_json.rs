@@ -41,38 +41,32 @@ impl ser::Error for Error {
 impl std::error::Error for Error {}
 
 /// A structure for serializing Rust values into JSON.
-pub struct Serializer {
-    buf: BytesMut,
+pub struct Serializer<'a> {
+    buf: &'a mut BytesMut,
 }
 
-impl Serializer {
+impl<'a> Serializer<'a> {
     /// Creates a new JSON serializer.
     #[inline]
-    pub fn new(capacity: usize) -> Self {
-        Serializer {
-            buf: BytesMut::with_capacity(capacity),
-        }
-    }
-
-    pub fn freeze(self) -> Bytes {
-        self.buf.freeze()
+    pub fn new(buf: &mut BytesMut) -> Serializer<'_> {
+        Serializer { buf }
     }
 }
 
 // TODO: any error? or not? all json serializer errors can check in compile time by type
 type Result<T> = std::result::Result<T, Error>;
 
-impl<'a> ser::Serializer for &'a mut Serializer {
+impl<'a, 'b> ser::Serializer for &'a mut Serializer<'b> {
     type Ok = ();
     type Error = Error;
 
-    type SerializeSeq = Compound<'a>;
-    type SerializeTuple = Compound<'a>;
-    type SerializeTupleStruct = Compound<'a>;
-    type SerializeTupleVariant = Compound<'a>;
-    type SerializeMap = Compound<'a>;
-    type SerializeStruct = Compound<'a>;
-    type SerializeStructVariant = Compound<'a>;
+    type SerializeSeq = Compound<'a, 'b>;
+    type SerializeTuple = Compound<'a, 'b>;
+    type SerializeTupleStruct = Compound<'a, 'b>;
+    type SerializeTupleVariant = Compound<'a, 'b>;
+    type SerializeMap = Compound<'a, 'b>;
+    type SerializeStruct = Compound<'a, 'b>;
+    type SerializeStructVariant = Compound<'a, 'b>;
 
     #[inline]
     fn serialize_bool(self, value: bool) -> Result<()> {
@@ -385,12 +379,12 @@ pub enum State {
 
 // Not public API. Should be pub(crate).
 #[doc(hidden)]
-pub struct Compound<'a> {
-    ser: &'a mut Serializer,
+pub struct Compound<'a, 'b> {
+    ser: &'a mut Serializer<'b>,
     state: State,
 }
 
-impl<'a> ser::SerializeSeq for Compound<'a> {
+impl<'a, 'b> ser::SerializeSeq for Compound<'a, 'b> {
     type Ok = ();
     type Error = Error;
 
@@ -416,7 +410,7 @@ impl<'a> ser::SerializeSeq for Compound<'a> {
     }
 }
 
-impl<'a> ser::SerializeTuple for Compound<'a> {
+impl<'a, 'b> ser::SerializeTuple for Compound<'a, 'b> {
     type Ok = ();
     type Error = Error;
 
@@ -434,7 +428,7 @@ impl<'a> ser::SerializeTuple for Compound<'a> {
     }
 }
 
-impl<'a> ser::SerializeTupleStruct for Compound<'a> {
+impl<'a, 'b> ser::SerializeTupleStruct for Compound<'a, 'b> {
     type Ok = ();
     type Error = Error;
 
@@ -452,7 +446,7 @@ impl<'a> ser::SerializeTupleStruct for Compound<'a> {
     }
 }
 
-impl<'a> ser::SerializeTupleVariant for Compound<'a> {
+impl<'a, 'b> ser::SerializeTupleVariant for Compound<'a, 'b> {
     type Ok = ();
     type Error = Error;
 
@@ -476,7 +470,7 @@ impl<'a> ser::SerializeTupleVariant for Compound<'a> {
     }
 }
 
-impl<'a> ser::SerializeMap for Compound<'a> {
+impl<'a, 'b> ser::SerializeMap for Compound<'a, 'b> {
     type Ok = ();
     type Error = Error;
 
@@ -516,7 +510,7 @@ impl<'a> ser::SerializeMap for Compound<'a> {
     }
 }
 
-impl<'a> ser::SerializeStruct for Compound<'a> {
+impl<'a, 'b> ser::SerializeStruct for Compound<'a, 'b> {
     type Ok = ();
     type Error = Error;
 
@@ -534,7 +528,7 @@ impl<'a> ser::SerializeStruct for Compound<'a> {
     }
 }
 
-impl<'a> ser::SerializeStructVariant for Compound<'a> {
+impl<'a, 'b> ser::SerializeStructVariant for Compound<'a, 'b> {
     type Ok = ();
     type Error = Error;
 
@@ -558,8 +552,8 @@ impl<'a> ser::SerializeStructVariant for Compound<'a> {
     }
 }
 
-struct MapKeySerializer<'a> {
-    ser: &'a mut Serializer,
+struct MapKeySerializer<'a, 'b> {
+    ser: &'a mut Serializer<'b>,
 }
 
 #[inline]
@@ -567,7 +561,7 @@ fn key_must_be_a_string() -> Error {
     ser::Error::custom("key must be a string")
 }
 
-impl<'a> ser::Serializer for MapKeySerializer<'a> {
+impl<'a, 'b> ser::Serializer for MapKeySerializer<'a, 'b> {
     type Ok = ();
     type Error = Error;
 
@@ -881,8 +875,14 @@ fn serialize_str_short(value: &str, buf: &mut BytesMut) {
     end_string(buf);
 }
 
+#[inline]
+pub fn to_bytes_mut<T: Serialize + ?Sized>(value: &T, buf: &mut BytesMut) -> Result<()> {
+    value.serialize(&mut Serializer::new(buf))
+}
+
 pub fn to_bytes<T: Serialize + ?Sized>(capacity: usize, value: &T) -> Result<Bytes> {
-    let mut ser = Serializer::new(capacity);
+    let mut buf = BytesMut::with_capacity(capacity);
+    let mut ser = Serializer::new(&mut buf);
     value.serialize(&mut ser)?;
-    Ok(ser.freeze())
+    Ok(buf.freeze())
 }

@@ -4,7 +4,7 @@ pub mod io_fmt;
 mod ser_json;
 
 #[cfg(feature = "json")]
-pub use ser_json::to_bytes;
+pub use ser_json::{to_bytes, to_bytes_mut};
 
 #[repr(align(32))]
 #[cfg(target_pointer_width = "64")]

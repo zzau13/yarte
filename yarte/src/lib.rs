@@ -113,3 +113,6 @@ pub use yarte_helpers::helpers::{RenderBytes, RenderBytesA, RenderBytesSafe, Ren
 
 #[cfg(feature = "bytes-buf")]
 pub use bytes::{BufMut, Bytes, BytesMut};
+
+#[cfg(feature = "json")]
+pub use yarte_helpers::helpers::{to_bytes, to_bytes_mut};

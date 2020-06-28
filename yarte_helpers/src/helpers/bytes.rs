@@ -270,38 +270,45 @@ impl<'a> io::Write for Writer<'a> {
 mod json {
     use super::*;
     use crate::at_helpers::{Json, JsonPretty};
+    use crate::helpers::to_bytes_mut;
     use serde::Serialize;
-    use serde_json::{to_writer, to_writer_pretty};
+    use serde_json::to_writer_pretty;
 
     impl<'a, S: Serialize> RenderBytes for Json<'a, S> {
+        /// # Panics
+        /// Can't panics at json serializer error
         #[inline(always)]
         fn render(self, buf: &mut BytesMut) {
-            // Infallible, can panics overflows usize
-            let _ = to_writer(&mut Writer::new(buf), self.0);
+            to_bytes_mut(self.0, buf).expect("Infallible serializable json struct");
         }
     }
 
     impl<'a, D: Serialize> RenderBytes for JsonPretty<'a, D> {
+        /// # Panics
+        /// Can't panics at json serializer error
         #[inline(always)]
         fn render(self, buf: &mut BytesMut) {
-            // Infallible, can panics overflows usize
-            let _ = to_writer_pretty(&mut Writer::new(buf), self.0);
+            to_writer_pretty(&mut Writer::new(buf), self.0)
+                .expect("Infallible serializable json struct");
         }
     }
 
     impl<'a, S: Serialize> RenderBytesSafe for Json<'a, S> {
+        /// # Panics
+        /// Can't panics at json serializer error
         #[inline(always)]
         fn render(self, buf: &mut BytesMut) {
-            // Infallible, can panics overflows usize
-            let _ = to_writer(&mut Writer::new(buf), self.0);
+            to_bytes_mut(self.0, buf).expect("Infallible serializable json struct");
         }
     }
 
     impl<'a, D: Serialize> RenderBytesSafe for JsonPretty<'a, D> {
+        /// # Panics
+        /// Can't panics at json serializer error
         #[inline(always)]
         fn render(self, buf: &mut BytesMut) {
-            // Infallible, can panics overflows usize
-            let _ = to_writer_pretty(&mut Writer::new(buf), self.0);
+            to_writer_pretty(&mut Writer::new(buf), self.0)
+                .expect("Infallible serializable json struct");
         }
     }
 }
