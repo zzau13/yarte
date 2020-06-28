@@ -52,6 +52,11 @@ struct Outer {
     inner: Vec<Inner>,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize)]
+struct Tuple {
+    tuple: (u8, u8, u8, u8),
+}
+
 fn test_encode_ok<T>(errors: &[(T, &str)])
 where
     T: PartialEq + Debug + Serialize,
@@ -245,4 +250,14 @@ fn test_write_enum() {
             "{\"AntHive\":[\"Bob\",\"Stuart\"]}",
         ),
     ]);
+}
+
+#[test]
+fn test_tuple() {
+    test_encode_ok(&[(
+        &Tuple {
+            tuple: (0, 2, 0, 1),
+        },
+        "{\"tuple\":[0,2,0,1]}",
+    )])
 }
