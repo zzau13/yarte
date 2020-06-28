@@ -235,10 +235,16 @@ fn serialize_str_short(value: &str, buf: &mut BytesMut) {
 }
 
 #[inline]
-pub fn to_bytes_mut<T: Serialize + ?Sized>(value: &T, buf: &mut BytesMut) {
+pub fn to_bytes_mut<T>(value: &T, buf: &mut BytesMut)
+where
+    T: ?Sized + Serialize,
+{
     value.to_bytes_mut(buf)
 }
 
-pub fn to_bytes<T: Serialize + ?Sized>(value: &T, capacity: usize) -> Bytes {
+pub fn to_bytes<T>(value: &T, capacity: usize) -> Bytes
+where
+    T: ?Sized + Serialize,
+{
     value.to_bytes(capacity)
 }

@@ -7,8 +7,15 @@ pub mod json {
 
     use crate::helpers::io_fmt::IoFmt;
 
-    #[derive(Clone, Copy)]
     pub struct Json<'a, T>(pub &'a T);
+
+    impl<'a, T> Clone for Json<'a, T> {
+        fn clone(&self) -> Self {
+            Json(self.0)
+        }
+    }
+
+    impl<'a, T> Copy for Json<'a, T> {}
 
     pub trait AsJson {
         fn __as_json(&self) -> Json<'_, Self>
@@ -25,8 +32,15 @@ pub mod json {
         }
     }
 
-    #[derive(Clone, Copy)]
     pub struct JsonPretty<'a, T>(pub &'a T);
+
+    impl<'a, T> Clone for JsonPretty<'a, T> {
+        fn clone(&self) -> Self {
+            JsonPretty(self.0)
+        }
+    }
+
+    impl<'a, T> Copy for JsonPretty<'a, T> {}
 
     pub trait AsJsonPretty {
         fn __as_json_pretty(&self) -> JsonPretty<'_, Self>
