@@ -9,4 +9,5 @@ repository = "https://github.com/botika/yarte"
 workspace = ".."
 
 [dependencies]
+yarte = { version = "*", path = "../../yarte", features = ["json"], default-features = false }
 serde = { version = "1.0", features = ["derive"] }

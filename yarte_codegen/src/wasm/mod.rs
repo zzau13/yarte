@@ -1,14 +1,13 @@
 #[cfg(feature = "wasm-app")]
 pub mod client;
-#[cfg(feature = "wasm-server")]
+#[cfg(all(feature = "wasm-server", feature = "bytes-buf"))]
 pub mod server {
     use proc_macro2::TokenStream;
-    use quote::quote;
 
     use yarte_dom::dom_fmt::to_wasmfmt;
     use yarte_hir::{Struct, HIR};
 
-    use crate::{CodeGen, EachCodeGen, IfElseCodeGen};
+    use crate::{CodeGen, EachCodeGen, HTMLBytesCodeGen, IfElseCodeGen};
 
     pub struct WASMCodeGen<'a> {
         s: &'a Struct<'a>,
@@ -26,19 +25,7 @@ pub mod server {
     impl<'a> CodeGen for WASMCodeGen<'a> {
         fn gen(&mut self, ir: Vec<HIR>) -> TokenStream {
             let ir = to_wasmfmt(ir, self.s).expect("html");
-            let mut tokens = TokenStream::new();
-            for i in ir {
-                use HIR::*;
-                tokens.extend(match i {
-                    Local(a) => quote!(#a),
-                    Lit(a) => quote!(_fmt.write_str(#a)?;),
-                    Safe(a) => quote!(::std::fmt::Display::fmt(&(#a), _fmt)?;),
-                    Expr(a) => quote!(::yarte::Render::render(&(#a), _fmt)?;),
-                    Each(a) => self.gen_each(*a),
-                    IfElse(a) => self.gen_if_else(*a),
-                })
-            }
-            tokens
+            HTMLBytesCodeGen.gen(ir)
         }
     }
 }

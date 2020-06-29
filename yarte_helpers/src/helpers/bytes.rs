@@ -269,9 +269,8 @@ impl<'a> io::Write for Writer<'a> {
 #[cfg(feature = "json")]
 mod json {
     use super::*;
-    use crate::at_helpers::{Json, JsonPretty};
+    use crate::at_helpers::Json;
     use crate::helpers::json::{self, to_bytes_mut};
-    use serde_json::to_writer_pretty;
 
     impl<'a, S: json::Serialize> RenderBytes for Json<'a, S> {
         #[inline(always)]
@@ -280,30 +279,10 @@ mod json {
         }
     }
 
-    impl<'a, D: serde::Serialize> RenderBytes for JsonPretty<'a, D> {
-        /// # Panics
-        /// Can't panics at json serializer error
-        #[inline(always)]
-        fn render(self, buf: &mut BytesMut) {
-            to_writer_pretty(&mut Writer::new(buf), self.0)
-                .expect("Infallible serializable json struct");
-        }
-    }
-
     impl<'a, S: json::Serialize> RenderBytesSafe for Json<'a, S> {
         #[inline(always)]
         fn render(self, buf: &mut BytesMut) {
             to_bytes_mut(self.0, buf)
-        }
-    }
-
-    impl<'a, D: serde::Serialize> RenderBytesSafe for JsonPretty<'a, D> {
-        /// # Panics
-        /// Can't panics at json serializer error
-        #[inline(always)]
-        fn render(self, buf: &mut BytesMut) {
-            to_writer_pretty(&mut Writer::new(buf), self.0)
-                .expect("Infallible serializable json struct");
         }
     }
 }

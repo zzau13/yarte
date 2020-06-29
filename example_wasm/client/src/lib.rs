@@ -2,7 +2,7 @@ use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::HtmlInputElement;
 
 use model::Fortune;
-use yarte_wasm_app::{App, Addr};
+use yarte_wasm_app::{Addr, App};
 
 #[derive(App)]
 #[template(path = "fortune", print = "code")]

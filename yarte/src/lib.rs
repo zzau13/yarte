@@ -39,7 +39,7 @@ pub use TemplateTrait as TemplateMin;
 #[cfg(feature = "wasm")]
 pub use yarte_derive::TemplateWasmServer;
 #[cfg(feature = "wasm")]
-pub use TemplateTrait as TemplateWasmServer;
+pub use TemplateBytesTrait as TemplateWasmServer;
 
 #[cfg(feature = "fixed")]
 /// Template trait

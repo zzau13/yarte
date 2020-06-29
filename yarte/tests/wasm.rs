@@ -1,8 +1,8 @@
 #![allow(clippy::into_iter_on_ref)]
 #![cfg(feature = "wasm")]
 
-use serde::Serialize;
-use yarte::TemplateWasmServer as Template;
+use bytes::Bytes;
+use yarte::{Serialize, TemplateWasmServer as Template};
 
 #[derive(Serialize)]
 struct Fortune {
@@ -32,13 +32,14 @@ fn wasm_server() {
     };
 
     assert_eq!(
-        t.call().unwrap(),
+        t.call(10240),
+        Bytes::from(
         "<!DOCTYPE html><html><head><title>Fortunes</title></head><body><table>\
         <thead><tr><th>id</th><th>message</th></tr></thead>\
         <tbody><tr><td>0</td><td>foo</td></tr><tr><td>1</td><td>bar</td></tr></tbody>\
         </table>\
         <script>function get_state(){return JSON.stringify({\"fortunes\":[{\"id\":0,\"message\":\"foo\"},{\"id\":1,\"message\":\"bar\"}]});}</script>\
         <script type=\"module\">import init from \'./pkg/example.js\';async function run(){await init()}run()</script>\
-        </body></html>"
+        </body></html>")
     )
 }

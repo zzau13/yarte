@@ -212,7 +212,7 @@ pub fn app(input: TokenStream) -> TokenStream {
 /// Need additional `scrip` path argument attribute
 pub fn template_wasm_server(input: TokenStream) -> TokenStream {
     fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
-        Box::new(FmtCodeGen::new(
+        Box::new(yarte_codegen::BytesCodeGen::new(
             yarte_codegen::server::WASMCodeGen::new(s),
             s,
             "yarte",

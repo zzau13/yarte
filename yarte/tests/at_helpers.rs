@@ -125,32 +125,14 @@ mod json {
         }
 
         #[derive(TemplateBytes)]
-        #[template(src = "{{ @json_pretty f }}")]
-        struct JsonPrettyTemplateF {
-            f: Json,
-        }
-
-        #[derive(TemplateBytes)]
         #[template(src = "{{ @json f }}")]
         struct JsonTemplateN {
-            f: JsonN,
-        }
-
-        #[derive(TemplateBytes)]
-        #[template(src = "{{ @json_pretty f }}")]
-        struct JsonPrettyTemplateN {
             f: JsonN,
         }
 
         #[derive(TemplateBytesText)]
         #[template(src = "{{ @json f }}", print = "code")]
         struct JsonTemplateFT {
-            f: Json,
-        }
-
-        #[derive(TemplateBytesText)]
-        #[template(src = "{{ @json_pretty f }}")]
-        struct JsonPrettyTemplateFT {
             f: Json,
         }
 
@@ -161,29 +143,11 @@ mod json {
 
             assert_eq!(Bytes::from(serde_json::to_string(&f).unwrap()), t.ccall(0));
 
-            let t = JsonPrettyTemplateF { f };
-            assert_eq!(
-                Bytes::from(serde_json::to_string_pretty(&f).unwrap()),
-                t.ccall(0)
-            );
-
             let t = JsonTemplateFT { f };
             assert_eq!(Bytes::from(serde_json::to_string(&f).unwrap()), t.ccall(0));
 
-            let t = JsonPrettyTemplateFT { f };
-            assert_eq!(
-                Bytes::from(serde_json::to_string_pretty(&f).unwrap()),
-                t.ccall(0)
-            );
-
             let t = JsonTemplateN { f: JsonN { f: 1 } };
             assert_eq!(Bytes::from(serde_json::to_string(&f).unwrap()), t.ccall(0));
-
-            let t = JsonPrettyTemplateN { f: JsonN { f: 1 } };
-            assert_eq!(
-                Bytes::from(serde_json::to_string_pretty(&f).unwrap()),
-                t.ccall(0)
-            );
         }
     }
 }
