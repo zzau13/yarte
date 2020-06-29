@@ -1,12 +1,11 @@
 use actix_files as fs;
 use actix_web::{get, middleware::Logger, App, HttpRequest, HttpResponse, HttpServer, Responder};
-use yarte::{Serialize, TemplateWasmServer};
+use yarte::{Serialize, TemplateWasmServer as Template};
 
 use model::{Fortune, Item};
 
-// TODO: Serialize bounded by trait
-#[derive(TemplateWasmServer, Serialize)]
-#[template(path = "fortune", script = "./pkg/client.js", print = "code")]
+#[derive(Template, Serialize)]
+#[template(path = "fortune", script = "./pkg/client.js")]
 pub struct Test {
     fortunes: Vec<Fortune>,
     head: String,
