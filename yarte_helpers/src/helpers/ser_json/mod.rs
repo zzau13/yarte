@@ -6,7 +6,7 @@ use bytes::{BufMut, Bytes, BytesMut};
 
 use v_jsonescape::{b_escape, b_escape_char, fallback};
 
-use crate::helpers::bytes::render_bool;
+use crate::helpers::bytes::{buf_ptr, render_bool};
 use crate::helpers::ryu::{Sealed, MAX_SIZE_FLOAT};
 
 mod array;
@@ -14,12 +14,6 @@ mod chrono;
 mod collections;
 mod deref;
 mod tpl;
-
-macro_rules! buf_ptr {
-    ($buf:expr) => {
-        $buf as *mut _ as *mut u8
-    };
-}
 
 pub trait Serialize {
     fn to_bytes_mut(&self, buf: &mut BytesMut);
@@ -60,7 +54,7 @@ macro_rules! itoa_display {
                     use super::integers::Integer;
                     buf.reserve(Self::MAX_LEN);
                     // Safety: Previous reserve MAX length
-                    let b = unsafe { self.write_to(buf_ptr!(buf.bytes_mut())) };
+                    let b = unsafe { self.write_to(buf_ptr(buf)) };
                     // Safety: Wrote `b` bytes
                     unsafe { buf.advance_mut(b) };
                 }
@@ -102,7 +96,7 @@ macro_rules! ryu_display {
                 } else {
                     buf.reserve(MAX_SIZE_FLOAT);
                     // Safety: Previous reserve MAX length
-                    let b = unsafe { self.write_to_ryu_buffer(buf_ptr!(buf.bytes_mut())) };
+                    let b = unsafe { self.write_to_ryu_buffer(buf_ptr(buf)) };
                     // Safety: Wrote `b` bytes
                     unsafe { buf.advance_mut(b) };
                 }
@@ -123,7 +117,7 @@ pub fn render_null(buf: &mut bytes::BytesMut) {
 pub fn begin_string(buf: &mut BytesMut) {
     buf.reserve(1);
     // Safety: previous reserve 1 and size_t of MaybeUninit<u8> it's equal to size_t of u8
-    unsafe { *buf_ptr!(buf.bytes_mut()) = b'"' };
+    unsafe { *buf_ptr(buf) = b'"' };
     // Safety: previous write 1
     unsafe { buf.advance_mut(1) };
 }
@@ -137,8 +131,8 @@ pub fn end_string(buf: &mut BytesMut) {
 pub fn empty_array(buf: &mut BytesMut) {
     buf.reserve(2);
     // Safety: previous reserve 2 and size_t of MaybeUninit<u8> it's equal to size_t of u8
-    unsafe { *buf_ptr!(buf.bytes_mut()) = b'[' };
-    unsafe { *buf_ptr!(buf.bytes_mut()).add(1) = b']' };
+    unsafe { *buf_ptr(buf) = b'[' };
+    unsafe { *buf_ptr(buf).add(1) = b']' };
     // Safety: previous write 2
     unsafe { buf.advance_mut(2) };
 }
@@ -147,7 +141,7 @@ pub fn empty_array(buf: &mut BytesMut) {
 pub fn begin_array(buf: &mut BytesMut) {
     buf.reserve(1);
     // Safety: previous reserve 1 and size_t of MaybeUninit<u8> it's equal to size_t of u8
-    unsafe { *buf_ptr!(buf.bytes_mut()) = b'[' };
+    unsafe { *buf_ptr(buf) = b'[' };
     // Safety: previous write 1
     unsafe { buf.advance_mut(1) };
 }
@@ -156,7 +150,7 @@ pub fn begin_array(buf: &mut BytesMut) {
 pub fn end_array(buf: &mut BytesMut) {
     buf.reserve(1);
     // Safety: previous reserve 1 and size_t of MaybeUninit<u8> it's equal to size_t of u8
-    unsafe { *buf_ptr!(buf.bytes_mut()) = b']' };
+    unsafe { *buf_ptr(buf) = b']' };
     // Safety: previous write 1
     unsafe { buf.advance_mut(1) };
 }
@@ -165,7 +159,7 @@ pub fn end_array(buf: &mut BytesMut) {
 pub fn write_comma(buf: &mut BytesMut) {
     buf.reserve(1);
     // Safety: previous reserve 1 and size_t of MaybeUninit<u8> it's equal to size_t of u8
-    unsafe { *buf_ptr!(buf.bytes_mut()) = b',' };
+    unsafe { *buf_ptr(buf) = b',' };
     // Safety: previous write 1
     unsafe { buf.advance_mut(1) };
 }
@@ -174,8 +168,8 @@ pub fn write_comma(buf: &mut BytesMut) {
 pub fn empty_object(buf: &mut BytesMut) {
     buf.reserve(2);
     // Safety: previous reserve 2 and size_t of MaybeUninit<u8> it's equal to size_t of u8
-    unsafe { *buf_ptr!(buf.bytes_mut()) = b'{' };
-    unsafe { *buf_ptr!(buf.bytes_mut()).add(1) = b'}' };
+    unsafe { *buf_ptr(buf) = b'{' };
+    unsafe { *buf_ptr(buf).add(1) = b'}' };
     // Safety: previous write 2
     unsafe { buf.advance_mut(2) };
 }
@@ -184,7 +178,7 @@ pub fn empty_object(buf: &mut BytesMut) {
 pub fn begin_object(buf: &mut BytesMut) {
     buf.reserve(1);
     // Safety: previous reserve 1 and size_t of MaybeUninit<u8> it's equal to size_t of u8
-    unsafe { *buf_ptr!(buf.bytes_mut()) = b'{' };
+    unsafe { *buf_ptr(buf) = b'{' };
     // Safety: previous write 1
     unsafe { buf.advance_mut(1) };
 }
@@ -193,7 +187,7 @@ pub fn begin_object(buf: &mut BytesMut) {
 pub fn end_object(buf: &mut BytesMut) {
     buf.reserve(1);
     // Safety: previous reserve 1 and size_t of MaybeUninit<u8> it's equal to size_t of u8
-    unsafe { *buf_ptr!(buf.bytes_mut()) = b'}' };
+    unsafe { *buf_ptr(buf) = b'}' };
     // Safety: previous write 1
     unsafe { buf.advance_mut(1) };
 }
@@ -202,7 +196,7 @@ pub fn end_object(buf: &mut BytesMut) {
 pub fn write_colon(buf: &mut BytesMut) {
     buf.reserve(1);
     // Safety: previous reserve 1 and size_t of MaybeUninit<u8> it's equal to size_t of u8
-    unsafe { *buf_ptr!(buf.bytes_mut()) = b':' };
+    unsafe { *buf_ptr(buf) = b':' };
     // Safety: previous write 1
     unsafe { buf.advance_mut(1) };
 }
@@ -211,8 +205,8 @@ pub fn write_colon(buf: &mut BytesMut) {
 pub fn end_array_object(buf: &mut BytesMut) {
     buf.reserve(2);
     // Safety: previous reserve 2 and size_t of MaybeUninit<u8> it's equal to size_t of u8
-    unsafe { *buf_ptr!(buf.bytes_mut()) = b']' };
-    unsafe { *buf_ptr!(buf.bytes_mut()).add(1) = b'}' };
+    unsafe { *buf_ptr(buf) = b']' };
+    unsafe { *buf_ptr(buf).add(1) = b'}' };
     // Safety: previous write 2
     unsafe { buf.advance_mut(2) };
 }
@@ -221,8 +215,8 @@ pub fn end_array_object(buf: &mut BytesMut) {
 pub fn end_object_object(buf: &mut BytesMut) {
     buf.reserve(2);
     // Safety: previous reserve 2 and size_t of MaybeUninit<u8> it's equal to size_t of u8
-    unsafe { *buf_ptr!(buf.bytes_mut()) = b'}' };
-    unsafe { *buf_ptr!(buf.bytes_mut()).add(1) = b'}' };
+    unsafe { *buf_ptr(buf) = b'}' };
+    unsafe { *buf_ptr(buf).add(1) = b'}' };
     // Safety: previous write 2
     unsafe { buf.advance_mut(2) };
 }
