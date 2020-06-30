@@ -1,17 +1,16 @@
 #![allow(clippy::transmute_ptr_to_ptr)]
 
 use std::io;
-use std::mem::transmute;
+use std::slice::from_raw_parts_mut;
 
 use bytes::{BufMut, BytesMut};
 use v_htmlescape::{b_escape, b_escape_char};
 
 use super::ryu::{Sealed, MAX_SIZE_FLOAT};
 
-macro_rules! buf_ptr {
-    ($buf:expr) => {
-        $buf as *mut _ as *mut u8
-    };
+#[inline(always)]
+pub fn buf_ptr(buf: &mut BytesMut) -> *mut u8 {
+    unsafe { buf.as_mut_ptr().add(buf.len()) }
 }
 
 /// Render trait, used for wrap  expressions `{{ ... }}` when it's in a html template
@@ -82,7 +81,7 @@ macro_rules! itoa_display {
                     use super::integers::Integer;
                     buf.reserve(Self::MAX_LEN);
                     // Safety: Previous reserve MAX length
-                    let b = unsafe { self.write_to(buf_ptr!(buf.bytes_mut())) };
+                    let b = unsafe { self.write_to(buf_ptr(buf)) };
                     // Safety: Wrote `b` bytes
                     unsafe { buf.advance_mut(b) };
                 }
@@ -166,7 +165,7 @@ macro_rules! itoa_display {
                     use super::integers::Integer;
                     buf.reserve(Self::MAX_LEN);
                     // Safety: Previous reserve MAX length
-                    let b = unsafe { self.write_to(buf_ptr!(buf.bytes_mut())) };
+                    let b = unsafe { self.write_to(buf_ptr(buf)) };
                     // Safety: Wrote `b` bytes
                     unsafe { buf.advance_mut(b) };
                 }
@@ -209,7 +208,7 @@ impl $t for $f {
         } else {
             buf.reserve(MAX_SIZE_FLOAT);
             // Safety: Previous reserve MAX length
-            let b = unsafe { self.write_to_ryu_buffer(buf_ptr!(buf.bytes_mut())) };
+            let b = unsafe { self.write_to_ryu_buffer(buf_ptr(buf)) };
             // Safety: Wrote `b` bytes
             unsafe { buf.advance_mut(b) };
         }
@@ -292,7 +291,9 @@ fn render_char(c: char, buf: &mut BytesMut) {
     let len = c.len_utf8();
     buf.reserve(len);
     // Safety: Has same layout and encode_utf8 NOT read buf
-    c.encode_utf8(unsafe { transmute(buf.bytes_mut()) });
+    unsafe {
+        c.encode_utf8(from_raw_parts_mut(buf_ptr(buf), len));
+    }
     // Safety: Just write this len
     unsafe { buf.advance_mut(len) }
 }
