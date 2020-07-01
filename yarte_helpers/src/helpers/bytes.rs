@@ -8,9 +8,13 @@ use v_htmlescape::{b_escape, b_escape_char};
 
 use super::ryu::{Sealed, MAX_SIZE_FLOAT};
 
+/// Return unsafe ptr to current buffer position
+///
+/// # Safety
+/// If buffer is full, can return invalid pointer
 #[inline(always)]
-pub fn buf_ptr(buf: &mut BytesMut) -> *mut u8 {
-    unsafe { buf.as_mut_ptr().add(buf.len()) }
+pub unsafe fn buf_ptr(buf: &mut BytesMut) -> *mut u8 {
+    buf.as_mut_ptr().add(buf.len())
 }
 
 /// Render trait, used for wrap  expressions `{{ ... }}` when it's in a html template

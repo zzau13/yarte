@@ -1,5 +1,3 @@
-#![allow(clippy::unnested_or_patterns)]
-
 use std::{
     borrow::Cow,
     collections::BTreeMap,
