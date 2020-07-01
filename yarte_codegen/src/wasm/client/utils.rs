@@ -1,3 +1,5 @@
+#![allow(clippy::unnested_or_patterns)]
+
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{parse2, punctuated::Punctuated, Field, Ident, Token, Type};

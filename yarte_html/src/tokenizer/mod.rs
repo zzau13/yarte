@@ -8,6 +8,7 @@
 // except according to those terms.
 //! The HTML5 tokenizer.
 #![allow(clippy::never_loop, clippy::cognitive_complexity, clippy::single_match)]
+#![allow(clippy::unnested_or_patterns)]
 
 
 use std::{

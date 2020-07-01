@@ -1,3 +1,5 @@
+#![allow(clippy::unnested_or_patterns)]
+
 use std::io::{self, Write};
 
 use log::warn;

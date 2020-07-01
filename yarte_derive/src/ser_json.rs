@@ -1,9 +1,36 @@
 // Adapted from [`simd-json-derive`](https://github.com/simd-lite/simd-json-derive)
 
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::quote;
+use quote::{quote, ToTokens};
 use syn::{Data, DataStruct, DeriveInput, Fields, FieldsNamed, FieldsUnnamed, Variant};
 use v_jsonescape::escape;
+
+struct StrT(String);
+
+impl ToTokens for StrT {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let this = &self.0;
+        let t = match this.len() {
+            0 => unreachable!(),
+            len @ 1..=3 => {
+                let range: TokenStream = this
+                    .as_bytes()
+                    .iter()
+                    .enumerate()
+                    .map(|(i, x)| quote!(unsafe { *yarte::buf_ptr(buf).add(#i) = #x; }))
+                    .flatten()
+                    .collect();
+                quote! {
+                    buf.reserve(#len);
+                    #range
+                    unsafe { yarte::BufMut::advance_mut(buf, #len); }
+                }
+            }
+            _ => quote!(buf.extend_from_slice(#this.as_bytes());),
+        };
+        tokens.extend(t)
+    }
+}
 
 pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
     match i {
@@ -74,12 +101,13 @@ pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
                 }
             };
 
+            let keys = keys.into_iter().map(StrT);
             quote! {
                 impl #generics yarte::Serialize for #ident #generics {
                     #[inline]
                     fn to_bytes_mut(&self, buf: &mut yarte::BytesMut) {
                         #(
-                            buf.extend_from_slice(#keys.as_bytes());
+                            #keys
                             self.#values.to_bytes_mut(buf);
                         )*
                         yarte::end_object(buf);
@@ -115,11 +143,16 @@ pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
             // They serialize as: "Variant"
             let (simple_keys, simple_values): (Vec<_>, Vec<_>) = simple
                 .iter()
-                .map(|s| (&s.ident, format!("\"{}\"", escape(&s.ident.to_string()))))
+                .map(|s| {
+                    (
+                        &s.ident,
+                        StrT(format!("\"{}\"", escape(&s.ident.to_string()))),
+                    )
+                })
                 .unzip();
             let simple = quote! {
                 #(
-                    #ident::#simple_keys => buf.extend_from_slice(#simple_values.as_bytes())
+                    #ident::#simple_keys => { #simple_values }
                 ),*
             };
 
@@ -131,12 +164,17 @@ pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
             // They serialize as: {"Variant":..}
             let (unnamed1_idents, unnamed1_keys): (Vec<_>, Vec<_>) = unnamed1
                 .iter()
-                .map(|v| (&v.ident, format!("{{\"{}\":", escape(&v.ident.to_string()))))
+                .map(|v| {
+                    (
+                        &v.ident,
+                        StrT(format!("{{\"{}\":", escape(&v.ident.to_string()))),
+                    )
+                })
                 .unzip();
             let unnamed1 = quote! {
                 #(
                     #ident::#unnamed1_idents(v) => {
-                        buf.extend_from_slice(#unnamed1_keys.as_bytes());
+                        #unnamed1_keys
                         v.to_bytes_mut(buf);
                         yarte::end_object(buf);
                     }
@@ -158,7 +196,7 @@ pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
                                 .map(|i| Ident::new(&format!("v{}", i), Span::call_site()))
                                 .collect::<Vec<_>>(),
                         ),
-                        format!("{{\"{}\":[", escape(&v.ident.to_string())),
+                        StrT(format!("{{\"{}\":[", escape(&v.ident.to_string()))),
                     )
                 })
                 .unzip();
@@ -183,7 +221,7 @@ pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
                 #(
                     #ident::#unnamed_idents(#unnamed_vars) =>
                     {
-                        buf.extend_from_slice(#unnamed_keys.as_bytes());
+                        #unnamed_keys
                         #unnamed_vecs
                         yarte::end_array_object(buf);
                     }
@@ -201,22 +239,22 @@ pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
                 let fields: Vec<_> = v.fields.iter().cloned().map(|f| f.ident.unwrap()).collect();
                 let (first, rest) = fields.split_first().unwrap();
 
-                let start = format!(
+                let start = StrT(format!(
                     "{{\"{}\":{{\"{}\":",
                     escape(&v.ident.to_string()),
                     escape(&first.to_string())
-                );
+                ));
 
                 let rest_keys = rest
                     .iter()
-                    .map(|f| format!(",\"{}\":", escape(&f.to_string())));
+                    .map(|f| StrT(format!(",\"{}\":", escape(&f.to_string()))));
 
                 named_bodies.push(quote! {
                     #ident::#named_ident{#(#fields),*} => {
-                        buf.extend_from_slice(#start.as_bytes());
+                        #start
                         #first.to_bytes_mut(buf);
                         #(
-                            buf.extend_from_slice(#rest_keys.as_bytes());
+                            #rest_keys
                             #rest.to_bytes_mut(buf);
                         )*
                         yarte::end_object_object(buf);

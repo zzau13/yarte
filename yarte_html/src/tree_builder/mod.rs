@@ -18,6 +18,7 @@
 // TODO: Use the spec html5 as possible
 // TODO: Coverage with html5lib-test
 
+#![allow(clippy::unnested_or_patterns)]
 #![allow(
 clippy::cognitive_complexity,
 clippy::redundant_static_lifetimes,

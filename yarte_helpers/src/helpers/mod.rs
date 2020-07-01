@@ -13,7 +13,7 @@ pub mod big_num_32;
 #[cfg(feature = "display-fn")]
 pub mod display_fn;
 
-#[cfg(feature = "bytes-buf")]
+#[cfg(any(feature = "bytes-buf", feature = "json"))]
 mod bytes;
 #[cfg(feature = "fixed")]
 mod fixed;
@@ -33,6 +33,7 @@ pub mod ryu;
 
 #[cfg(feature = "json")]
 pub mod json {
+    pub use super::bytes::buf_ptr;
     pub use super::ser_json::{
         begin_array, end_array, end_array_object, end_object, end_object_object, to_bytes,
         to_bytes_mut, write_comma, Serialize,
