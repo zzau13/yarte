@@ -6,7 +6,7 @@ use chrono::{DateTime, TimeZone};
 
 use super::{begin_string, end_string, Serialize};
 
-impl<Tz: TimeZone> Serialize for &DateTime<Tz> {
+impl<Tz: TimeZone> Serialize for DateTime<Tz> {
     /// Serialize into a rfc3339 time string
     ///
     /// See [the `serde` module](./serde/index.html) for alternate
