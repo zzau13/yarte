@@ -1,7 +1,7 @@
 // Adapted from [`simd-json-derive`](https://github.com/simd-lite/simd-json-derive)
 use std::fmt;
 
-use bytes::BytesMut;
+use buf_min::Buffer;
 use chrono::{DateTime, TimeZone};
 
 use super::{begin_string, end_string, Serialize};
@@ -11,7 +11,7 @@ impl<Tz: TimeZone> Serialize for DateTime<Tz> {
     ///
     /// See [the `serde` module](./serde/index.html) for alternate
     /// serializations.
-    fn to_bytes_mut(&self, buf: &mut BytesMut) {
+    fn to_bytes_mut<B: Buffer>(&self, buf: &mut B) {
         struct FormatWrapped<'a, D: 'a> {
             inner: &'a D,
         }

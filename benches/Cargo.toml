@@ -10,7 +10,7 @@ members = ["."]
 [dependencies]
 yarte = { path = "../yarte", version = "*", features = ["fixed", "bytes-buf"] }
 itoa = "0.4"
-v_htmlescape = "0.9"
+v_htmlescape = "0.10"
 
 [build-dependencies]
 yarte = { path = "../yarte", version = "*" }

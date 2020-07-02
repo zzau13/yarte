@@ -28,16 +28,16 @@ impl<'a, T: CodeGen> BytesCodeGen<'a, T> {
         tokens.extend(self.s.implement_head(
             quote!(#parent::TemplateBytesTrait),
             &quote!(
-                fn call(&self, capacity: usize) -> #parent::Bytes {
+                fn call<B: #parent::Buffer>(&self, capacity: usize) -> B::Freeze {
                     use #parent::*;
-                    let mut bytes_mut = #parent::BytesMut::with_capacity(capacity);
+                    let mut bytes_mut: B = #parent::Buffer::with_capacity(capacity);
                     #nodes
                     bytes_mut.freeze()
                 }
 
-                fn ccall(self, capacity: usize) -> #parent::Bytes {
+                fn ccall<B: #parent::Buffer>(self, capacity: usize) -> B::Freeze {
                     use #parent::*;
-                    let mut bytes_mut = #parent::BytesMut::with_capacity(capacity);
+                    let mut bytes_mut: B = #parent::Buffer::with_capacity(capacity);
                     #nodes
                     bytes_mut.freeze()
                 }

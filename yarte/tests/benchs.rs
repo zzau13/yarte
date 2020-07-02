@@ -4,7 +4,7 @@
 
 use std::mem::MaybeUninit;
 
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 
 use yarte::{
     TemplateBytesMin as TemplateBytes, TemplateFixedMin as TemplateFixed, TemplateMin as Template,
@@ -31,7 +31,10 @@ fn big_table() {
         unsafe { TemplateFixed::call(&table, &mut [MaybeUninit::uninit(); 256]) }.unwrap(),
         expected.as_bytes()
     );
-    assert_eq!(TemplateBytes::ccall(table, 0), Bytes::from(expected))
+    assert_eq!(
+        TemplateBytes::ccall::<BytesMut>(table, 0),
+        Bytes::from(expected)
+    )
 }
 
 #[derive(Template, TemplateFixed, TemplateBytes)]
@@ -73,7 +76,10 @@ fn teams() {
         unsafe { TemplateFixed::call(&teams, &mut [MaybeUninit::uninit(); 256]) }.unwrap(),
         expected.as_bytes()
     );
-    assert_eq!(TemplateBytes::ccall(teams, 0), Bytes::from(expected))
+    assert_eq!(
+        TemplateBytes::ccall::<BytesMut>(teams, 0),
+        Bytes::from(expected)
+    )
 }
 
 #[derive(Template, TemplateFixed, TemplateBytes)]

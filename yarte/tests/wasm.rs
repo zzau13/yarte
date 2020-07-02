@@ -1,7 +1,7 @@
 #![allow(clippy::into_iter_on_ref)]
 #![cfg(feature = "wasm")]
 
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 use yarte::{Serialize, TemplateWasmServer as Template};
 
 #[derive(Serialize)]
@@ -32,7 +32,7 @@ fn wasm_server() {
     };
 
     assert_eq!(
-        t.call(10240),
+        t.call::<BytesMut>(10240),
         Bytes::from(
         "<!DOCTYPE html><html><head><title>Fortunes</title></head><body><table>\
         <thead><tr><th>id</th><th>message</th></tr></thead>\

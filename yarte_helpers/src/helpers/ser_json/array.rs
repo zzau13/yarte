@@ -3,7 +3,7 @@ use super::*;
 
 impl<T> Serialize for [T; 0] {
     #[inline]
-    fn to_bytes_mut(&self, buf: &mut BytesMut) {
+    fn to_bytes_mut<B: Buffer>(&self, buf: &mut B) {
         empty_array(buf)
     }
 }
@@ -16,7 +16,7 @@ macro_rules! array_impls {
                 T: Serialize,
             {
                 #[inline]
-                fn to_bytes_mut(&self, buf: &mut BytesMut) {
+                fn to_bytes_mut<B: Buffer>(&self, buf: &mut B) {
                     let mut i = self.iter();
                     if let Some(first) = i.next() {
                         begin_array(buf);

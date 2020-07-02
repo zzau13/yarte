@@ -10,7 +10,7 @@ macro_rules! vec_like {
             T: Serialize,
         {
             #[inline]
-            fn to_bytes_mut(&self, buf: &mut BytesMut) {
+            fn to_bytes_mut<B: Buffer>(&self, buf: &mut B) {
                 let mut i = self.iter();
                 if let Some(first) = i.next() {
                     begin_array(buf);
@@ -40,7 +40,7 @@ where
     H: std::hash::BuildHasher,
 {
     #[inline]
-    fn to_bytes_mut(&self, buf: &mut BytesMut) {
+    fn to_bytes_mut<B: Buffer>(&self, buf: &mut B) {
         let mut i = self.iter();
         if let Some(first) = i.next() {
             begin_array(buf);
@@ -60,19 +60,19 @@ where
 /// Bounded Object keys types
 #[doc(hidden)]
 pub trait SerObjKey: Serialize {
-    fn ser_obj_key(&self, buf: &mut BytesMut);
+    fn ser_obj_key<B: Buffer>(&self, buf: &mut B);
 }
 
 impl SerObjKey for str {
     #[inline]
-    fn ser_obj_key(&self, buf: &mut BytesMut) {
+    fn ser_obj_key<B: Buffer>(&self, buf: &mut B) {
         serialize_str_short(self, buf);
     }
 }
 
 impl SerObjKey for String {
     #[inline]
-    fn ser_obj_key(&self, buf: &mut BytesMut) {
+    fn ser_obj_key<B: Buffer>(&self, buf: &mut B) {
         serialize_str_short(self, buf);
     }
 }
@@ -86,7 +86,7 @@ macro_rules! deref_impl {
         $(#[doc = $doc])*
         impl <$($desc)+ {
             #[inline]
-            fn ser_obj_key(&self, buf: &mut BytesMut) {
+            fn ser_obj_key<B: Buffer>(&self, buf: &mut B) {
                 (**self).ser_obj_key(buf)
             }
         }
@@ -99,7 +99,7 @@ deref_impl!(<T: ?Sized> SerObjKey for Box<T> where T: SerObjKey);
 deref_impl!(<'a, T: ?Sized> SerObjKey for std::borrow::Cow<'a, T> where T: SerObjKey + ToOwned);
 
 impl SerObjKey for char {
-    fn ser_obj_key(&self, buf: &mut BytesMut) {
+    fn ser_obj_key<B: Buffer>(&self, buf: &mut B) {
         begin_string(buf);
         b_escape_char(*self, buf);
         end_string(buf);
@@ -115,7 +115,7 @@ where
     H: std::hash::BuildHasher,
 {
     #[inline]
-    fn to_bytes_mut(&self, buf: &mut BytesMut) {
+    fn to_bytes_mut<B: Buffer>(&self, buf: &mut B) {
         let mut i = self.iter();
         if let Some((k, v)) = i.next() {
             begin_object(buf);
@@ -141,7 +141,7 @@ where
     V: Serialize,
 {
     #[inline]
-    fn to_bytes_mut(&self, buf: &mut BytesMut) {
+    fn to_bytes_mut<B: Buffer>(&self, buf: &mut B) {
         let mut i = self.iter();
         if let Some((k, v)) = i.next() {
             begin_object(buf);

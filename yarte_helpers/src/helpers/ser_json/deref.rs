@@ -9,7 +9,7 @@ macro_rules! deref_impl {
         $(#[doc = $doc])*
         impl <$($desc)+ {
             #[inline]
-            fn to_bytes_mut(&self, buf: &mut BytesMut) {
+            fn to_bytes_mut<B: Buffer>(&self, buf: &mut B) {
                 (**self).to_bytes_mut(buf)
             }
         }
