@@ -115,7 +115,7 @@ mod json {
     #[cfg(feature = "bytes-buf")]
     mod bytes_buf {
         use super::*;
-        use bytes::Bytes;
+        use bytes::{Bytes, BytesMut};
         use yarte::{TemplateBytes, TemplateBytesText};
 
         #[derive(TemplateBytes)]
@@ -141,13 +141,22 @@ mod json {
             let f = Json { f: 1 };
             let t = JsonTemplateF { f };
 
-            assert_eq!(Bytes::from(serde_json::to_string(&f).unwrap()), t.ccall(0));
+            assert_eq!(
+                Bytes::from(serde_json::to_string(&f).unwrap()),
+                t.ccall::<BytesMut>(0)
+            );
 
             let t = JsonTemplateFT { f };
-            assert_eq!(Bytes::from(serde_json::to_string(&f).unwrap()), t.ccall(0));
+            assert_eq!(
+                Bytes::from(serde_json::to_string(&f).unwrap()),
+                t.ccall::<BytesMut>(0)
+            );
 
             let t = JsonTemplateN { f: JsonN { f: 1 } };
-            assert_eq!(Bytes::from(serde_json::to_string(&f).unwrap()), t.ccall(0));
+            assert_eq!(
+                Bytes::from(serde_json::to_string(&f).unwrap()),
+                t.ccall::<BytesMut>(0)
+            );
         }
     }
 }

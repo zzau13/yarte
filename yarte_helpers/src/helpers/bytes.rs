@@ -3,19 +3,10 @@
 use std::io;
 use std::slice::from_raw_parts_mut;
 
-use bytes::{BufMut, BytesMut};
+use buf_min::Buffer;
 use v_htmlescape::{b_escape, b_escape_char};
 
 use super::ryu::{Sealed, MAX_SIZE_FLOAT};
-
-/// Return unsafe ptr to current buffer position
-///
-/// # Safety
-/// If buffer is full, can return invalid pointer
-#[inline(always)]
-pub unsafe fn buf_ptr(buf: &mut BytesMut) -> *mut u8 {
-    buf.as_mut_ptr().add(buf.len())
-}
 
 /// Render trait, used for wrap  expressions `{{ ... }}` when it's in a html template
 pub trait RenderBytes {
@@ -23,7 +14,7 @@ pub trait RenderBytes {
     ///
     /// # Panics
     /// With an new buffer, render length overflows usize
-    fn render(self, buf: &mut BytesMut);
+    fn render<B: Buffer>(self, buf: &mut B);
 }
 
 /// Auto copy/deref trait
@@ -32,12 +23,12 @@ pub trait RenderBytesA {
     ///
     /// # Panics
     /// With an empty buffer, render length overflows usize
-    fn __render_itb(self, buf: &mut BytesMut);
+    fn __render_itb<B: Buffer>(self, buf: &mut B);
 }
 
 impl<T: RenderBytes + Copy> RenderBytesA for T {
     #[inline(always)]
-    fn __render_itb(self, buf: &mut BytesMut) {
+    fn __render_itb<B: Buffer>(self, buf: &mut B) {
         self.render(buf)
     }
 }
@@ -48,12 +39,12 @@ pub trait RenderBytesSafeA {
     ///
     /// # Panics
     /// With an empty buffer, render length overflows usize
-    fn __render_itb_safe(self, buf: &mut BytesMut);
+    fn __render_itb_safe<B: Buffer>(self, buf: &mut B);
 }
 
 impl<T: RenderBytesSafe + Copy> RenderBytesSafeA for T {
     #[inline(always)]
-    fn __render_itb_safe(self, buf: &mut BytesMut) {
+    fn __render_itb_safe<B: Buffer>(self, buf: &mut B) {
         self.render(buf)
     }
 }
@@ -62,8 +53,7 @@ macro_rules! str_display {
     ($($ty:ty)*) => {
         $(
             impl RenderBytes for $ty {
-                #[inline(always)]
-                 fn render(self, buf: &mut BytesMut)  {
+                 fn render<B: Buffer>(self, buf: &mut B)  {
                     b_escape(self.as_bytes(), buf)
                 }
             }
@@ -80,14 +70,13 @@ macro_rules! itoa_display {
     ($($ty:ty)*) => {
         $(
             impl RenderBytes for $ty {
-                #[inline(always)]
-                 fn render(self, buf: &mut BytesMut)  {
+                 fn render<B: Buffer>(self, buf: &mut B)  {
                     use super::integers::Integer;
                     buf.reserve(Self::MAX_LEN);
                     // Safety: Previous reserve MAX length
-                    let b = unsafe { self.write_to(buf_ptr(buf)) };
+                    let b = unsafe { self.write_to(buf.buf_ptr()) };
                     // Safety: Wrote `b` bytes
-                    unsafe { buf.advance_mut(b) };
+                    unsafe { buf.advance(b) };
                 }
             }
         )*
@@ -105,7 +94,7 @@ macro_rules! itoa128_display {
         $(
             impl RenderBytes for $ty {
                 #[inline(always)]
-                 fn render(self, buf: &mut BytesMut)  {
+                 fn render<B: Buffer>(self, buf: &mut B)  {
                     // Infallible, can panics overflows usize
                     let _ = itoa::write(Writer::new(buf), self);
                 }
@@ -120,15 +109,14 @@ itoa128_display! {
 }
 
 impl RenderBytes for char {
-    #[inline(always)]
-    fn render(self, buf: &mut BytesMut) {
+    fn render<B: Buffer>(self, buf: &mut B) {
         b_escape_char(self, buf)
     }
 }
 
 impl RenderBytes for bool {
     #[inline(always)]
-    fn render(self, buf: &mut BytesMut) {
+    fn render<B: Buffer>(self, buf: &mut B) {
         render_bool(self, buf)
     }
 }
@@ -139,7 +127,7 @@ pub trait RenderBytesSafe {
     ///
     /// # Panics
     /// With an empty buffer, render length overflows usize
-    fn render(self, buf: &mut BytesMut);
+    fn render<B: Buffer>(self, buf: &mut B);
 }
 
 macro_rules! str_display {
@@ -147,7 +135,7 @@ macro_rules! str_display {
         $(
             impl RenderBytesSafe for $ty {
                 #[inline(always)]
-                 fn render(self, buf: &mut BytesMut)  {
+                 fn render<B: Buffer>(self, buf: &mut B)  {
                     buf.extend_from_slice(self.as_bytes());
                 }
             }
@@ -165,13 +153,13 @@ macro_rules! itoa_display {
         $(
             impl RenderBytesSafe for $ty {
                 #[inline(always)]
-                 fn render(self, buf: &mut BytesMut)  {
+                 fn render<B: Buffer>(self, buf: &mut B)  {
                     use super::integers::Integer;
                     buf.reserve(Self::MAX_LEN);
                     // Safety: Previous reserve MAX length
-                    let b = unsafe { self.write_to(buf_ptr(buf)) };
+                    let b = unsafe { self.write_to(buf.buf_ptr()) };
                     // Safety: Wrote `b` bytes
-                    unsafe { buf.advance_mut(b) };
+                    unsafe { buf.advance(b) };
                 }
             }
         )*
@@ -189,7 +177,7 @@ macro_rules! itoa128_display {
         $(
             impl RenderBytesSafe for $ty {
                 #[inline(always)]
-                 fn render(self, buf: &mut BytesMut)  {
+                 fn render<B: Buffer>(self, buf: &mut B)  {
                     let _ = itoa::write(Writer::new(buf), self);
                 }
             }
@@ -204,20 +192,20 @@ itoa128_display! {
 
 macro_rules! ryu_display {
     ($f:ty, $t:ty) => {
-impl $t for $f {
-    #[inline(always)]
-     fn render(self, buf: &mut BytesMut)  {
-        if self.is_nonfinite() {
-            buf.extend_from_slice(self.format_nonfinite().as_bytes());
-        } else {
-            buf.reserve(MAX_SIZE_FLOAT);
-            // Safety: Previous reserve MAX length
-            let b = unsafe { self.write_to_ryu_buffer(buf_ptr(buf)) };
-            // Safety: Wrote `b` bytes
-            unsafe { buf.advance_mut(b) };
+        impl $t for $f {
+            #[inline(always)]
+            fn render<B: Buffer>(self, buf: &mut B)  {
+                if self.is_nonfinite() {
+                    buf.extend_from_slice(self.format_nonfinite().as_bytes());
+                } else {
+                    buf.reserve(MAX_SIZE_FLOAT);
+                    // Safety: Previous reserve MAX length
+                    let b = unsafe { self.write_to_ryu_buffer(buf.buf_ptr()) };
+                    // Safety: Wrote `b` bytes
+                    unsafe { buf.advance(b) };
+                }
+            }
         }
-    }
-}
     };
     ($f:ty, $t:ty, $($r:tt)+) => {
         ryu_display!($f, $t);
@@ -235,30 +223,30 @@ ryu_display!(
 
 impl RenderBytesSafe for char {
     #[inline(always)]
-    fn render(self, buf: &mut BytesMut) {
+    fn render<B: Buffer>(self, buf: &mut B) {
         render_char(self, buf)
     }
 }
 
 impl RenderBytesSafe for bool {
     #[inline(always)]
-    fn render(self, buf: &mut BytesMut) {
+    fn render<B: Buffer>(self, buf: &mut B) {
         render_bool(self, buf)
     }
 }
 
-struct Writer<'a> {
-    buf: &'a mut BytesMut,
+struct Writer<'a, B> {
+    buf: &'a mut B,
 }
 
-impl<'a> Writer<'a> {
+impl<'a, B: Buffer> Writer<'a, B> {
     #[inline]
-    fn new(buf: &mut BytesMut) -> Writer {
+    fn new(buf: &mut B) -> Writer<'_, B> {
         Writer { buf }
     }
 }
 
-impl<'a> io::Write for Writer<'a> {
+impl<'a, B: Buffer> io::Write for Writer<'a, B> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.buf.extend_from_slice(buf);
         Ok(buf.len())
@@ -277,32 +265,34 @@ mod json {
 
     impl<'a, S: json::Serialize> RenderBytes for Json<'a, S> {
         #[inline(always)]
-        fn render(self, buf: &mut BytesMut) {
+        fn render<B: Buffer>(self, buf: &mut B) {
             to_bytes_mut(self.0, buf)
         }
     }
 
     impl<'a, S: json::Serialize> RenderBytesSafe for Json<'a, S> {
         #[inline(always)]
-        fn render(self, buf: &mut BytesMut) {
+        fn render<B: Buffer>(self, buf: &mut B) {
             to_bytes_mut(self.0, buf)
         }
     }
 }
 
 #[inline(always)]
-fn render_char(c: char, buf: &mut BytesMut) {
+fn render_char<B: Buffer>(c: char, buf: &mut B) {
     let len = c.len_utf8();
     buf.reserve(len);
-    // Safety: Has same layout and encode_utf8 NOT read buf
+    // Safety:  Previous reserve length
     unsafe {
-        c.encode_utf8(from_raw_parts_mut(buf_ptr(buf), len));
+        // TODO: char encode with length by argument
+        c.encode_utf8(from_raw_parts_mut(buf.buf_ptr(), len));
     }
     // Safety: Just write this len
-    unsafe { buf.advance_mut(len) }
+    unsafe { buf.advance(len) }
 }
 
-pub(crate) fn render_bool(b: bool, buf: &mut BytesMut) {
+#[inline(always)]
+pub(crate) fn render_bool<B: Buffer>(b: bool, buf: &mut B) {
     const T: &[u8] = b"true";
     const F: &[u8] = b"false";
     if b {

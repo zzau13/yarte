@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::io::{stdout, Write};
 use std::thread;
 
+use bytes::BytesMut;
 use std::mem::MaybeUninit;
 use yarte::{Template, TemplateBytesMin, TemplateFixedMin, TemplateMin};
 
@@ -52,7 +53,7 @@ fn main() {
     })
     .unwrap();
 
-    let buf = TemplateBytesMin::ccall(
+    let buf = TemplateBytesMin::ccall::<BytesMut>(
         IndexTemplateB {
             query: query
                 .get("name")

@@ -17,13 +17,13 @@ impl ToTokens for StrT {
                     .as_bytes()
                     .iter()
                     .enumerate()
-                    .map(|(i, x)| quote!(unsafe { *yarte::buf_ptr(buf).add(#i) = #x; }))
+                    .map(|(i, x)| quote!(unsafe { *buf.buf_ptr().add(#i) = #x; }))
                     .flatten()
                     .collect();
                 quote! {
                     buf.reserve(#len);
                     #range
-                    unsafe { yarte::BufMut::advance_mut(buf, #len); }
+                    unsafe { buf.advance(#len); }
                 }
             }
             _ => quote!(buf.extend_from_slice(#this.as_bytes());),
@@ -48,7 +48,7 @@ pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
             if unnamed.len() == 1 {
                 quote! {
                     impl #generics yarte::Serialize for #ident #generics {
-                        fn to_bytes_mut(&self, buf: &mut yarte::BytesMut) {
+                        fn to_bytes_mut<B: yarte::Buffer>(&self, buf: &mut B) {
                             self.0.to_bytes_mut(buf)
                         }
                     }
@@ -62,12 +62,12 @@ pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
                     .collect();
                 quote! {
                     impl #generics yarte::Serialize for #ident #generics {
-                        fn to_bytes_mut(&self, buf: &mut yarte::BytesMut) {
+                        fn to_bytes_mut<B: yarte::Buffer>(&self, buf: &mut B) {
                             yarte::begin_array(buf);
-                            (&self.0).to_bytes_mut(buf);
+                            self.0.to_bytes_mut(buf);
                             #(
                                 yarte::write_comma(buf);
-                                (&self.#keys).to_bytes_mut(buf);
+                                self.#keys.to_bytes_mut(buf);
                             )*
                             yarte::end_array(buf);
                         }
@@ -105,7 +105,7 @@ pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
             quote! {
                 impl #generics yarte::Serialize for #ident #generics {
                     #[inline]
-                    fn to_bytes_mut(&self, buf: &mut yarte::BytesMut) {
+                    fn to_bytes_mut<B: yarte::Buffer>(&self, buf: &mut B) {
                         #(
                             #keys
                             self.#values.to_bytes_mut(buf);
@@ -274,7 +274,7 @@ pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
             quote! {
                 impl #generics yarte::Serialize for #ident #generics {
                     #[inline]
-                    fn to_bytes_mut(&self, buf: &mut yarte::BytesMut) {
+                    fn to_bytes_mut<B: yarte::Buffer>(&self, buf: &mut B) {
                         match self {
                             #match_body
                         }

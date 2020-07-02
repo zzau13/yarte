@@ -89,12 +89,12 @@ pub trait TemplateBytesTrait {
     ///
     /// # Panics
     /// Render length overflows usize
-    fn call(&self, capacity: usize) -> bytes::Bytes;
+    fn call<B: Buffer>(&self, capacity: usize) -> B::Freeze;
     /// Writes to buffer and return it freeze and drop
     ///
     /// # Panics
     /// Render length overflows usize
-    fn ccall(self, capacity: usize) -> bytes::Bytes;
+    fn ccall<B: Buffer>(self, capacity: usize) -> B::Freeze;
 }
 
 #[cfg(all(feature = "bytes-buf", feature = "html-min"))]
@@ -112,7 +112,7 @@ pub use TemplateBytesTrait as TemplateBytesMin;
 pub use yarte_helpers::helpers::{RenderBytes, RenderBytesA, RenderBytesSafe, RenderBytesSafeA};
 
 #[cfg(any(feature = "bytes-buf", feature = "json"))]
-pub use bytes::{BufMut, Bytes, BytesMut};
+pub use buf_min::Buffer;
 
 #[cfg(feature = "json")]
 pub use yarte_derive::Serialize;

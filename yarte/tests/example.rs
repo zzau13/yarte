@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::mem::MaybeUninit;
 
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 
 use yarte::{TemplateBytesMin, TemplateFixedMin, TemplateMin};
 
@@ -48,7 +48,7 @@ fn main() {
     );
 
     assert_eq!(
-        TemplateBytesMin::ccall(
+        TemplateBytesMin::ccall::<BytesMut>(
             IndexTemplateB {
                 query: query
                     .get("name")

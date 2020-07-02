@@ -13,7 +13,7 @@ use std::i64;
 use std::string::ToString;
 use std::u64;
 
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 
 use yarte::{to_bytes, Serialize};
 
@@ -64,7 +64,7 @@ where
     for &(ref value, out) in errors {
         let out = Bytes::from(out.to_string());
 
-        let s = to_bytes(value, 0);
+        let s = to_bytes::<BytesMut, _>(value, 0);
         assert_eq!(s, out);
     }
 }
@@ -109,16 +109,16 @@ fn test_write_f64() {
 #[test]
 fn test_encode_nonfinite_float_yields_null() {
     let e = Bytes::from("null");
-    let v = to_bytes(&std::f64::NAN, 0);
+    let v = to_bytes::<BytesMut, _>(&std::f64::NAN, 0);
     assert_eq!(v, e);
 
-    let v = to_bytes(&std::f64::INFINITY, 0);
+    let v = to_bytes::<BytesMut, _>(&std::f64::INFINITY, 0);
     assert_eq!(v, e);
 
-    let v = to_bytes(&std::f32::NAN, 0);
+    let v = to_bytes::<BytesMut, _>(&std::f32::NAN, 0);
     assert_eq!(v, e);
 
-    let v = to_bytes(&std::f32::INFINITY, 0);
+    let v = to_bytes::<BytesMut, _>(&std::f32::INFINITY, 0);
     assert_eq!(v, e);
 }
 

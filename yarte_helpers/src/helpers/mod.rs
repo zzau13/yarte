@@ -33,7 +33,6 @@ pub mod ryu;
 
 #[cfg(feature = "json")]
 pub mod json {
-    pub use super::bytes::buf_ptr;
     pub use super::ser_json::{
         begin_array, end_array, end_array_object, end_object, end_object_object, to_bytes,
         to_bytes_mut, write_comma, Serialize,
