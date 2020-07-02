@@ -55,7 +55,7 @@ macro_rules! str_display {
             impl RenderBytes for $ty {
                  fn render<B: Buffer>(self, buf: &mut B)  {
                     b_escape(self.as_bytes(), buf)
-                }
+                 }
             }
         )*
     };
@@ -70,7 +70,8 @@ macro_rules! itoa_display {
     ($($ty:ty)*) => {
         $(
             impl RenderBytes for $ty {
-                 fn render<B: Buffer>(self, buf: &mut B)  {
+                #[inline(always)]
+                fn render<B: Buffer>(self, buf: &mut B)  {
                     use super::integers::Integer;
                     buf.reserve(Self::MAX_LEN);
                     // Safety: Previous reserve MAX length
@@ -247,6 +248,7 @@ impl<'a, B: Buffer> Writer<'a, B> {
 }
 
 impl<'a, B: Buffer> io::Write for Writer<'a, B> {
+    #[inline]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.buf.extend_from_slice(buf);
         Ok(buf.len())

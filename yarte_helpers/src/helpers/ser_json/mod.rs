@@ -69,7 +69,7 @@ itoa_display! {
 }
 
 impl Serialize for char {
-    #[inline(always)]
+    #[inline]
     fn to_bytes_mut<B: Buffer>(&self, buf: &mut B) {
         begin_string(buf);
         b_escape_char(*self, buf);
