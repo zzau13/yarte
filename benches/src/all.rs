@@ -4,6 +4,7 @@ use std::{io, slice};
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
+use bytes::BytesMut;
 use itoa;
 use v_htmlescape::f_escape;
 use yarte::{
@@ -181,7 +182,7 @@ fn bytes_teams(b: &mut criterion::Bencher) {
         year: 2015,
         teams: build_teams(),
     };
-    b.iter(|| teams.call(2048));
+    b.iter(|| teams.call::<BytesMut>(2048));
 }
 
 #[derive(TemplateBytesText)]
@@ -196,7 +197,7 @@ fn bytes_text_teams(b: &mut criterion::Bencher) {
         year: 2015,
         teams: build_teams(),
     };
-    b.iter(|| teams.call(2048));
+    b.iter(|| teams.call::<BytesMut>(2048));
 }
 
 #[derive(TemplateBytes)]
@@ -209,7 +210,7 @@ fn bytes_big_table(b: &mut criterion::Bencher, size: usize) {
     let t = BigTableB {
         table: build_big_table(size),
     };
-    b.iter(|| t.call(109915));
+    b.iter(|| t.call::<BytesMut>(109915));
 }
 
 #[derive(TemplateBytesText)]
@@ -222,7 +223,7 @@ fn bytes_text_big_table(b: &mut criterion::Bencher, size: usize) {
     let t = BigTableBT {
         table: build_big_table(size),
     };
-    b.iter(|| t.call(109915));
+    b.iter(|| t.call::<BytesMut>(109915));
 }
 
 // Fixed
