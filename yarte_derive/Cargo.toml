@@ -1,6 +1,6 @@
 [package]
 name = "yarte_derive"
-version = "0.11.3"
+version = "0.12.0"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "Procedural macro package for yarte"
 categories = ["template-engine", "web-programming", "gui"]
@@ -28,10 +28,10 @@ bytes-buf = ["yarte_codegen/bytes-buf"]
 json = ["v_jsonescape", "yarte_helpers/json"]
 
 [dependencies]
-yarte_codegen = { version = "0.11.3", path = "../yarte_codegen" }
-yarte_helpers = { version = "0.11.3", path = "../yarte_helpers" }
-yarte_hir = { version = "0.11.3", path = "../yarte_hir" }
-yarte_parser = { version = "0.11.3", path = "../yarte_parser" }
+yarte_codegen = { version = "0.12.0", path = "../yarte_codegen" }
+yarte_helpers = { version = "0.12.0", path = "../yarte_helpers" }
+yarte_hir = { version = "0.12.0", path = "../yarte_hir" }
+yarte_parser = { version = "0.12.0", path = "../yarte_parser" }
 v_jsonescape = { version = "0.1", optional = true }
 
 bat = "0.15"
