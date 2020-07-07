@@ -2,15 +2,22 @@
 
 ## Build 
 ```bash
+# client
+cd client
 wasm-pack build --release --target web 
 ```
-
+```bash
+# server
+cd server
+cargo run --release
+```
 
 ## Generate App Documentation
 You can generate the documentation on the BlackBox 
 to be able to modify it outside the automatic render cycle
 by message
 ```bash
+# client
 cargo doc --target wasm32-unknown-unknown --open --no-deps
 ```
 
