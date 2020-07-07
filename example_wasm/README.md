@@ -1,5 +1,12 @@
 # Work in progress
 
+### Benches
+- 4 requests
+- 145.98 KB / 146.72 KB transferred
+- Finish: 145 ms
+- DOMContentLoaded: 48 ms
+- load: 85 ms
+
 ## Build 
 ```bash
 # client
