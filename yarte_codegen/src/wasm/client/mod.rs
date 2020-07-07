@@ -753,6 +753,8 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
 
         // Join buffers
         quote! {
+            #[allow(unused_imports)]
+            use yarte_wasm_app::*;
             #[wasm_bindgen]
             extern "C" {
                 fn get_state() -> String;

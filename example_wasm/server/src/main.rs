@@ -1,5 +1,6 @@
 use actix_files as fs;
 use actix_web::{get, middleware::Logger, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use bytes::BytesMut;
 use yarte::{Serialize, TemplateWasmServer as Template};
 
 use model::{Fortune, Item};
@@ -20,7 +21,7 @@ impl Responder for Test {
     fn respond_to(self, _req: &HttpRequest) -> Self::Future {
         HttpResponse::Ok()
             .content_type("text/html; charset=utf-8")
-            .body(self.ccall(10240))
+            .body(self.ccall::<BytesMut>(10240))
     }
 }
 
@@ -44,6 +45,7 @@ async fn main() -> std::io::Result<()> {
     std::env::set_var("RUST_LOG", "actix_web=info");
     env_logger::init();
 
+    println!("Listen http://localhost:8080");
     // start http server
     HttpServer::new(move || {
         App::new()

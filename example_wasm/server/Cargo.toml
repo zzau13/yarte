@@ -19,5 +19,7 @@ actix-web = "2.0"
 actix-rt = "1.0"
 actix-files = "0.2"
 
+bytes = "0.5"
+
 [build-dependencies]
 yarte = { version = "*", path = "../../yarte" }

@@ -12,7 +12,7 @@ pub use wasm_bindgen::JsCast;
 pub use web_sys as web;
 
 pub use yarte_derive::App;
-pub use yarte_helpers::{helpers::big_num_32::*};
+pub use yarte_helpers::{helpers::{big_num_32::*, IntoCopyIterator}};
 
 mod queue;
 
@@ -282,7 +282,7 @@ mod test {
         };
     }
 
-    // #[templates(.., mode = "wasm")]
+    // #[templates(..)]
     // #[msg enum Msg {
     //      #[fn(msg)]
     //      Msg,

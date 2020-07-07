@@ -6,7 +6,8 @@ description = "Coverage for WASM applications"
 edition = "2018"
 license = "MIT/Apache-2.0"
 repository = "https://github.com/botika/yarte"
-workspace = ".."
+[workspace]
+members = ["."]
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = false

@@ -43,6 +43,13 @@ impl<'a> WASMCodeGen<'a> {
             bases.insert(index);
         }
 
+        // TODO: Expressions in path
+        let parent_id = if fragment {
+            self.get_parent_node()
+        } else {
+            last!(self).steps.len()
+        };
+
         // Push
         self.stack.push(State {
             id: Parent::Expr(id),
@@ -50,6 +57,7 @@ impl<'a> WASMCodeGen<'a> {
             ..Default::default()
         });
 
+        // TODO: remove from stack before `step`
         let vdom = get_vdom_ident(id);
         let component_ty = get_component_ty_ident(id);
         let table = get_table_ident(id);
@@ -164,12 +172,6 @@ impl<'a> WASMCodeGen<'a> {
                 }
             }
         }
-        // TODO: Expressions in path
-        let parent = if fragment {
-            self.get_parent_node()
-        } else {
-            curr.steps.len()
-        };
 
         let last = last_mut!(self);
         last.buff_render.push((vars, render));
@@ -206,7 +208,7 @@ impl<'a> WASMCodeGen<'a> {
             last.buff_hydrate.push(hydrate);
         }
         last.path_nodes
-            .push((table_dom.clone(), last.steps[..parent].to_vec()));
+            .push((table_dom.clone(), last.steps[..parent_id].to_vec()));
         last.black_box.push(BlackBox {
             doc: "Each Virtual DOM node".to_string(),
             name: table,
