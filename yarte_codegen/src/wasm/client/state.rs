@@ -137,6 +137,12 @@ pub struct State {
     pub path_events: Vec<PathNode>,
     /// path to nodes
     pub steps: Vec<Step>,
+    /// Component ident
+    pub component: Option<Ident>,
+    ///
+    pub parent_id: usize,
+    /// Current black box
+    pub current_bb: TokenStream,
 }
 
 impl State {

@@ -30,7 +30,6 @@ impl<'a> WASMCodeGen<'a> {
     ) {
         // Get current state
         let current_bb = self.get_current_bb();
-        let old_on = last!(self).id;
 
         // Get bases
         let (key, index) = var;
@@ -54,24 +53,29 @@ impl<'a> WASMCodeGen<'a> {
         self.stack.push(State {
             id: Parent::Expr(id),
             bases,
+            parent_id,
+            current_bb,
             ..Default::default()
         });
 
-        // TODO: remove from stack before `step`
+        // TODO: component build
+        let component = get_component(id, body.iter(), self);
+        last_mut!(self).component = Some(component);
+
+        // Do steps
+        self.step(body);
+
         let vdom = get_vdom_ident(id);
         let component_ty = get_component_ty_ident(id);
         let table = get_table_ident(id);
         // TODO: Path to Dom is registered, use old
         let table_dom = get_table_dom_ident(id);
 
-        // Do steps
-        let component = get_component(id, body.iter(), self);
-        self.step(body);
-
         // Pop
         let mut curr = self.stack.pop().expect("one state");
 
         // Update state
+        let old_on = last!(self).id;
         let (base, _) = self.get_bb_t_root(var_id.into_iter());
         curr.add_t_root(base);
 
@@ -101,6 +105,8 @@ impl<'a> WASMCodeGen<'a> {
             }
         }
 
+        let current_bb = &curr.current_bb;
+
         // TODO: remove self
         let build_args: TokenStream = quote!(#args)
             .to_string()
@@ -127,7 +133,7 @@ impl<'a> WASMCodeGen<'a> {
         };
         let (new, cached) = self.new_each(
             &curr,
-            &component,
+            curr.component.as_ref().expect("some component"),
             &component_ty,
             last,
             insert_point,
@@ -149,7 +155,7 @@ impl<'a> WASMCodeGen<'a> {
         );
         let (new, cached) = self.new_each(
             &curr,
-            &component,
+            curr.component.as_ref().expect("some component"),
             &component_ty,
             last,
             &insert_point,
