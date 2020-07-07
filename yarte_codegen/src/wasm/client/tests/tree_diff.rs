@@ -21,6 +21,8 @@ fn test_diff_u16() {
 
     let diff = 0b0000_0001_1111_1111u16;
     let expected = quote! {
+        #[allow(unused_imports)]
+        use yarte_wasm_app::*;
         #[wasm_bindgen]
         extern "C" {
             fn get_state() -> String;
@@ -114,6 +116,8 @@ fn test_diff_u16_1() {
     let diff_1 = 64u16;
     assert_eq!(diff_0 & diff_1, 0);
     let expected = quote! {
+        #[allow(unused_imports)]
+        use yarte_wasm_app::*;
         #[wasm_bindgen]
         extern "C" {
             fn get_state() -> String;
