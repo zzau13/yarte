@@ -7,7 +7,7 @@ use std::{
 
 use bat::{PagingMode, PrettyPrinter};
 
-use yarte_helpers::{config::PrintOption, definitely_not_nightly};
+use crate::{config::PrintOption, definitely_not_nightly};
 
 pub fn log(s: &str, path: String, option: &PrintOption) {
     if definitely_not_nightly() {

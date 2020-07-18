@@ -34,14 +34,9 @@ yarte_hir = { version = "0.12.1", path = "../yarte_hir" }
 yarte_parser = { version = "0.12.1", path = "../yarte_parser" }
 v_jsonescape = { version = "0.2", optional = true }
 
-bat = "0.15"
-
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = "1.0"
-
-tempfile = "3.0"
-toolchain_find = "0.1"
 
 [package.metadata.docs.rs]
 all-features = true

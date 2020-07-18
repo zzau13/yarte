@@ -101,7 +101,7 @@ fn add20(app: &mut Test, _addr: &Addr<Test>) {
 
 #[wasm_bindgen(start)]
 pub fn start() {
-    let app = Test::start_default();
+    let app = Test::run();
     // Safe when only is used one time
     unsafe {
         app.hydrate();

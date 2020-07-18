@@ -91,7 +91,7 @@ fn test_diff_u16() {
     }
         .to_string();
 
-    assert_eq!(tokens(der), expected)
+    assert_eq!(tokens(der, false), expected)
 }
 
 #[test]
@@ -194,5 +194,5 @@ fn test_diff_u16_1() {
     }
         .to_string();
 
-    assert_eq!(tokens(der), expected)
+    assert_eq!(tokens(der, false), expected)
 }

@@ -4,7 +4,7 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{parse2, Expr, Ident};
 
-use yarte_dom::dom::{Each, ExprId, VarId, VarInner};
+use yarte_dom::dom::{Each, ExprId, VarId};
 
 use super::{
     component::get_component,
@@ -29,7 +29,7 @@ impl<'a> WASMCodeGen<'a> {
         insert_point: &[InsertPath],
     ) {
         // Get current state
-        let current_bb = self.get_current_bb();
+        let current_bb = self.current_bb();
 
         // Get bases
         let (key, index) = var;
@@ -44,9 +44,9 @@ impl<'a> WASMCodeGen<'a> {
 
         // TODO: Expressions in path
         let parent_id = if fragment {
-            self.get_parent_node()
+            self.parent_node()
         } else {
-            last!(self).steps.len()
+            self.stack.last().steps.len()
         };
 
         // Push
@@ -60,7 +60,7 @@ impl<'a> WASMCodeGen<'a> {
 
         // TODO: component build
         let component = get_component(id, body.iter(), self);
-        last_mut!(self).component = Some(component);
+        self.cur_mut().component = Some(component);
 
         // Do steps
         self.step(body);
@@ -72,11 +72,11 @@ impl<'a> WASMCodeGen<'a> {
         let table_dom = get_table_dom_ident(id);
 
         // Pop
-        let mut curr = self.stack.pop().expect("one state");
+        let mut curr = self.stack.pop();
 
         // Update state
-        let old_on = last!(self).id;
-        let (base, _) = self.get_bb_t_root(var_id.into_iter());
+        let old_on = self.stack.last().id;
+        let (base, _) = self.bb_t_root(var_id.into_iter());
         curr.add_t_root(base);
 
         // TODO: Multiple root
@@ -164,22 +164,17 @@ impl<'a> WASMCodeGen<'a> {
             None,
         );
 
-        let mut vars = self
-            .tree_map
-            .get(&id)
-            .cloned()
-            .expect("expression registered in tree map");
+        let mut vars = self.solver.expr_inner_var(&id).clone();
 
         for (i, _) in &curr.buff_render {
             for j in i {
-                let VarInner { base, .. } = self.var_map.get(j).unwrap();
-                if !var_id_index.contains(base) {
+                if !var_id_index.contains(&self.solver.var_base(j)) {
                     vars.insert(*j);
                 }
             }
         }
 
-        let last = last_mut!(self);
+        let last = self.stack.last_mut();
         last.buff_render.push((vars, render));
         last.buff_build.push(build);
         last.buff_new.push(if let Some(cached) = cached {
@@ -238,7 +233,7 @@ impl<'a> WASMCodeGen<'a> {
         table_dom: TokenStream,
         parent: Option<TokenStream>,
     ) -> (TokenStream, Option<TokenStream>) {
-        let bb = self.get_global_bb_ident();
+        let bb = self.global_bb_ident();
         let tmp = format_ident!("__tmp__");
         let froot = get_field_root_ident();
         let steps = get_steps(
@@ -369,7 +364,7 @@ impl<'a> WASMCodeGen<'a> {
             // TODO:
             let parents = curr.get_render_hash().into_iter().any(|(i, _)| {
                 for j in i {
-                    let base = self.var_map.get(&j).unwrap().base;
+                    let base = self.solver.var_base(&j);
                     if base != each_base {
                         return true;
                     }
@@ -377,7 +372,7 @@ impl<'a> WASMCodeGen<'a> {
                 false
             });
 
-            let render = self.get_render(curr);
+            let render = self.render(curr);
             assert!(!render.is_empty());
             if parents {
                 quote! {

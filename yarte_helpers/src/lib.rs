@@ -16,6 +16,9 @@ pub mod recompile;
 
 pub mod at_helpers;
 pub mod helpers;
+// TODO: PR to update incompatible dirs "^1"
+#[cfg(all(feature = "logger", not(target_arch = "wasm32")))]
+pub mod logger;
 
 pub fn calculate_hash<T: Hash>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();

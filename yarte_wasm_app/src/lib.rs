@@ -1,18 +1,17 @@
 #[cfg(not(target_arch = "wasm32"))]
 compile_error!("Only compile to 'wasm32'");
 
-use std::{
-    cell::{Cell, UnsafeCell},
-    default::Default,
-    rc::Rc,
-};
+// TODO: remove RC in favor of lazy static, when wasm32 application finish WASM machine clean it
+use core::cell::{Cell, UnsafeCell};
+use core::default::Default;
+use std::rc::Rc;
 
 pub use serde_json::from_str;
 pub use wasm_bindgen::JsCast;
 pub use web_sys as web;
 
 pub use yarte_derive::App;
-pub use yarte_helpers::{helpers::{big_num_32::*, IntoCopyIterator}};
+pub use yarte_helpers::helpers::{big_num_32::*, IntoCopyIterator};
 
 mod queue;
 
@@ -24,7 +23,7 @@ use self::queue::Queue;
 /// App communicate exclusively by directional exchanging messages
 /// The sender can't wait the response since it never answer
 // TODO: derive
-pub trait App: Default + Sized + Unpin + 'static {
+pub trait App: Default + Sized + 'static {
     type BlackBox;
     type Message: 'static;
     /// Private: empty for overridden in derive
@@ -52,8 +51,8 @@ pub trait App: Default + Sized + Unpin + 'static {
     /// address.
     ///
     /// This is constructs a new app using the `Default` trait, and
-    /// invokes its `start` method.
-    fn start_default() -> Addr<Self>
+    /// invokes its `__start` method.
+    fn run() -> Addr<Self>
     where
         Self: App,
     {
