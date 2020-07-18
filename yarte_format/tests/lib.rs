@@ -1,6 +1,3 @@
-#![cfg(nightly)]
-#![feature(proc_macro_hygiene)]
-
 use yarte_format::{yformat, yformat_html};
 
 #[test]

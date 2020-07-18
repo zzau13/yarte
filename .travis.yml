@@ -9,7 +9,7 @@ matrix:
   include:
     - rust: stable
     - rust: beta
-    - rust: 1.42.0
+    - rust: 1.45.0
     - rust: nightly
 
 before_script:

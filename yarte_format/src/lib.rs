@@ -4,7 +4,6 @@
 //!
 //! ## Example
 //! ```rust
-//! #![feature(proc_macro_hygiene)]
 //! use yarte_format::{yformat, yformat_html};
 //!
 //! let foo = "World";
@@ -15,9 +14,6 @@
 //!
 //! ```
 //!
-#![cfg(nightly)]
-#![feature(proc_macro_hygiene)]
-
 pub use yarte_derive::{yformat, yformat_html};
 pub use yarte_helpers::{
     at_helpers::*,
