@@ -29,7 +29,7 @@ In order to  fully understand Yarte's capabilities take a look at the following 
 - [Tests](./yarte/tests)
 - [Our book](https://yarte.netlify.com/)
 - [Crate documentation](https://docs.rs/yarte/)
-- Minimum supported Rust version: 1.42 or later
+- Minimum supported Rust version: 1.45 or later
 
 ## Acknowledgment
 Yarte is based on all previous templates engines, syntax as well as its documentation 
