@@ -4,8 +4,6 @@ use quote::quote;
 
 use yarte_hir::{Each, IfElse, HIR};
 
-#[macro_use]
-mod macros;
 #[cfg(feature = "bytes-buf")]
 mod bytes;
 #[cfg(feature = "fixed")]

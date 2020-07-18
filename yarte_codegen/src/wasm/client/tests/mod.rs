@@ -4,7 +4,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::parse2;
 
-use yarte_helpers::config::Config;
+use yarte_helpers::{config::Config, logger::log};
 use yarte_hir::{generate, visit_derive};
 use yarte_parser::{
     emitter, parse,
@@ -13,11 +13,12 @@ use yarte_parser::{
 
 use crate::CodeGen;
 
+mod each;
 mod tree_diff;
 
 use super::WASMCodeGen;
 
-fn tokens(i: TokenStream) -> String {
+fn tokens(i: TokenStream, wlog: bool) -> String {
     let config = &Config::new("");
     let der = parse2(i).unwrap();
     let s = visit_derive(&der, config).unwrap();
@@ -31,7 +32,11 @@ fn tokens(i: TokenStream) -> String {
         .unwrap_or_else(|e| emitter(&src, config, e.into_iter()));
     clean();
 
-    WASMCodeGen::new(&s).gen(ir).to_string()
+    let res = WASMCodeGen::new(&s).gen(ir).to_string();
+    if wlog {
+        log(&res, "Test".into(), &config.debug);
+    }
+    res
 }
 
 #[test]
@@ -122,5 +127,5 @@ fn test() {
     }
     .to_string();
 
-    assert_eq!(tokens(der), expected)
+    assert_eq!(tokens(der, false), expected)
 }

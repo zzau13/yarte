@@ -1,22 +1,19 @@
-use std::collections::{BTreeSet, HashMap};
+use std::collections::BTreeSet;
 
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{punctuated::Punctuated, Expr, Token};
 
-use yarte_dom::dom::{Document, Element, Expression, Node, TreeMap, VarId, VarInner};
+use yarte_dom::dom::{Document, Element, Expression, Node, VarId};
 
-pub fn get_leaf_text(
-    children: Document,
-    tree_map: &TreeMap,
-    var_map: &HashMap<VarId, VarInner>,
-) -> (BTreeSet<VarId>, TokenStream) {
-    LeafTextBuilder::new(tree_map, var_map).build(children)
+use crate::wasm::client::solver::Solver;
+
+pub fn get_leaf_text(children: Document, solver: &Solver) -> (BTreeSet<VarId>, TokenStream) {
+    LeafTextBuilder::new(solver).build(children)
 }
 
 struct LeafTextBuilder<'a> {
-    tree_map: &'a TreeMap,
-    var_map: &'a HashMap<VarId, VarInner>,
+    solver: &'a Solver,
     buff: BTreeSet<VarId>,
     buff_expr: String,
     buff_args: Punctuated<Expr, Token![,]>,
@@ -24,15 +21,11 @@ struct LeafTextBuilder<'a> {
 
 // TODO: #[str] alone expression for no reallocate string
 impl<'a> LeafTextBuilder<'a> {
-    fn new<'n>(
-        tree_map: &'n TreeMap,
-        var_map: &'n HashMap<VarId, VarInner>,
-    ) -> LeafTextBuilder<'n> {
+    fn new(solver: &Solver) -> LeafTextBuilder {
         LeafTextBuilder {
-            tree_map,
-            var_map,
+            solver,
             buff: Default::default(),
-            buff_expr: "".into(),
+            buff_expr: Default::default(),
             buff_args: Default::default(),
         }
     }
@@ -54,7 +47,7 @@ impl<'a> LeafTextBuilder<'a> {
                 Node::Expr(e) => match e {
                     // TODO
                     Expression::Safe(id, e) | Expression::Unsafe(id, e) => {
-                        let vars = self.tree_map.get(&id).expect("Expression to be defined");
+                        let vars = self.solver.expr_inner_var(&id);
                         self.buff.extend(vars);
                         self.buff_expr.push_str("{}");
                         self.buff_args.push(*e);

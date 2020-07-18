@@ -8,15 +8,15 @@ use proc_macro::TokenStream;
 use quote::quote;
 
 use yarte_codegen::{CodeGen, FmtCodeGen, HTMLCodeGen, TextCodeGen};
-use yarte_helpers::config::{get_source, read_config_file, Config, PrintConfig};
+use yarte_helpers::{
+    config::{get_source, read_config_file, Config, PrintConfig},
+    logger::log,
+};
 use yarte_hir::{generate, visit_derive, HIROptions, Print, Struct};
 use yarte_parser::{emitter, parse, parse_partials, source_map, Partial};
 
-mod logger;
 #[cfg(feature = "json")]
 mod ser_json;
-
-use self::logger::log;
 
 type Sources<'a> = &'a BTreeMap<PathBuf, String>;
 

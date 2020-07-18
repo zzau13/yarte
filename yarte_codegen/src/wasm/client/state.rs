@@ -1,4 +1,5 @@
 use std::collections::{BTreeSet, HashSet};
+use std::slice::Iter;
 
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -236,5 +237,45 @@ impl State {
             name: get_t_root_ident(),
             ty: parse2(base).unwrap(),
         });
+    }
+}
+
+// TODO: check non continuous stack implementation
+pub struct Stack<T> {
+    data: Vec<T>,
+}
+
+impl<T> Stack<T> {
+    pub fn new(t: T) -> Self {
+        Stack { data: vec![t] }
+    }
+
+    pub fn last(&self) -> &T {
+        self.data.last().expect("one state in stack")
+    }
+
+    pub fn last_mut(&mut self) -> &mut T {
+        self.data.last_mut().expect("one state in stack")
+    }
+
+    pub fn push(&mut self, t: T) {
+        self.data.push(t);
+    }
+
+    pub fn pop(&mut self) -> T {
+        self.data.pop().expect("one state in stack")
+    }
+
+    pub fn iter(&self) -> Iter<'_, T> {
+        self.into_iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a Stack<T> {
+    type Item = &'a T;
+    type IntoIter = Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.iter()
     }
 }

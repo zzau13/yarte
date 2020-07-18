@@ -6,7 +6,7 @@
 // NOTE: this implementation is lifted from the standard library and
 //      modified for single thread
 // Unsafe only use in single thread environment
-use std::{cell::UnsafeCell, ptr};
+use core::{cell::UnsafeCell, ptr};
 
 #[derive(Debug)]
 struct Node<T> {
@@ -62,13 +62,14 @@ impl<T> Queue<T> {
                 debug_assert!((*tail).value.is_none());
                 debug_assert!((*next).value.is_some());
                 let ret = (*next).value.take().unwrap();
-                drop(Box::from_raw(tail));
+                let _ = Box::from_raw(tail);
                 Some(ret)
             }
         }
     }
 }
 
+#[cfg(test)]
 impl<T> Drop for Queue<T> {
     fn drop(&mut self) {
         unsafe {

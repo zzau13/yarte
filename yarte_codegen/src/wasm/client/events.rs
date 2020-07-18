@@ -50,25 +50,15 @@ impl<'a> WASMCodeGen<'a> {
         let name = self.current_node_ident(0);
         assert_eq!(&event[..2], "on");
         let event = &event[2..];
-        let vars = self.tree_map.get(&id).expect("registered expression");
-        let vars_ident = vars
-            .iter()
-            .map(|x| {
-                self.var_map
-                    .get(x)
-                    .expect("registered variable")
-                    .ident
-                    .clone()
-            })
-            .collect::<Vec<_>>();
+        let vars = self.solver.expr_inner_var(&id);
 
-        let (forget, dom) = match &last!(self).id {
+        let (forget, dom) = match self.cur().id {
             Parent::Body => {
-                let ident = self.get_global_bb_ident();
+                let ident = self.global_bb_ident();
                 (vars.is_empty(), quote!(self.#ident))
             }
             Parent::Expr(i) => {
-                let ident = get_vdom_ident(*i);
+                let ident = get_vdom_ident(i);
                 (false, quote!(#ident))
             }
             Parent::Head => todo!(),
@@ -78,8 +68,8 @@ impl<'a> WASMCodeGen<'a> {
         let (closure_expr, clones) = get_closure(msg);
 
         if forget {
-            let current = last_mut!(self);
-            current.buff_hydrate.push(quote! {
+            let cur = self.cur_mut();
+            cur.buff_hydrate.push(quote! {
                 #clones
                 let __cloned__ = __addr.clone();
                 let __closure__ = #closure_expr;
@@ -88,11 +78,11 @@ impl<'a> WASMCodeGen<'a> {
                 .unwrap_throw();
                 __closure__.forget();
             });
-            current.path_events.push((name, current.steps.clone()));
+            cur.path_events.push((name, cur.steps.clone()));
         } else {
             let closure = format_ident!("__closure__{}", self.count);
             self.count += 1;
-            let current = self.stack.last_mut().unwrap();
+            let current = self.stack.last_mut();
             current.black_box.push(BlackBox {
                 doc: "".to_string(),
                 name: closure.clone(),

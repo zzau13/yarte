@@ -2,7 +2,7 @@
 #![allow(clippy::too_many_arguments)]
 
 use std::{
-    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
+    collections::{BTreeMap, HashSet},
     iter, mem,
 };
 
@@ -14,8 +14,7 @@ use syn::{
 };
 
 use yarte_dom::dom::{
-    Attribute, Document, Element, ExprId, ExprOrText, Expression, IfBlock, IfElse, Node, TreeMap,
-    Var, VarId, VarInner, VarMap, DOM,
+    Attribute, Document, Element, ExprId, ExprOrText, Expression, IfBlock, IfElse, Node, VarId, DOM,
 };
 use yarte_hir::{Struct, HIR};
 
@@ -26,6 +25,7 @@ mod each;
 mod events;
 mod leaf_text;
 mod messages;
+mod solver;
 mod state;
 mod utils;
 
@@ -35,7 +35,8 @@ mod tests;
 use self::{
     component::clean,
     leaf_text::get_leaf_text,
-    state::{BlackBox, PAttr, Parent, State, Step},
+    solver::Solver,
+    state::{BlackBox, PAttr, Parent, Stack, State, Step},
     utils::*,
 };
 
@@ -58,17 +59,13 @@ use self::{
 /// and that accepts context sensitive languages
 pub struct WASMCodeGen<'a> {
     /// State
-    stack: Vec<State>,
+    stack: Stack<State>,
     /// unique
     count: usize,
+    ///
+    solver: Solver,
     /// Derive struct
     s: &'a Struct<'a>,
-    /// Variables grouped by base field
-    grouped_map: HashMap<VarId, BTreeSet<VarId>>,
-    /// Expresion -> Inner Variables
-    tree_map: TreeMap,
-    /// VarId -> Variable details
-    var_map: HashMap<VarId, VarInner>,
     /// Helpers buffer
     helpers: TokenStream,
     /// Components buffer
@@ -83,44 +80,44 @@ impl<'a> WASMCodeGen<'a> {
         WASMCodeGen {
             component: vec![],
             count: 0,
-            grouped_map: Default::default(),
             helpers: TokenStream::new(),
             s,
-            stack: vec![state],
-            tree_map: Default::default(),
-            var_map: Default::default(),
+            stack: Stack::new(state),
+            solver: Default::default(),
         }
     }
 
     // Getters
-    fn get_bb_t_root<I: Iterator<Item = VarId>>(&self, parents: I) -> (TokenStream, usize) {
-        let len = parents.fold(0, |acc, x| {
-            acc + self
-                .grouped_map
-                .get(&x)
-                .map(|x| x.len())
-                .expect("grouped variables")
-        });
+    fn cur(&self) -> &State {
+        self.stack.last()
+    }
+
+    fn cur_mut(&mut self) -> &mut State {
+        self.stack.last_mut()
+    }
+
+    fn bb_t_root<I: Iterator<Item = VarId>>(&self, parents: I) -> (TokenStream, usize) {
+        let len = parents.fold(0, |acc, x| acc + self.solver.group(&x).len());
 
         get_t_root_type(len)
     }
 
     #[inline]
-    fn get_current_bb(&self) -> TokenStream {
-        match &last!(self).id {
+    fn current_bb(&self) -> TokenStream {
+        match self.cur().id {
             Parent::Expr(id) => {
-                let ident = get_vdom_ident(*id);
+                let ident = get_vdom_ident(id);
                 quote!(#ident)
             }
             _ => {
-                let ident = self.get_global_bb_ident();
+                let ident = self.global_bb_ident();
                 quote!(self.#ident)
             }
         }
     }
 
     #[inline]
-    fn get_global_bb_ident(&self) -> Ident {
+    fn global_bb_ident(&self) -> Ident {
         self.s
             .fields
             .iter()
@@ -134,7 +131,7 @@ impl<'a> WASMCodeGen<'a> {
             .expect("Black box field")
     }
 
-    fn get_initial_state(&self) -> TokenStream {
+    fn initial_state(&self) -> TokenStream {
         let attr: PAttr = parse2(quote!(#[serde(default)])).unwrap();
         let fields = self
             .s
@@ -161,8 +158,8 @@ impl<'a> WASMCodeGen<'a> {
     }
 
     // TODO: Expressions in path
-    fn get_parent_node(&self) -> usize {
-        last!(self)
+    fn parent_node(&self) -> usize {
+        self.cur()
             .steps
             .iter()
             .rposition(|x| match x {
@@ -173,7 +170,7 @@ impl<'a> WASMCodeGen<'a> {
     }
 
     #[inline]
-    fn get_state_fields(&self) -> Punctuated<&Ident, Token![,]> {
+    fn state_fields(&self) -> Punctuated<&Ident, Token![,]> {
         self.s.fields.iter().filter(|x| is_state(x)).fold(
             <Punctuated<&Ident, Token![,]>>::new(),
             |mut acc, x| {
@@ -184,7 +181,7 @@ impl<'a> WASMCodeGen<'a> {
     }
 
     #[inline]
-    fn get_inner(&self) -> Punctuated<FieldValue, Token![,]> {
+    fn inner_fields_value(&self) -> Punctuated<FieldValue, Token![,]> {
         self.s.fields.iter().filter(|x| is_inner(&x.attrs)).fold(
             <Punctuated<FieldValue, Token![,]>>::new(),
             |mut acc, x| {
@@ -224,72 +221,77 @@ impl<'a> WASMCodeGen<'a> {
     }
 
     #[inline]
-    fn get_checks(&self, check: BTreeMap<VarId, (Vec<usize>, usize)>) -> TokenStream {
-        let mut buff: Vec<TokenStream> = check
-            .into_iter()
-            .fold(
-                BTreeMap::new(),
-                |mut acc: BTreeMap<Option<ExprId>, (Vec<usize>, usize)>,
-                 (base, (positions, len))| {
-                    acc.entry(self.stack.iter().rev().find_map(|x| match &x.id {
-                        Parent::Expr(id) if x.bases.contains(&base) => Some(*id),
-                        _ => None,
-                    }))
-                    .and_modify(|x| {
-                        let len = x.1;
-                        x.0.extend(positions.iter().copied().map(|i| len + i));
-                        x.1 += len;
-                    })
-                    .or_insert((positions, len));
-                    acc
-                },
-            )
-            .into_iter()
-            .map(|(i, (x, len))| {
-                let (t_root, len) = get_t_root_type(len);
-                let mut bits = vec![false; len];
-                for i in x {
-                    bits[i] = true;
-                }
-                let number = match len {
-                    8 => {
-                        let number = get_number_u8(bits);
-                        quote!(#number)
+    fn checks(&self, curr: &State, check: BTreeMap<VarId, (Vec<usize>, usize)>) -> TokenStream {
+        let mut buff: Vec<TokenStream> =
+            check
+                .into_iter()
+                .fold(
+                    BTreeMap::new(),
+                    |mut acc: BTreeMap<Option<ExprId>, (Vec<usize>, usize)>,
+                     (base, (positions, len))| {
+                        acc.entry(
+                            self.stack.iter().chain(iter::once(curr)).rev().find_map(
+                                |x| match &x.id {
+                                    Parent::Expr(id) if x.bases.contains(&base) => Some(*id),
+                                    _ => None,
+                                },
+                            ),
+                        )
+                        .and_modify(|x| {
+                            let len = x.1;
+                            x.0.extend(positions.iter().copied().map(|i| len + i));
+                            x.1 += len;
+                        })
+                        .or_insert((positions, len));
+                        acc
+                    },
+                )
+                .into_iter()
+                .map(|(i, (x, len))| {
+                    let (t_root, len) = get_t_root_type(len);
+                    let mut bits = vec![false; len];
+                    for i in x {
+                        bits[i] = true;
                     }
-                    16 => {
-                        let number = get_number_u16(bits);
-                        quote!(#number)
-                    }
-                    32 => {
-                        let number = get_number_u32(&bits);
-                        quote!(#number)
-                    }
-                    64 => {
-                        let tokens = get_split_32(&bits);
-                        quote!(yarte_wasm_app::U64([#tokens]))
-                    }
-                    128 => {
-                        let tokens = get_split_32(&bits);
-                        quote!(yarte_wasm_app::U128([#tokens]))
-                    }
-                    256 => {
-                        let tokens = get_split_32(&bits);
-                        quote!(yarte_wasm_app::U256([#tokens]))
-                    }
-                    _ => todo!("more than 256 variables per context"),
-                };
+                    let number = match len {
+                        8 => {
+                            let number = get_number_u8(bits);
+                            quote!(#number)
+                        }
+                        16 => {
+                            let number = get_number_u16(bits);
+                            quote!(#number)
+                        }
+                        32 => {
+                            let number = get_number_u32(&bits);
+                            quote!(#number)
+                        }
+                        64 => {
+                            let tokens = get_split_32(&bits);
+                            quote!(yarte_wasm_app::U64([#tokens]))
+                        }
+                        128 => {
+                            let tokens = get_split_32(&bits);
+                            quote!(yarte_wasm_app::U128([#tokens]))
+                        }
+                        256 => {
+                            let tokens = get_split_32(&bits);
+                            quote!(yarte_wasm_app::U256([#tokens]))
+                        }
+                        _ => todo!("more than 256 variables per context"),
+                    };
 
-                let vdom = if let Some(i) = i {
-                    let ident = get_vdom_ident(i);
-                    quote!(#ident)
-                } else {
-                    let bb = self.get_global_bb_ident();
-                    quote!(self.#bb)
-                };
+                    let vdom = if let Some(i) = i {
+                        let ident = get_vdom_ident(i);
+                        quote!(#ident)
+                    } else {
+                        let bb = self.global_bb_ident();
+                        quote!(self.#bb)
+                    };
 
-                quote!(yarte_wasm_app::YNumber::neq_zero(#vdom.t_root & #number))
-            })
-            .collect();
+                    quote!(yarte_wasm_app::YNumber::neq_zero(#vdom.t_root & #number))
+                })
+                .collect();
         let mut buff = buff.drain(..);
         let tokens = buff.next().unwrap_or_default();
         buff.fold(tokens, |mut acc, t| {
@@ -299,14 +301,14 @@ impl<'a> WASMCodeGen<'a> {
     }
 
     #[inline]
-    fn get_check_hash(
+    fn check_hash(
         &self,
         checks: BTreeMap<VarId, Vec<VarId>>,
     ) -> BTreeMap<VarId, (Vec<usize>, usize)> {
         checks
             .into_iter()
             .map(|(i, deps)| {
-                let group = self.grouped_map.get(&i).expect("group registred");
+                let group = self.solver.group(&i);
                 let len = group.len();
                 let deps: Vec<usize> = deps
                     .into_iter()
@@ -317,12 +319,12 @@ impl<'a> WASMCodeGen<'a> {
             .collect()
     }
 
-    fn get_render(&self, curr: &State) -> TokenStream {
+    fn render(&self, curr: &State) -> TokenStream {
         let mut tokens = TokenStream::new();
         for (i, t) in curr.get_render_hash().into_iter() {
             let mut checks: BTreeMap<VarId, Vec<VarId>> = BTreeMap::new();
             for j in i {
-                let base = self.var_map.get(&j).unwrap().base;
+                let base = self.solver.var_base(&j);
                 checks
                     .entry(base)
                     .and_modify(|x| {
@@ -330,7 +332,7 @@ impl<'a> WASMCodeGen<'a> {
                     })
                     .or_insert_with(|| vec![j]);
             }
-            let checks = self.get_checks(self.get_check_hash(checks));
+            let checks = self.checks(curr, self.check_hash(checks));
             if checks.is_empty() {
                 tokens.extend(t);
             } else {
@@ -346,7 +348,7 @@ impl<'a> WASMCodeGen<'a> {
     // TODO
     fn init_build(&self, build: TokenStream) -> TokenStream {
         let ident = format_ident!("{}InitialState", self.s.ident);
-        let args = self.get_state_fields();
+        let args = self.state_fields();
 
         quote! {
             let #ident { #args } = yarte_wasm_app::from_str(&get_state()).unwrap_or_default();
@@ -357,8 +359,8 @@ impl<'a> WASMCodeGen<'a> {
 
     #[inline]
     // TODO
-    fn init_hydrate(curr: &mut State) -> TokenStream {
-        if curr.buff_hydrate.is_empty() {
+    fn init_hydrate(cur: &mut State) -> TokenStream {
+        if cur.buff_hydrate.is_empty() {
             quote!()
         } else {
             let body = get_body_ident();
@@ -368,35 +370,35 @@ impl<'a> WASMCodeGen<'a> {
                     .body().unwrap_throw();
             };
             // Get step for events
-            let steps = get_steps(curr.path_events.iter(), quote!(#body));
+            let steps = get_steps(cur.path_events.iter(), quote!(#body));
 
             // Ended 'hydrate' buffer
             hydrate.extend(steps);
-            hydrate.extend(curr.buff_hydrate.drain(..).flatten());
+            hydrate.extend(cur.buff_hydrate.drain(..).flatten());
             hydrate
         }
     }
 
     #[inline]
     // TODO
-    fn init_render(&self, curr: &mut State) -> TokenStream {
-        let name = self.get_global_bb_ident();
-        let (base, _) = self.get_bb_t_root(iter::once(get_self_id()));
-        let render = self.get_render(curr);
+    fn init_render(&self, cur: &mut State) -> TokenStream {
+        let name = self.global_bb_ident();
+        let (base, _) = self.bb_t_root(iter::once(get_self_id()));
+        let render = self.render(cur);
         let render = quote! {
             if self.#name.t_root == <#base as yarte_wasm_app::YNumber>::zero() {
                 return;
             }
             #render
         };
-        curr.add_t_root(base);
+        cur.add_t_root(base);
 
         render
     }
 
     #[inline]
     fn init(&mut self, mut dom: DOM) -> TokenStream {
-        self.resolve_tree_var(dom.tree_map, dom.var_map);
+        self.solver.init(dom.tree_map, dom.var_map);
         let mut build = TokenStream::new();
 
         assert_eq!(dom.doc.len(), 1);
@@ -425,21 +427,21 @@ impl<'a> WASMCodeGen<'a> {
                 });
                 if let Some(head) = head {
                     self.step(head);
-                    if !last!(self).path_nodes.is_empty() {
+                    if !self.cur().path_nodes.is_empty() {
                         todo!("in head expressions")
                     }
                 }
                 if let Some(body) = body {
-                    last_mut!(self).id = Parent::Body;
+                    self.cur_mut().id = Parent::Body;
                     self.step(body);
-                    if !last!(self).path_nodes.is_empty() {
+                    if !self.cur().path_nodes.is_empty() {
                         let ident = get_body_ident();
-                        let current = last_mut!(self);
-                        let tokens = get_steps(current.path_nodes.iter(), quote!(#ident));
+                        let cur = self.cur_mut();
+                        let tokens = get_steps(cur.path_nodes.iter(), quote!(#ident));
                         build.extend(quote!(let #ident = doc.body().unwrap_throw();));
                         build.extend(tokens);
-                        build.extend(mem::take(&mut current.buff_build).into_iter().flatten());
-                        current.path_nodes.clear();
+                        build.extend(mem::take(&mut cur.buff_build).into_iter().flatten());
+                        cur.path_nodes.clear();
                     }
                 } else {
                     panic!("Need <body> tag")
@@ -453,7 +455,7 @@ impl<'a> WASMCodeGen<'a> {
 
     // Main recursive loop
     fn step(&mut self, doc: Document) {
-        let last_node = last!(self).steps.len();
+        let cur = self.cur().steps.len();
         // TODO: Inline nodes
         let insert_points = doc.iter().filter(|x| match x {
             Node::Elem(Element::Text(_)) => false,
@@ -477,7 +479,7 @@ impl<'a> WASMCodeGen<'a> {
                 Node::Elem(Element::Node {
                     children, attrs, ..
                 }) => {
-                    last_mut!(self).steps.push(if i == 0 {
+                    self.cur_mut().steps.push(if i == 0 {
                         Step::FirstChild
                     } else {
                         Step::NextSibling
@@ -495,7 +497,7 @@ impl<'a> WASMCodeGen<'a> {
                 Node::Expr(e) => match e {
                     Expression::Each(id, each) => {
                         self.gen_each(id, *each, len != 1, i == len, insert_point.split_at(i).0);
-                        last_mut!(self).steps.push(Step::Each(id));
+                        self.cur_mut().steps.push(Step::Each(id));
                     }
                     Expression::IfElse(id, if_else) => {
                         let IfElse { ifs, if_else, els } = *if_else;
@@ -515,7 +517,7 @@ impl<'a> WASMCodeGen<'a> {
             }
         }
 
-        last_mut!(self).steps.drain(last_node..);
+        self.cur_mut().steps.drain(cur..);
     }
 
     #[inline]
@@ -544,38 +546,6 @@ impl<'a> WASMCodeGen<'a> {
         todo!("resolve if else block expresion");
     }
 
-    #[inline]
-    fn resolve_tree_var(&mut self, tree_map: TreeMap, var_map: VarMap) {
-        let mut grouped = HashMap::new();
-        let var_map: HashMap<VarId, VarInner> = var_map
-            .into_iter()
-            .filter_map(|(i, x)| match x {
-                Var::This(x) => {
-                    grouped
-                        .entry(x.base)
-                        .and_modify(|x: &mut BTreeSet<VarId>| {
-                            x.insert(i);
-                        })
-                        .or_insert_with(|| {
-                            // Need Order
-                            let mut b = BTreeSet::new();
-                            b.insert(i);
-                            b
-                        });
-                    Some((i, x))
-                }
-                Var::Local(..) => None,
-            })
-            .collect();
-
-        if grouped.get(&get_self_id()).is_none() {
-            todo!("need any field in struct of application")
-        }
-        self.grouped_map = grouped;
-        self.tree_map = tree_map;
-        self.var_map = var_map;
-    }
-
     // Clear buffer and return it
     // TODO: empty helpers
     #[inline]
@@ -599,32 +569,28 @@ impl<'a> WASMCodeGen<'a> {
     // TODO: whitespace and text node
     #[inline]
     fn write_leaf_text(&mut self, children: Document) {
-        let (t, e) = get_leaf_text(children, &self.tree_map, &self.var_map);
+        let (t, e) = get_leaf_text(children, &self.solver);
         let name = self.current_node_ident(0);
 
-        let dom = match &last!(self).id {
+        let dom = match self.cur().id {
             Parent::Body => {
-                let ident = self.get_global_bb_ident();
+                let ident = self.global_bb_ident();
                 quote!(self.#ident)
             }
             Parent::Expr(i) => {
-                let ident = get_vdom_ident(*i);
+                let ident = get_vdom_ident(i);
                 quote!(#ident)
             }
             Parent::Head => todo!(),
         };
-        let current = last_mut!(self);
-        current
-            .buff_new
+        let cur = self.cur_mut();
+        cur.buff_new
             .push(quote! { #name.set_text_content(Some(&#e)); });
 
-        current
-            .path_nodes
-            .push((name.clone(), current.steps.clone()));
-        current
-            .buff_render
+        cur.path_nodes.push((name.clone(), cur.steps.clone()));
+        cur.buff_render
             .push((t, quote! { #dom.#name.set_text_content(Some(&#e)); }));
-        current.black_box.push(BlackBox {
+        cur.black_box.push(BlackBox {
             doc: "Yarte Node element".into(),
             name,
             ty: parse2(quote!(yarte_wasm_app::web::Element)).unwrap(),
@@ -641,12 +607,11 @@ impl<'a> WASMCodeGen<'a> {
     }
 
     fn find_current_node(&self, init: usize) -> Option<Ident> {
-        let current = last!(self);
-        let path = &current.steps[init..];
-        current
-            .path_nodes
+        let cur = self.cur();
+        let path = &cur.steps[init..];
+        cur.path_nodes
             .iter()
-            .chain(current.path_events.iter())
+            .chain(cur.path_events.iter())
             .find_map(|(i, x)| {
                 if path.eq(x.as_slice()) {
                     Some(i.clone())
@@ -661,16 +626,16 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
     fn gen(&mut self, ir: Vec<HIR>) -> TokenStream {
         let build = self.init(ir.into());
 
-        let mut curr = self.stack.pop().expect("one state");
+        let mut cur = self.stack.pop();
 
         // Ended 'hydrate' buffer
-        let hydrate = Self::init_hydrate(&mut curr);
+        let hydrate = Self::init_hydrate(&mut cur);
 
         // Black box ident and type
-        let bb_ident = self.get_global_bb_ident();
+        let bb_ident = self.global_bb_ident();
         let bb_type = format_ident!("{}BlackBox", self.s.ident);
 
-        let mut render = self.init_render(&mut curr);
+        let mut render = self.init_render(&mut cur);
         // Ended 'render' buffer
         render.extend(quote! {
             self.#bb_ident.t_root = yarte_wasm_app::YNumber::zero();
@@ -679,21 +644,21 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
         // BlackBox
         // TODO: specify component type
         let component_type: Type = parse2(quote!(yarte_wasm_app::web::Element)).unwrap();
-        let mut bb_field_value = curr.get_black_box_fields(&get_field_root_ident(), true);
+        let mut bb_field_value = cur.get_black_box_fields(&get_field_root_ident(), true);
 
         for (i, _) in &self.component {
-            curr.black_box.push(BlackBox {
+            cur.black_box.push(BlackBox {
                 doc: "Component".to_string(),
                 name: i.clone(),
                 ty: component_type.clone(),
             })
         }
-        let black_box = curr.get_black_box(&bb_type);
+        let black_box = cur.get_black_box(&bb_type);
 
         // Add components to black box fields value
         bb_field_value.extend(self.empty_components());
-        let args = self.get_state_fields();
-        let inner = self.get_inner();
+        let args = self.state_fields();
+        let inner = self.inner_fields_value();
         let mut fields = vec![];
         if !args.is_empty() {
             fields.push(args.into_token_stream());
@@ -746,7 +711,7 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
         let app = self.s.implement_head(quote!(yarte_wasm_app::App), &app);
         let helpers = &self.helpers;
 
-        let initial_state = self.get_initial_state();
+        let initial_state = self.initial_state();
 
         // Multi app compilation
         clean();
