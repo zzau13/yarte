@@ -1,7 +1,6 @@
 //! A mostly lock-free single-producer, single consumer queue.
 //!
-// http://www.1024cores.net/home/lock-free-algorithms
-//                         /queues/non-intrusive-mpsc-node-based-queue
+// http://www.1024cores.net/home/lock-free-algorithms/queues/non-intrusive-mpsc-node-based-queue
 
 // NOTE: this implementation is lifted from the standard library and
 //      modified for single thread
@@ -15,6 +14,12 @@ struct Node<T> {
 }
 
 /// This Queue is unsafe because only one thread can use it at a time
+/// and it haven't a valid Drop implementation without test context.
+/// It isn't volatile flow and you make sure it's always a Singleton.
+/// It is recommended not to implement out of WASM Single Page Application context.
+/// And for a future implementation of wasm thread, it can't be used.
+/// When this feature is further specified, the necessary measures
+/// will be taken for its correct operation in a multi thread environment.
 #[derive(Debug)]
 pub struct Queue<T> {
     head: UnsafeCell<*mut Node<T>>,

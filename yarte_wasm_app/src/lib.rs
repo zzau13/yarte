@@ -19,9 +19,16 @@ use self::queue::Queue;
 
 /// App are object which encapsulate state and behavior
 ///
+/// Make sure it's always a Singleton. Can panic in future implementations.
 ///
 /// App communicate exclusively by directional exchanging messages
 /// The sender can't wait the response since it never answer
+///
+/// It is recommended not to implement out of WASM Single Page Application context.
+///
+/// For a future implementation of wasm thread, it can't be used.
+/// When this feature is further specified, the necessary measures
+/// will be taken for its correct operation in a multi thread environment.
 // TODO: derive
 pub trait App: Default + Sized + 'static {
     type BlackBox;
