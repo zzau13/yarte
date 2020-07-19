@@ -1,5 +1,5 @@
 {{#> base title = "Actix web" }}
-    {{~#if let Some((name, lastname)) = query }}
+    {{~#if let Some((name, lastname)) = query ~}}
         {{> card/hi ~}}
     {{ else ~}}
         {{> card/form ~}}

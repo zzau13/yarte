@@ -1,12 +1,30 @@
-use yarte_format::{yformat, yformat_html};
+#![cfg(features = "bytes-buf")]
+use bytes::BytesMut;
+use yarte::{yformat, yformat_html, ywrite};
 
 #[test]
 fn test() {
     let world = "World";
     let res = yformat!("Hello {{ world }}!");
 
-    eprintln!("{}", res);
     assert_eq!(res, "Hello World!")
+}
+
+#[test]
+fn test_w() {
+    let mut bytes_mut = BytesMut::new();
+
+    let world = "World";
+    ywrite!(bytes_mut, "Hello {{ world }}!");
+
+    assert_eq!(&bytes_mut[..], b"Hello World!");
+
+    let mut bytes_mut = BytesMut::new();
+
+    let world = 1;
+    ywrite!(bytes_mut, "Hello {{ world }}!",);
+
+    assert_eq!(&bytes_mut[..], b"Hello 1!")
 }
 
 #[test]

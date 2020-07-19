@@ -38,7 +38,7 @@ impl<T: CodeGen> CodeGen for FnFmtCodeGen<T> {
                 #[allow(unused_imports)]
                 use #parent::*;
                 let mut buf = String::with_capacity(#size_hint);
-                let _ = write!(buf, "{}", yarte_format::DisplayFn::new(|_fmt| {
+                let _ = write!(buf, "{}", #parent::DisplayFn::new(|_fmt| {
                     #body
                     Ok(())
                 }));

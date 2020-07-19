@@ -1,11 +1,10 @@
-#![allow(clippy::uninit_assumed_init)]
 use std::collections::HashMap;
 use std::io::{stdout, Write};
 use std::thread;
 
 use bytes::BytesMut;
 use std::mem::MaybeUninit;
-use yarte::{Template, TemplateBytesMin, TemplateFixedMin, TemplateMin};
+use yarte::{ywrite, Template, TemplateBytesMin, TemplateFixedMin, TemplateMin};
 
 #[derive(Template)]
 #[template(path = "index")]
@@ -68,4 +67,13 @@ fn main() {
     })
     .join()
     .unwrap();
+
+    let mut buf = BytesMut::with_capacity(2048);
+    let query = query
+        .get("name")
+        .and_then(|name| query.get("lastname").map(|lastname| (*name, *lastname)));
+    ywrite!(buf, "{{> index_bytes }}");
+    println!("\nywrite:");
+    stdout().lock().write_all(&buf.freeze()).unwrap();
+    println!();
 }
