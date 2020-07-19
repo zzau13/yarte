@@ -4,7 +4,6 @@ members = [
     "yarte",
     "yarte_codegen",
     "yarte_derive",
-    "yarte_format",
     "yarte_helpers",
     "yarte_hir",
     "yarte_html",

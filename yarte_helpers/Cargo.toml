@@ -15,7 +15,7 @@ workspace = ".."
 [features]
 big-num-32 = []
 config = ["serde", "toml"]
-default = ["markup", "config", "logger"]
+default = ["markup", "config", "logger", "display-fn"]
 display-fn = []
 json = ["buf-min", "chrono", "serde", "serde_json", "v_jsonescape", "ryu-ad"]
 ryu-ad = ["ryu"]

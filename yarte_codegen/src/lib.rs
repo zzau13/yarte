@@ -13,8 +13,12 @@ mod fn_fmt;
 mod html;
 mod text;
 pub mod wasm;
+mod write_b;
 
-pub use self::{fmt::FmtCodeGen, fn_fmt::FnFmtCodeGen, html::HTMLCodeGen, text::TextCodeGen};
+pub use self::{
+    fmt::FmtCodeGen, fn_fmt::FnFmtCodeGen, html::HTMLCodeGen, text::TextCodeGen,
+    write_b::WriteBCodeGen,
+};
 
 #[cfg(any(feature = "wasm-app", feature = "wasm-server"))]
 pub use wasm::*;

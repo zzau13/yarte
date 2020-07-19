@@ -5,8 +5,10 @@ use std::{
 };
 
 use proc_macro::TokenStream;
-use quote::quote;
+use quote::{format_ident, quote};
 
+use syn::parse::ParseBuffer;
+use syn::spanned::Spanned;
 use yarte_codegen::{CodeGen, FmtCodeGen, HTMLCodeGen, TextCodeGen};
 use yarte_helpers::{
     config::{get_source, read_config_file, Config, PrintConfig},
@@ -90,11 +92,12 @@ pub fn template_ptr(input: TokenStream) -> TokenStream {
 #[cfg(feature = "fixed")]
 /// Implements TemplateFixedTrait with html escape functionality
 pub fn template_html_ptr(input: TokenStream) -> TokenStream {
+    const PARENT: &str = "yarte";
     fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
         Box::new(yarte_codegen::FixedCodeGen::new(
-            yarte_codegen::HTMLFixedCodeGen("yarte"),
+            yarte_codegen::HTMLFixedCodeGen(PARENT),
             s,
-            "yarte",
+            PARENT,
         ))
     }
     let i = &syn::parse(input).unwrap();
@@ -105,13 +108,18 @@ pub fn template_html_ptr(input: TokenStream) -> TokenStream {
 #[cfg(feature = "bytes-buf")]
 /// Implements TemplateBytesTrait without html escape functionality
 pub fn template_bytes(input: TokenStream) -> TokenStream {
-    fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
+    const PARENT: &str = "yarte";
+
+    let buf_i = format_ident!("bytes_mut");
+    let buf: syn::Expr = syn::parse2(quote!(#buf_i)).unwrap();
+    let get_codegen = |s| {
         Box::new(yarte_codegen::BytesCodeGen::new(
-            yarte_codegen::TextBytesCodeGen,
+            yarte_codegen::TextBytesCodeGen::new(&buf, PARENT),
             s,
-            "yarte",
+            buf_i,
+            PARENT,
         ))
-    }
+    };
 
     let i = &syn::parse(input).unwrap();
     build!(
@@ -128,13 +136,18 @@ pub fn template_bytes(input: TokenStream) -> TokenStream {
 #[cfg(feature = "bytes-buf")]
 /// Implements TemplateBytesTrait with html escape functionality
 pub fn template_html_bytes(input: TokenStream) -> TokenStream {
-    fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
+    const PARENT: &str = "yarte";
+
+    let buf_i = format_ident!("bytes_mut");
+    let buf: syn::Expr = syn::parse2(quote!(#buf_i)).unwrap();
+    let get_codegen = |s| {
         Box::new(yarte_codegen::BytesCodeGen::new(
-            yarte_codegen::HTMLBytesCodeGen,
+            yarte_codegen::HTMLBytesCodeGen::new(&buf, PARENT),
             s,
-            "yarte",
+            buf_i,
+            PARENT,
         ))
-    }
+    };
     let i = &syn::parse(input).unwrap();
     build!(i, get_codegen, Default::default())
 }
@@ -144,11 +157,12 @@ pub fn template_html_bytes(input: TokenStream) -> TokenStream {
 /// # Work in Progress
 /// Implements TemplateTrait with html minifier
 pub fn template_html_min_ptr(input: TokenStream) -> TokenStream {
+    const PARENT: &str = "yarte";
     fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
         Box::new(yarte_codegen::FixedCodeGen::new(
-            yarte_codegen::HTMLMinFixedCodeGen("yarte"),
+            yarte_codegen::HTMLMinFixedCodeGen(PARENT),
             s,
-            "yarte",
+            PARENT,
         ))
     }
     let i = &syn::parse(input).unwrap();
@@ -160,13 +174,18 @@ pub fn template_html_min_ptr(input: TokenStream) -> TokenStream {
 /// # Work in Progress
 /// Implements TemplateTrait with html minifier
 pub fn template_html_min_bytes(input: TokenStream) -> TokenStream {
-    fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
+    const PARENT: &str = "yarte";
+
+    let buf_i = format_ident!("bytes_mut");
+    let buf: syn::Expr = syn::parse2(quote!(#buf_i)).unwrap();
+    let get_codegen = |s| {
         Box::new(yarte_codegen::BytesCodeGen::new(
-            yarte_codegen::HTMLMinBytesCodeGen,
+            yarte_codegen::HTMLMinBytesCodeGen::new(&buf, PARENT),
             s,
-            "yarte",
+            buf_i,
+            PARENT,
         ))
-    }
+    };
     let i = &syn::parse(input).unwrap();
     build!(i, get_codegen, Default::default())
 }
@@ -211,13 +230,18 @@ pub fn app(input: TokenStream) -> TokenStream {
 ///
 /// Need additional `scrip` path argument attribute
 pub fn template_wasm_server(input: TokenStream) -> TokenStream {
-    fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
+    const PARENT: &str = "yarte";
+    let buf_i = format_ident!("bytes_mut");
+    let buf: syn::Expr = syn::parse2(quote!(#buf_i)).unwrap();
+
+    let get_codegen = |s| {
         Box::new(yarte_codegen::BytesCodeGen::new(
-            yarte_codegen::server::WASMCodeGen::new(s),
+            yarte_codegen::server::WASMCodeGen::new(s, &buf, PARENT),
             s,
-            "yarte",
+            buf_i,
+            PARENT,
         ))
-    }
+    };
     let i = &syn::parse(input).unwrap();
     build!(i, get_codegen, Default::default())
 }
@@ -233,7 +257,7 @@ pub fn serialize_json(i: TokenStream) -> TokenStream {
 #[proc_macro]
 /// Format handlebars string in this scope with html escape functionality
 pub fn yformat_html(i: TokenStream) -> TokenStream {
-    const PARENT: &str = "yarte_format";
+    const PARENT: &str = "yarte";
     fn get_codegen<'a>(_s: &'a Struct<'a>) -> Box<dyn CodeGen + 'a> {
         Box::new(yarte_codegen::FnFmtCodeGen::new(HTMLCodeGen, PARENT))
     }
@@ -259,7 +283,7 @@ pub fn yformat_html(i: TokenStream) -> TokenStream {
 #[proc_macro]
 /// Format handlebars string in this scope without html escape functionality
 pub fn yformat(i: TokenStream) -> TokenStream {
-    const PARENT: &str = "yarte_format";
+    const PARENT: &str = "yarte";
     fn get_codegen<'a>(_s: &'a Struct<'a>) -> Box<dyn CodeGen + 'a> {
         Box::new(yarte_codegen::FnFmtCodeGen::new(TextCodeGen, PARENT))
     }
@@ -280,6 +304,71 @@ pub fn yformat(i: TokenStream) -> TokenStream {
             parent: PARENT,
         }
     )
+}
+
+#[proc_macro]
+#[cfg(feature = "bytes-buf")]
+/// Write handlebars template to `buf-min::Buffer` in this scope without html escape functionality
+pub fn ywrite(i: TokenStream) -> TokenStream {
+    const PARENT: &str = "yarte";
+
+    let ParseWriteArg { buf, src, .. } = match syn::parse(i) {
+        Ok(arg) => arg,
+        Err(e) => return e.to_compile_error().into(),
+    };
+    // Check correct syn::Expr
+    {
+        use syn::Expr::*;
+        match &buf {
+            Field(_) | Path(_) => (),
+            _ => {
+                return syn::Error::new(buf.span(), "first argument should be a ident or field")
+                    .to_compile_error()
+                    .into()
+            }
+        }
+    }
+
+    let get_codegen = |_| {
+        Box::new(yarte_codegen::WriteBCodeGen::new(
+            yarte_codegen::TextBytesCodeGen::new(&buf, PARENT),
+            PARENT,
+        ))
+    };
+
+    let input = quote! {
+        #[template(src = #src)]
+        struct __YFormat__;
+    };
+
+    let i = &syn::parse2(input).unwrap();
+    build!(
+        i,
+        get_codegen,
+        HIROptions {
+            resolve_to_self: false,
+            is_text: true,
+            parent: PARENT,
+        }
+    )
+}
+
+struct ParseWriteArg {
+    buf: syn::Expr,
+    _comma: syn::Token![,],
+    src: syn::LitStr,
+    _end_comma: Option<syn::Token![,]>,
+}
+
+impl syn::parse::Parse for ParseWriteArg {
+    fn parse(input: &ParseBuffer) -> syn::parse::Result<Self> {
+        Ok(ParseWriteArg {
+            buf: input.parse()?,
+            _comma: input.parse()?,
+            src: input.parse()?,
+            _end_comma: input.parse()?,
+        })
+    }
 }
 
 fn sources_to_tokens<'a>(
