@@ -4,7 +4,7 @@ use std::thread;
 
 use bytes::BytesMut;
 use std::mem::MaybeUninit;
-use yarte::{ywrite, Template, TemplateBytesMin, TemplateFixedMin, TemplateMin};
+use yarte::{ywrite_min, Template, TemplateBytesMin, TemplateFixedMin, TemplateMin};
 
 #[derive(Template)]
 #[template(path = "index")]
@@ -72,8 +72,10 @@ fn main() {
     let query = query
         .get("name")
         .and_then(|name| query.get("lastname").map(|lastname| (*name, *lastname)));
-    ywrite!(buf, "{{> index_bytes }}");
-    println!("\nywrite:");
+
+    ywrite_min!(buf, "{{> index_bytes }}");
+
+    println!("\nywrite_min!:");
     stdout().lock().write_all(&buf.freeze()).unwrap();
     println!();
 }

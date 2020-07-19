@@ -7,7 +7,7 @@ pub mod server {
     use yarte_dom::dom_fmt::to_wasmfmt;
     use yarte_hir::{Struct, HIR};
 
-    use crate::{CodeGen, EachCodeGen, HTMLBytesCodeGen, IfElseCodeGen};
+    use crate::{CodeGen, EachCodeGen, HTMLMinBytesCodeGen, IfElseCodeGen};
 
     pub struct WASMCodeGen<'a> {
         s: &'a Struct<'a>,
@@ -31,7 +31,7 @@ pub mod server {
     impl<'a> CodeGen for WASMCodeGen<'a> {
         fn gen(&mut self, ir: Vec<HIR>) -> TokenStream {
             let ir = to_wasmfmt(ir, self.s).expect("html");
-            HTMLBytesCodeGen::new(self.buf, self.parent).gen(ir)
+            HTMLMinBytesCodeGen::new(self.buf, self.parent).gen(ir)
         }
     }
 }

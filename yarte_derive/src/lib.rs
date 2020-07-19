@@ -353,6 +353,100 @@ pub fn ywrite(i: TokenStream) -> TokenStream {
     )
 }
 
+#[proc_macro]
+#[cfg(feature = "bytes-buf")]
+/// Write handlebars template to `buf-min::Buffer` in this scope with html escape functionality
+pub fn ywrite_html(i: TokenStream) -> TokenStream {
+    const PARENT: &str = "yarte";
+
+    let ParseWriteArg { buf, src, .. } = match syn::parse(i) {
+        Ok(arg) => arg,
+        Err(e) => return e.to_compile_error().into(),
+    };
+    // Check correct syn::Expr
+    {
+        use syn::Expr::*;
+        match &buf {
+            Field(_) | Path(_) => (),
+            _ => {
+                return syn::Error::new(buf.span(), "first argument should be a ident or field")
+                    .to_compile_error()
+                    .into()
+            }
+        }
+    }
+
+    let get_codegen = |_| {
+        Box::new(yarte_codegen::WriteBCodeGen::new(
+            yarte_codegen::HTMLBytesCodeGen::new(&buf, PARENT),
+            PARENT,
+        ))
+    };
+
+    let input = quote! {
+        #[template(src = #src)]
+        struct __YFormat__;
+    };
+
+    let i = &syn::parse2(input).unwrap();
+    build!(
+        i,
+        get_codegen,
+        HIROptions {
+            resolve_to_self: false,
+            parent: PARENT,
+            ..Default::default()
+        }
+    )
+}
+
+#[proc_macro]
+#[cfg(all(feature = "html-min", feature = "fixed"))]
+/// Write handlebars template to `buf-min::Buffer` in this scope without html escape functionality
+pub fn ywrite_min(i: TokenStream) -> TokenStream {
+    const PARENT: &str = "yarte";
+
+    let ParseWriteArg { buf, src, .. } = match syn::parse(i) {
+        Ok(arg) => arg,
+        Err(e) => return e.to_compile_error().into(),
+    };
+    // Check correct syn::Expr
+    {
+        use syn::Expr::*;
+        match &buf {
+            Field(_) | Path(_) => (),
+            _ => {
+                return syn::Error::new(buf.span(), "first argument should be a ident or field")
+                    .to_compile_error()
+                    .into()
+            }
+        }
+    }
+
+    let get_codegen = |_| {
+        Box::new(yarte_codegen::WriteBCodeGen::new(
+            yarte_codegen::HTMLMinBytesCodeGen::new(&buf, PARENT),
+            PARENT,
+        ))
+    };
+
+    let input = quote! {
+        #[template(src = #src)]
+        struct __YFormat__;
+    };
+
+    let i = &syn::parse2(input).unwrap();
+    build!(
+        i,
+        get_codegen,
+        HIROptions {
+            resolve_to_self: false,
+            parent: PARENT,
+            ..Default::default()
+        }
+    )
+}
+
 struct ParseWriteArg {
     buf: syn::Expr,
     _comma: syn::Token![,],
