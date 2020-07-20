@@ -1,6 +1,6 @@
 #[cfg(feature = "wasm-app")]
 pub mod client;
-#[cfg(all(feature = "wasm-server", feature = "bytes-buf"))]
+#[cfg(all(feature = "wasm-server", feature = "bytes-buf", feature = "html-min"))]
 pub mod server {
     use proc_macro2::TokenStream;
 

@@ -21,7 +21,7 @@ bytes-buf = []
 fixed = []
 html-min = ["yarte_dom", "yarte_html"]
 wasm-app = ["indexmap", "heck", "yarte_hir/wasm-app", "yarte_dom/wasm-app"]
-wasm-server = ["yarte_dom", "yarte_html"]
+wasm-server = ["html-min", "bytes-buf"]
 
 [dependencies]
 yarte_helpers = { version = "0.12.1", path = "../yarte_helpers" }
