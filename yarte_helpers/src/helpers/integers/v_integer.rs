@@ -18,7 +18,7 @@ use std::arch::x86_64::{
 
 use std::mem::transmute;
 
-use super::{dig, write_10k_100kk, write_less10k};
+use super::{dig, sum_0, write_10k_100kk, write_less10k};
 
 #[repr(align(16))]
 struct A16<T>(pub T);
@@ -105,10 +105,10 @@ pub unsafe fn write_u32(value: u32, buf: *mut u8) -> usize {
         let o = if a >= 10 {
             let i = (a << 1) as usize;
             *buf = dig(i);
-            *buf.add(1) = dig(i + 1);
+            *buf.add(1) = dig(i.wrapping_add(1));
             2
         } else {
-            *buf = a as u8 + b'0';
+            *buf = sum_0(a as u8);
             1
         };
 
@@ -123,7 +123,7 @@ pub unsafe fn write_u32(value: u32, buf: *mut u8) -> usize {
             ),
         );
 
-        8 + o
+        o.wrapping_add(8)
     }
 }
 
@@ -154,7 +154,7 @@ pub unsafe fn write_u64(value: u64, buf: *mut u8) -> usize {
         // unsafe make sure length of slice is greeter than 16 bytes
         _mm_storeu_si128(buf as *mut __m128i, shift_digits_sse2(va, digits as u8));
 
-        16 - digits as usize
+        16u32.wrapping_sub(digits) as usize
     } else {
         let o = write_less10k((value / 10_000_000_000_000_000) as u16, buf); // 1 to 1844
         let value = value % 10_000_000_000_000_000;
@@ -172,6 +172,6 @@ pub unsafe fn write_u64(value: u64, buf: *mut u8) -> usize {
                 transmute(K_ASCII_ZERO),
             ),
         );
-        16 + o
+        o.wrapping_add(16)
     }
 }
