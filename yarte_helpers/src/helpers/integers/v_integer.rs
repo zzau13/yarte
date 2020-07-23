@@ -18,7 +18,7 @@ use std::arch::x86_64::{
 
 use std::mem::transmute;
 
-use super::{write_10k_100kk, write_less10k, DIGITS_LUT};
+use super::{dig, write_10k_100kk, write_less10k};
 
 #[repr(align(16))]
 struct A16<T>(pub T);
@@ -104,8 +104,8 @@ pub unsafe fn write_u32(value: u32, buf: *mut u8) -> usize {
 
         let o = if a >= 10 {
             let i = (a << 1) as usize;
-            *buf = DIGITS_LUT[i];
-            *buf.add(1) = DIGITS_LUT[i + 1];
+            *buf = dig(i);
+            *buf.add(1) = dig(i + 1);
             2
         } else {
             *buf = a as u8 + b'0';

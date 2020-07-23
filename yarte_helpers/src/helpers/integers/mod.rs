@@ -10,6 +10,12 @@ static DIGITS_LUT: &[u8] = b"\
       6061626364656667686970717273747576777879\
       8081828384858687888990919293949596979899";
 
+#[inline(always)]
+fn dig(n: usize) -> u8 {
+    debug_assert!(n < DIGITS_LUT.len());
+    unsafe { *DIGITS_LUT.as_ptr().add(n) }
+}
+
 #[inline]
 unsafe fn write_less10k(value: u16, buf: *mut u8) -> usize {
     debug_assert!(value < 10_000);
@@ -17,16 +23,16 @@ unsafe fn write_less10k(value: u16, buf: *mut u8) -> usize {
     if value > 1_000 - 1 {
         let d1 = ((value / 100) << 1) as usize;
         let d2 = ((value % 100) << 1) as usize;
-        *buf = DIGITS_LUT[d1];
-        *buf.add(1) = DIGITS_LUT[d1 + 1];
-        *buf.add(2) = DIGITS_LUT[d2];
-        *buf.add(3) = DIGITS_LUT[d2 + 1];
+        *buf = dig(d1);
+        *buf.add(1) = dig(d1 + 1);
+        *buf.add(2) = dig(d2);
+        *buf.add(3) = dig(d2 + 1);
         4
     } else if value < 100 {
         if value > 10 - 1 {
             let d2 = (value << 1) as usize;
-            *buf = DIGITS_LUT[d2];
-            *buf.add(1) = DIGITS_LUT[d2 + 1];
+            *buf = dig(d2);
+            *buf.add(1) = dig(d2 + 1);
             2
         } else {
             *buf = value as u8 + b'0';
@@ -35,8 +41,8 @@ unsafe fn write_less10k(value: u16, buf: *mut u8) -> usize {
     } else {
         let d2 = ((value % 100) << 1) as usize;
         *buf = (value / 100) as u8 + b'0';
-        *buf.add(1) = DIGITS_LUT[d2];
-        *buf.add(2) = DIGITS_LUT[d2 + 1];
+        *buf.add(1) = dig(d2);
+        *buf.add(2) = dig(d2 + 1);
         3
     }
 }
@@ -54,14 +60,14 @@ unsafe fn write_10kk_100kk(value: u32, buf: *mut u8) {
     let d3 = ((c / 100) << 1) as usize;
     let d4 = ((c % 100) << 1) as usize;
 
-    *buf = DIGITS_LUT[d1];
-    *buf.add(1) = DIGITS_LUT[d1 + 1];
-    *buf.add(2) = DIGITS_LUT[d2];
-    *buf.add(3) = DIGITS_LUT[d2 + 1];
-    *buf.add(4) = DIGITS_LUT[d3];
-    *buf.add(5) = DIGITS_LUT[d3 + 1];
-    *buf.add(6) = DIGITS_LUT[d4];
-    *buf.add(7) = DIGITS_LUT[d4 + 1];
+    *buf = dig(d1);
+    *buf.add(1) = dig(d1 + 1);
+    *buf.add(2) = dig(d2);
+    *buf.add(3) = dig(d2 + 1);
+    *buf.add(4) = dig(d3);
+    *buf.add(5) = dig(d3 + 1);
+    *buf.add(6) = dig(d4);
+    *buf.add(7) = dig(d4 + 1);
 }
 
 #[inline]
@@ -80,43 +86,43 @@ unsafe fn write_10k_100kk(value: u32, buf: *mut u8) -> usize {
             let d2 = ((b % 100) << 1) as usize;
 
             *buf = (b / 100) as u8 + 0x30;
-            *buf.add(1) = DIGITS_LUT[d2];
-            *buf.add(2) = DIGITS_LUT[d2 + 1];
-            *buf.add(3) = DIGITS_LUT[d3];
-            *buf.add(4) = DIGITS_LUT[d3 + 1];
-            *buf.add(5) = DIGITS_LUT[d4];
-            *buf.add(6) = DIGITS_LUT[d4 + 1];
+            *buf.add(1) = dig(d2);
+            *buf.add(2) = dig(d2 + 1);
+            *buf.add(3) = dig(d3);
+            *buf.add(4) = dig(d3 + 1);
+            *buf.add(5) = dig(d4);
+            *buf.add(6) = dig(d4 + 1);
             7
         } else if value > 100000 - 1 {
             let d2 = ((b % 100) << 1) as usize;
 
-            *buf = DIGITS_LUT[d2];
-            *buf.add(1) = DIGITS_LUT[d2 + 1];
-            *buf.add(2) = DIGITS_LUT[d3];
-            *buf.add(3) = DIGITS_LUT[d3 + 1];
-            *buf.add(4) = DIGITS_LUT[d4];
-            *buf.add(5) = DIGITS_LUT[d4 + 1];
+            *buf = dig(d2);
+            *buf.add(1) = dig(d2 + 1);
+            *buf.add(2) = dig(d3);
+            *buf.add(3) = dig(d3 + 1);
+            *buf.add(4) = dig(d4);
+            *buf.add(5) = dig(d4 + 1);
             6
         } else {
             *buf = (b % 100) as u8 + 0x30;
-            *buf.add(1) = DIGITS_LUT[d3];
-            *buf.add(2) = DIGITS_LUT[d3 + 1];
-            *buf.add(3) = DIGITS_LUT[d4];
-            *buf.add(4) = DIGITS_LUT[d4 + 1];
+            *buf.add(1) = dig(d3);
+            *buf.add(2) = dig(d3 + 1);
+            *buf.add(3) = dig(d4);
+            *buf.add(4) = dig(d4 + 1);
             5
         }
     } else {
         let d1 = ((b / 100) << 1) as usize;
         let d2 = ((b % 100) << 1) as usize;
 
-        *buf = DIGITS_LUT[d1];
-        *buf.add(1) = DIGITS_LUT[d1 + 1];
-        *buf.add(2) = DIGITS_LUT[d2];
-        *buf.add(3) = DIGITS_LUT[d2 + 1];
-        *buf.add(4) = DIGITS_LUT[d3];
-        *buf.add(5) = DIGITS_LUT[d3 + 1];
-        *buf.add(6) = DIGITS_LUT[d4];
-        *buf.add(7) = DIGITS_LUT[d4 + 1];
+        *buf = dig(d1);
+        *buf.add(1) = dig(d1 + 1);
+        *buf.add(2) = dig(d2);
+        *buf.add(3) = dig(d2 + 1);
+        *buf.add(4) = dig(d3);
+        *buf.add(5) = dig(d3 + 1);
+        *buf.add(6) = dig(d4);
+        *buf.add(7) = dig(d4 + 1);
         8
     }
 }
@@ -127,14 +133,14 @@ unsafe fn write_u8(value: u8, buf: *mut u8) -> usize {
         1
     } else if value < 100 {
         let d2 = (value << 1) as usize;
-        *buf = DIGITS_LUT[d2];
-        *buf.add(1) = DIGITS_LUT[d2 + 1];
+        *buf = dig(d2);
+        *buf.add(1) = dig(d2 + 1);
         2
     } else {
         let d2 = ((value % 100) << 1) as usize;
         *buf = (value / 100) as u8 + b'0';
-        *buf.add(1) = DIGITS_LUT[d2];
-        *buf.add(2) = DIGITS_LUT[d2 + 1];
+        *buf.add(1) = dig(d2);
+        *buf.add(2) = dig(d2 + 1);
         3
     }
 }
@@ -146,23 +152,23 @@ unsafe fn write_u16(value: u16, buf: *mut u8) -> usize {
             1
         } else {
             let d = (value << 1) as usize;
-            *buf = DIGITS_LUT[d];
-            *buf.add(1) = DIGITS_LUT[d + 1];
+            *buf = dig(d);
+            *buf.add(1) = dig(d + 1);
             2
         }
     } else if value < 10_000 {
         let d2 = ((value % 100) << 1) as usize;
         if value < 1_000 {
             *buf = (value / 100) as u8 + b'0';
-            *buf.add(1) = DIGITS_LUT[d2];
-            *buf.add(2) = DIGITS_LUT[d2 + 1];
+            *buf.add(1) = dig(d2);
+            *buf.add(2) = dig(d2 + 1);
             3
         } else {
             let d1 = ((value / 100) << 1) as usize;
-            *buf = DIGITS_LUT[d1];
-            *buf.add(1) = DIGITS_LUT[d1 + 1];
-            *buf.add(2) = DIGITS_LUT[d2];
-            *buf.add(3) = DIGITS_LUT[d2 + 1];
+            *buf = dig(d1);
+            *buf.add(1) = dig(d1 + 1);
+            *buf.add(2) = dig(d2);
+            *buf.add(3) = dig(d2 + 1);
             4
         }
     } else {
@@ -171,10 +177,10 @@ unsafe fn write_u16(value: u16, buf: *mut u8) -> usize {
         let d2 = ((c % 100) << 1) as usize;
 
         *buf = (value / 10_000) as u8 + b'0';
-        *buf.add(1) = DIGITS_LUT[d1];
-        *buf.add(2) = DIGITS_LUT[d1 + 1];
-        *buf.add(3) = DIGITS_LUT[d2];
-        *buf.add(4) = DIGITS_LUT[d2 + 1];
+        *buf.add(1) = dig(d1);
+        *buf.add(2) = dig(d1 + 1);
+        *buf.add(3) = dig(d2);
+        *buf.add(4) = dig(d2 + 1);
         5
     }
 }
@@ -194,8 +200,8 @@ mod fallback {
 
             let o = if a >= 10 {
                 let i = (a << 1) as usize;
-                *buf = DIGITS_LUT[i];
-                *buf.add(1) = DIGITS_LUT[i + 1];
+                *buf = dig(i);
+                *buf.add(1) = dig(i + 1);
                 2
             } else {
                 *buf = a as u8 + b'0';
