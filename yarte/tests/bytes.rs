@@ -36,6 +36,14 @@ fn test_variables() {
          Iñtërnâtiônàlizætiøn"
             .byteb()
     );
+    let mut b = BytesMut::with_capacity(128);
+    unsafe { s.write_call(&mut b) };
+    assert_eq!(
+        b.freeze(),
+        "hello world, foo\nwith number: 42\nIñtërnâtiônàlizætiøn is important\nin vars too: \
+         Iñtërnâtiônàlizætiøn"
+            .byteb()
+    )
 }
 
 const LOOP: usize = 13;
@@ -49,7 +57,16 @@ fn bytes3() {
     assert_eq!(
         Loop.call::<BytesMut>(8),
         "12010123121111231221212312313123124141231251512312616123127171231281812312919123121011012312111111231212112123987"
-            .byteb())
+            .byteb()
+    );
+
+    let mut b = BytesMut::with_capacity(8);
+    unsafe { Loop.write_call(&mut b) };
+    assert_eq!(
+        b.freeze(),
+        "12010123121111231221212312313123124141231251512312616123127171231281812312919123121011012312111111231212112123987"
+            .byteb()
+    )
 }
 
 #[derive(TemplateBytes)]
@@ -65,6 +82,9 @@ fn test_escape() {
         s.call::<BytesMut>(64),
         "Hello, &lt;&gt;&amp;&quot;!".byteb()
     );
+    let mut b = BytesMut::with_capacity(64);
+    unsafe { s.write_call(&mut b) };
+    assert_eq!(b.freeze(), "Hello, &lt;&gt;&amp;&quot;!".byteb())
 }
 
 #[derive(TemplateBytes)]
@@ -79,6 +99,10 @@ fn test_for() {
         strings: vec!["foo", "bar", "baz"],
     };
     assert_eq!(s.call::<BytesMut>(64), "0. foo(first)1. bar2. baz".byteb());
+
+    let mut b = BytesMut::with_capacity(64);
+    unsafe { s.write_call(&mut b) };
+    assert_eq!(b.freeze(), "0. foo(first)1. bar2. baz".byteb())
 }
 
 #[derive(TemplateBytes)]
@@ -97,4 +121,8 @@ fn test_nested_for() {
         s.call::<BytesMut>(64),
         "1\n  0foo1bar2baz2\n  0bar1baz".byteb()
     );
+
+    let mut b = BytesMut::with_capacity(64);
+    unsafe { s.write_call(&mut b) };
+    assert_eq!(b.freeze(), "1\n  0foo1bar2baz2\n  0bar1baz".byteb())
 }

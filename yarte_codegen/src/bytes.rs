@@ -38,16 +38,38 @@ impl<'a, T: CodeGen> BytesCodeGen<'a, T> {
             &quote!(
                 fn call<B: #parent::Buffer>(&self, capacity: usize) -> B::Freeze {
                     use #parent::*;
-                    let mut #buf: B = B::with_capacity(capacity);
+                    let mut #buf = B::with_capacity(capacity);
+                    macro_rules! buf_ref {
+                        ($b:expr) => { &mut $b };
+                    }
                     #nodes
                     #buf.freeze()
                 }
 
                 fn ccall<B: #parent::Buffer>(self, capacity: usize) -> B::Freeze {
                     use #parent::*;
-                    let mut #buf: B = #parent::Buffer::with_capacity(capacity);
+                    let mut #buf = B::with_capacity(capacity);
+                    macro_rules! buf_ref {
+                        ($b:expr) => { &mut $b };
+                    }
                     #nodes
                     #buf.freeze()
+                }
+
+                unsafe fn write_call<B: #parent::Buffer>(&self, #buf: &mut B) {
+                    use #parent::*;
+                    macro_rules! buf_ref {
+                        ($b:expr) => { $b };
+                    }
+                    #nodes
+                }
+
+                unsafe fn write_ccall<B: #parent::Buffer>(self, #buf: &mut B) {
+                    use #parent::*;
+                    macro_rules! buf_ref {
+                        ($b:expr) => { $b };
+                    }
+                    #nodes
                 }
             ),
         ));
@@ -91,7 +113,7 @@ impl<'a> CodeGen for TextBytesCodeGen<'a> {
                 }
                 Safe(a) | Expr(a) => {
                     let buf = &self.buf;
-                    quote!(&(#a).__render_itb_safe(&mut #buf);)
+                    quote!(&(#a).__render_itb_safe(buf_ref!(#buf));)
                 }
                 Each(a) => self.gen_each(*a),
                 IfElse(a) => self.gen_if_else(*a),
@@ -111,8 +133,8 @@ where
         tokens.extend(match i {
             Local(a) => quote!(#a),
             Lit(a) => literal(a, &buf),
-            Safe(a) => quote!(&(#a).__render_itb_safe(&mut #buf);),
-            Expr(a) => quote!(&(#a).__render_itb(&mut #buf);),
+            Safe(a) => quote!(&(#a).__render_itb_safe(buf_ref!(#buf));),
+            Expr(a) => quote!(&(#a).__render_itb(buf_ref!(#buf));),
             Each(a) => codegen.gen_each(*a),
             IfElse(a) => codegen.gen_if_else(*a),
         })

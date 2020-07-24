@@ -31,6 +31,9 @@ impl<T: CodeGen> CodeGen for WriteBCodeGen<T> {
             {
                 #[allow(unused_imports)]
                 use #parent::*;
+                macro_rules! buf_ref {
+                    ($b:expr) => { &mut $b };
+                }
                 #body
             }
         }
