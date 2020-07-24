@@ -1,7 +1,7 @@
-#![cfg(feature = "bytes_buff")]
+#![cfg(feature = "bytes-buf")]
 #![allow(clippy::uninit_assumed_init)]
 
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 
 use yarte::TemplateBytes;
 
@@ -31,11 +31,25 @@ fn test_variables() {
         i18n: "Iñtërnâtiônàlizætiøn".to_string(),
     };
     assert_eq!(
-        s.call(128)
+        s.call::<BytesMut>(128),
         "hello world, foo\nwith number: 42\nIñtërnâtiônàlizætiøn is important\nin vars too: \
          Iñtërnâtiônàlizætiøn"
             .byteb()
     );
+}
+
+const LOOP: usize = 13;
+
+#[derive(TemplateBytes)]
+#[template(src = "{{# each 0..LOOP }}12{{ this }}1{{ this }}123{{/each }}987")]
+struct Loop;
+
+#[test]
+fn bytes3() {
+    assert_eq!(
+        Loop.call::<BytesMut>(8),
+        "12010123121111231221212312313123124141231251512312616123127171231281812312919123121011012312111111231212112123987"
+            .byteb())
 }
 
 #[derive(TemplateBytes)]
@@ -47,7 +61,10 @@ struct EscapeTemplate<'a> {
 #[test]
 fn test_escape() {
     let s = EscapeTemplate { name: "<>&\"" };
-    assert_eq!(s.call(64), "Hello, &lt;&gt;&amp;&quot;!".byteb());
+    assert_eq!(
+        s.call::<BytesMut>(64),
+        "Hello, &lt;&gt;&amp;&quot;!".byteb()
+    );
 }
 
 #[derive(TemplateBytes)]
@@ -61,7 +78,7 @@ fn test_for() {
     let s = ForTemplate {
         strings: vec!["foo", "bar", "baz"],
     };
-    assert_eq!(s.call(64), "0. foo(first)1. bar2. baz".byteb());
+    assert_eq!(s.call::<BytesMut>(64), "0. foo(first)1. bar2. baz".byteb());
 }
 
 #[derive(TemplateBytes)]
@@ -76,5 +93,8 @@ fn test_nested_for() {
     let numbers: &[&str] = &["bar", "baz"];
     let seqs: &[&[&str]] = &[alpha, numbers];
     let s = NestedForTemplate { seqs };
-    assert_eq!(s.call(64), "1\n  0foo1bar2baz2\n  0bar1baz".byteb());
+    assert_eq!(
+        s.call::<BytesMut>(64),
+        "1\n  0foo1bar2baz2\n  0bar1baz".byteb()
+    );
 }
