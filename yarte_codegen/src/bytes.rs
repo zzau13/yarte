@@ -38,7 +38,7 @@ impl<'a, T: CodeGen> BytesCodeGen<'a, T> {
             &quote!(
                 fn call<B: #parent::Buffer>(&self, capacity: usize) -> B::Freeze {
                     use #parent::*;
-                    let mut #buf: B = #parent::Buffer::with_capacity(capacity);
+                    let mut #buf: B = B::with_capacity(capacity);
                     #nodes
                     #buf.freeze()
                 }
@@ -66,15 +66,11 @@ impl<'a, T: CodeGen> CodeGen for BytesCodeGen<'a, T> {
 
 pub struct TextBytesCodeGen<'a> {
     buf: &'a syn::Expr,
-    parent: Ident,
 }
 
 impl<'a> TextBytesCodeGen<'a> {
-    pub fn new<'n>(buf: &'n syn::Expr, parent: &'static str) -> TextBytesCodeGen<'n> {
-        TextBytesCodeGen {
-            buf,
-            parent: format_ident!("{}", parent),
-        }
+    pub fn new(buf: &syn::Expr) -> TextBytesCodeGen {
+        TextBytesCodeGen { buf }
     }
 }
 
@@ -89,9 +85,9 @@ impl<'a> CodeGen for TextBytesCodeGen<'a> {
             tokens.extend(match i {
                 Local(a) => quote!(#a),
                 Lit(a) => {
-                    let parent = &self.parent;
                     let buf = &self.buf;
-                    quote!(#parent::Buffer::extend_from_slice(&mut #buf, #a.as_bytes());)
+                    let buf = &quote!(#buf);
+                    literal(a, buf)
                 }
                 Safe(a) | Expr(a) => {
                     let buf = &self.buf;
@@ -105,7 +101,7 @@ impl<'a> CodeGen for TextBytesCodeGen<'a> {
     }
 }
 
-fn gen<C>(codegen: &mut C, v: Vec<HIR>, parent: Ident, buf: TokenStream) -> TokenStream
+fn gen<C>(codegen: &mut C, v: Vec<HIR>, buf: TokenStream) -> TokenStream
 where
     C: CodeGen + EachCodeGen + IfElseCodeGen,
 {
@@ -114,7 +110,7 @@ where
         use HIR::*;
         tokens.extend(match i {
             Local(a) => quote!(#a),
-            Lit(a) => quote!(#parent::Buffer::extend_from_slice(&mut #buf, #a.as_bytes());),
+            Lit(a) => literal(a, &buf),
             Safe(a) => quote!(&(#a).__render_itb_safe(&mut #buf);),
             Expr(a) => quote!(&(#a).__render_itb(&mut #buf);),
             Each(a) => codegen.gen_each(*a),
@@ -124,17 +120,52 @@ where
     tokens
 }
 
+fn literal(a: String, buf: &TokenStream) -> TokenStream {
+    let len = a.len();
+    let b = a.as_bytes();
+    // https://github.com/torvalds/linux/blob/master/arch/x86/lib/memcpy_64.S
+    // https://software.intel.com/content/www/us/en/develop/download/intel-64-and-ia-32-architectures-optimization-reference-manual.html
+    match len {
+        0 => unreachable!(),
+        // For 1 to 3 bytes, is mostly faster write byte-by-byte
+        1..=3 => {
+            let range: TokenStream = write_bb(b, buf);
+            quote! {{
+                #[doc = #a]
+                #buf.reserve(#len);
+                unsafe {
+                    #range
+                    #buf.advance(#len);
+                }
+            }}
+        }
+        _ => {
+            quote! {
+                #buf.extend_from_slice(#a.as_bytes());
+            }
+        }
+    }
+}
+
+fn write_bb(b: &[u8], buf: &TokenStream) -> TokenStream {
+    b.iter()
+        .enumerate()
+        .map(|(i, b)| {
+            quote! {
+                *#buf.buf_ptr().add(#i) = #b;
+            }
+        })
+        .flatten()
+        .collect()
+}
+
 pub struct HTMLBytesCodeGen<'a> {
     buf: &'a syn::Expr,
-    parent: Ident,
 }
 
 impl<'a> HTMLBytesCodeGen<'a> {
-    pub fn new<'n>(buf: &'n syn::Expr, parent: &'static str) -> HTMLBytesCodeGen<'n> {
-        HTMLBytesCodeGen {
-            buf,
-            parent: format_ident!("{}", parent),
-        }
+    pub fn new(buf: &syn::Expr) -> HTMLBytesCodeGen {
+        HTMLBytesCodeGen { buf }
     }
 }
 
@@ -143,9 +174,8 @@ impl<'a> EachCodeGen for HTMLBytesCodeGen<'a> {}
 impl<'a> IfElseCodeGen for HTMLBytesCodeGen<'a> {}
 impl<'a> CodeGen for HTMLBytesCodeGen<'a> {
     fn gen(&mut self, v: Vec<HIR>) -> TokenStream {
-        let parent = self.parent.clone();
         let buf = self.buf;
-        gen(self, v, parent, quote!(#buf))
+        gen(self, v, quote!(#buf))
     }
 }
 
@@ -156,15 +186,11 @@ pub mod html_min {
 
     pub struct HTMLMinBytesCodeGen<'a> {
         buf: &'a syn::Expr,
-        parent: Ident,
     }
 
     impl<'a> HTMLMinBytesCodeGen<'a> {
-        pub fn new<'n>(buf: &'n syn::Expr, parent: &'static str) -> HTMLMinBytesCodeGen<'n> {
-            HTMLMinBytesCodeGen {
-                buf,
-                parent: format_ident!("{}", parent),
-            }
+        pub fn new(buf: &syn::Expr) -> HTMLMinBytesCodeGen {
+            HTMLMinBytesCodeGen { buf }
         }
     }
 
@@ -174,9 +200,8 @@ pub mod html_min {
     impl<'a> CodeGen for HTMLMinBytesCodeGen<'a> {
         fn gen(&mut self, v: Vec<HIR>) -> TokenStream {
             let dom: DOMFmt = v.into();
-            let parent = self.parent.clone();
             let buf = self.buf;
-            gen(self, dom.0, parent, quote!(#buf))
+            gen(self, dom.0, quote!(#buf))
         }
     }
 }

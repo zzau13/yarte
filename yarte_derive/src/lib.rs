@@ -115,7 +115,7 @@ pub fn template_bytes(input: TokenStream) -> TokenStream {
     let buf: syn::Expr = syn::parse2(quote!(#buf_i)).unwrap();
     let get_codegen = |s| {
         Box::new(yarte_codegen::BytesCodeGen::new(
-            yarte_codegen::TextBytesCodeGen::new(&buf, PARENT),
+            yarte_codegen::TextBytesCodeGen::new(&buf),
             s,
             buf_i,
             PARENT,
@@ -143,7 +143,7 @@ pub fn template_html_bytes(input: TokenStream) -> TokenStream {
     let buf: syn::Expr = syn::parse2(quote!(#buf_i)).unwrap();
     let get_codegen = |s| {
         Box::new(yarte_codegen::BytesCodeGen::new(
-            yarte_codegen::HTMLBytesCodeGen::new(&buf, PARENT),
+            yarte_codegen::HTMLBytesCodeGen::new(&buf),
             s,
             buf_i,
             PARENT,
@@ -181,7 +181,7 @@ pub fn template_html_min_bytes(input: TokenStream) -> TokenStream {
     let buf: syn::Expr = syn::parse2(quote!(#buf_i)).unwrap();
     let get_codegen = |s| {
         Box::new(yarte_codegen::BytesCodeGen::new(
-            yarte_codegen::HTMLMinBytesCodeGen::new(&buf, PARENT),
+            yarte_codegen::HTMLMinBytesCodeGen::new(&buf),
             s,
             buf_i,
             PARENT,
@@ -237,7 +237,7 @@ pub fn template_wasm_server(input: TokenStream) -> TokenStream {
 
     let get_codegen = |s| {
         Box::new(yarte_codegen::BytesCodeGen::new(
-            yarte_codegen::server::WASMCodeGen::new(s, &buf, PARENT),
+            yarte_codegen::server::WASMCodeGen::new(s, &buf),
             s,
             buf_i,
             PARENT,
@@ -332,7 +332,7 @@ pub fn ywrite(i: TokenStream) -> TokenStream {
 
     let get_codegen = |_| {
         Box::new(yarte_codegen::WriteBCodeGen::new(
-            yarte_codegen::TextBytesCodeGen::new(&buf, PARENT),
+            yarte_codegen::TextBytesCodeGen::new(&buf),
             PARENT,
         ))
     };
@@ -379,7 +379,7 @@ pub fn ywrite_html(i: TokenStream) -> TokenStream {
 
     let get_codegen = |_| {
         Box::new(yarte_codegen::WriteBCodeGen::new(
-            yarte_codegen::HTMLBytesCodeGen::new(&buf, PARENT),
+            yarte_codegen::HTMLBytesCodeGen::new(&buf),
             PARENT,
         ))
     };
@@ -426,7 +426,7 @@ pub fn ywrite_min(i: TokenStream) -> TokenStream {
 
     let get_codegen = |_| {
         Box::new(yarte_codegen::WriteBCodeGen::new(
-            yarte_codegen::HTMLMinBytesCodeGen::new(&buf, PARENT),
+            yarte_codegen::HTMLMinBytesCodeGen::new(&buf),
             PARENT,
         ))
     };
