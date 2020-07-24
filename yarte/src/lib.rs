@@ -104,18 +104,12 @@ pub trait TemplateBytesTrait {
     ///
     /// # Panics
     /// Render length overflows usize
-    ///
-    /// # Safety
-    /// Can overlapping if `Self` has a `B` reference
-    unsafe fn write_call<B: Buffer>(&self, buf: &mut B);
+    fn write_call<B: Buffer>(&self, buf: &mut B);
     /// Writes to buffer and drop
     ///
     /// # Panics
     /// Render length overflows usize
-    ///
-    /// # Safety
-    /// Can overlapping if `Self` has a `B` reference
-    unsafe fn write_ccall<B: Buffer>(self, buf: &mut B);
+    fn write_ccall<B: Buffer>(self, buf: &mut B);
 }
 
 #[cfg(all(feature = "bytes-buf", feature = "html-min"))]
