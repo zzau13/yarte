@@ -56,7 +56,7 @@ impl<'a, T: CodeGen> BytesCodeGen<'a, T> {
                     #buf.freeze()
                 }
 
-                unsafe fn write_call<B: #parent::Buffer>(&self, #buf: &mut B) {
+                fn write_call<B: #parent::Buffer>(&self, #buf: &mut B) {
                     use #parent::*;
                     macro_rules! buf_ref {
                         ($b:expr) => { $b };
@@ -64,7 +64,7 @@ impl<'a, T: CodeGen> BytesCodeGen<'a, T> {
                     #nodes
                 }
 
-                unsafe fn write_ccall<B: #parent::Buffer>(self, #buf: &mut B) {
+                fn write_ccall<B: #parent::Buffer>(self, #buf: &mut B) {
                     use #parent::*;
                     macro_rules! buf_ref {
                         ($b:expr) => { $b };

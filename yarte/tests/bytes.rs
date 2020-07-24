@@ -37,7 +37,7 @@ fn test_variables() {
             .byteb()
     );
     let mut b = BytesMut::with_capacity(128);
-    unsafe { s.write_call(&mut b) };
+    s.write_call(&mut b);
     assert_eq!(
         b.freeze(),
         "hello world, foo\nwith number: 42\nIñtërnâtiônàlizætiøn is important\nin vars too: \
@@ -61,7 +61,7 @@ fn bytes3() {
     );
 
     let mut b = BytesMut::with_capacity(8);
-    unsafe { Loop.write_call(&mut b) };
+    Loop.write_call(&mut b);
     assert_eq!(
         b.freeze(),
         "12010123121111231221212312313123124141231251512312616123127171231281812312919123121011012312111111231212112123987"
@@ -83,7 +83,7 @@ fn test_escape() {
         "Hello, &lt;&gt;&amp;&quot;!".byteb()
     );
     let mut b = BytesMut::with_capacity(64);
-    unsafe { s.write_call(&mut b) };
+    s.write_call(&mut b);
     assert_eq!(b.freeze(), "Hello, &lt;&gt;&amp;&quot;!".byteb())
 }
 
@@ -101,7 +101,7 @@ fn test_for() {
     assert_eq!(s.call::<BytesMut>(64), "0. foo(first)1. bar2. baz".byteb());
 
     let mut b = BytesMut::with_capacity(64);
-    unsafe { s.write_call(&mut b) };
+    s.write_call(&mut b);
     assert_eq!(b.freeze(), "0. foo(first)1. bar2. baz".byteb())
 }
 
@@ -123,6 +123,6 @@ fn test_nested_for() {
     );
 
     let mut b = BytesMut::with_capacity(64);
-    unsafe { s.write_call(&mut b) };
+    s.write_call(&mut b);
     assert_eq!(b.freeze(), "1\n  0foo1bar2baz2\n  0bar1baz".byteb())
 }
