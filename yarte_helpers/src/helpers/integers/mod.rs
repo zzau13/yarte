@@ -18,42 +18,77 @@ fn dig(n: usize) -> u8 {
 
 #[inline(always)]
 fn sum_0(n: u8) -> u8 {
-    sum(n, b'0')
+    n.sum(b'0')
 }
 
-#[inline(always)]
-fn sum(a: u8, b: u8) -> u8 {
-    debug_assert!(a.checked_add(b).is_some());
-    a.wrapping_add(b)
+trait UnsafeInteger: Copy {
+    fn sum(self, a: Self) -> Self;
+    fn dib(self, a: Self) -> Self;
+    fn ren(self, a: Self) -> Self;
+    fn m2(self) -> usize;
 }
+
+macro_rules! impl_unsafe_integers {
+    ($($t:tt)+) => {
+    $(
+    impl UnsafeInteger for $t {
+        #[inline(always)]
+        fn sum(self, b: Self) -> Self {
+            debug_assert!(self.checked_add(b).is_some());
+            self.wrapping_add(b)
+        }
+
+        #[inline(always)]
+        fn dib(self, b: Self) -> Self {
+            debug_assert!(self.checked_div(b).is_some());
+            self.wrapping_div(b)
+        }
+
+        #[inline(always)]
+        fn ren(self, b: Self) -> Self {
+            debug_assert!(self.checked_rem(b).is_some());
+            self.wrapping_rem(b)
+        }
+
+        #[inline(always)]
+        fn m2(self) -> usize {
+            debug_assert!(self.checked_shl(1).is_some());
+            (self as usize).wrapping_shl(1)
+        }
+    }
+    )+
+    };
+}
+
+impl_unsafe_integers!(u8 u16 u32 u64 usize);
 
 #[inline]
 unsafe fn write_less10k(value: u16, buf: *mut u8) -> usize {
     debug_assert!(value < 10_000);
 
     if value > 1_000 - 1 {
-        let d1 = ((value / 100) << 1) as usize;
-        let d2 = ((value % 100) << 1) as usize;
+        let d1 = value.dib(100).m2();
+        let d2 = value.ren(100).m2();
         *buf = dig(d1);
-        *buf.add(1) = dig(d1.wrapping_add(1));
+        *buf.add(1) = dig(d1.sum(1));
         *buf.add(2) = dig(d2);
-        *buf.add(3) = dig(d2.wrapping_add(1));
+        *buf.add(3) = dig(d2.sum(1));
         4
     } else if value < 100 {
         if value > 10 - 1 {
-            let d2 = (value << 1) as usize;
+            let d2 = value.m2();
             *buf = dig(d2);
-            *buf.add(1) = dig(d2.wrapping_add(1));
+            *buf.add(1) = dig(d2.sum(1));
             2
         } else {
             *buf = sum_0(value as u8);
             1
         }
     } else {
-        let d2 = ((value % 100) << 1) as usize;
-        *buf = sum_0((value / 100) as u8);
+        let d2 = value.ren(100).m2();
+        *buf = sum_0(value.dib(100) as u8);
         *buf.add(1) = dig(d2);
-        *buf.add(2) = dig(d2.wrapping_add(1));
+        *buf.add(2) = dig(d2.sum(1));
         3
     }
 }
@@ -63,22 +98,22 @@ unsafe fn write_less10k(value: u16, buf: *mut u8) -> usize {
 unsafe fn write_10kk_100kk(value: u32, buf: *mut u8) {
     debug_assert!(value < 100_000_000);
     // value = bbbbcccc
-    let b = value / 10_000;
-    let c = value % 10_000;
+    let b = value.dib(10_000);
+    let c = value.ren(10_000);
 
-    let d1 = ((b / 100) << 1) as usize;
-    let d2 = ((b % 100) << 1) as usize;
-    let d3 = ((c / 100) << 1) as usize;
-    let d4 = ((c % 100) << 1) as usize;
+    let d1 = b.dib(100).m2();
+    let d2 = b.ren(100).m2();
+    let d3 = c.dib(100).m2();
+    let d4 = c.ren(100).m2();
 
     *buf = dig(d1);
-    *buf.add(1) = dig(d1.wrapping_add(1));
+    *buf.add(1) = dig(d1.sum(1));
     *buf.add(2) = dig(d2);
-    *buf.add(3) = dig(d2.wrapping_add(1));
+    *buf.add(3) = dig(d2.sum(1));
     *buf.add(4) = dig(d3);
-    *buf.add(5) = dig(d3.wrapping_add(1));
+    *buf.add(5) = dig(d3.sum(1));
     *buf.add(6) = dig(d4);
-    *buf.add(7) = dig(d4.wrapping_add(1));
+    *buf.add(7) = dig(d4.sum(1));
 }
 
 #[inline]
@@ -86,70 +121,70 @@ unsafe fn write_10k_100kk(value: u32, buf: *mut u8) -> usize {
     debug_assert!(value < 100_000_000);
     debug_assert!(value >= 10_000);
     // value = bbbb_cccc
-    let b = value / 10000;
-    let c = value % 10000;
+    let b = value.dib(10_000);
+    let c = value.ren(10_000);
 
-    let d3 = ((c / 100) << 1) as usize;
-    let d4 = ((c % 100) << 1) as usize;
+    let d3 = c.dib(100).m2();
+    let d4 = c.ren(100).m2();
 
     if value < 10_000_000 {
         if value > 1_000_000 - 1 {
-            let d2 = ((b % 100) << 1) as usize;
+            let d2 = b.ren(100).m2();
 
-            *buf = (b / 100) as u8 + 0x30;
+            *buf = sum_0(b.dib(100) as u8);
             *buf.add(1) = dig(d2);
-            *buf.add(2) = dig(d2.wrapping_add(1));
+            *buf.add(2) = dig(d2.sum(1));
             *buf.add(3) = dig(d3);
-            *buf.add(4) = dig(d3.wrapping_add(1));
+            *buf.add(4) = dig(d3.sum(1));
             *buf.add(5) = dig(d4);
-            *buf.add(6) = dig(d4.wrapping_add(1));
+            *buf.add(6) = dig(d4.sum(1));
             7
         } else if value > 100000 - 1 {
-            let d2 = ((b % 100) << 1) as usize;
+            let d2 = b.ren(100).m2();
 
             *buf = dig(d2);
-            *buf.add(1) = dig(d2.wrapping_add(1));
+            *buf.add(1) = dig(d2.sum(1));
             *buf.add(2) = dig(d3);
-            *buf.add(3) = dig(d3.wrapping_add(1));
+            *buf.add(3) = dig(d3.sum(1));
             *buf.add(4) = dig(d4);
-            *buf.add(5) = dig(d4.wrapping_add(1));
+            *buf.add(5) = dig(d4.sum(1));
             6
         } else {
-            *buf = (b % 100) as u8 + 0x30;
+            *buf = sum_0(b.ren(100) as u8);
             *buf.add(1) = dig(d3);
-            *buf.add(2) = dig(d3.wrapping_add(1));
+            *buf.add(2) = dig(d3.sum(1));
             *buf.add(3) = dig(d4);
-            *buf.add(4) = dig(d4.wrapping_add(1));
+            *buf.add(4) = dig(d4.sum(1));
             5
         }
     } else {
-        let d1 = ((b / 100) << 1) as usize;
-        let d2 = ((b % 100) << 1) as usize;
+        let d1 = b.dib(100).m2();
+        let d2 = b.ren(100).m2();
 
         *buf = dig(d1);
-        *buf.add(1) = dig(d1.wrapping_add(1));
+        *buf.add(1) = dig(d1.sum(1));
         *buf.add(2) = dig(d2);
-        *buf.add(3) = dig(d2.wrapping_add(1));
+        *buf.add(3) = dig(d2.sum(1));
         *buf.add(4) = dig(d3);
-        *buf.add(5) = dig(d3.wrapping_add(1));
+        *buf.add(5) = dig(d3.sum(1));
         *buf.add(6) = dig(d4);
-        *buf.add(7) = dig(d4.wrapping_add(1));
+        *buf.add(7) = dig(d4.sum(1));
         8
     }
 }
 
 unsafe fn write_u8(value: u8, buf: *mut u8) -> usize {
     if value < 10 {
-        *buf = value as u8 + b'0';
+        *buf = sum_0(value);
         1
     } else if value < 100 {
-        let d2 = (value << 1) as usize;
+        let d2 = value.m2();
         *buf = dig(d2);
-        *buf.add(1) = dig(d2.wrapping_add(1));
+        *buf.add(1) = dig(d2.sum(1));
         2
     } else {
-        let d2 = ((value % 100) << 1) as usize;
-        *buf = sum_0((value / 100) as u8);
+        let d2 = value.ren(100).m2();
+        *buf = sum_0(value.dib(100) as u8);
         *buf.add(1) = dig(d2);
         *buf.add(2) = dig(d2.wrapping_add(1));
         3
@@ -162,36 +197,37 @@ unsafe fn write_u16(value: u16, buf: *mut u8) -> usize {
             *buf = sum_0(value as u8);
             1
         } else {
-            let d = (value << 1) as usize;
+            let d = value.m2();
             *buf = dig(d);
-            *buf.add(1) = dig(d.wrapping_add(1));
+            *buf.add(1) = dig(d.sum(1));
             2
         }
     } else if value < 10_000 {
-        let d2 = ((value % 100) << 1) as usize;
+        let d2 = value.ren(100).m2();
         if value < 1_000 {
-            *buf = sum_0((value / 100) as u8);
+            *buf = sum_0(value.dib(100) as u8);
             *buf.add(1) = dig(d2);
-            *buf.add(2) = dig(d2.wrapping_add(1));
+            *buf.add(2) = dig(d2.sum(1));
             3
         } else {
-            let d1 = ((value / 100) << 1) as usize;
+            let d1 = value.dib(100).m2();
             *buf = dig(d1);
-            *buf.add(1) = dig(d1.wrapping_add(1));
+            *buf.add(1) = dig(d1.sum(1));
             *buf.add(2) = dig(d2);
-            *buf.add(3) = dig(d2.wrapping_add(1));
+            *buf.add(3) = dig(d2.sum(1));
             4
         }
     } else {
-        let c = value % 10_000;
-        let d1 = ((c / 100) << 1) as usize;
-        let d2 = ((c % 100) << 1) as usize;
+        let c = value.ren(10_000);
 
-        *buf = sum_0((value / 10_000) as u8);
+        let d1 = c.dib(100).m2();
+        let d2 = c.ren(100).m2();
+
+        *buf = sum_0(value.dib(10_000) as u8);
         *buf.add(1) = dig(d1);
-        *buf.add(2) = dig(d1.wrapping_add(1));
+        *buf.add(2) = dig(d1.sum(1));
         *buf.add(3) = dig(d2);
-        *buf.add(4) = dig(d2.wrapping_add(1));
+        *buf.add(4) = dig(d2.sum(1));
         5
     }
 }
@@ -206,20 +242,20 @@ mod fallback {
             write_10k_100kk(value, buf)
         } else {
             // value = aabbbbbbbb in decimal
-            let a = value / 100_000_000; // 1 to 42
-            let value = value % 100_000_000;
+            let a = value.dib(100_000_000); // 1 to 42
+            let value = value.ren(100_000_000);
 
             let o = if a >= 10 {
-                let i = (a << 1) as usize;
+                let i = a.m2();
                 *buf = dig(i);
-                *buf.add(1) = dig(i.wrapping_add(1));
+                *buf.add(1) = dig(i.sum(1));
                 2
             } else {
                 *buf = sum_0(a as u8);
                 1
             };
             write_10kk_100kk(value, buf.add(o));
-            o.wrapping_add(8)
+            o.sum(8)
         }
     }
 
@@ -230,23 +266,23 @@ mod fallback {
             write_10k_100kk(value as u32, buf)
         } else if value < 10_000_000_000_000_000 {
             // value = aaaa_aaaa_bbbb_bbbb in decimal
-            let a = (value / 100_000_000) as u32;
+            let a = value.dib(100_000_000) as u32;
             let o = if a < 10_000 {
                 write_less10k(a as u16, buf)
             } else {
                 write_10k_100kk(a, buf)
             };
 
-            write_10kk_100kk((value % 100_000_000) as u32, buf.add(o));
-            o.wrapping_add(8)
+            write_10kk_100kk(value.ren(100_000_000) as u32, buf.add(o));
+            o.sum(8)
         } else {
-            let a = (value / 10_000_000_000_000_000) as u16; // 1 to 1844
-            let value = value % 10_000_000_000_000_000;
+            let a = value.dib(10_000_000_000_000_000) as u16; // 1 to 1844
+            let value = value.ren(10_000_000_000_000_000);
 
             let o = write_less10k(a, buf);
-            write_10kk_100kk((value / 100_000_000) as u32, buf.add(o));
-            write_10kk_100kk((value % 100_000_000) as u32, buf.add(o.wrapping_add(8)));
-            o.wrapping_add(16)
+            write_10kk_100kk(value.dib(100_000_000) as u32, buf.add(o));
+            write_10kk_100kk(value.ren(100_000_000) as u32, buf.add(o.sum(8)));
+            o.sum(16)
         }
     }
 }

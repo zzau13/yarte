@@ -18,7 +18,7 @@ use std::arch::x86_64::{
 
 use std::mem::transmute;
 
-use super::{dig, sum_0, write_10k_100kk, write_less10k};
+use super::{dig, sum_0, write_10k_100kk, write_less10k, UnsafeInteger};
 
 #[repr(align(16))]
 struct A16<T>(pub T);
@@ -99,16 +99,16 @@ pub unsafe fn write_u32(value: u32, buf: *mut u8) -> usize {
         write_10k_100kk(value, buf)
     } else {
         // value = aabbbbbbbb in decimal
-        let a = value / 100_000_000; // 1 to 42
-        let value = value % 100_000_000;
+        let a = value.dib(100_000_000) as u8; // 1 to 42
+        let value = value.ren(100_000_000);
 
         let o = if a >= 10 {
-            let i = (a << 1) as usize;
+            let i = a.m2();
             *buf = dig(i);
-            *buf.add(1) = dig(i.wrapping_add(1));
+            *buf.add(1) = dig(i.sum(1));
             2
         } else {
-            *buf = sum_0(a as u8);
+            *buf = sum_0(a);
             1
         };
 
@@ -123,7 +123,7 @@ pub unsafe fn write_u32(value: u32, buf: *mut u8) -> usize {
             ),
         );
 
-        o.wrapping_add(8)
+        o.sum(8)
     }
 }
 
@@ -139,8 +139,8 @@ pub unsafe fn write_u64(value: u64, buf: *mut u8) -> usize {
         // Convert to ascii
         let va = _mm_add_epi8(
             _mm_packus_epi16(
-                convert8digits_sse2((value / 100_000_000) as u32),
-                convert8digits_sse2((value % 100_000_000) as u32),
+                convert8digits_sse2(value.dib(100_000_000) as u32),
+                convert8digits_sse2(value.ren(100_000_000) as u32),
             ),
             transmute(K_ASCII_ZERO),
         );
@@ -156,8 +156,8 @@ pub unsafe fn write_u64(value: u64, buf: *mut u8) -> usize {
 
         16u32.wrapping_sub(digits) as usize
     } else {
-        let o = write_less10k((value / 10_000_000_000_000_000) as u16, buf); // 1 to 1844
-        let value = value % 10_000_000_000_000_000;
+        let o = write_less10k(value.dib(10_000_000_000_000_000) as u16, buf); // 1 to 1844
+        let value = value.ren(10_000_000_000_000_000);
 
         // value = aaaa_aaaa_bbbb_bbbb in decimal
         // Shift digits to the beginning
@@ -166,12 +166,12 @@ pub unsafe fn write_u64(value: u64, buf: *mut u8) -> usize {
             buf.add(o) as *mut __m128i,
             _mm_add_epi8(
                 _mm_packus_epi16(
-                    convert8digits_sse2((value / 100_000_000) as u32),
-                    convert8digits_sse2((value % 100_000_000) as u32),
+                    convert8digits_sse2(value.dib(100_000_000) as u32),
+                    convert8digits_sse2(value.ren(100_000_000) as u32),
                 ),
                 transmute(K_ASCII_ZERO),
             ),
         );
-        o.wrapping_add(16)
+        o.sum(16)
     }
 }
