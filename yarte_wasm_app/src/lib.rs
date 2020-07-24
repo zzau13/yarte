@@ -1,6 +1,3 @@
-#[cfg(not(target_arch = "wasm32"))]
-compile_error!("Only compile to 'wasm32'");
-
 // TODO: remove RC in favor of lazy static, when wasm32 application finish WASM machine clean it
 use core::cell::{Cell, UnsafeCell};
 use core::default::Default;
@@ -51,7 +48,7 @@ pub trait App: Default + Sized + 'static {
     where
         Self: App,
     {
-        Addr(Rc::new(Context::new(self)))
+        Addr::new(self)
     }
 
     /// Construct and start a new asynchronous app, returning its
@@ -59,6 +56,9 @@ pub trait App: Default + Sized + 'static {
     ///
     /// This is constructs a new app using the `Default` trait, and
     /// invokes its `__start` method.
+    ///
+    /// # Panics
+    /// target_arch not 'wasm32'
     fn run() -> Addr<Self>
     where
         Self: App,
@@ -69,6 +69,16 @@ pub trait App: Default + Sized + 'static {
 
 /// The address of App
 pub struct Addr<A: App>(Rc<Context<A>>);
+
+impl<A: App> Addr<A> {
+    #[inline]
+   fn new(a: A) -> Addr<A> {
+        if cfg!(not(target_arch = "wasm32")) {
+            panic!("Only compile to 'wasm32'");
+        }
+       Addr(Rc::new(Context::new(a)))
+   }
+}
 
 impl<A: App> Addr<A> {
     /// Enqueue message
@@ -145,7 +155,24 @@ impl<A: App> Context<A> {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod test_not_wasm {
+    use super::*;
+    #[derive(Default)]
+    struct T;
+    impl App for T {
+        type BlackBox = ();
+        type Message = ();
+    }
+
+    #[should_panic]
+    #[test]
+    fn test() {
+        let _ = T::run();
+    }
+}
+
+#[cfg(all(test, target_arch = "wasm32"))]
 mod test {
     use super::*;
     use std::default::Default;
