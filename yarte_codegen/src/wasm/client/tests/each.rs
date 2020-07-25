@@ -25,7 +25,7 @@ impl yarte_wasm_app::App for Test {
     type Message = Msg;
     #[doc(hidden)]
     #[inline]
-    fn __render(&mut self, __addr: &yarte_wasm_app::Addr<Self>) {
+    fn __render(&mut self, __addr: &'static yarte_wasm_app::Addr<Self>) {
         if self.black_box.t_root == <u8 as yarte_wasm_app::YNumber>::zero() {
             return;
         }
@@ -88,9 +88,9 @@ impl yarte_wasm_app::App for Test {
     }
     #[doc(hidden)]
     #[inline]
-    fn __hydrate(&mut self, __addr: &yarte_wasm_app::Addr<Self>) {}
+    fn __hydrate(&mut self, __addr: &'static yarte_wasm_app::Addr<Self>) {}
     #[doc(hidden)]
-    fn __dispatch(&mut self, __msg: Self::Message, __addr: &yarte_wasm_app::Addr<Self>) {
+    fn __dispatch(&mut self, __msg: Self::Message, __addr: &'static yarte_wasm_app::Addr<Self>) {
         use Msg::*;
         match __msg {}
     }

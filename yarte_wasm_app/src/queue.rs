@@ -7,6 +7,10 @@
 // Unsafe only use in single thread environment
 use core::{cell::UnsafeCell, ptr};
 
+use alloc::boxed::Box;
+
+// TODO: check array implementation
+
 #[derive(Debug)]
 struct Node<T> {
     next: UnsafeCell<*mut Node<T>>,
@@ -74,7 +78,6 @@ impl<T> Queue<T> {
     }
 }
 
-#[cfg(test)]
 impl<T> Drop for Queue<T> {
     fn drop(&mut self) {
         unsafe {
@@ -90,7 +93,7 @@ impl<T> Drop for Queue<T> {
 
 #[cfg(test)]
 mod test {
-    use std::rc::Rc;
+    use alloc::rc::Rc;
     use wasm_bindgen_futures::spawn_local;
     use wasm_bindgen_test::*;
 
@@ -102,18 +105,38 @@ mod test {
         let q1 = Rc::clone(&q);
 
         spawn_local(async move {
-            for _ in 0..100_000 {
+            for i in 0..100_000 {
                 loop {
                     match q1.pop() {
-                        Some(1) => break,
+                        Some(j) if i == j => break,
                         Some(_) => panic!(),
                         None => {}
                     }
                 }
             }
+            assert!(q1.pop().is_none());
         });
-        for _ in 0..100_000 {
-            q.push(1);
+        for i in 0..100_000 {
+            q.push(i);
         }
+    }
+
+    #[wasm_bindgen_test]
+    fn test_e() {
+        let q = &Queue::new();
+
+        for i in 0..100 {
+            q.push(i);
+        }
+        for i in 0..100 {
+            loop {
+                match q.pop() {
+                    Some(j) if i == j => break,
+                    Some(_) => panic!(),
+                    None => {}
+                }
+            }
+        }
+        assert!(q.pop().is_none());
     }
 }
