@@ -8,7 +8,7 @@ use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::HtmlInputElement;
 
 use model::Fortune;
-use yarte_wasm_app::{Addr, App};
+use yarte_wasm_app::{Addr, App, run};
 
 #[derive(App)]
 #[template(path = "fortune", print = "code")]
@@ -101,7 +101,7 @@ fn add20(app: &mut Test, _addr: &Addr<Test>) {
 
 #[wasm_bindgen(start)]
 pub fn start() {
-    let app = Test::run();
+    let app = run!(Test);
     // Safe when only is used one time
     unsafe {
         app.hydrate();

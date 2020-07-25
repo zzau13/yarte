@@ -38,7 +38,7 @@ fn get_closure(msg: &syn::Expr) -> (TokenStream, TokenStream) {
         quote! {
             Closure::wrap(Box::new(move |__event: yarte_wasm_app::web::Event| {
                     __event.prevent_default();
-                    __cloned__.send(#msg);
+                    __addr.send(#msg);
                 }) as Box<dyn Fn(yarte_wasm_app::web::Event)>)
         },
         cloned,
@@ -90,7 +90,6 @@ impl<'a> WASMCodeGen<'a> {
             });
             current.buff_new.push(quote! {
                     #clones
-                    let __cloned__ = __addr.clone();
                     let #closure = Some(#closure_expr);
                     #name
                         .add_event_listener_with_callback(#event, yarte_wasm_app::JsCast::unchecked_ref(#closure.as_ref().unwrap().as_ref()))
@@ -101,7 +100,6 @@ impl<'a> WASMCodeGen<'a> {
                 .push((name.clone(), current.steps.clone()));
             current.buff_hydrate.push(quote! {
                     #clones
-                    let __cloned__ = __addr.clone();
                     let __closure__ = #closure_expr;
                     #dom.#name
                         .add_event_listener_with_callback(#event, yarte_wasm_app::JsCast::unchecked_ref(__closure__.as_ref()))
@@ -122,7 +120,6 @@ impl<'a> WASMCodeGen<'a> {
                     )
                     .unwrap_throw();
                     #clones
-                    let __cloned__ = __addr.clone();
                     #dom.#closure.replace(#closure_expr);
                 },
             ));

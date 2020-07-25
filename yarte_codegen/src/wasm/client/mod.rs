@@ -698,14 +698,14 @@ impl<'a> CodeGen for WASMCodeGen<'a> {
 
             #[doc(hidden)]
             #[inline]
-            fn __render(&mut self, __addr: &yarte_wasm_app::Addr<Self>) { # render }
+            fn __render(&mut self, __addr: &'static yarte_wasm_app::Addr<Self>) { # render }
 
             #[doc(hidden)]
             #[inline]
-            fn __hydrate(&mut self, __addr: &yarte_wasm_app::Addr<Self>) { # hydrate }
+            fn __hydrate(&mut self, __addr: &'static yarte_wasm_app::Addr<Self>) { # hydrate }
 
             #[doc(hidden)]
-            fn __dispatch(&mut self, __msg: Self::Message, __addr: &yarte_wasm_app::Addr<Self>) { #dispatch }
+            fn __dispatch(&mut self, __msg: Self::Message, __addr: &'static yarte_wasm_app::Addr<Self>) { #dispatch }
         };
         // Implement App trait
         let app = self.s.implement_head(quote!(yarte_wasm_app::App), &app);

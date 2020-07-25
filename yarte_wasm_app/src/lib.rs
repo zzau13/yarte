@@ -1,7 +1,13 @@
-// TODO: remove RC in favor of lazy static, when wasm32 application finish WASM machine clean it
+extern crate alloc;
+
+use core::any::TypeId;
 use core::cell::{Cell, UnsafeCell};
 use core::default::Default;
-use std::rc::Rc;
+use core::ptr;
+
+use alloc::alloc::{dealloc, Layout};
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 
 pub use serde_json::from_str;
 pub use wasm_bindgen::JsCast;
@@ -16,105 +22,117 @@ use self::queue::Queue;
 
 /// App are object which encapsulate state and behavior
 ///
-/// Make sure it's always a Singleton. Can panic in future implementations.
-///
 /// App communicate exclusively by directional exchanging messages
-/// The sender can't wait the response since it never answer
+/// Not implement `Clone` trait
 ///
 /// It is recommended not to implement out of WASM Single Page Application context.
-///
-/// For a future implementation of wasm thread, it can't be used.
-/// When this feature is further specified, the necessary measures
-/// will be taken for its correct operation in a multi thread environment.
 // TODO: derive
-pub trait App: Default + Sized + 'static {
+pub trait App: Default + Sized {
     type BlackBox;
     type Message: 'static;
     /// Private: empty for overridden in derive
     #[doc(hidden)]
-    fn __render(&mut self, _addr: &Addr<Self>) {}
+    fn __render(&mut self, _addr: &'static Addr<Self>) {}
 
     /// Private: empty for overridden in derive
     #[doc(hidden)]
-    fn __hydrate(&mut self, _addr: &Addr<Self>) {}
+    fn __hydrate(&mut self, _addr: &'static Addr<Self>) {}
 
     /// Private: empty for overridden in derive
     #[doc(hidden)]
-    fn __dispatch(&mut self, _msg: Self::Message, _addr: &Addr<Self>) {}
-
-    /// Private: Start a new asynchronous app, returning its address.
-    #[doc(hidden)]
-    fn __start(self) -> Addr<Self>
-    where
-        Self: App,
-    {
-        Addr::new(self)
-    }
-
-    /// Construct and start a new asynchronous app, returning its
-    /// address.
-    ///
-    /// This is constructs a new app using the `Default` trait, and
-    /// invokes its `__start` method.
-    ///
-    /// # Panics
-    /// target_arch not 'wasm32'
-    fn run() -> Addr<Self>
-    where
-        Self: App,
-    {
-        Self::default().__start()
-    }
+    fn __dispatch(&mut self, _msg: Self::Message, _addr: &'static Addr<Self>) {}
 }
 
 /// The address of App
-pub struct Addr<A: App>(Rc<Context<A>>);
+pub struct Addr<A: App>(Context<A>);
 
-impl<A: App> Addr<A> {
-    #[inline]
-   fn new(a: A) -> Addr<A> {
-        if cfg!(not(target_arch = "wasm32")) {
-            panic!("Only compile to 'wasm32'");
+#[doc(hidden)]
+/// Register new Addr<`ty`> singleton
+///
+/// # Safety
+/// Not use, can broke singleton register
+pub unsafe fn __insert_singleton(ty: TypeId) -> bool {
+    static mut __IS_INIT: Vec<TypeId> = Vec::new();
+    let x = &mut __IS_INIT;
+    if x.iter().copied().any(|x| x == ty) {
+        false
+    } else {
+        x.push(ty);
+        true
+    }
+}
+
+/// Macro to create a `Addr<A>` reference to a statically allocated `App`.
+/// `$ty`: App
+///
+/// This macro returns a value with type `&'static Addr<$ty>`.
+/// # Panics
+/// Have one instance
+/// Only construct to target arch `wasm32`
+/// ```
+#[macro_export]
+macro_rules! run {
+    ($ty:ty) => {
+        unsafe {
+            if $crate::__insert_singleton(core::any::TypeId::of::<$ty>()) {
+                $crate::Addr::new(<$ty as core::default::Default>::default())
+            } else {
+                panic!(concat!(
+                    "Addr<",
+                    stringify!($ty),
+                    "> is a Singleton. Only have one instance"
+                ));
+            }
         }
-       Addr(Rc::new(Context::new(a)))
-   }
+    };
+}
+
+/// Constructor and destructor
+impl<A: App> Addr<A> {
+    /// Make new Address for App
+    ///
+    /// Use at `run!` macro and for testing
+    ///
+    /// # Safety
+    /// Produce memory leaks if return reference and its copies hasn't owner
+    ///
+    /// # Panics
+    /// Only construct in target arch `wasm32`
+    pub unsafe fn new(a: A) -> &'static Addr<A> {
+        if cfg!(not(target_arch = "wasm32")) {
+            panic!("Only construct in 'wasm32'");
+        }
+        Box::leak(Box::new(Addr(Context::new(a))))
+    }
+
+    /// Dealloc Address
+    ///
+    /// Use for testing
+    ///
+    /// # Safety
+    /// Broke `'static` lifetime
+    pub unsafe fn dealloc(&'static self) {
+        let p = stc_to_ptr(self);
+        ptr::drop_in_place(p);
+        dealloc(p as *mut u8, Layout::new::<Addr<A>>());
+    }
+}
+
+/// Static ref to mutable ptr
+///
+/// # Safety
+/// Broke `'static` lifetime and mutability
+const unsafe fn stc_to_ptr<T>(t: &'static T) -> *mut T {
+    t as *const T as *mut T
 }
 
 impl<A: App> Addr<A> {
-    /// Enqueue message
-    #[inline]
-    fn push(&self, msg: A::Message) {
-        self.0.q.push(msg);
-        self.update();
-    }
-
     /// Sends a message
     ///
     /// The message is always queued
-    pub fn send(&self, msg: A::Message) {
-        self.push(msg);
-    }
-
-    #[inline]
-    fn update(&self) {
-        if self.0.ready.get() {
-            self.0.ready.replace(false);
-            while let Some(msg) = self.0.q.pop() {
-                // UB is checked by ready Cell
-                unsafe {
-                    self.0.app.get().as_mut().unwrap().__dispatch(msg, &self);
-                }
-                while let Some(msg) = self.0.q.pop() {
-                    unsafe {
-                        self.0.app.get().as_mut().unwrap().__dispatch(msg, &self);
-                    }
-                }
-                unsafe {
-                    self.0.app.get().as_mut().unwrap().__render(&self);
-                }
-            }
-            self.0.ready.replace(true);
-        }
+    pub fn send(&'static self, msg: A::Message) {
+        self.0.q.push(msg);
+        self.update();
     }
 
     /// Hydrate app
@@ -123,18 +141,29 @@ impl<A: App> Addr<A> {
     /// # Safety
     /// Produce **unexpected behaviour** if launched more than one time
     #[inline]
-    pub unsafe fn hydrate(&self) {
+    pub unsafe fn hydrate(&'static self) {
         debug_assert!(!self.0.ready.get());
         // Only run one time
-        self.0.app.get().as_mut().unwrap().__hydrate(&self);
+        self.0.app.get().as_mut().unwrap().__hydrate(self);
         self.0.ready.replace(true);
         self.update();
     }
-}
 
-impl<A: App> Clone for Addr<A> {
-    fn clone(&self) -> Self {
-        Addr(Rc::clone(&self.0))
+    #[inline]
+    fn update(&'static self) {
+        if self.0.ready.get() {
+            self.0.ready.replace(false);
+            // UB is checked by ready Cell
+            let app = unsafe { self.0.app.get().as_mut().unwrap() };
+            while let Some(msg) = self.0.q.pop() {
+                app.__dispatch(msg, self);
+                while let Some(msg) = self.0.q.pop() {
+                    app.__dispatch(msg, self);
+                }
+                app.__render(self);
+            }
+            self.0.ready.replace(true);
+        }
     }
 }
 
@@ -152,295 +181,5 @@ impl<A: App> Context<A> {
             q: Queue::new(),
             ready: Cell::new(false),
         }
-    }
-}
-
-#[cfg(all(test, not(target_arch = "wasm32")))]
-mod test_not_wasm {
-    use super::*;
-    #[derive(Default)]
-    struct T;
-    impl App for T {
-        type BlackBox = ();
-        type Message = ();
-    }
-
-    #[should_panic]
-    #[test]
-    fn test() {
-        let _ = T::run();
-    }
-}
-
-#[cfg(all(test, target_arch = "wasm32"))]
-mod test {
-    use super::*;
-    use std::default::Default;
-
-    use wasm_bindgen_futures::spawn_local;
-    use wasm_bindgen_test::*;
-
-    #[derive(Default)]
-    struct Test {
-        c: Rc<Cell<usize>>,
-        any: usize,
-        it: Vec<usize>,
-        black_box: <Self as App>::BlackBox,
-    }
-
-    impl App for Test {
-        type BlackBox = BlackBox;
-        type Message = Msg;
-        fn __dispatch(&mut self, m: Self::Message, addr: &Addr<Self>) {
-            match m {
-                Msg::Msg(i) => msg(self, i, addr),
-                Msg::Reset => reset(self, addr),
-                Msg::Tree(i) => msg_tree(self, i, addr),
-                Msg::Fut(i) => msg_fut(self, i, addr),
-            }
-        }
-    }
-
-    /// PoC tree builder and diff
-    /// Tree is a tree of flow with static bool slices for expressions and IfElse flow
-    ///  `app.black_box.t_root & [bool; N] != 0`
-    /// For iterables vector of bool slices allocated in black box
-    ///  `app.black_box.t_children_I[J] & [bool; M] != 0`
-    /// management of children will control by `__render`
-    /// and macros push or pop or replace
-    /// or manual control of black box
-    ///
-    /// BlackBox trait Tree control
-    ///     - render_all:
-    ///     - ignore_next_render ?:
-    /// public fields in BlackBox for Dom references
-    ///
-    /// Construct in base of used variables in templates
-    ///
-    /// this macro is construct in derive
-    #[derive(Debug, PartialEq)]
-    struct BlackBox {
-        t_root: u8,
-        t_children_0: Vec<bool>,
-    }
-
-    impl Default for BlackBox {
-        fn default() -> BlackBox {
-            BlackBox {
-                t_root: 0xFF,
-                t_children_0: vec![],
-            }
-        }
-    }
-
-    impl BlackBox {
-        fn set_zero(&mut self) {
-            self.t_root = 0;
-            for child in self.t_children_0.iter_mut() {
-                *child = false;
-            }
-        }
-    }
-
-    #[macro_export]
-    macro_rules! set_any {
-        ($app:ident, $value:expr) => {
-            // fields, index will set in derive
-            $app.black_box.t_root |= 1 << 1;
-            $app.any = $value;
-        };
-    }
-
-    #[macro_export]
-    macro_rules! set_it {
-        ($app:ident, $value:expr) => {
-            // fields, index will set in derive
-            let value = $value;
-            $app.black_box.t_root |= 1 << 2;
-            $app.black_box.t_children_0 = vec![true; value.len()];
-            $app.it = value;
-        };
-    }
-
-    // For template
-    // ```
-    // <h1>{{ c }} {{ any }}</h1>
-    // <div>
-    //     {{# each it }}
-    //         {{ this + 2 }}
-    //         <br>
-    //     {{/ each }}
-    // </div>
-    // ```
-    //
-    // get a black box tree
-    // ```
-    // struct BlackBox {
-    //     t_root: bool,
-    //     t_children_0: Vec<bool>,
-    //     ...
-    // }
-    // ```
-    //
-    #[macro_export]
-    macro_rules! push_it {
-        ($app:ident, $value:expr) => {
-            // fields, index will set in derive
-            $app.black_box.t_root |= 1 << 2;
-            $app.black_box.t_children_0.push(true);
-            $app.it.push($value);
-        };
-    }
-
-    #[macro_export]
-    macro_rules! pop_it {
-        ($app:ident) => {{
-            // fields, index will set in derive
-            $app.black_box.t_root |= 1 << 2;
-            $app.black_box.t_children_0.pop();
-            $app.it.pop()
-        }};
-    }
-
-    #[macro_export]
-    macro_rules! set_it_index {
-        ($app:ident [$i:expr] $value:expr) => {
-            // fields, index will set in derive
-            $app.black_box.t_root |= 1 << 2;
-            $app.black_box
-                .t_children_0
-                .get_mut($i)
-                .map(|x| *x = true)
-                .and_then(|_| $app.it.get_mut($i).map(|x| *x = $value))
-        };
-    }
-
-    // #[templates(..)]
-    // #[msg enum Msg {
-    //      #[fn(msg)]
-    //      Msg,
-    //      #[fn(reset)]
-    //      Reset,
-    //      #[fn(msg_tree)]
-    //      MsgTree(usize),
-    //      #[fn(msg_fut)]
-    //      MsgFut(usize),
-    // }]
-    enum Msg {
-        Msg(usize),
-        Reset,
-        Tree(usize),
-        Fut(usize),
-    }
-
-    #[inline]
-    fn msg_tree(app: &mut Test, msg: usize, _addr: &Addr<Test>) {
-        app.black_box.set_zero();
-        // after first render
-        let expected = BlackBox {
-            t_root: 0,
-            t_children_0: vec![],
-        };
-        assert_eq!(app.black_box, expected);
-        set_any!(app, msg);
-        set_it!(app, vec![1, 2, 3, 4]);
-        let expected = BlackBox {
-            t_root: 6,
-            t_children_0: vec![true, true, true, true],
-        };
-        assert_eq!(app.black_box, expected);
-        app.black_box.set_zero();
-        push_it!(app, 5);
-        let expected = BlackBox {
-            t_root: 4,
-            t_children_0: vec![false, false, false, false, true],
-        };
-        assert_eq!(app.black_box, expected);
-        app.black_box.set_zero();
-        let _ = pop_it!(app);
-        let expected = BlackBox {
-            t_root: 4,
-            t_children_0: vec![false, false, false, false],
-        };
-        assert_eq!(app.black_box, expected);
-        app.black_box.set_zero();
-        let expected = BlackBox {
-            t_root: 0,
-            t_children_0: vec![false, false, false, false],
-        };
-        assert_eq!(app.black_box, expected);
-        set_it_index!(app [1] 6);
-        let expected = BlackBox {
-            t_root: 4,
-            t_children_0: vec![false, true, false, false],
-        };
-        assert_eq!(app.black_box, expected)
-    }
-
-    #[inline]
-    fn msg(app: &mut Test, msg: usize, _addr: &Addr<Test>) {
-        app.c.replace(msg);
-    }
-
-    #[inline]
-    fn reset(_app: &mut Test, addr: &Addr<Test>) {
-        addr.send(Msg::Msg(0));
-    }
-
-    #[inline]
-    fn msg_fut(_app: &mut Test, msg: usize, addr: &Addr<Test>) {
-        addr.send(Msg::Reset);
-        let mb = addr.clone();
-        let work = unsafe {
-            async_timer::Timed::platform_new_unchecked(
-                async move { mb.send(Msg::Msg(msg)) },
-                core::time::Duration::from_secs(1),
-            )
-        };
-        spawn_local(async move {
-            work.await.unwrap();
-        });
-    }
-
-    #[wasm_bindgen_test]
-    fn test() {
-        let c = Rc::new(Cell::new(0));
-        let c2 = Rc::clone(&c);
-        let app = Test {
-            c,
-            ..Default::default()
-        };
-        let addr = app.__start();
-        unsafe {
-            addr.hydrate();
-        }
-        let addr2 = addr.clone();
-        addr.send(Msg::Msg(2));
-        assert_eq!(c2.get(), 2);
-        addr2.send(Msg::Msg(3));
-        addr.send(Msg::Msg(1));
-        assert_eq!(c2.get(), 1);
-        addr.send(Msg::Msg(1));
-        addr2.send(Msg::Msg(3));
-        assert_eq!(c2.get(), 3);
-        addr2.send(Msg::Reset);
-        assert_eq!(c2.get(), 0);
-        addr2.send(Msg::Msg(3));
-        assert_eq!(c2.get(), 3);
-        addr2.send(Msg::Fut(7));
-        assert_eq!(c2.get(), 0);
-        let c3 = Rc::clone(&c2);
-        let work = unsafe {
-            async_timer::Timed::platform_new_unchecked(async {}, core::time::Duration::from_secs(1))
-        };
-        spawn_local(async move {
-            work.await.unwrap();
-            assert_eq!(c3.get(), 7);
-            addr2.send(Msg::Reset);
-            assert_eq!(c3.get(), 0);
-        });
-        addr.send(Msg::Reset);
-        assert_eq!(c2.get(), 0);
-        addr.send(Msg::Tree(0))
     }
 }

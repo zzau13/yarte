@@ -36,7 +36,7 @@ impl App for NonKeyed {
     type BlackBox = ();
     type Message = Msg;
 
-    fn __render(&mut self, mb: &Addr<Self>) {
+    fn __render(&mut self, mb: &'static Addr<Self>) {
         if self.t_root == 0 {
             return;
         }
@@ -164,7 +164,7 @@ impl App for NonKeyed {
         self.t_root = 0;
     }
 
-    fn __hydrate(&mut self, mb: &Addr<Self>) {
+    fn __hydrate(&mut self, mb: &'static Addr<Self>) {
         let document = web_sys::window().unwrap_throw().document().unwrap_throw();
         let f = document
             .body()
@@ -259,7 +259,7 @@ impl App for NonKeyed {
         }
     }
 
-    fn __dispatch(&mut self, msg: <Self as App>::Message, addr: &Addr<Self>) {
+    fn __dispatch(&mut self, msg: <Self as App>::Message, addr: &'static Addr<Self>) {
         match msg {
             Msg::Append => append(self, addr),
             Msg::Clear => clear(self, addr),
