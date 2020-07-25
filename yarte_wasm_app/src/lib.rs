@@ -75,9 +75,10 @@ pub unsafe fn __insert_singleton(ty: TypeId) -> bool {
 /// ```ignore
 /// #[derive(App)]
 /// #[template(path = "index")
-/// #[msg(pub Msg { Inc, Reset })]
+/// #[msg(enum Msg { Inc, Reset })]
 /// struct MyApp {
-///     count: usize
+///     count: usize,
+///     bb: <Self as App>::BlackBox,
 /// }
 ///
 /// fn inc(app: &mut MyApp, _addr: &Addr<MyApp>) {
