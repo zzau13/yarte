@@ -1,3 +1,4 @@
+#![no_std]
 extern crate alloc;
 
 use core::any::TypeId;
@@ -44,6 +45,7 @@ pub trait App: Default + Sized {
 }
 
 /// The address of App
+#[repr(transparent)]
 pub struct Addr<A: App>(Context<A>);
 
 #[doc(hidden)]
