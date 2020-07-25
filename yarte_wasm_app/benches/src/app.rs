@@ -3,7 +3,7 @@ use rand::{rngs::SmallRng, SeedableRng};
 use serde_json::from_str;
 use wasm_bindgen::{prelude::*, JsCast, UnwrapThrowExt};
 use web_sys::{Element, Event};
-
+use hashbrown::HashSet;
 use yarte_wasm_app::*;
 
 use crate::{
@@ -25,7 +25,7 @@ pub struct NonKeyed {
     pub rng: SmallRng,
     // Black box
     pub t_root: u8,
-    pub old_selected: Option<usize>,
+    pub old_selected: HashSet<usize>,
     pub tbody: Element,
     pub tbody_children: Vec<RowDOM>,
     //
@@ -78,6 +78,7 @@ impl App for NonKeyed {
             }
         }
 
+        /*
         // TODO: select insert point
         // TODO: #[id]
         //  {{#each}}
@@ -105,8 +106,8 @@ impl App for NonKeyed {
                 }
             }
         }
+     */
 
-        /*
         // multiple elements use hashset<usize>
         if self.t_root & 0b0000_0011 != 0 {
             let children = self.tbody.children();
@@ -159,7 +160,6 @@ impl App for NonKeyed {
             }
             // Find new
         }
-        */
 
         self.t_root = 0;
     }
@@ -342,7 +342,7 @@ impl Default for NonKeyed {
             rng: SmallRng::seed_from_u64(Date::now() as u64),
             // Black box
             t_root: 0,
-            old_selected: None,
+            old_selected: HashSet::new(),
             tbody,
             tbody_children,
             tr: row_element(),

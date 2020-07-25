@@ -4,9 +4,6 @@ version = "0.0.1"
 publish = false
 edition = "2018"
 
-[package.metadata.wasm-pack.profile.release]
-wasm-opt = false
-
 [workspace]
 members = [".", "codegen"]
 
@@ -34,7 +31,6 @@ features = [
   "Event",
   "HtmlCollection"
 ]
-
 
 [profile.release]
 lto = true
