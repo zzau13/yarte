@@ -14,8 +14,5 @@ mod row;
 
 #[wasm_bindgen(start)]
 pub fn start() {
-    let app = run!(NonKeyed);
-    unsafe {
-        app.hydrate();
-    }
+    let _app = run!(NonKeyed);
 }

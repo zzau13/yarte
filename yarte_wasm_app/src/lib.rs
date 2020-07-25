@@ -77,7 +77,7 @@ macro_rules! run {
     ($ty:ty) => {
         unsafe {
             if $crate::__insert_singleton(core::any::TypeId::of::<$ty>()) {
-                $crate::Addr::new(<$ty as core::default::Default>::default())
+                $crate::Addr::run(<$ty as core::default::Default>::default())
             } else {
                 panic!(concat!(
                     "Addr<",
@@ -100,11 +100,29 @@ impl<A: App> Addr<A> {
     ///
     /// # Panics
     /// Only construct in target arch `wasm32`
-    pub unsafe fn new(a: A) -> &'static Addr<A> {
+    unsafe fn new(a: A) -> &'static Addr<A> {
         if cfg!(not(target_arch = "wasm32")) {
             panic!("Only construct in 'wasm32'");
         }
         Box::leak(Box::new(Addr(Context::new(a))))
+    }
+
+    /// Make new Address for App and run it
+    ///
+    /// Use at `run!` macro and for testing
+    ///
+    /// # Safety
+    /// Produce memory leaks if return reference and its copies hasn't owner
+    /// Can break Singleton pattern
+    ///
+    /// Outside test context use `run!` macro or create only one instance
+    ///
+    /// # Panics
+    /// Only run it in target arch `wasm32`
+    pub unsafe fn run(a: A) -> &'static Self {
+        let addr = Self::new(a);
+        addr.hydrate();
+        addr
     }
 
     /// Dealloc Address
@@ -143,7 +161,7 @@ impl<A: App> Addr<A> {
     /// # Safety
     /// Produce **unexpected behaviour** if launched more than one time
     #[inline]
-    pub unsafe fn hydrate(&'static self) {
+    unsafe fn hydrate(&'static self) {
         debug_assert!(!self.0.ready.get());
         // Only run one time
         self.0.app.get().as_mut().unwrap().__hydrate(self);

@@ -275,10 +275,7 @@ mod test {
             c,
             ..Default::default()
         };
-        let addr = unsafe { Addr::new(app) };
-        unsafe {
-            addr.hydrate();
-        }
+        let addr = unsafe { Addr::run(app) };
         addr.send(Msg::Msg(2));
         assert_eq!(c2.get(), 2);
         addr.send(Msg::Msg(3));
