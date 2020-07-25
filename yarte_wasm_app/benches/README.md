@@ -8,6 +8,12 @@ wasm-pack build --target web --release
 python3 -m http.server
 ```
 
+### Bundle
+```bash
+180K example_bg.wasm
+ 60K example_bg.wasm.gz
+```
+
 # Partial result of proof of concept
 > On intel i7-7700HQ
 
