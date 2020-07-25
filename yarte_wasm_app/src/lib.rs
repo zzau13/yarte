@@ -65,12 +65,33 @@ pub unsafe fn __insert_singleton(ty: TypeId) -> bool {
 }
 
 /// Macro to create a `Addr<A>` reference to a statically allocated `App`.
-/// `$ty`: App
 ///
 /// This macro returns a value with type `&'static Addr<$ty>`.
+///
 /// # Panics
-/// Have one instance
+/// Have one type instance
 /// Only construct to target arch `wasm32`
+///
+/// ```ignore
+/// #[derive(App)]
+/// #[template(path = "index")
+/// #[msg(pub Msg { Inc, Reset })]
+/// struct MyApp {
+///     count: usize
+/// }
+///
+/// fn inc(app: &mut MyApp, _addr: &Addr<MyApp>) {
+///     set_count!(app, app.count + 1);
+/// }
+///
+/// fn reset(app: &mut MyApp, _addr: &Addr<MyApp>) {
+///     if app.count != 0 {
+///         set_count!(app, 0);
+///     }
+/// }
+///
+/// let addr = run!(MyApp);
+/// addr.send(Msg::Reset);
 /// ```
 #[macro_export]
 macro_rules! run {
