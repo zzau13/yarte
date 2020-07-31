@@ -1,3 +1,4 @@
+pub mod cow;
 pub mod integers;
 pub mod io_fmt;
 

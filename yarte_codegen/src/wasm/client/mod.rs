@@ -433,7 +433,11 @@ impl<'a> WASMCodeGen<'a> {
                 }
                 if let Some(body) = body {
                     self.cur_mut().id = Parent::Body;
-                    self.step(body);
+                    if all_children_text(body.iter()) {
+                        self.write_leaf_text(body);
+                    } else {
+                        self.step(body);
+                    }
                     if !self.cur().path_nodes.is_empty() {
                         let ident = get_body_ident();
                         let cur = self.cur_mut();
@@ -542,9 +546,7 @@ impl<'a> WASMCodeGen<'a> {
     }
 
     #[inline]
-    fn resolve_if_block(&mut self, IfBlock { block, .. }: IfBlock, id: ExprId) {
-        todo!("resolve if else block expresion");
-    }
+    fn resolve_if_block(&mut self, IfBlock { block, .. }: IfBlock, id: ExprId) {}
 
     // Clear buffer and return it
     // TODO: empty helpers
