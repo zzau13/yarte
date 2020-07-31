@@ -1,6 +1,6 @@
 # Disclaimer
-All struct and function in this crate -- crate those based on the real crates -- are entirely fictional. 
-All celebrity code are impersonated.
+All structures and functions in this crate -- even those based on the real crates -- are entirely fictional. 
+All celebrity codes are impersonated...poorly.
 The following program contains coarse language and due to its content it should not be used by anyone.
 
 # Yarte [![Latest version](https://img.shields.io/crates/v/yarte.svg)](https://crates.io/crates/yarte) [![Build Status](https://travis-ci.org/botika/yarte.svg?branch=master)](https://travis-ci.org/botika/yarte)
