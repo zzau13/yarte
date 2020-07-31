@@ -1,7 +1,5 @@
 use std::cmp::min;
 
-use wasm_bindgen::UnwrapThrowExt;
-
 use rand::seq::SliceRandom;
 use yarte_wasm_app::*;
 
@@ -162,23 +160,20 @@ pub fn select(app: &mut NonKeyed, msg: usize, _mb: &Addr<NonKeyed>) {
 
 #[inline]
 pub fn delete(app: &mut NonKeyed, msg: usize, _mb: &Addr<NonKeyed>) {
-    if let Some(selected) = app.selected {
-        if msg == selected {
-            // #macro set_selected
-            app.selected = None;
-            app.t_root |= 0b0000_0010;
-            // /macro
+    if let Some(position) = app.data.iter().position(|x| x.id == msg) {
+        // #macro remove_data(_app, i: usize)
+        app.data.remove(position);
+        app.tbody_children.remove(position).root.remove();
+        // TODO: if index
+        app.t_root |= 0b0000_0001;
+        // /macro
+
+        // deselect
+        if let Some(selected) = app.selected {
+            if msg == selected {
+                // No propagate change to render
+                app.selected = None;
+            }
         }
     }
-    app.data
-        .iter()
-        .position(|x| x.id == msg)
-        .map(|x| {
-            // #macro remove_data(_app, i: usize)
-            app.tbody_children.remove(x).root.remove();
-            app.data.remove(x);
-            app.t_root |= 0b0000_0001;
-            // /macro
-        })
-        .unwrap_throw();
 }
