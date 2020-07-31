@@ -138,18 +138,16 @@ impl<'a> Visit<'a> for ResolveIf<'a> {
         self.visit_pat(pat);
     }
 
+    // TODO:
     fn visit_ident(&mut self, ident: &'a Ident) {
         let ident = quote!(#ident).to_string();
         let var_id = calculate_hash(&ident);
         self.builder.var_map.insert(
             var_id,
-            Var::Local(
-                self.id,
-                VarInner {
-                    base: var_id,
-                    ident,
-                },
-            ),
+            Var::This(VarInner {
+                base: var_id,
+                ident,
+            }),
         );
         self.buff.push(var_id);
     }

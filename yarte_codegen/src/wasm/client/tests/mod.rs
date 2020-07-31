@@ -15,6 +15,7 @@ use crate::CodeGen;
 
 mod each;
 mod tree_diff;
+// mod ifs;
 
 use super::WASMCodeGen;
 
