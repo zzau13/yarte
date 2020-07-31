@@ -1,9 +1,9 @@
+use hashbrown::HashSet;
 use js_sys::Date;
 use rand::{rngs::SmallRng, SeedableRng};
 use serde_json::from_str;
 use wasm_bindgen::{prelude::*, JsCast, UnwrapThrowExt};
 use web_sys::{Element, Event};
-use hashbrown::HashSet;
 use yarte_wasm_app::*;
 
 use crate::{
@@ -79,34 +79,34 @@ impl App for NonKeyed {
         }
 
         /*
-        // TODO: select insert point
-        // TODO: #[id]
-        //  {{#each}}
-        //      {{# if #[id] super::selected == id }}{{else}}{{/if}
-        //  {{/each}}
-        if self.t_root & 0b0000_0011 != 0 {
-            if let Some(old) = self
-                .old_selected
-                .take()
-                .and_then(|x| self.tbody_children.get(x))
-            {
-                old.root.set_class_name("");
-            }
-            if let Some(new) = self.selected {
-                if let Some((dom, i)) = self
-                    .data
-                    .iter()
-                    .position(|x| x.id == new)
-                    .and_then(|x| self.tbody_children.get(x).map(|dom| (dom, x)))
-                {
-                    dom.root.set_class_name("danger");
-                    self.old_selected = Some(i);
-                } else {
-                    self.selected = None;
-                }
-            }
-        }
-     */
+           // TODO: select insert point
+           // TODO: #[id]
+           //  {{#each}}
+           //      {{# if #[id] super::selected == id }}{{else}}{{/if}
+           //  {{/each}}
+           if self.t_root & 0b0000_0011 != 0 {
+               if let Some(old) = self
+                   .old_selected
+                   .take()
+                   .and_then(|x| self.tbody_children.get(x))
+               {
+                   old.root.set_class_name("");
+               }
+               if let Some(new) = self.selected {
+                   if let Some((dom, i)) = self
+                       .data
+                       .iter()
+                       .position(|x| x.id == new)
+                       .and_then(|x| self.tbody_children.get(x).map(|dom| (dom, x)))
+                   {
+                       dom.root.set_class_name("danger");
+                       self.old_selected = Some(i);
+                   } else {
+                       self.selected = None;
+                   }
+               }
+           }
+        */
 
         // multiple elements use hashset<usize>
         if self.t_root & 0b0000_0011 != 0 {
@@ -134,25 +134,25 @@ impl App for NonKeyed {
                     .difference(&selecteds)
                     .copied()
                     .collect::<Vec<_>>()
-                    {
-                        if i < len {
-                            children.item(i as u32).unwrap_throw().set_class_name("");
-                        }
-                        self.old_selected.remove(&i);
+                {
+                    if i < len {
+                        children.item(i as u32).unwrap_throw().set_class_name("");
                     }
+                    self.old_selected.remove(&i);
+                }
 
                 for i in selecteds
                     .difference(&self.old_selected)
                     .copied()
                     .collect::<Vec<_>>()
-                    {
-                        children
-                            .item(i as u32)
-                            .unwrap_throw()
-                            .set_class_name("danger");
+                {
+                    children
+                        .item(i as u32)
+                        .unwrap_throw()
+                        .set_class_name("danger");
 
-                        self.old_selected.insert(i);
-                    }
+                    self.old_selected.insert(i);
+                }
             } else {
                 for i in self.old_selected.drain().filter(|i| *i < len) {
                     children.item(i as u32).unwrap_throw().set_class_name("");
