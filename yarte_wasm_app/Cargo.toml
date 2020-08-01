@@ -1,43 +1,19 @@
 [package]
 name = "yarte_wasm_app"
-version = "0.0.9"
+version = "0.1.0"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
-description = "Yarte WASM application"
-categories = ["template-engine", "web-programming", "gui"]
+description = "A simple single thread reactor pattern for wasm"
 documentation = "https://docs.rs/yarte_wasm_app"
 edition = "2018"
 include = ["src/**/*", "Cargo.toml"]
-keywords = ["markup", "template", "handlebars", "html", "wasm"]
+keywords = ["wasm", "reactor"]
 license = "MIT/Apache-2.0"
-readme = "../README.md"
 repository = "https://github.com/botika/yarte"
 workspace = ".."
 
 [badges]
 travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
-
-[dependencies]
-yarte_helpers = { version = "0.12.2", path = "../yarte_helpers", features = ["big-num-32"] }
-yarte_derive = { version = "0.12.2", path = "../yarte_derive", features = ["wasm-app"] }
-
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-
-wasm-bindgen = "0.2"
-[dependencies.web-sys]
-version = "0.3"
-features = [
-  "Document",
-  "Element",
-  "Event",
-  "EventTarget",
-  "HtmlCollection",
-  "HtmlElement",
-  "Node",
-  "Text",
-  "Window",
-]
 
 [dev-dependencies]
 wasm-bindgen-futures = "0.4"
