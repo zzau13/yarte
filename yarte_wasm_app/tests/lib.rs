@@ -249,24 +249,6 @@ mod test {
     }
 
     #[wasm_bindgen_test]
-    fn one_instance() {
-        #[derive(Default)]
-        struct Singleton;
-        impl App for Singleton {
-            type BlackBox = ();
-            type Message = ();
-        }
-
-        let _ = run!(Singleton);
-        // TODO:
-        //  #[should_panic]
-        let _ = std::panic::catch_unwind(|| {
-            // let _ = run!(Singleton);
-        });
-        // assert!(r.is_err());
-    }
-
-    #[wasm_bindgen_test]
     fn test() {
         use std::rc::Rc;
         let c = Rc::new(Cell::new(0));
@@ -275,7 +257,7 @@ mod test {
             c,
             ..Default::default()
         };
-        let addr = unsafe { Addr::run(app) };
+        let addr = Addr::run(app);
         addr.send(Msg::Msg(2));
         assert_eq!(c2.get(), 2);
         addr.send(Msg::Msg(3));

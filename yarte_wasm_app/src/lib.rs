@@ -1,21 +1,43 @@
+//! # Yarte wasm application
+//! A simple single thread reactor pattern with a doubly-linked list as dequeue.
+//!
+//! Intended to be used as a singleton and static.
+//!
+//! ## Implement without yarte derive
+//! The cycle of App methods is:
+//! - `init`:
+//!     - `App.__hydrate(&mut self, _addr: &'static Addr<Self>)`
+//!     - `update`
+//! - `on message`:
+//!     - enqueue message
+//!     - is ready? -> `update`
+//! - `update`
+//!     - pop message? -> `App.__dispatch(&mut self, _msg: Self::Message, _addr: &'static Addr<Self>)`
+//!     - is queue empty?  -> `App.__render(&mut self, _addr: &'static Addr<Self>)`
+//!     - is queue not empty? -> `update`. It is **not** recursive
+//!
+//!
+//! ### Why no backpressure?
+//! Because you don't need it because you don't need a runtime to poll wasm futures.
+//! Backpressure can be implemented for future it is needed and carry static reference to the
+//! Address of the App.
+//!
+//! ### Why no RC?
+//! Because you don't need it because it is thinking to be implemented as singleton and static.
+//!
+//! ### Why doubly-linked list?
+//! Is simpler than grow array implementation and it will never be a bottleneck in a browser.
+//! But in the future it can be implemented.
+//!
 #![no_std]
 extern crate alloc;
 
-use core::any::TypeId;
 use core::cell::{Cell, UnsafeCell};
 use core::default::Default;
 use core::ptr;
 
 use alloc::alloc::{dealloc, Layout};
 use alloc::boxed::Box;
-use alloc::vec::Vec;
-
-pub use serde_json::from_str;
-pub use wasm_bindgen::JsCast;
-pub use web_sys as web;
-
-pub use yarte_derive::App;
-pub use yarte_helpers::helpers::{big_num_32::*, IntoCopyIterator};
 
 mod queue;
 
@@ -23,8 +45,7 @@ use self::queue::Queue;
 
 /// App are object which encapsulate state and behavior
 ///
-/// App communicate exclusively by directional exchanging messages
-/// Not implement `Clone` trait
+/// App communicate exclusively by directional exchanging messages.
 ///
 /// It is recommended not to implement out of WASM Single Page Application context.
 // TODO: derive
@@ -33,14 +54,17 @@ pub trait App: Default + Sized {
     type Message: 'static;
     /// Private: empty for overridden in derive
     #[doc(hidden)]
+    #[inline]
     fn __render(&mut self, _addr: &'static Addr<Self>) {}
 
     /// Private: empty for overridden in derive
     #[doc(hidden)]
+    #[inline]
     fn __hydrate(&mut self, _addr: &'static Addr<Self>) {}
 
     /// Private: empty for overridden in derive
     #[doc(hidden)]
+    #[inline]
     fn __dispatch(&mut self, _msg: Self::Message, _addr: &'static Addr<Self>) {}
 }
 
@@ -48,23 +72,7 @@ pub trait App: Default + Sized {
 #[repr(transparent)]
 pub struct Addr<A: App>(Context<A>);
 
-#[doc(hidden)]
-/// Register new Addr<`ty`> singleton
-///
-/// # Safety
-/// Not use, can broke singleton register
-pub unsafe fn __insert_singleton(ty: TypeId) -> bool {
-    static mut __IS_INIT: Vec<TypeId> = Vec::new();
-    let x = &mut __IS_INIT;
-    if x.iter().copied().any(|x| x == ty) {
-        false
-    } else {
-        x.push(ty);
-        true
-    }
-}
-
-/// Macro to create a `Addr<A>` reference to a statically allocated `App`.
+/// Macro to create a `Addr<A: App>` reference to a statically allocated `App`.
 ///
 /// This macro returns a value with type `&'static Addr<$ty>`.
 ///
@@ -97,18 +105,16 @@ pub unsafe fn __insert_singleton(ty: TypeId) -> bool {
 #[macro_export]
 macro_rules! run {
     ($ty:ty) => {
-        unsafe {
-            if $crate::__insert_singleton(core::any::TypeId::of::<$ty>()) {
-                $crate::Addr::run(<$ty as core::default::Default>::default())
-            } else {
-                panic!(concat!(
-                    "Addr<",
-                    stringify!($ty),
-                    "> is a Singleton. Only have one instance"
-                ));
-            }
-        }
+        $crate::Addr::run(<$ty as core::default::Default>::default())
     };
+}
+
+/// Static ref to mutable ptr
+///
+/// # Safety
+/// Broke `'static` lifetime and mutability
+const unsafe fn stc_to_ptr<T>(t: &'static T) -> *mut T {
+    t as *const T as *mut T
 }
 
 /// Constructor and destructor
@@ -122,6 +128,7 @@ impl<A: App> Addr<A> {
     ///
     /// # Panics
     /// Only construct in target arch `wasm32`
+    #[inline]
     unsafe fn new(a: A) -> &'static Addr<A> {
         if cfg!(not(target_arch = "wasm32")) {
             panic!("Only construct in 'wasm32'");
@@ -131,20 +138,14 @@ impl<A: App> Addr<A> {
 
     /// Make new Address for App and run it
     ///
-    /// Use at `run!` macro and for testing
-    ///
-    /// # Safety
-    /// Produce memory leaks if return reference and its copies hasn't owner
-    /// Can break Singleton pattern
-    ///
-    /// Outside test context use `run!` macro or create only one instance
-    ///
     /// # Panics
     /// Only run it in target arch `wasm32`
-    pub unsafe fn run(a: A) -> &'static Self {
-        let addr = Self::new(a);
-        addr.hydrate();
-        addr
+    pub fn run(a: A) -> &'static Addr<A> {
+        unsafe {
+            let addr = Self::new(a);
+            addr.hydrate();
+            addr
+        }
     }
 
     /// Dealloc Address
@@ -158,17 +159,7 @@ impl<A: App> Addr<A> {
         ptr::drop_in_place(p);
         dealloc(p as *mut u8, Layout::new::<Addr<A>>());
     }
-}
 
-/// Static ref to mutable ptr
-///
-/// # Safety
-/// Broke `'static` lifetime and mutability
-const unsafe fn stc_to_ptr<T>(t: &'static T) -> *mut T {
-    t as *const T as *mut T
-}
-
-impl<A: App> Addr<A> {
     /// Sends a message
     ///
     /// The message is always queued
