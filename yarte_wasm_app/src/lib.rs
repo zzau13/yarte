@@ -35,7 +35,9 @@
 //! Because you don't need it because it is thinking to be implemented as singleton and static.
 //!
 //! ### Whe no RefCell?
-//! Because you don't need it because all uniques (mutable) references are made in atomic functions.
+//! Because you don't need it because all uniques (mutable) references are made in atomic functions,
+//! `run!` is designed for assure **unique** owner of **all** `App` is `Addr` and the unique safe method
+//! is `send`
 //!
 //! #### Why no backpressure?
 //! Because you don't need it because you don't need a runtime to poll wasm futures.
@@ -126,7 +128,7 @@ pub struct Addr<A: App>(Context<A>);
 #[macro_export]
 macro_rules! run {
     ($ty:ty) => {
-        $crate::Addr::run(<$ty as core::default::Default>::default())
+        unsafe { $crate::Addr::run(<$ty as core::default::Default>::default()) }
     };
 }
 
@@ -150,12 +152,13 @@ impl<A: App> Addr<A> {
     ///
     /// # Panics
     /// Only run it in target arch `wasm32`
-    pub fn run(a: A) -> &'static Addr<A> {
+    ///
+    /// # Safety
+    /// Can broke needed atomicity of unique references and queue pop
+    pub unsafe fn run(a: A) -> &'static Addr<A> {
         let addr = Self::new(a);
         // SAFETY: only run one time at the unique constructor
-        unsafe {
-            addr.hydrate();
-        }
+        addr.hydrate();
         addr
     }
 
