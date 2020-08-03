@@ -28,8 +28,10 @@
 //! Is simpler than grow array implementation and it will never be a bottleneck in a browser.
 //! But in the future it can be implemented.
 //!
-#![no_std]
 extern crate alloc;
+
+// TODO: core_intrinsics
+use std::hint::unreachable_unchecked;
 
 use core::cell::{Cell, UnsafeCell};
 use core::default::Default;
@@ -110,28 +112,16 @@ macro_rules! run {
     };
 }
 
-/// Static ref to mutable ptr
-///
-/// # Safety
-/// Broke `'static` lifetime and mutability
-#[cfg(debug_assertions)]
-const unsafe fn stc_to_ptr<T>(t: &'static T) -> *mut T {
-    t as *const T as *mut T
-}
-
 /// Constructor and destructor
 impl<A: App> Addr<A> {
     /// Make new Address for App
     ///
     /// Use at `run!` macro and for testing
     ///
-    /// # Safety
-    /// Produce memory leaks if return reference and its copies hasn't owner
-    ///
     /// # Panics
     /// Only construct in target arch `wasm32`
     #[inline]
-    unsafe fn new(a: A) -> &'static Addr<A> {
+    fn new(a: A) -> &'static Addr<A> {
         if cfg!(not(target_arch = "wasm32")) {
             panic!("Only construct in 'wasm32'");
         }
@@ -143,11 +133,12 @@ impl<A: App> Addr<A> {
     /// # Panics
     /// Only run it in target arch `wasm32`
     pub fn run(a: A) -> &'static Addr<A> {
+        let addr = Self::new(a);
+        // SAFETY: only run one time at the unique constructor
         unsafe {
-            let addr = Self::new(a);
             addr.hydrate();
-            addr
         }
+        addr
     }
 
     /// Dealloc Address
@@ -179,8 +170,9 @@ impl<A: App> Addr<A> {
     #[inline]
     unsafe fn hydrate(&'static self) {
         debug_assert!(!self.0.ready.get());
+        // SAFETY: UB is checked by ready Cell
         // Only run one time
-        self.0.app.get().as_mut().unwrap().__hydrate(self);
+        self.0.app().__hydrate(self);
         self.0.ready.replace(true);
     }
 
@@ -188,14 +180,15 @@ impl<A: App> Addr<A> {
     fn update(&'static self) {
         if self.0.ready.get() {
             self.0.ready.replace(false);
-            // UB is checked by ready Cell
-            let app = unsafe { self.0.app.get().as_mut().unwrap() };
             while let Some(msg) = self.0.q.pop() {
-                app.__dispatch(msg, self);
+                // SAFETY: UB is checked by ready Cell
+                unsafe { self.0.app() }.__dispatch(msg, self);
                 while let Some(msg) = self.0.q.pop() {
-                    app.__dispatch(msg, self);
+                    // SAFETY: UB is checked by ready Cell
+                    unsafe { self.0.app() }.__dispatch(msg, self);
                 }
-                app.__render(self);
+                // SAFETY: UB is checked by ready Cell
+                unsafe { self.0.app() }.__render(self);
             }
             self.0.ready.replace(true);
         }
@@ -217,4 +210,30 @@ impl<A: App> Context<A> {
             ready: Cell::new(false),
         }
     }
+
+    /// Get unsafe mutable reference of A
+    ///
+    /// # Safety
+    /// Unchecked null pointer and broke mutability
+    unsafe fn app(&self) -> &mut A {
+        &mut *self.app.get()
+    }
+}
+
+/// Static ref to mutable ptr
+///
+/// # Safety
+/// Broke `'static` lifetime and mutability
+#[cfg(debug_assertions)]
+const unsafe fn stc_to_ptr<T>(t: &'static T) -> *mut T {
+    t as *const T as *mut T
+}
+
+/// unchecked unwrap
+///
+/// # Safety
+/// `None` produce UB
+#[inline]
+unsafe fn unwrap<T>(o: Option<T>) -> T {
+    o.unwrap_or_else(|| unreachable_unchecked())
 }

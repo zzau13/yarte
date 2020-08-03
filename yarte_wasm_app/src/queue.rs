@@ -1,11 +1,13 @@
 //! A mostly lock-free single-producer, single consumer queue.
 //!
 // http://www.1024cores.net/home/lock-free-algorithms/queues/non-intrusive-mpsc-node-based-queue
+
+// TODO: test grow array implementation
 use core::{cell::UnsafeCell, ptr};
 
 use alloc::boxed::Box;
 
-// TODO: check array implementation
+use super::unwrap;
 
 #[derive(Debug)]
 struct Node<T> {
@@ -60,7 +62,7 @@ impl<T> Queue<T> {
                 *self.tail.get() = next;
                 debug_assert!((*tail).value.is_none());
                 debug_assert!((*next).value.is_some());
-                let ret = (*next).value.take().unwrap();
+                let ret = unwrap((*next).value.take());
                 let _ = Box::from_raw(tail);
                 Some(ret)
             }
