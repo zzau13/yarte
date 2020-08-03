@@ -214,6 +214,7 @@ impl<A: App> Context<A> {
     /// # Safety
     /// Unchecked null pointer and broke mutability
     #[inline]
+    #[allow(clippy::mut_from_ref)]
     unsafe fn app(&self) -> &mut A {
         &mut *self.app.get()
     }
