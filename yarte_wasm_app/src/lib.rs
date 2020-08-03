@@ -158,7 +158,7 @@ impl<A: App> Addr<A> {
     ///
     /// The message is always queued
     pub fn send(&'static self, msg: A::Message) {
-        self.0.q.push(msg);
+        self.0.push(msg);
         self.update();
     }
 
@@ -170,27 +170,25 @@ impl<A: App> Addr<A> {
     #[inline]
     unsafe fn hydrate(&'static self) {
         debug_assert!(!self.0.ready.get());
-        // SAFETY: UB is checked by ready Cell
-        // Only run one time
         self.0.app().__hydrate(self);
-        self.0.ready.replace(true);
+        self.0.ready(true);
     }
 
     #[inline]
     fn update(&'static self) {
-        if self.0.ready.get() {
-            self.0.ready.replace(false);
-            while let Some(msg) = self.0.q.pop() {
-                // SAFETY: UB is checked by ready Cell
-                unsafe { self.0.app() }.__dispatch(msg, self);
-                while let Some(msg) = self.0.q.pop() {
-                    // SAFETY: UB is checked by ready Cell
-                    unsafe { self.0.app() }.__dispatch(msg, self);
+        if self.0.is_ready() {
+            self.0.ready(false);
+            // SAFETY: UB is checked by ready Cell
+            unsafe {
+                while let Some(msg) = self.0.pop() {
+                    self.0.app().__dispatch(msg, self);
+                    while let Some(msg) = self.0.pop() {
+                        self.0.app().__dispatch(msg, self);
+                    }
+                    self.0.app().__render(self);
                 }
-                // SAFETY: UB is checked by ready Cell
-                unsafe { self.0.app() }.__render(self);
             }
-            self.0.ready.replace(true);
+            self.0.ready(true);
         }
     }
 }
@@ -215,8 +213,36 @@ impl<A: App> Context<A> {
     ///
     /// # Safety
     /// Unchecked null pointer and broke mutability
+    #[inline]
     unsafe fn app(&self) -> &mut A {
         &mut *self.app.get()
+    }
+
+    /// Set ready
+    #[inline]
+    fn ready(&self, r: bool) {
+        self.ready.replace(r);
+    }
+
+    /// Is ready
+    #[inline]
+    fn is_ready(&self) -> bool {
+        self.ready.get()
+    }
+
+    /// Enqueue message
+    #[inline]
+    fn push(&self, msg: A::Message) {
+        self.q.push(msg);
+    }
+
+    /// Pop message
+    ///
+    /// # Safety
+    /// Only call in a atomic function
+    #[inline]
+    unsafe fn pop(&self) -> Option<A::Message> {
+        self.q.pop()
     }
 }
 
