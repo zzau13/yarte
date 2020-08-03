@@ -3,7 +3,8 @@
 //!
 //! Intended to be used as a singleton and static.
 //!
-//! ## Implement without yarte derive
+//! ## Architecture
+//! ### Cycle
 //! The cycle of App methods is:
 //! - `init`:
 //!     - `__hydrate(&mut self, _addr: &'static Addr<Self>)`
@@ -15,16 +16,33 @@
 //!     - is queue empty?  -> `__render(&mut self, _addr: &'static Addr<Self>)`
 //!     - is queue not empty? -> `update`
 //!
+//! ### Virtual DOM and differences in tree
+//! The virtual DOM model and the difference calculation in the node tree
+//! It differs from all previous implementations in many ways.
+//! The main aspect that is not found in any other implementation
+//! is that it accumulates the changes in a tree of differences
+//! with dimension less or equal to the html node tree.
 //!
-//! ### Why no backpressure?
+//! It is simply built through a static link of the modules that allows us
+//! detect local fixed points at compile time and change the base of the
+//! difference application. That is, instead of making the difference in the html nodes,
+//! we make the difference on a tree of differences in the process line.
+//!
+//! With what allows a reduction of the dimension of the domain and strong optimizations in parallel.
+//!
+//! ### Unsafe code and controversies
+//! #### Why no RC?
+//! Because you don't need it because it is thinking to be implemented as singleton and static.
+//!
+//! ### Whe no RefCell?
+//! Because you don't need it because all uniques (mutable) references are made in atomic functions.
+//!
+//! #### Why no backpressure?
 //! Because you don't need it because you don't need a runtime to poll wasm futures.
 //! Backpressure can be implemented for future it is needed and carry static reference to the
 //! Address of the App.
 //!
-//! ### Why no RC?
-//! Because you don't need it because it is thinking to be implemented as singleton and static.
-//!
-//! ### Why doubly-linked list?
+//! #### Why doubly-linked list?
 //! Is simpler than grow array implementation and it will never be a bottleneck in a browser.
 //! But in the future it can be implemented.
 //!
