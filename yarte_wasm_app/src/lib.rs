@@ -18,15 +18,16 @@
 //!
 //! ### Virtual DOM and differences in tree
 //! The virtual DOM model and the difference calculation in the node tree
-//! It differs from all previous implementations in many ways.
+//! differs from all previous implementations in many ways.
 //! The main aspect that is not found in any other implementation
 //! is that it accumulates the changes in a tree of differences
-//! with dimension less or equal to the html node tree.
+//! equivalent space dimension is less or equal than
+//! html node tree equivalent space dimension.
 //!
-//! It is simply built through a static link of the modules that allows us
+//! It's compiled with static linking of the modules that allows to
 //! detect local fixed points at compile time and change the base of the
-//! difference application. That is, instead of making the difference in the html nodes,
-//! we make the difference on a tree of differences in the process line.
+//! difference linear map. That is, instead of making the difference in the html nodes,
+//! it make the difference on a tree of differences write at process line.
 //!
 //! With what allows a reduction of the dimension of the domain and strong optimizations in parallel.
 //!
