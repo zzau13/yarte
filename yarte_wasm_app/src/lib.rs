@@ -6,15 +6,14 @@
 //! ## Implement without yarte derive
 //! The cycle of App methods is:
 //! - `init`:
-//!     - `App.__hydrate(&mut self, _addr: &'static Addr<Self>)`
-//!     - `update`
+//!     - `__hydrate(&mut self, _addr: &'static Addr<Self>)`
 //! - `on message`:
 //!     - enqueue message
 //!     - is ready? -> `update`
 //! - `update`
-//!     - pop message? -> `App.__dispatch(&mut self, _msg: Self::Message, _addr: &'static Addr<Self>)`
-//!     - is queue empty?  -> `App.__render(&mut self, _addr: &'static Addr<Self>)`
-//!     - is queue not empty? -> `update`. It is **not** recursive
+//!     - pop message? -> `__dispatch(&mut self, _msg: Self::Message, _addr: &'static Addr<Self>)`
+//!     - is queue empty?  -> `__render(&mut self, _addr: &'static Addr<Self>)`
+//!     - is queue not empty? -> `update`
 //!
 //!
 //! ### Why no backpressure?
@@ -34,8 +33,10 @@ extern crate alloc;
 
 use core::cell::{Cell, UnsafeCell};
 use core::default::Default;
+#[cfg(debug_assertions)]
 use core::ptr;
 
+#[cfg(debug_assertions)]
 use alloc::alloc::{dealloc, Layout};
 use alloc::boxed::Box;
 
@@ -113,6 +114,7 @@ macro_rules! run {
 ///
 /// # Safety
 /// Broke `'static` lifetime and mutability
+#[cfg(debug_assertions)]
 const unsafe fn stc_to_ptr<T>(t: &'static T) -> *mut T {
     t as *const T as *mut T
 }
@@ -154,6 +156,7 @@ impl<A: App> Addr<A> {
     ///
     /// # Safety
     /// Broke `'static` lifetime
+    #[cfg(debug_assertions)]
     pub unsafe fn dealloc(&'static self) {
         let p = stc_to_ptr(self);
         ptr::drop_in_place(p);
@@ -179,7 +182,6 @@ impl<A: App> Addr<A> {
         // Only run one time
         self.0.app.get().as_mut().unwrap().__hydrate(self);
         self.0.ready.replace(true);
-        self.update();
     }
 
     #[inline]
