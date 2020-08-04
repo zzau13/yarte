@@ -1,7 +1,7 @@
 //! # Yarte wasm application
-//! A simple single thread reactor pattern with a doubly-linked list as dequeue.
+//! A simple reactor pattern
 //!
-//! Intended to be used as a singleton and static.
+//! Intended to be used as a singleton and static with single state
 //!
 //! ## Architecture
 //! ### Cycle
@@ -37,7 +37,7 @@
 //!
 //! ### Whe no RefCell?
 //! Because you don't need it because all uniques (mutable) references are made in atomic functions,
-//! `run!` is designed for assure **unique** owner of **all** `App` is `Addr` and the unique safe method
+//! `run!` is designed for assure **unique** owner of **all** `App` is `Addr` and its unique safe method
 //! is `send`
 //!
 //! #### Why no backpressure?
