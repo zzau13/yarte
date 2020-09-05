@@ -306,7 +306,7 @@ mod test {
         let ir = test(src);
         let mut buff = String::new();
         serialize(ir.iter(), &mut buff).unwrap();
-        assert_eq!(buff, "Hello, {{#if let Some ( foo__0x00000000 ) = flag }}foo{{ foo__0x00000000 }}{{else if let Some ( foo__0x00000001 ) = flag2 }}{{ foo__0x00000001 }}bar{{/if}}!");
+        assert_eq!(buff, "Hello, {{#if let Some (foo__0x00000000) = flag }}foo{{ foo__0x00000000 }}{{else if let Some (foo__0x00000001) = flag2 }}{{ foo__0x00000001 }}bar{{/if}}!");
     }
 
     #[test]
@@ -353,7 +353,7 @@ mod test {
         serialize(ir.iter(), &mut buff).unwrap();
         assert_eq!(
             buff,
-            "Hello, {{#each iter }}foo{{ ( index0 + 1 ) }}{{/each}}!"
+            "Hello, {{#each iter }}foo{{ (index0 + 1) }}{{/each}}!"
         );
     }
 
@@ -365,7 +365,7 @@ mod test {
         serialize(ir.iter(), &mut buff).unwrap();
         assert_eq!(
             buff,
-            "Hello, {{#each iter }}foo{{ ( index0 == 0 ) }}{{/each}}!"
+            "Hello, {{#each iter }}foo{{ (index0 == 0) }}{{/each}}!"
         );
     }
 }
