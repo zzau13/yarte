@@ -96,6 +96,13 @@ pub trait App: Default + Sized {
 #[repr(transparent)]
 pub struct Addr<A: App>(Context<A>);
 
+#[cfg(not(debug_assertions))]
+impl<A: App> Drop for Addr<A> {
+    fn drop(&mut self) {
+        panic!("drop app")
+    }
+}
+
 /// Macro to create a `Addr<A: App>` reference to a statically allocated `App`.
 ///
 /// This macro returns a value with type `&'static Addr<$ty>`.

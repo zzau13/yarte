@@ -70,7 +70,6 @@ impl<T> Queue<T> {
     }
 }
 
-#[cfg(debug_assertions)]
 impl<T> Drop for Queue<T> {
     fn drop(&mut self) {
         unsafe {
