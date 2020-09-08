@@ -21,7 +21,8 @@ HTML templates using conditionals, loops, rust code and template composition.
 - Infallible render
 
 ### Is it really fast?
-See it for yourself in the [TechEmpower benchmarks][bench] with [`ntex`][ntex]!
+See it for yourself in the [TechEmpower benchmarks][bench] with [`ntex`][ntex] 
+and in the [js-framework-benchmark](https://krausest.github.io/js-framework-benchmark/2020/table_chrome_85.0.4183.83.html)!
 
 ## Documentation
 In order to  fully understand Yarte's capabilities take a look at the following documentation:
