@@ -49,10 +49,12 @@
 //! Is simpler than grow array implementation and it will never be a bottleneck in a browser.
 //! But in the future it can be implemented.
 //!
+#![no_std]
 extern crate alloc;
 
 // TODO: core_intrinsics
-use std::hint::unreachable_unchecked;
+// TODO: nightly version
+// use std::hint::unreachable_unchecked;
 
 use core::cell::{Cell, UnsafeCell};
 use core::default::Default;
@@ -291,5 +293,5 @@ const unsafe fn stc_to_ptr<T>(t: &'static T) -> *mut T {
 /// `None` produce UB
 #[inline]
 unsafe fn unwrap<T>(o: Option<T>) -> T {
-    o.unwrap_or_else(|| unreachable_unchecked())
+    o.unwrap()
 }
