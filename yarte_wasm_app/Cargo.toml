@@ -19,3 +19,6 @@ maintenance = { status = "actively-developed" }
 wasm-bindgen-futures = "0.4"
 async-timer = "0.7"
 wasm-bindgen-test = "0.3"
+
+[build-dependencies]
+yarte_helpers = { version = "0.12.2", path = "../yarte_helpers", default-features = false }

@@ -50,20 +50,18 @@
 //! But in the future it can be implemented.
 //!
 #![no_std]
+#![cfg_attr(nightly, feature(core_intrinsics))]
+
 extern crate alloc;
 
-// TODO: core_intrinsics
-// TODO: nightly version
-// use std::hint::unreachable_unchecked;
-
+use alloc::boxed::Box;
 use core::cell::{Cell, UnsafeCell};
 use core::default::Default;
-#[cfg(debug_assertions)]
-use core::ptr;
 
 #[cfg(debug_assertions)]
 use alloc::alloc::{dealloc, Layout};
-use alloc::boxed::Box;
+#[cfg(debug_assertions)]
+use core::ptr;
 
 mod queue;
 
@@ -292,6 +290,17 @@ const unsafe fn stc_to_ptr<T>(t: &'static T) -> *mut T {
 /// # Safety
 /// `None` produce UB
 #[inline]
+#[cfg(not(nightly))]
 unsafe fn unwrap<T>(o: Option<T>) -> T {
     o.unwrap()
+}
+
+/// unchecked unwrap
+///
+/// # Safety
+/// `None` produce UB
+#[inline]
+#[cfg(nightly)]
+unsafe fn unwrap<T>(o: Option<T>) -> T {
+    o.unwrap_or_else(|| core::intrinsics::unreachable())
 }
