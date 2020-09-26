@@ -10,7 +10,7 @@ workspace = ".."
 
 [dependencies]
 model = { version = "*", path = "../model" }
-yarte = { version = "*", path = "../../yarte", features = ["wasm"] }
+yarte = { version = "*", path = "../../../yarte", features = ["wasm"] }
 serde = { version = "1.0", features = ["derive"] }
 
 env_logger = "0.7"
@@ -22,4 +22,4 @@ actix-files = "0.2"
 bytes = "0.5"
 
 [build-dependencies]
-yarte = { version = "*", path = "../../yarte" }
+yarte = { version = "*", path = "../../../yarte" }
