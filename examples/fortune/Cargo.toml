@@ -1,0 +1,15 @@
+[package]
+name = "fortune"
+version = "0.0.1"
+authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
+publish = false
+edition = "2018"
+
+workspace = "../.."
+
+[dependencies]
+yarte = { path = "../../yarte", version = "*", features = ["html-min", "fixed", "bytes-buf"]  }
+bytes = "0.5"
+
+[build-dependencies]
+yarte = { path = "../../yarte", version = "*" }

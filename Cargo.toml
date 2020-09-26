@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "example",
+    "examples/fortune",
     "yarte",
     "yarte_codegen",
     "yarte_derive",
