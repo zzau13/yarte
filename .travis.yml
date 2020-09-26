@@ -36,6 +36,4 @@ script:
     && cargo test --features fixed        \
     && cargo test --features json         \
     && cargo test --features wasm         \
-    && cd ../example                      \
-    && cargo run --release                \
     && cd ..
