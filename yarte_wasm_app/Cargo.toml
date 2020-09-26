@@ -1,6 +1,6 @@
 [package]
 name = "yarte_wasm_app"
-version = "0.1.2"
+version = "0.2.0"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "A simple single thread reactor pattern for wasm"
 documentation = "https://docs.rs/yarte_wasm_app"
