@@ -17,6 +17,7 @@ mod test_not_wasm {
     }
 }
 
+#[cfg(target_arch = "wasm32")]
 mod test {
     use super::*;
     use std::cell::Cell;

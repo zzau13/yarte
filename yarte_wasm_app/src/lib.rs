@@ -76,7 +76,7 @@ use self::queue::Queue;
 ///
 /// It is recommended not to implement out of WASM Single Page Application context.
 // TODO: derive
-pub trait App: Default + Sized {
+pub trait App: Default + 'static {
     type BlackBox;
     type Message: 'static;
     /// Private: empty for overridden in derive
@@ -138,12 +138,12 @@ impl<A: App> Drop for Addr<A> {
 #[macro_export]
 macro_rules! run {
     ($ty:ty) => {
-        unsafe { $crate::Addr::run(<$ty as core::default::Default>::default()) }
+        unsafe { $crate::A::run(<$ty as core::default::Default>::default()) }
     };
 }
 
 /// No Send and No Sync wrapper around static reference
-pub struct A<I: App + 'static>(&'static Addr<I>);
+pub struct A<I: App>(&'static Addr<I>);
 
 #[cfg(nightly)]
 impl<I: App> !Send for A<I> {}
