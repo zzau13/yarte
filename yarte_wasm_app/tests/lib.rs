@@ -17,7 +17,6 @@ mod test_not_wasm {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
 mod test {
     use super::*;
     use std::cell::Cell;
@@ -38,7 +37,7 @@ mod test {
     impl App for Test {
         type BlackBox = BlackBox;
         type Message = Msg;
-        fn __dispatch(&mut self, m: Self::Message, addr: &'static Addr<Self>) {
+        fn __dispatch(&mut self, m: Self::Message, addr: A<Self>) {
             match m {
                 Msg::Msg(i) => msg(self, i, addr),
                 Msg::Reset => reset(self, addr),
@@ -181,7 +180,7 @@ mod test {
     }
 
     #[inline]
-    fn msg_tree(app: &mut Test, msg: usize, _addr: &Addr<Test>) {
+    fn msg_tree(app: &mut Test, msg: usize, _addr: A<Test>) {
         app.black_box.set_zero();
         // after first render
         let expected = BlackBox {
@@ -225,17 +224,17 @@ mod test {
     }
 
     #[inline]
-    fn msg(app: &mut Test, msg: usize, _addr: &Addr<Test>) {
+    fn msg(app: &mut Test, msg: usize, _addr: A<Test>) {
         app.c.replace(msg);
     }
 
     #[inline]
-    fn reset(_app: &mut Test, addr: &'static Addr<Test>) {
+    fn reset(_app: &mut Test, addr: A<Test>) {
         addr.send(Msg::Msg(0));
     }
 
     #[inline]
-    fn msg_fut(_app: &mut Test, msg: usize, addr: &'static Addr<Test>) {
+    fn msg_fut(_app: &mut Test, msg: usize, addr: A<Test>) {
         addr.send(Msg::Reset);
         let work = unsafe {
             async_timer::Timed::platform_new_unchecked(
@@ -257,7 +256,7 @@ mod test {
             c,
             ..Default::default()
         };
-        let addr = unsafe { Addr::run(app) };
+        let addr = unsafe { A::run(app) };
         addr.send(Msg::Msg(2));
         assert_eq!(c2.get(), 2);
         addr.send(Msg::Msg(3));

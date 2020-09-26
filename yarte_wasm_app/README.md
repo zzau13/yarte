@@ -3,6 +3,7 @@
 
 A simple single thread reactor pattern implementation.
 
+Only 101% rust safe in nightly.
 
 ## Documentation
 In order to  fully understand Yarte wasm app's capabilities take a look at the following documentation:

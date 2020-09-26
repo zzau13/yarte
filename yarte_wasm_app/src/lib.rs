@@ -3,6 +3,8 @@
 //!
 //! Intended to be used as a singleton and static with single state
 //!
+//! Only 101% rust safe in nightly
+//!
 //! ## Architecture
 //! ### Cycle
 //! The cycle of App methods is:
@@ -50,13 +52,14 @@
 //! But in the future it can be implemented.
 //!
 #![no_std]
-#![cfg_attr(nightly, feature(core_intrinsics))]
+#![cfg_attr(nightly, feature(core_intrinsics, negative_impls))]
 
 extern crate alloc;
 
 use alloc::boxed::Box;
 use core::cell::{Cell, UnsafeCell};
 use core::default::Default;
+use core::marker::{Send, Sync};
 
 #[cfg(debug_assertions)]
 use alloc::alloc::{dealloc, Layout};
@@ -79,22 +82,21 @@ pub trait App: Default + Sized {
     /// Private: empty for overridden in derive
     #[doc(hidden)]
     #[inline]
-    fn __render(&mut self, _addr: &'static Addr<Self>) {}
+    fn __render(&mut self, _addr: A<Self>) {}
 
     /// Private: empty for overridden in derive
     #[doc(hidden)]
     #[inline]
-    fn __hydrate(&mut self, _addr: &'static Addr<Self>) {}
+    fn __hydrate(&mut self, _addr: A<Self>) {}
 
     /// Private: empty for overridden in derive
     #[doc(hidden)]
     #[inline]
-    fn __dispatch(&mut self, _msg: Self::Message, _addr: &'static Addr<Self>) {}
+    fn __dispatch(&mut self, _msg: Self::Message, _addr: A<Self>) {}
 }
 
 /// The address of App
-#[repr(transparent)]
-pub struct Addr<A: App>(Context<A>);
+pub struct Addr<A: App>(pub(crate) Context<A>);
 
 #[cfg(not(debug_assertions))]
 impl<A: App> Drop for Addr<A> {
@@ -103,7 +105,7 @@ impl<A: App> Drop for Addr<A> {
     }
 }
 
-/// Macro to create a `Addr<A: App>` reference to a statically allocated `App`.
+/// Macro to create a `A<App: App>` reference to a statically allocated `App`.
 ///
 /// This macro returns a value with type `&'static Addr<$ty>`.
 ///
@@ -140,22 +142,24 @@ macro_rules! run {
     };
 }
 
-/// Constructor and destructor
-impl<A: App> Addr<A> {
-    /// Make new Address for App
-    ///
-    /// Use at `run!` macro and for testing
-    ///
-    /// # Panics
-    /// Only construct in target arch `wasm32`
-    #[inline]
-    fn new(a: A) -> &'static Addr<A> {
-        if cfg!(not(target_arch = "wasm32")) {
-            panic!("Only construct in 'wasm32'");
-        }
-        Box::leak(Box::new(Addr(Context::new(a))))
-    }
+/// No Send and No Sync wrapper around static reference
+pub struct A<I: App + 'static>(&'static Addr<I>);
 
+#[cfg(nightly)]
+impl<I: App> !Send for A<I> {}
+#[cfg(nightly)]
+impl<I: App> !Sync for A<I> {}
+
+impl<I: App> Clone for A<I> {
+    #[inline(always)]
+    fn clone(&self) -> Self {
+        A(self.0)
+    }
+}
+
+impl<I: App> Copy for A<I> {}
+
+impl<I: App> A<I> {
     /// Make new Address for App and run it
     ///
     /// # Panics
@@ -163,9 +167,9 @@ impl<A: App> Addr<A> {
     ///
     /// # Safety
     /// Can broke needed atomicity of unique references and queue pop
-    pub unsafe fn run(a: A) -> &'static Addr<A> {
-        let addr = Self::new(a);
-        // SAFETY: only run one time at the unique constructor
+    pub unsafe fn run(a: I) -> A<I> {
+        let addr = A(Addr::new(a));
+        // SAFETY: only run one time
         addr.hydrate();
         addr
     }
@@ -175,19 +179,18 @@ impl<A: App> Addr<A> {
     /// Use for testing
     ///
     /// # Safety
-    /// Broke `'static` lifetime
+    /// Broke `'static` lifetime and all copies are nothing,
+    /// World could explode
     #[cfg(debug_assertions)]
-    pub unsafe fn dealloc(&'static self) {
-        let p = stc_to_ptr(self);
-        ptr::drop_in_place(p);
-        dealloc(p as *mut u8, Layout::new::<Addr<A>>());
+    pub unsafe fn dealloc(self) {
+        self.0.dealloc();
     }
 
     /// Sends a message
     ///
     /// The message is always queued
-    pub fn send(&'static self, msg: A::Message) {
-        self.0.push(msg);
+    pub fn send(self, msg: I::Message) {
+        self.ctx().push(msg);
         self.update();
     }
 
@@ -197,28 +200,65 @@ impl<A: App> Addr<A> {
     /// # Safety
     /// Produce **unexpected behaviour** if launched more than one time
     #[inline]
-    unsafe fn hydrate(&'static self) {
-        debug_assert!(!self.0.ready.get());
-        self.0.app().__hydrate(self);
-        self.0.ready(true);
+    unsafe fn hydrate(self) {
+        let ctx = self.ctx();
+        debug_assert!(!ctx.is_ready());
+        ctx.app().__hydrate(self);
+        ctx.ready(true);
     }
 
     #[inline]
-    fn update(&'static self) {
-        if self.0.is_ready() {
-            self.0.ready(false);
+    fn update(self) {
+        let ctx = self.ctx();
+        if ctx.is_ready() {
+            ctx.ready(false);
             // SAFETY: UB is checked by ready Cell
             unsafe {
-                while let Some(msg) = self.0.pop() {
-                    self.0.app().__dispatch(msg, self);
-                    while let Some(msg) = self.0.pop() {
-                        self.0.app().__dispatch(msg, self);
+                while let Some(msg) = ctx.pop() {
+                    ctx.app().__dispatch(msg, self);
+                    while let Some(msg) = ctx.pop() {
+                        ctx.app().__dispatch(msg, self);
                     }
-                    self.0.app().__render(self);
+                    ctx.app().__render(self);
                 }
             }
-            self.0.ready(true);
+            ctx.ready(true);
         }
+    }
+
+    #[inline]
+    fn ctx(&self) -> &Context<I> {
+        &(self.0).0
+    }
+}
+
+/// Constructor and destructor
+impl<I: App> Addr<I> {
+    /// Make new Address for App
+    ///
+    /// Use at `run!` macro and for testing
+    ///
+    /// # Panics
+    /// Only construct in target arch `wasm32`
+    #[inline]
+    fn new(a: I) -> &'static Addr<I> {
+        if cfg!(not(target_arch = "wasm32")) {
+            panic!("Only construct in 'wasm32'");
+        }
+        Box::leak(Box::new(Addr(Context::new(a))))
+    }
+
+    /// Dealloc Address
+    ///
+    /// Use for testing
+    ///
+    /// # Safety
+    /// Broke `'static` lifetime
+    #[cfg(debug_assertions)]
+    pub(crate) unsafe fn dealloc(&'static self) {
+        let p = stc_to_ptr(self);
+        ptr::drop_in_place(p);
+        dealloc(p as *mut u8, Layout::new::<Addr<I>>());
     }
 }
 
@@ -230,7 +270,7 @@ pub struct Context<A: App> {
 }
 
 impl<A: App> Context<A> {
-    fn new(app: A) -> Self {
+    pub(crate) fn new(app: A) -> Self {
         Self {
             app: UnsafeCell::new(app),
             q: Queue::new(),
@@ -244,25 +284,25 @@ impl<A: App> Context<A> {
     /// Unchecked null pointer and broke mutability
     #[inline]
     #[allow(clippy::mut_from_ref)]
-    unsafe fn app(&self) -> &mut A {
+    pub(crate) unsafe fn app(&self) -> &mut A {
         &mut *self.app.get()
     }
 
     /// Set ready
     #[inline]
-    fn ready(&self, r: bool) {
+    pub(crate) fn ready(&self, r: bool) {
         self.ready.replace(r);
     }
 
     /// Is ready
     #[inline]
-    fn is_ready(&self) -> bool {
+    pub(crate) fn is_ready(&self) -> bool {
         self.ready.get()
     }
 
     /// Enqueue message
     #[inline]
-    fn push(&self, msg: A::Message) {
+    pub(crate) fn push(&self, msg: A::Message) {
         self.q.push(msg);
     }
 
@@ -271,7 +311,7 @@ impl<A: App> Context<A> {
     /// # Safety
     /// Only call in a atomic function
     #[inline]
-    unsafe fn pop(&self) -> Option<A::Message> {
+    pub(crate) unsafe fn pop(&self) -> Option<A::Message> {
         self.q.pop()
     }
 }
