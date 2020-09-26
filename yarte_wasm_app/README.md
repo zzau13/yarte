@@ -3,8 +3,6 @@
 
 A simple single thread reactor pattern implementation.
 
-Only 101% rust safe in nightly.
-
 ## Documentation
 In order to  fully understand Yarte wasm app's capabilities take a look at the following documentation:
 - [Crate documentation](https://docs.rs/yarte_wasm_app/)
@@ -12,9 +10,6 @@ In order to  fully understand Yarte wasm app's capabilities take a look at the f
 
 ### Is it really fast?
 You can see in [js-framework-benchmark](https://github.com/krausest/js-framework-benchmark)
-
-<img alt="" width="413" src="https://user-images.githubusercontent.com/3374055/89741479-f6908180-da91-11ea-8fb7-dcd6e7476c75.png">
-
 
 ## Contributing
 

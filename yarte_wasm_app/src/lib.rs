@@ -9,13 +9,13 @@
 //! ### Cycle
 //! The cycle of App methods is:
 //! - `init`:
-//!     - `__hydrate(&mut self, _addr: &'static Addr<Self>)`
+//!     - `__hydrate(&mut self, _addr: A<Self>)`
 //! - `on message`:
 //!     - enqueue message
 //!     - is ready? -> `update`
 //! - `update`
-//!     - pop message? -> `__dispatch(&mut self, _msg: Self::Message, _addr: &'static Addr<Self>)`
-//!     - is queue empty?  -> `__render(&mut self, _addr: &'static Addr<Self>)`
+//!     - pop message? -> `__dispatch(&mut self, _msg: Self::Message, _addr: A<Self>)`
+//!     - is queue empty?  -> `__render(&mut self, _addr: A<Self>)`
 //!     - is queue not empty? -> `update`
 //!
 //! ### Virtual DOM and differences in tree
@@ -142,7 +142,7 @@ macro_rules! run {
     };
 }
 
-/// No Send and No Sync wrapper around static reference
+/// No Send and No Sync wrapper static reference
 pub struct A<I: App>(&'static Addr<I>);
 
 #[cfg(nightly)]
