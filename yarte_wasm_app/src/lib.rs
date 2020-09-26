@@ -59,6 +59,7 @@ extern crate alloc;
 use alloc::boxed::Box;
 use core::cell::{Cell, UnsafeCell};
 use core::default::Default;
+#[cfg(nightly)]
 use core::marker::{Send, Sync};
 
 #[cfg(debug_assertions)]
