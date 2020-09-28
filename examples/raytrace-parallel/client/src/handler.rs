@@ -3,6 +3,7 @@ use std::fmt;
 use futures::{FutureExt, StreamExt};
 use gloo_timers::future::IntervalStream;
 use serde_json::from_str;
+use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::window;
 use yarte_wasm_app::DeLorean;
@@ -60,7 +61,7 @@ pub(crate) fn start_render(app: &mut RayTracing, addr: DeLorean<RayTracing>) {
     let concurrency = app.n_concurrency;
     let RenderingImage { rx, partial, .. } = match scene.render(concurrency, app.pool()) {
         Ok(r) => r,
-        Err(e) => return error_render(app, now, format!("Worker pool\n{:?}", e)),
+        Err(e) => return error_render(app, now, JsError(e)),
     };
 
     let width = partial.width;
@@ -104,14 +105,22 @@ pub(crate) fn start_render(app: &mut RayTracing, addr: DeLorean<RayTracing>) {
 pub(crate) unsafe fn unsafe_paint(app: &RayTracing, img: UnsafeImg) {
     console_log!("Unsafe painting");
     if let Err(e) = put_image_ptr(img) {
-        error(app, format!("{:?}", e));
+        error(app, JsError(e));
     }
 }
 
 pub(crate) fn paint(app: &RayTracing, img: Img) {
     console_log!("Painting");
     if let Err(e) = put_image(img) {
-        error(app, format!("{:?}", e));
+        error(app, JsError(e));
+    }
+}
+
+struct JsError(JsValue);
+
+impl fmt::Display for JsError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&self.0, f)
     }
 }
 
