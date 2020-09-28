@@ -1,5 +1,6 @@
 use wasm_bindgen::prelude::*;
 
+// TODO: Disable only in release
 #[macro_export]
 macro_rules! console_log {
     ($($t:tt)*) => ($crate::log(&format_args!($($t)*).to_string()))
