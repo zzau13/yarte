@@ -11,7 +11,7 @@ use utils::console_log;
 
 use crate::app::RayTracing;
 use crate::handler::{
-    update_concurrency, enable_interface, end_render, error, paint, start_render, unsafe_paint,
+    enable_interface, end_render, error, paint, start_render, unsafe_paint, update_concurrency,
     update_time,
 };
 use crate::scene::{Img, UnsafeImg};
