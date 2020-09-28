@@ -46,8 +46,8 @@ pub(crate) fn start_render(app: &mut RayTracing, addr: A<RayTracing>) {
         return;
     }
     console_log!("Start Render");
-    let now = window().unwrap().performance().unwrap().now();
     disable_interface(app);
+    let now = window().unwrap().performance().unwrap().now();
     let scene: Scene = match from_str(&app.scene.value()) {
         Ok(s) => s,
         Err(e) => return error(app, e),
