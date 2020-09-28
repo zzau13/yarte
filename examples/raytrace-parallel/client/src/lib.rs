@@ -11,7 +11,7 @@ use utils::console_log;
 
 use crate::app::RayTracing;
 use crate::handler::{
-    change_concurrency, enable_interface, end_render, error, paint, start_render, unsafe_paint,
+    update_concurrency, enable_interface, end_render, error, paint, start_render, unsafe_paint,
     update_time,
 };
 use crate::scene::{Img, UnsafeImg};
@@ -21,7 +21,7 @@ mod handler;
 mod scene;
 
 enum Msg {
-    ChangeConcurrency(String),
+    UpdateConcurrency(String),
     EndRender(f64),
     Error(Box<dyn fmt::Display>),
     Paint(Img),
@@ -46,7 +46,7 @@ impl App for RayTracing {
 
         let cl = Closure::wrap(Box::new(move |event: Event| {
             let target = event.target().unwrap().unchecked_into::<HtmlInputElement>();
-            addr.send(Msg::ChangeConcurrency(target.value()))
+            addr.send(Msg::UpdateConcurrency(target.value()))
         }) as Box<dyn Fn(Event)>);
         self.concurrency
             .add_event_listener_with_callback("input", cl.as_ref().unchecked_ref())
@@ -59,12 +59,12 @@ impl App for RayTracing {
 
     fn __dispatch(&mut self, msg: Self::Message, addr: A<Self>) {
         match msg {
-            Msg::ChangeConcurrency(val) => change_concurrency(self, val),
             Msg::EndRender(start) => end_render(self, start),
             Msg::Error(s) => error(self, s),
             Msg::Paint(image) => paint(self, image),
             Msg::StartRender => start_render(self, addr),
             Msg::UnsafePaint(image) => unsafe { unsafe_paint(self, image) },
+            Msg::UpdateConcurrency(val) => update_concurrency(self, val),
             Msg::UpdateTime(start) => update_time(self, start),
         }
     }
