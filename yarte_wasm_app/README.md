@@ -1,6 +1,8 @@
 # Yarte Wasm application [![Latest version](https://img.shields.io/crates/v/yarte_wasm_app.svg)](https://crates.io/crates/yarte_wasm_app) [![Build Status](https://travis-ci.org/botika/yarte.svg?branch=master)](https://travis-ci.org/botika/yarte)
 > `Derive` is `Work in progress` 
 
+DeLorean for your app. Easy and safe traveling to the future in your thread and the nightly.
+
 A simple single thread reactor pattern implementation.
 
 ## Documentation
