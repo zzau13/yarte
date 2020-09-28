@@ -1,4 +1,4 @@
-#![feature(extern_types)]
+#![feature(extern_types, box_syntax)]
 #![allow(clippy::manual_non_exhaustive)]
 use std::fmt;
 

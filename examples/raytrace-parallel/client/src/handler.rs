@@ -42,6 +42,11 @@ pub(crate) fn enable_interface(
 }
 
 pub(crate) fn start_render(app: &mut RayTracing, addr: A<RayTracing>) {
+    fn error_render<S: fmt::Display>(app: &mut RayTracing, now: f64, e: S) {
+        error(app, e);
+        end_render(app, now);
+    }
+
     if app.rendering {
         return;
     }
@@ -50,15 +55,12 @@ pub(crate) fn start_render(app: &mut RayTracing, addr: A<RayTracing>) {
     let now = window().unwrap().performance().unwrap().now();
     let scene: Scene = match from_str(&app.scene.value()) {
         Ok(s) => s,
-        Err(e) => return error(app, e),
+        Err(e) => return error_render(app, now, e),
     };
     let concurrency = app.n_concurrency;
     let RenderingImage { rx, partial, .. } = match scene.render(concurrency, app.pool()) {
         Ok(r) => r,
-        Err(e) => {
-            error(app, format!("Worker pool\n{:?}", e));
-            return end_render(app, now);
-        }
+        Err(e) => return error_render(app, now, format!("Worker pool\n{:?}", e)),
     };
 
     let width = partial.width;
@@ -67,7 +69,7 @@ pub(crate) fn start_render(app: &mut RayTracing, addr: A<RayTracing>) {
     let fut = async move {
         let render = rx.map(|image| {
             let msg = image.map_or_else(
-                |_| Error(Box::new("Ray tracing")),
+                |_| Error(box "Ray tracing"),
                 |data| {
                     Paint(Img {
                         data,
@@ -126,7 +128,7 @@ pub(crate) fn update_time(app: &mut RayTracing, start: f64) {
         app.time
             .set_text_content(Some(&format!("{:.2} ms", now - start)));
     } else {
-        error(app, Box::new("now is after start"));
+        error(app, "now is after start");
     }
 }
 
