@@ -140,7 +140,7 @@ pub(crate) fn end_render(app: &mut RayTracing, start: f64) {
 }
 
 pub(crate) fn update_concurrency(app: &mut RayTracing, s: String) {
-    console_log!("Change Concurrency");
+    console_log!("Update Concurrency");
 
     app.n_concurrency = match usize::from_str_radix(&s, 10) {
         Ok(i) => i,

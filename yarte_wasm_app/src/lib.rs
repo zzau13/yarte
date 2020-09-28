@@ -143,8 +143,11 @@ macro_rules! run {
     };
 }
 
+/// DeLorean for your app. Easy and safe traveling to the future in your thread and the nightly
+///
 /// No Send and No Sync wrapper static reference
 pub struct A<I: App>(&'static Addr<I>);
+pub use self::A as DeLorean;
 
 #[cfg(nightly)]
 impl<I: App> !Send for A<I> {}
