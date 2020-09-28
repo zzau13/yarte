@@ -66,14 +66,16 @@ pub(crate) fn start_render(app: &mut RayTracing, addr: A<RayTracing>) {
 
     let fut = async move {
         let render = rx.map(|image| {
-            let msg = match image.ok() {
-                Some(data) => Paint(Img {
-                    data,
-                    width,
-                    height,
-                }),
-                None => Error(Box::new("Ray tracing")),
-            };
+            let msg = image.map_or_else(
+                |_| Error(Box::new("Ray tracing")),
+                |data| {
+                    Paint(Img {
+                        data,
+                        width,
+                        height,
+                    })
+                },
+            );
 
             addr.send(msg);
         });
