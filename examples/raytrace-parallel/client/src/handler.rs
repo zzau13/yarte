@@ -1,3 +1,4 @@
+use std::error;
 use std::fmt;
 
 use futures::{FutureExt, StreamExt};
@@ -116,7 +117,9 @@ pub(crate) fn paint(app: &RayTracing, img: Img) {
     }
 }
 
-struct JsError(JsValue);
+// TODO: error enum
+#[derive(Debug)]
+pub(crate) struct JsError(JsValue);
 
 impl fmt::Display for JsError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -124,8 +127,12 @@ impl fmt::Display for JsError {
     }
 }
 
+impl error::Error for JsError {}
+
+// TODO: param error enum
 pub(crate) fn error<S: fmt::Display>(_app: &RayTracing, err: S) {
-    // TODO: Some error message with app state
+    // TODO: error message with app state
+    // TODO: error message in screen
     console_error!("Error: {}", err)
 }
 

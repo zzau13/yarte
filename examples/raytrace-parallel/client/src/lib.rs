@@ -5,7 +5,7 @@ use std::fmt;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{Event, HtmlInputElement};
-use yarte_wasm_app::{run, App, A};
+use yarte_wasm_app::{run, App, DeLorean};
 
 use utils::console_log;
 
@@ -34,7 +34,7 @@ impl App for RayTracing {
     type BlackBox = ();
     type Message = Msg;
 
-    fn __hydrate(&mut self, addr: A<Self>) {
+    fn __hydrate(&mut self, addr: DeLorean<Self>) {
         let cl = Closure::wrap(Box::new(move |event: Event| {
             event.prevent_default();
             addr.send(Msg::StartRender)
@@ -57,7 +57,7 @@ impl App for RayTracing {
         console_log!("wasm app is ready");
     }
 
-    fn __dispatch(&mut self, msg: Self::Message, addr: A<Self>) {
+    fn __dispatch(&mut self, msg: Self::Message, addr: DeLorean<Self>) {
         match msg {
             Msg::EndRender(start) => end_render(self, start),
             Msg::Error(s) => error(self, s),
