@@ -5,7 +5,7 @@ use gloo_timers::future::IntervalStream;
 use serde_json::from_str;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::window;
-use yarte_wasm_app::A;
+use yarte_wasm_app::DeLorean;
 
 use utils::{console_error, console_log};
 
@@ -41,7 +41,7 @@ pub(crate) fn enable_interface(
     console_log!("Enable inputs");
 }
 
-pub(crate) fn start_render(app: &mut RayTracing, addr: A<RayTracing>) {
+pub(crate) fn start_render(app: &mut RayTracing, addr: DeLorean<RayTracing>) {
     fn error_render<S: fmt::Display>(app: &mut RayTracing, now: f64, e: S) {
         error(app, e);
         end_render(app, now);

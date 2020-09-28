@@ -12,7 +12,7 @@ crate-type = ["cdylib"]
 worker-pool = { path = "../worker-pool" }
 utils = { path = "../utils" }
 
-yarte_wasm_app = "0.2.0"
+yarte_wasm_app = "0.2.1"
 
 raytracer = { git = "https://github.com/alexcrichton/raytracer", branch = "update-deps" }
 
