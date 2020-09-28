@@ -46,7 +46,8 @@ pub(crate) fn enable_interface(
 pub(crate) fn start_render(app: &mut RayTracing, addr: DeLorean<RayTracing>) {
     fn error_render<S: fmt::Display>(app: &mut RayTracing, now: f64, e: S) {
         error(app, e);
-        end_render(app, now);
+        bench_time(app, now);
+        end_render(app);
     }
 
     if app.rendering {
@@ -71,7 +72,10 @@ pub(crate) fn start_render(app: &mut RayTracing, addr: DeLorean<RayTracing>) {
     let fut = async move {
         let render = rx.map(|image| {
             let msg = image.map_or_else(
-                |_| Error(box "Ray tracing"),
+                |_| {
+                    bench_time_msg(now, addr);
+                    Error(box "Ray tracing")
+                },
                 |data| {
                     Paint(Img {
                         data,
@@ -86,14 +90,15 @@ pub(crate) fn start_render(app: &mut RayTracing, addr: DeLorean<RayTracing>) {
 
         let mut stream = IntervalStream::new(1000 / 24)
             .map(|_| {
-                addr.send(UpdateTime(now));
+                bench_time_msg(now, addr);
                 addr.send(UnsafePaint(unsafe { partial.clone() }));
             })
             .take_until(render);
 
         while stream.next().await.is_some() {}
 
-        addr.send(EndRender(now))
+        bench_time_msg(now, addr);
+        addr.send(EndRender)
     };
 
     spawn_local(fut);
@@ -136,22 +141,34 @@ pub(crate) fn error<S: fmt::Display>(_app: &RayTracing, err: S) {
     console_error!("Error: {}", err)
 }
 
-pub(crate) fn update_time(app: &mut RayTracing, start: f64) {
+pub(crate) fn update_time(app: &mut RayTracing, time: f64) {
     console_log!("Update Time");
+    app.time.set_text_content(Some(&format!("{:.2} ms", time)));
+}
 
+pub(crate) fn bench(start: f64) -> Result<f64, &'static str> {
     let now = window().unwrap().performance().unwrap().now();
     if start < now {
-        app.time
-            .set_text_content(Some(&format!("{:.2} ms", now - start)));
+        Ok(now - start)
     } else {
-        error(app, "now is after start");
+        Err("now is after start")
     }
 }
 
-pub(crate) fn end_render(app: &mut RayTracing, start: f64) {
+pub(crate) fn bench_time(app: &mut RayTracing, start: f64) {
+    match bench(start) {
+        Ok(t) => update_time(app, t),
+        Err(e) => error(app, e),
+    }
+}
+
+pub(crate) fn bench_time_msg(start: f64, addr: DeLorean<RayTracing>) {
+    addr.send(bench(start).map_or_else(|e| Error(box e), UpdateTime))
+}
+
+pub(crate) fn end_render(app: &mut RayTracing) {
     console_log!("End Render");
 
-    update_time(app, start);
     enable_interface(app);
 }
 

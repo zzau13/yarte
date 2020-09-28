@@ -21,12 +21,12 @@ mod handler;
 mod scene;
 
 enum Msg {
-    UpdateConcurrency(String),
-    EndRender(f64),
+    EndRender,
     Error(Box<dyn fmt::Display>),
     Paint(Img),
     StartRender,
     UnsafePaint(UnsafeImg),
+    UpdateConcurrency(String),
     UpdateTime(f64),
 }
 
@@ -59,7 +59,7 @@ impl App for RayTracing {
 
     fn __dispatch(&mut self, msg: Self::Message, addr: DeLorean<Self>) {
         match msg {
-            Msg::EndRender(start) => end_render(self, start),
+            Msg::EndRender => end_render(self),
             Msg::Error(s) => error(self, s),
             Msg::Paint(image) => paint(self, image),
             Msg::StartRender => start_render(self, addr),
