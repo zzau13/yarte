@@ -151,7 +151,7 @@ pub(crate) fn bench(start: f64) -> Result<f64, &'static str> {
     if start < now {
         Ok(now - start)
     } else {
-        Err("now is after start")
+        Err("now is after than start")
     }
 }
 
