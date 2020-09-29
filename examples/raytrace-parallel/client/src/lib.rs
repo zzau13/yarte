@@ -11,10 +11,9 @@ use utils::console_log;
 
 use crate::app::RayTracing;
 use crate::handler::{
-    enable_interface, end_render, error, paint, start_render, unsafe_paint, update_concurrency,
-    update_time,
+    enable_interface, end_render, error, paint, start_render, update_concurrency, update_time,
 };
-use crate::scene::{Img, UnsafeImg};
+use crate::scene::ImageData;
 
 mod app;
 mod handler;
@@ -23,9 +22,8 @@ mod scene;
 enum Msg {
     EndRender,
     Error(Box<dyn fmt::Display>),
-    Paint(Img),
+    Paint(ImageData),
     StartRender,
-    UnsafePaint(UnsafeImg),
     UpdateConcurrency(String),
     UpdateTime(f64),
 }
@@ -61,9 +59,8 @@ impl App for RayTracing {
         match msg {
             Msg::EndRender => end_render(self),
             Msg::Error(s) => error(self, s),
-            Msg::Paint(image) => paint(self, image),
+            Msg::Paint(image) => paint(image),
             Msg::StartRender => start_render(self, addr),
-            Msg::UnsafePaint(image) => unsafe { unsafe_paint(self, image) },
             Msg::UpdateConcurrency(val) => update_concurrency(self, val),
             Msg::UpdateTime(start) => update_time(self, start),
         }

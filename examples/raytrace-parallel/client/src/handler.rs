@@ -1,3 +1,4 @@
+use std::convert::TryInto;
 use std::error;
 use std::fmt;
 
@@ -11,9 +12,9 @@ use yarte_wasm_app::DeLorean;
 
 use utils::{console_error, console_log};
 
-use crate::scene::{put_image, put_image_ptr, RenderingImage, Scene, UnsafeImg};
-use crate::Msg::{EndRender, Error, Paint, UnsafePaint, UpdateTime};
-use crate::{Img, RayTracing};
+use crate::scene::{update_image, ImageData, Img, RenderingImage, Scene};
+use crate::Msg::{EndRender, Error, Paint, UpdateTime};
+use crate::RayTracing;
 
 pub(crate) fn disable_interface(
     RayTracing {
@@ -71,27 +72,31 @@ pub(crate) fn start_render(app: &mut RayTracing, addr: DeLorean<RayTracing>) {
 
     let fut = async move {
         let render = rx.map(|image| {
-            let msg = image.map_or_else(
-                |_| {
-                    bench_time_msg(now, addr);
-                    Error(box "Ray tracing")
-                },
-                |data| {
-                    Paint(Img {
-                        data,
-                        width,
-                        height,
+            addr.send(
+                image
+                    .map_err(|_| Error(box "Ray Tracing"))
+                    .and_then(|data| {
+                        Img::new(data, width, height)
+                            .try_into()
+                            .map_err(|e| Error(box JsError(e)))
                     })
-                },
+                    .map_or_else(
+                        |e| {
+                            bench_time_msg(now, addr);
+                            e
+                        },
+                        Paint,
+                    ),
             );
-
-            addr.send(msg);
         });
 
-        let mut stream = IntervalStream::new(1000 / 24)
+        let mut stream = IntervalStream::new(1)
             .map(|_| {
+                addr.send(
+                    unsafe { partial.clone().into_image_data() }
+                        .map_or_else(|e| Error(box JsError(e)), Paint),
+                );
                 bench_time_msg(now, addr);
-                addr.send(UnsafePaint(unsafe { partial.clone() }));
             })
             .take_until(render);
 
@@ -104,22 +109,9 @@ pub(crate) fn start_render(app: &mut RayTracing, addr: DeLorean<RayTracing>) {
     spawn_local(fut);
 }
 
-/// Paint image in ptr
-///
-/// # Safety
-/// Assume [`ptr`, `ptr` + `len`] is a valid image data of `width x height`
-pub(crate) unsafe fn unsafe_paint(app: &RayTracing, img: UnsafeImg) {
-    console_log!("Unsafe painting");
-    if let Err(e) = put_image_ptr(img) {
-        error(app, JsError(e));
-    }
-}
-
-pub(crate) fn paint(app: &RayTracing, img: Img) {
+pub(crate) fn paint(i: ImageData) {
     console_log!("Painting");
-    if let Err(e) = put_image(img) {
-        error(app, JsError(e));
-    }
+    update_image(i)
 }
 
 // TODO: error enum

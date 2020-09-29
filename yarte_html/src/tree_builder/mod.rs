@@ -20,11 +20,11 @@
 
 #![allow(clippy::unnested_or_patterns)]
 #![allow(
-clippy::cognitive_complexity,
-clippy::redundant_static_lifetimes,
-clippy::suspicious_else_formatting,
-clippy::unused_unit,
-clippy::wrong_self_convention
+    clippy::cognitive_complexity,
+    clippy::redundant_static_lifetimes,
+    clippy::suspicious_else_formatting,
+    clippy::unused_unit,
+    clippy::wrong_self_convention
 )]
 
 use std::{

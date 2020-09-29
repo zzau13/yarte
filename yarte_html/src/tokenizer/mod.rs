@@ -10,7 +10,6 @@
 #![allow(clippy::never_loop, clippy::cognitive_complexity, clippy::single_match)]
 #![allow(clippy::unnested_or_patterns)]
 
-
 use std::{
     borrow::Cow::{self, Borrowed, Owned},
     mem,

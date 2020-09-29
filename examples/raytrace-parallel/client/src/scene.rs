@@ -1,3 +1,4 @@
+use std::convert::TryInto;
 use std::fmt::{self, Display, Formatter};
 
 use futures::channel::oneshot;
@@ -23,36 +24,7 @@ extern "C" {
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_name = updateImage)]
-    fn update_image(data: ImageData);
-}
-
-pub(crate) fn put_image(
-    Img {
-        data,
-        width,
-        height,
-    }: Img,
-) -> Result<(), JsValue> {
-    let ptr = data.as_ptr() as usize;
-    let len = data.len();
-    // Safety: The data owner will die
-    unsafe { image_data(ptr, len, width, height) }.map(update_image)
-}
-
-/// Put image
-///
-/// # Safety
-/// Not know the owner of ptr
-pub(crate) unsafe fn put_image_ptr(
-    UnsafeImg {
-        ptr,
-        len,
-        width,
-        height,
-        _p,
-    }: UnsafeImg,
-) -> Result<(), JsValue> {
-    image_data(ptr, len, width, height).map(update_image)
+    pub fn update_image(data: ImageData);
 }
 
 pub(crate) struct Scene {
@@ -137,9 +109,30 @@ pub(crate) struct Img {
     pub height: u32,
 }
 
+impl Img {
+    pub fn new(data: Vec<u8>, width: u32, height: u32) -> Img {
+        Img {
+            data,
+            width,
+            height,
+        }
+    }
+}
+
 impl Display for Img {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&self.data, f)
+    }
+}
+
+impl TryInto<ImageData> for Img {
+    type Error = JsValue;
+
+    fn try_into(self) -> Result<ImageData, Self::Error> {
+        let ptr = self.data.as_ptr() as usize;
+        let len = self.data.len();
+        // Safety: The data owner will die
+        unsafe { image_data(ptr, len, self.width, self.height) }
     }
 }
 
@@ -169,6 +162,10 @@ impl UnsafeImg {
             _p: (),
         }
     }
+
+    pub unsafe fn into_image_data(self) -> Result<ImageData, JsValue> {
+        image_data(self.ptr, self.len, self.width, self.height)
+    }
 }
 
 pub(crate) struct RenderingImage {
@@ -179,7 +176,7 @@ pub(crate) struct RenderingImage {
 }
 
 // TODO:
-pub(crate) unsafe fn image_data(
+unsafe fn image_data(
     base: usize,
     len: usize,
     width: u32,
