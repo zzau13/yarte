@@ -59,7 +59,7 @@ impl App for RayTracing {
         match msg {
             Msg::EndRender => end_render(self),
             Msg::Error(s) => error(self, s),
-            Msg::Paint(image) => paint(image),
+            Msg::Paint(image) => paint(self, image),
             Msg::StartRender => start_render(self, addr),
             Msg::UpdateConcurrency(val) => update_concurrency(self, val),
             Msg::UpdateTime(start) => update_time(self, start),

@@ -8,6 +8,7 @@ use rayon::prelude::*;
 use serde::{Deserialize, Deserializer};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::{JsCast, JsValue};
+use web_sys::CanvasRenderingContext2d;
 
 use worker_pool::WorkerPool;
 
@@ -24,7 +25,7 @@ extern "C" {
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_name = updateImage)]
-    pub fn update_image(data: ImageData);
+    pub fn update_image(ctx: &CanvasRenderingContext2d, data: ImageData);
 }
 
 pub(crate) struct Scene {

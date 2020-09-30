@@ -1,12 +1,17 @@
 use wasm_bindgen::JsCast;
-use web_sys::{window, Element, HtmlButtonElement, HtmlInputElement, HtmlTextAreaElement};
+use web_sys::{
+    window, CanvasRenderingContext2d, Element, HtmlButtonElement, HtmlCanvasElement,
+    HtmlInputElement, HtmlTextAreaElement,
+};
 
 use worker_pool::WorkerPool;
 
 pub(crate) struct RayTracing {
     pub button: HtmlButtonElement,
+    pub canvas: HtmlCanvasElement,
     pub concurrency: HtmlInputElement,
     pub concurrency_amt: Element,
+    pub ctx: CanvasRenderingContext2d,
     pub n_concurrency: usize,
     pub rendering: bool,
     pub scene: HtmlTextAreaElement,
@@ -29,6 +34,15 @@ impl Default for RayTracing {
             .get_element_by_id("scene")
             .unwrap()
             .unchecked_into::<HtmlTextAreaElement>();
+        let canvas = document
+            .get_element_by_id("canvas")
+            .unwrap()
+            .unchecked_into::<HtmlCanvasElement>();
+        let ctx = canvas
+            .get_context("2d")
+            .unwrap()
+            .unwrap()
+            .unchecked_into::<CanvasRenderingContext2d>();
         let concurrency = document
             .get_element_by_id("concurrency")
             .unwrap()
@@ -43,8 +57,10 @@ impl Default for RayTracing {
 
         Self {
             button,
+            canvas,
             concurrency,
             concurrency_amt,
+            ctx,
             n_concurrency: num_th,
             rendering: true,
             scene,

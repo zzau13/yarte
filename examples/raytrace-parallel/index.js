@@ -25,12 +25,6 @@ function start() {
   wasm_bindgen.start()
 }
 
-// TODO: will do in wasm
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-
-function updateImage(data) {
-  canvas.width = data.width;
-  canvas.height = data.height;
+function updateImage(ctx, data) {
   ctx.putImageData(data, 0, 0);
 }

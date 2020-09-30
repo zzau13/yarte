@@ -69,6 +69,7 @@ pub(crate) fn start_render(app: &mut RayTracing, addr: DeLorean<RayTracing>) {
 
     let width = partial.width;
     let height = partial.height;
+    resize_canvas(app, width, height);
 
     let fut = async move {
         let render = rx.map(|image| {
@@ -109,9 +110,15 @@ pub(crate) fn start_render(app: &mut RayTracing, addr: DeLorean<RayTracing>) {
     spawn_local(fut);
 }
 
-pub(crate) fn paint(i: ImageData) {
+pub(crate) fn resize_canvas(app: &mut RayTracing, width: u32, height: u32) {
+    console_log!("Resize canvas");
+    app.canvas.set_width(width);
+    app.canvas.set_height(height);
+}
+
+pub(crate) fn paint(app: &mut RayTracing, img: ImageData) {
     console_log!("Painting");
-    update_image(i)
+    update_image(&app.ctx, img);
 }
 
 // TODO: error enum
