@@ -27,6 +27,7 @@
 //! `run!` is designed for assure **unique** owner of **all** `App` is `DeLorean`
 //!
 //!
+#![no_std]
 #![cfg_attr(nightly, feature(core_intrinsics, negative_impls))]
 
 extern crate alloc;
@@ -60,11 +61,13 @@ pub trait App: Default + 'static {
     #[inline]
     fn __render(&mut self, _addr: A<Self>) {}
 
+    // TODO: Future backpressure
     /// Private: empty for overridden in derive
     #[doc(hidden)]
     #[inline]
     fn __hydrate(&mut self, _addr: A<Self>) {}
 
+    // TODO: Future backpressure
     /// Private: empty for overridden in derive
     #[doc(hidden)]
     #[inline]
@@ -215,12 +218,6 @@ pub struct Context<A: App> {
     app: UnsafeCell<A>,
     q: Queue<A::Message>,
     ready: Cell<bool>,
-}
-
-impl<A: App> Drop for Context<A> {
-    fn drop(&mut self) {
-        eprintln!("Drop Context")
-    }
 }
 
 impl<A: App> Context<A> {

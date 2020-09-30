@@ -193,7 +193,6 @@ mod test {
             rx.await.unwrap();
             assert_eq!(c3.get(), 1);
             // Only use at end
-            // In wasm is already synchronize
             unsafe { addr.dealloc() };
             // TODO:
             //  #[should_panic]
@@ -269,7 +268,6 @@ mod test_wasm {
             assert_eq!(c3.get(), 7);
 
             // Only use at end
-            // In wasm is already synchronize
             unsafe { addr.dealloc() };
             // TODO:
             //  #[should_panic]
