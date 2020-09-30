@@ -1,4 +1,4 @@
-# Parallel Raytracing
+# Parallel Raytracing [online compiled](yarte-parallel-ray-tracing.netlify.app)
 > Adapted from [`wasm-bindgen`](https://github.com/rustwasm/wasm-bindgen/tree/master/examples/raytrace-parallel)
 >
 > Make sure to have `rust` at nightly and `wasm-bindgen-cli` at the last version
