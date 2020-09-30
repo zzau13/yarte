@@ -16,34 +16,6 @@ use crate::scene::{update_image, ImageData, Img, RenderingImage, Scene};
 use crate::Msg::{EndRender, Error, Paint, UpdateTime};
 use crate::RayTracing;
 
-pub(crate) fn disable_interface(
-    RayTracing {
-        button,
-        concurrency,
-        rendering,
-        ..
-    }: &mut RayTracing,
-) {
-    *rendering = true;
-    button.set_disabled(true);
-    concurrency.set_disabled(true);
-    console_log!("Disable inputs");
-}
-
-pub(crate) fn enable_interface(
-    RayTracing {
-        button,
-        concurrency,
-        rendering,
-        ..
-    }: &mut RayTracing,
-) {
-    button.set_disabled(false);
-    concurrency.set_disabled(false);
-    *rendering = false;
-    console_log!("Enable inputs");
-}
-
 pub(crate) fn start_render(app: &mut RayTracing, addr: DeLorean<RayTracing>) {
     fn error_render<S: fmt::Display>(app: &mut RayTracing, now: f64, e: S) {
         error(app, e);
@@ -110,15 +82,15 @@ pub(crate) fn start_render(app: &mut RayTracing, addr: DeLorean<RayTracing>) {
     spawn_local(fut);
 }
 
-pub(crate) fn resize_canvas(app: &mut RayTracing, width: u32, height: u32) {
+pub(crate) fn resize_canvas(RayTracing { canvas, .. }: &mut RayTracing, width: u32, height: u32) {
     console_log!("Resize canvas");
-    app.canvas.set_width(width);
-    app.canvas.set_height(height);
+    canvas.set_width(width);
+    canvas.set_height(height);
 }
 
-pub(crate) fn paint(app: &mut RayTracing, img: ImageData) {
+pub(crate) fn paint(RayTracing { ctx, .. }: &RayTracing, img: ImageData) {
     console_log!("Painting");
-    update_image(&app.ctx, img);
+    update_image(&ctx, img);
 }
 
 // TODO: error enum
@@ -140,9 +112,9 @@ pub(crate) fn error<S: fmt::Display>(_app: &RayTracing, err: S) {
     console_error!("Error: {}", err)
 }
 
-pub(crate) fn update_time(app: &mut RayTracing, time: f64) {
+pub(crate) fn update_time(RayTracing { time, .. }: &mut RayTracing, t: f64) {
     console_log!("Update Time");
-    app.time.set_text_content(Some(&format!("{:.2} ms", time)));
+    time.set_text_content(Some(&format!("{:.2} ms", t)));
 }
 
 pub(crate) fn bench(start: f64) -> Result<f64, &'static str> {
@@ -180,4 +152,32 @@ pub(crate) fn update_concurrency(app: &mut RayTracing, s: String) {
     };
 
     app.concurrency_amt.set_text_content(Some(&s));
+}
+
+pub(crate) fn disable_interface(
+    RayTracing {
+        button,
+        concurrency,
+        rendering,
+        ..
+    }: &mut RayTracing,
+) {
+    *rendering = true;
+    button.set_disabled(true);
+    concurrency.set_disabled(true);
+    console_log!("Disable inputs");
+}
+
+pub(crate) fn enable_interface(
+    RayTracing {
+        button,
+        concurrency,
+        rendering,
+        ..
+    }: &mut RayTracing,
+) {
+    button.set_disabled(false);
+    concurrency.set_disabled(false);
+    *rendering = false;
+    console_log!("Enable inputs");
 }

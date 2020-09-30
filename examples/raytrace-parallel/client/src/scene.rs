@@ -32,6 +32,7 @@ pub(crate) struct Scene {
     inner: raytracer::scene::Scene,
 }
 
+// TODO: From form
 impl<'de> Deserialize<'de> for Scene {
     fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error>
     where
