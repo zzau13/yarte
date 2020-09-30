@@ -83,9 +83,9 @@ impl<T: Sized> Drop for Queue<T> {
         unsafe {
             let mut cur = *self.tail.get();
             while !cur.is_null() {
-                let next = (*cur).next.get();
+                let next = *(*cur).next.get();
                 let _ = Box::from_raw(cur);
-                cur = *next;
+                cur = next;
             }
         }
     }
