@@ -1,12 +1,12 @@
 [package]
-name = "yarte_wasm_app"
-version = "0.2.1"
+name = "delorean"
+version = "0.1.0"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "A simple single thread reactor pattern for wasm"
 documentation = "https://docs.rs/yarte_wasm_app"
 edition = "2018"
 include = ["src/**/*", "Cargo.toml"]
-keywords = ["wasm", "reactor"]
+keywords = ["reactor"]
 license = "MIT/Apache-2.0"
 repository = "https://github.com/botika/yarte"
 workspace = ".."
@@ -19,6 +19,8 @@ maintenance = { status = "actively-developed" }
 wasm-bindgen-futures = "0.4"
 async-timer = "0.7"
 wasm-bindgen-test = "0.3"
+futures = "0.3"
+tokio = { version = "0.2", features = ["rt-util", "rt-core", "macros"] }
 
 [build-dependencies]
 yarte_helpers = { version = "0.12.2", path = "../yarte_helpers", default-features = false }

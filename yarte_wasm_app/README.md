@@ -1,17 +1,13 @@
-# Yarte Wasm application [![Latest version](https://img.shields.io/crates/v/yarte_wasm_app.svg)](https://crates.io/crates/yarte_wasm_app) [![Build Status](https://travis-ci.org/botika/yarte.svg?branch=master)](https://travis-ci.org/botika/yarte)
-> `Derive` is `Work in progress` 
+# DeLorean [![Latest version](https://img.shields.io/crates/v/delorean.svg)](https://crates.io/crates/delorean) [![Build Status](https://travis-ci.org/botika/yarte.svg?branch=master)](https://travis-ci.org/botika/yarte)
 
-DeLorean for your app. Easy and safe traveling to the future in your thread and the nightly.
+DeLorean for your app. Easy and safe traveling to the future in your thread.
 
-A simple single thread reactor pattern implementation.
+A simple single thread reactor pattern implementation. 
 
 ## Documentation
 In order to  fully understand Yarte wasm app's capabilities take a look at the following documentation:
-- [Crate documentation](https://docs.rs/yarte_wasm_app/)
+- [Crate documentation](https://docs.rs/delorean/)
 - Minimum supported Rust version: 1.45 or later
-
-### Is it really fast?
-You can see in [js-framework-benchmark](https://github.com/krausest/js-framework-benchmark)
 
 ## Contributing
 
