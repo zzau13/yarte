@@ -60,7 +60,7 @@ jobs:
       - name: Run test wasm
         timeout-minutes: 40
         run: |
-          cd yarte_wasm_app && wasm-pack test --node && cd ..
+          cd delorean && wasm-pack test --node && cd ..
 
       - name: Install cargo-cache
         continue-on-error: true
