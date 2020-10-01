@@ -1,51 +1,10 @@
-//! # Yarte wasm application
-//! A simple reactor pattern
-//!
-//! Intended to be used as a singleton and static with single state
-//!
-//! Only 101% rust safe in nightly
-//!
-//! ## Architecture
-//! ### Cycle
-//! The cycle of App methods is:
-//! - `init`:
-//!     - `__hydrate(&mut self, _addr: A<Self>)`
-//! - `on message`:
-//!     - enqueue message
-//!     - is ready? -> `update`
-//! - `update`
-//!     - pop message? -> `__dispatch(&mut self, _msg: Self::Message, _addr: A<Self>)`
-//!     - is queue empty?  -> `__render(&mut self, _addr: A<Self>)`
-//!     - is queue not empty? -> `update`
-//!
-//! ### Unsafe code and controversies
-//! #### Why no RC?
-//! Because it is thinking to be implemented as singleton and static.
-//!
-//! ### Whe no RefCell?
-//! Because all uniques (mutable) references are made in atomic instructions,
-//! `run!` is designed for assure **unique** owner of **all** `App` is `DeLorean`
-//!
-//!
-#![no_std]
-#![cfg_attr(nightly, feature(core_intrinsics, negative_impls))]
-
-extern crate alloc;
-
-use alloc::boxed::Box;
-use core::cell::{Cell, UnsafeCell};
-use core::default::Default;
-#[cfg(nightly)]
-use core::marker::{Send, Sync};
-
-#[cfg(debug_assertions)]
 use alloc::alloc::{dealloc, Layout};
-#[cfg(debug_assertions)]
+use alloc::boxed::Box;
+use core::default::Default;
 use core::ptr;
 
-mod queue;
-
-use self::queue::Queue;
+#[cfg(nightly)]
+use core::marker::{Send, Sync};
 
 /// App are object which encapsulate state and behavior
 ///
@@ -100,6 +59,7 @@ macro_rules! run {
 /// No Send and No Sync wrapper static reference
 pub struct A<I: App>(&'static Addr<I>);
 pub use self::A as DeLorean;
+use crate::{stc_to_ptr, Context};
 
 #[cfg(nightly)]
 impl<I: App> !Send for A<I> {}
@@ -211,87 +171,4 @@ impl<I: App> Addr<I> {
         ptr::drop_in_place(p);
         dealloc(p as *mut u8, Layout::new::<Addr<I>>());
     }
-}
-
-/// Encapsulate inner context of the App
-pub struct Context<A: App> {
-    app: UnsafeCell<A>,
-    q: Queue<A::Message>,
-    ready: Cell<bool>,
-}
-
-impl<A: App> Context<A> {
-    pub(crate) fn new(app: A) -> Self {
-        Self {
-            app: UnsafeCell::new(app),
-            q: Queue::new(),
-            ready: Cell::new(false),
-        }
-    }
-
-    /// Get unsafe mutable reference of A
-    ///
-    /// # Safety
-    /// Unchecked null pointer and broke mutability
-    #[inline]
-    #[allow(clippy::mut_from_ref)]
-    pub(crate) unsafe fn app(&self) -> &mut A {
-        &mut *self.app.get()
-    }
-
-    /// Set ready
-    #[inline]
-    pub(crate) fn ready(&self, r: bool) {
-        self.ready.replace(r);
-    }
-
-    /// Is ready
-    #[inline]
-    pub(crate) fn is_ready(&self) -> bool {
-        self.ready.get()
-    }
-
-    /// Enqueue message
-    #[inline]
-    pub(crate) fn push(&self, msg: A::Message) {
-        self.q.push(msg);
-    }
-
-    /// Pop message
-    ///
-    /// # Safety
-    /// Only call in a atomic function
-    #[inline]
-    pub(crate) unsafe fn pop(&self) -> Option<A::Message> {
-        self.q.pop()
-    }
-}
-
-/// Static ref to mutable ptr
-///
-/// # Safety
-/// Broke `'static` lifetime and mutability
-#[cfg(debug_assertions)]
-const unsafe fn stc_to_ptr<T>(t: &'static T) -> *mut T {
-    t as *const T as *mut T
-}
-
-/// unchecked unwrap
-///
-/// # Safety
-/// `None` produce UB
-#[inline]
-#[cfg(not(nightly))]
-unsafe fn unwrap<T>(o: Option<T>) -> T {
-    o.unwrap()
-}
-
-/// unchecked unwrap
-///
-/// # Safety
-/// `None` produce UB
-#[inline]
-#[cfg(nightly)]
-unsafe fn unwrap<T>(o: Option<T>) -> T {
-    o.unwrap_or_else(|| core::intrinsics::unreachable())
 }

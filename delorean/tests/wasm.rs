@@ -1,9 +1,13 @@
-use delorean::*;
+#![cfg(target_arch = "wasm32")]
+
 use std::cell::Cell;
 use std::default::Default;
 use std::rc::Rc;
-use std::thread::{sleep, spawn};
-use std::time::Duration;
+
+use wasm_bindgen_futures::spawn_local;
+use wasm_bindgen_test::*;
+
+use delorean::*;
 
 #[derive(Default)]
 struct Test {
@@ -162,118 +166,45 @@ fn reset(_app: &mut Test, addr: A<Test>) {
     addr.send(Msg::Msg(0));
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-mod test {
-    use super::*;
-    use futures::channel::oneshot;
-    use futures::join;
-    use tokio::task;
+#[wasm_bindgen_test]
+fn test() {
+    let c = Rc::new(Cell::new(0));
+    let c2 = Rc::clone(&c);
+    let app = Test {
+        c,
+        ..Default::default()
+    };
+    let addr = unsafe { A::run(app) };
+    addr.send(Msg::Tree(0));
+    addr.send(Msg::Msg(2));
+    assert_eq!(c2.get(), 2);
+    addr.send(Msg::Msg(3));
+    addr.send(Msg::Msg(1));
+    assert_eq!(c2.get(), 1);
+    addr.send(Msg::Msg(1));
+    addr.send(Msg::Msg(3));
+    assert_eq!(c2.get(), 3);
+    addr.send(Msg::Reset);
+    assert_eq!(c2.get(), 0);
+    addr.send(Msg::Msg(3));
+    assert_eq!(c2.get(), 3);
+    let c3 = Rc::clone(&c2);
+    let work = unsafe {
+        async_timer::Timed::platform_new_unchecked(
+            async move { addr.send(Msg::Msg(7)) },
+            core::time::Duration::from_secs(1),
+        )
+    };
+    spawn_local(async move {
+        work.await.unwrap();
+        assert_eq!(c3.get(), 7);
 
-    #[tokio::test]
-    async fn _test() {
-        let c = Rc::new(Cell::new(0));
-        let c2 = Rc::clone(&c);
-        let app = Test {
-            c,
-            ..Default::default()
-        };
-        let addr = unsafe { A::run(app) };
-        addr.send(Msg::Tree(0));
-        let c3 = Rc::clone(&c2);
-
-        addr.send(Msg::Reset);
-        assert_eq!(c2.get(), 0);
-        let (tx, rx) = oneshot::channel();
-        // Join in local with channels
-        let _ = spawn(|| {
-            sleep(Duration::new(2, 0));
-            let _ = tx.send(());
-        });
-        let work = async move {
-            rx.await.unwrap();
-            assert_eq!(c3.get(), 1);
-            // Only use at end
-            unsafe { addr.dealloc() };
-            // TODO:
-            //  #[should_panic]
-            // addr.send(Msg::Reset);
-        };
-
-        let (tx, rx2) = oneshot::channel();
-        let _ = spawn(|| {
-            sleep(Duration::new(1, 0));
-            let _ = tx.send(());
-        });
-        let c3 = Rc::clone(&c2);
-        let work2 = async move {
-            rx2.await.unwrap();
-            assert_eq!(c3.get(), 0);
-            addr.send(Msg::Msg(1));
-        };
-
-        // Run the local task set.
-        let local = task::LocalSet::new();
-        local
-            .run_until(async {
-                task::spawn_local(async {
-                    join!(work, work2);
-                    ()
-                })
-                .await
-                .unwrap();
-            })
-            .await;
-
-        assert_eq!(c2.get(), 1);
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-mod test_wasm {
-    use super::*;
-    use wasm_bindgen_futures::spawn_local;
-    use wasm_bindgen_test::*;
-
-    #[wasm_bindgen_test]
-    fn test() {
-        let c = Rc::new(Cell::new(0));
-        let c2 = Rc::clone(&c);
-        let app = Test {
-            c,
-            ..Default::default()
-        };
-        let addr = unsafe { A::run(app) };
-        addr.send(Msg::Tree(0));
-        addr.send(Msg::Msg(2));
-        assert_eq!(c2.get(), 2);
-        addr.send(Msg::Msg(3));
-        addr.send(Msg::Msg(1));
-        assert_eq!(c2.get(), 1);
-        addr.send(Msg::Msg(1));
-        addr.send(Msg::Msg(3));
-        assert_eq!(c2.get(), 3);
-        addr.send(Msg::Reset);
-        assert_eq!(c2.get(), 0);
-        addr.send(Msg::Msg(3));
-        assert_eq!(c2.get(), 3);
-        let c3 = Rc::clone(&c2);
-        let work = unsafe {
-            async_timer::Timed::platform_new_unchecked(
-                async move { addr.send(Msg::Msg(7)) },
-                core::time::Duration::from_secs(1),
-            )
-        };
-        spawn_local(async move {
-            work.await.unwrap();
-            assert_eq!(c3.get(), 7);
-
-            // Only use at end
-            unsafe { addr.dealloc() };
-            // TODO:
-            //  #[should_panic]
-            // addr.send(Msg::Reset);
-        });
-        addr.send(Msg::Reset);
-        assert_eq!(c2.get(), 0);
-    }
+        // Only use at end
+        unsafe { addr.dealloc() };
+        // TODO:
+        //  #[should_panic]
+        // addr.send(Msg::Reset);
+    });
+    addr.send(Msg::Reset);
+    assert_eq!(c2.get(), 0);
 }

@@ -1,11 +1,11 @@
-//! A mostly lock-free single-producer, single consumer queue.
+//! A mostly lock-free single producer, single consumer queue.
 //!
 // http://www.1024cores.net/home/lock-free-algorithms/queues/non-intrusive-mpsc-node-based-queue
 
 // TODO: test grow array implementation
-use core::{cell::UnsafeCell, ptr};
-
 use alloc::boxed::Box;
+
+use core::{cell::UnsafeCell, ptr};
 
 use super::unwrap;
 
@@ -93,42 +93,16 @@ impl<T: Sized> Drop for Queue<T> {
 
 #[cfg(test)]
 mod test {
-    use alloc::rc::Rc;
-    use wasm_bindgen_futures::spawn_local;
-    use wasm_bindgen_test::*;
-
     use super::*;
 
-    #[wasm_bindgen_test]
-    fn test() {
-        let q = Rc::new(Queue::new());
-        let q1 = Rc::clone(&q);
-
-        spawn_local(async move {
-            for i in 0..100_000 {
-                loop {
-                    match unsafe { q1.pop() } {
-                        Some(j) if i == j => break,
-                        Some(_) => panic!(),
-                        None => {}
-                    }
-                }
-            }
-            assert!(unsafe { q1.pop() }.is_none());
-        });
-        for i in 0..100_000 {
-            q.push(i);
-        }
-    }
-
-    #[wasm_bindgen_test]
+    #[test]
     fn test_e() {
         let q = &Queue::new();
 
-        for i in 0..100 {
+        for i in 0..1_000_000 {
             q.push(i);
         }
-        for i in 0..100 {
+        for i in 0..1_000_000 {
             loop {
                 match unsafe { q.pop() } {
                     Some(j) if i == j => break,
@@ -138,5 +112,11 @@ mod test {
             }
         }
         assert!(unsafe { q.pop() }.is_none());
+        let q = Queue::new();
+
+        for i in 0..1_000_000 {
+            q.push(i);
+        }
+        drop(q);
     }
 }
