@@ -20,7 +20,6 @@ wasm-bindgen-futures = "0.4"
 async-timer = "0.7"
 wasm-bindgen-test = "0.3"
 futures = "0.3"
-tokio = { version = "0.2", features = ["rt-util", "rt-core", "macros"] }
 
 [build-dependencies]
 yarte_helpers = { version = "0.12.2", path = "../yarte_helpers", default-features = false }
