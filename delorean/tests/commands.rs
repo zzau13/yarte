@@ -61,14 +61,19 @@ impl Stream for Commander {
         } = self.get_mut();
         match Pin::new(interface).poll_next(cx) {
             Poll::Pending => {
-                for (_, i) in threads.iter_mut() {
-                    if let Poll::Ready(msg) = Pin::new(i).poll(cx) {
+                let mut finished = vec![];
+                for (i, (_, rx)) in threads.iter_mut().enumerate() {
+                    if let Poll::Ready(msg) = Pin::new(rx).poll(cx) {
                         let msg = match msg {
                             Ok(msg) => msg,
                             Err(_) => Msg::Off,
                         };
+                        finished.push(i);
                         addr.send(msg);
                     }
+                }
+                for i in finished {
+                    let _ = threads.remove(i);
                 }
                 Poll::Pending
             }
