@@ -5,7 +5,7 @@ use std::default::Default;
 use futures::channel::mpsc;
 use futures::StreamExt;
 
-use delorean::{run, App, Return, A};
+use delorean::{App, Return, A};
 
 /// Reusable Commands
 #[derive(Default)]
@@ -21,7 +21,7 @@ enum Msg {
 // TODO: more coverage
 impl App for Test {
     type BlackBox = ();
-    type Output = usize;
+    type Output = (usize, A<Self>);
     type Message = Msg;
 
     fn __hydrate(&mut self, addr: A<Self>) -> Return<Self::Output> {
@@ -35,7 +35,7 @@ impl App for Test {
                     msg => addr.send(msg),
                 }
             }
-            0
+            (0, addr)
         })
     }
 
@@ -63,5 +63,7 @@ impl App for Test {
 
 #[tokio::test]
 async fn test() {
-    assert_eq!(run!(Test).await, 0);
+    let (ret, addr) = unsafe { A::run(Test::default()) }.await;
+    assert_eq!(ret, 0);
+    unsafe { addr.dealloc() }
 }
