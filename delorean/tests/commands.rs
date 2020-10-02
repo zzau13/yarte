@@ -4,15 +4,15 @@ use std::default::Default;
 
 use futures::channel::mpsc;
 use futures::channel::oneshot;
+use futures::executor::block_on;
+use futures::task::Context;
 use futures::{Stream, StreamExt};
 
+use tokio::macros::support::{Future, Pin, Poll};
 use tokio::spawn;
 use tokio::task::JoinHandle;
 
 use delorean::{App, Return, A};
-use futures::executor::block_on;
-use futures::task::Context;
-use tokio::macros::support::{Future, Pin, Poll};
 
 /// Reusable Commands
 #[derive(Default)]
@@ -66,7 +66,7 @@ impl Stream for Commander {
                     if let Poll::Ready(msg) = Pin::new(rx).poll(cx) {
                         let msg = match msg {
                             Ok(msg) => msg,
-                            Err(_) => Msg::Off,
+                            Err(_) => panic!(),
                         };
                         finished.push(i);
                         addr.send(msg);
