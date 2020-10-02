@@ -3,8 +3,8 @@ use alloc::boxed::Box;
 use core::default::Default;
 use core::future::Future;
 use core::pin::Pin;
-use core::ptr;
 use core::task::{self, Poll};
+use core::{mem, ptr};
 
 // Are auto implement. Is for document
 #[cfg(nightly)]
@@ -113,6 +113,26 @@ impl<I: App> A<I> {
     fn ctx(&self) -> &Context<I> {
         &(self.0).0
     }
+}
+
+/// Recover the owner of app and dealloc Context
+///
+/// Basically you can recovery your App with a version of your current state
+///
+/// # Safety
+/// Ultra unsafe function, NEVER call inside your App, Only Outside.
+/// Current is replace for `Default::default()`, check it's correctly with yours expected behaviour
+/// Make sure to ALL your runtime is ended.
+///
+/// Drop all your old `DeLorean<I>` references
+///
+pub unsafe fn recovery<I: App>(addr: A<I>) -> I {
+    let app = addr.0;
+    let app = (app.0).app();
+    let app = mem::take(app);
+
+    addr.dealloc();
+    app
 }
 
 /// TODO
