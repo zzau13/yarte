@@ -3,19 +3,95 @@
 use std::default::Default;
 
 use futures::channel::mpsc;
-use futures::StreamExt;
+use futures::channel::oneshot;
+use futures::{Stream, StreamExt};
+
+use tokio::spawn;
+use tokio::task::JoinHandle;
 
 use delorean::{App, Return, A};
+use futures::executor::block_on;
+use futures::task::Context;
+use tokio::macros::support::{Future, Pin, Poll};
 
 /// Reusable Commands
 #[derive(Default)]
 struct Test {
-    commands: Option<mpsc::UnboundedSender<Return<Msg>>>,
+    commands: Option<mpsc::UnboundedSender<Msg>>,
 }
 
 enum Msg {
     Init,
+    Any(usize),
     Off,
+}
+
+struct Commander {
+    addr: A<Test>,
+    threads: Vec<(JoinHandle<()>, oneshot::Receiver<Msg>)>,
+    interface: mpsc::UnboundedReceiver<Msg>,
+}
+
+impl Commander {
+    fn new(addr: A<Test>, interface: mpsc::UnboundedReceiver<Msg>) -> Commander {
+        Commander {
+            addr,
+            interface,
+            threads: vec![],
+        }
+    }
+}
+
+impl Drop for Commander {
+    fn drop(&mut self) {
+        for (j, _) in self.threads.drain(..) {
+            let _ = block_on(j);
+        }
+    }
+}
+
+impl Stream for Commander {
+    type Item = ();
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let Commander {
+            addr,
+            threads,
+            interface,
+        } = self.get_mut();
+        match Pin::new(interface).poll_next(cx) {
+            Poll::Pending => {
+                for (_, i) in threads.iter_mut() {
+                    if let Poll::Ready(msg) = Pin::new(i).poll(cx) {
+                        let msg = match msg {
+                            Ok(msg) => msg,
+                            Err(_) => Msg::Off,
+                        };
+                        addr.send(msg);
+                    }
+                }
+                Poll::Pending
+            }
+            Poll::Ready(Some(msg)) => {
+                if let Msg::Off = msg {
+                    eprintln!("Comander Off");
+                    return Poll::Ready(None);
+                }
+                let (tx, rx) = oneshot::channel();
+                threads.push((spawn(worker(msg, tx)), rx));
+                Poll::Ready(Some(()))
+            }
+            Poll::Ready(None) => Poll::Ready(None),
+        }
+    }
+}
+
+async fn worker(msg: Msg, tx: oneshot::Sender<Msg>) {
+    let msg = match msg {
+        Msg::Any(n) => Msg::Any(n * 2),
+        _ => Msg::Off,
+    };
+    let _ = tx.send(msg);
 }
 
 // TODO: more coverage
@@ -25,16 +101,12 @@ impl App for Test {
     type Message = Msg;
 
     fn __hydrate(&mut self, addr: A<Self>) -> Return<Self::Output> {
-        let (tx, mut rx) = mpsc::unbounded();
+        let (tx, rx) = mpsc::unbounded();
         self.commands.replace(tx);
         addr.send(Msg::Init);
+        let mut commander = Commander::new(addr, rx);
         Box::pin(async move {
-            while let Some(command) = rx.next().await {
-                match command.await {
-                    Msg::Off => break,
-                    msg => addr.send(msg),
-                }
-            }
+            while commander.next().await.is_some() {}
             (0, addr)
         })
     }
@@ -43,19 +115,17 @@ impl App for Test {
         match msg {
             Msg::Init => {
                 eprintln!("Init");
-                let _ = self
-                    .commands
-                    .as_ref()
-                    .unwrap()
-                    .unbounded_send(Box::pin(async { Msg::Off }));
+                let _ = self.commands.as_ref().unwrap().unbounded_send(Msg::Any(1));
+            }
+            Msg::Any(x) => {
+                if x % 2 == 0 {
+                    let _ = self.commands.as_ref().unwrap().unbounded_send(Msg::Off);
+                }
+                eprintln!("Any {}", x);
             }
             a @ Msg::Off => {
                 eprintln!("Off");
-                let _ = self
-                    .commands
-                    .as_ref()
-                    .unwrap()
-                    .unbounded_send(Box::pin(async move { a }));
+                let _ = self.commands.as_ref().unwrap().unbounded_send(a);
             }
         }
     }
