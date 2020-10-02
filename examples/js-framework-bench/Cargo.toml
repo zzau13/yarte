@@ -5,11 +5,11 @@ publish = false
 edition = "2018"
 
 [workspace]
-members = [".", "codegen"]
+members = ["../fortune/src", "codegen"]
 
 [dependencies]
-yarte_wasm_app = { path = "../.", version = "*" }
-codegen = { path = "./codegen", version = "*" }
+yarte_wasm_app = { path = "../fortune", version = "*" }
+codegen = { path = "codegen", version = "*" }
 hashbrown = { version ="0.6", default_features = false, features = ["ahash"] }
 
 serde = "1.0"
