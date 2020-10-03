@@ -79,7 +79,7 @@ impl Stream for Commander {
             }
             Poll::Ready(Some(msg)) => {
                 if let Msg::Off = msg {
-                    eprintln!("Comander Off");
+                    eprintln!("Commander Off");
                     return Poll::Ready(None);
                 }
                 let (tx, rx) = oneshot::channel();
