@@ -79,14 +79,17 @@ impl Stream for Commander {
             }
             Poll::Ready(Some(msg)) => {
                 if let Msg::Off = msg {
-                    eprintln!("Commander Off");
+                    eprintln!("Commander Off by Msg");
                     return Poll::Ready(None);
                 }
                 let (tx, rx) = oneshot::channel();
                 threads.push((spawn(worker(msg, tx)), rx));
                 Poll::Ready(Some(()))
             }
-            Poll::Ready(None) => Poll::Ready(None),
+            Poll::Ready(None) => {
+                eprintln!("Commander Off by End Stream");
+                Poll::Ready(None)
+            }
         }
     }
 }
@@ -124,13 +127,13 @@ impl App for Test {
             }
             Msg::Any(x) => {
                 if x % 2 == 0 {
-                    let _ = self.commands.as_ref().unwrap().unbounded_send(Msg::Off);
+                    let _ = self.commands.take();
                 }
                 eprintln!("Any {}", x);
             }
-            a @ Msg::Off => {
+            Msg::Off => {
                 eprintln!("Off");
-                let _ = self.commands.as_ref().unwrap().unbounded_send(a);
+                let _ = self.commands.take();
             }
         }
     }
