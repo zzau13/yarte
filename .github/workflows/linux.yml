@@ -53,15 +53,6 @@ jobs:
           command: test
           args: --all --all-features --no-fail-fast -- --nocapture
 
-      - name: Install wasm-pack
-        run: |
-          cargo install wasm-pack --force
-
-      - name: Run test wasm
-        timeout-minutes: 40
-        run: |
-          cd delorean && wasm-pack test --node && cd ..
-
       - name: Install cargo-cache
         continue-on-error: true
         run: |
