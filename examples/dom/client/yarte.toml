@@ -1,6 +1,0 @@
-# TODO: unique config file or composable
-[main]
-dir = "../templates"
-
-[debug]
-short = false

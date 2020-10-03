@@ -8,5 +8,4 @@ members = [
     "yarte_hir",
     "yarte_html",
     "yarte_parser",
-    "delorean"
 ]
