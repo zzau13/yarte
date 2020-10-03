@@ -18,16 +18,12 @@ before_script:
       rustup component add rustfmt
       rustup component add clippy
     fi
-  - curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.2/install.sh | bash
-  - nvm install node
-  - cargo install wasm-pack --force
 
 script:
   - |
     if [[ "$TRAVIS_RUST_VERSION" != "nightly" ]]; then
       cargo fmt -- --check
       cargo clippy --all-targets --all-features -- -D warnings
-      cd delorean && wasm-pack test --node && cd ..
     fi
   - cargo test --all-features --all -- --nocapture
   - |
