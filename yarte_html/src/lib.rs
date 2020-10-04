@@ -2,7 +2,8 @@
 #![allow(
     clippy::match_single_binding,
     clippy::unknown_clippy_lints,
-    clippy::match_on_vec_items
+    clippy::match_on_vec_items,
+    clippy::match_like_matches_macro
 )]
 #[macro_use]
 mod macros;

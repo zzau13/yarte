@@ -160,10 +160,7 @@ fn serialize_domfmt(sink: Sink, mut ir: Vec<HIR>, opts: SerializerOpt) -> ParseR
             chunks.next();
         }
     }
-    let mut ir = ir.drain(..).filter(|x| match x {
-        HIR::Lit(_) => false,
-        _ => true,
-    });
+    let mut ir = ir.drain(..).filter(|x| !matches!(x, HIR::Lit(_)));
 
     let mut buff = vec![];
     for chunk in chunks {

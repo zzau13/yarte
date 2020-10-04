@@ -44,33 +44,29 @@ pub fn is_on_attr(attr: &Attribute) -> Option<&str> {
 }
 
 pub fn all_children_text<'a, I: Iterator<Item = &'a Node> + Clone>(mut doc: I) -> bool {
-    !doc.clone().all(|x| {
-        if let Node::Elem(Element::Text(_)) = x {
-            true
-        } else {
-            false
-        }
-    }) && doc.all(|x| match x {
-        Node::Elem(Element::Text(_)) => true,
-        Node::Expr(e) => match e {
-            Expression::IfElse(_, block) => {
-                let IfElse { ifs, if_else, els } = &**block;
-                all_if_block_text(ifs)
-                    && if_else.iter().all(|x| all_if_block_text(x))
-                    && els
-                        .as_ref()
-                        .map(|x| all_children_text(x.iter()))
-                        .unwrap_or(true)
-            }
-            Expression::Each(_, block) => {
-                let Each { body, .. } = &**block;
-                all_children_text(body.iter())
-            }
-            Expression::Local(..) => false,
-            _ => true,
-        },
-        _ => false,
-    })
+    !doc.clone()
+        .all(|x| matches!(x, Node::Elem(Element::Text(_))))
+        && doc.all(|x| match x {
+            Node::Elem(Element::Text(_)) => true,
+            Node::Expr(e) => match e {
+                Expression::IfElse(_, block) => {
+                    let IfElse { ifs, if_else, els } = &**block;
+                    all_if_block_text(ifs)
+                        && if_else.iter().all(|x| all_if_block_text(x))
+                        && els
+                            .as_ref()
+                            .map(|x| all_children_text(x.iter()))
+                            .unwrap_or(true)
+                }
+                Expression::Each(_, block) => {
+                    let Each { body, .. } = &**block;
+                    all_children_text(body.iter())
+                }
+                Expression::Local(..) => false,
+                _ => true,
+            },
+            _ => false,
+        })
 }
 
 #[inline]

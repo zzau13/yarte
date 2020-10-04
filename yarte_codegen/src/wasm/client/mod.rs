@@ -162,10 +162,7 @@ impl<'a> WASMCodeGen<'a> {
         self.cur()
             .steps
             .iter()
-            .rposition(|x| match x {
-                Step::FirstChild => true,
-                _ => false,
-            })
+            .rposition(|x| matches!(x, Step::FirstChild))
             .unwrap_or_default()
     }
 
@@ -461,10 +458,9 @@ impl<'a> WASMCodeGen<'a> {
     fn step(&mut self, doc: Document) {
         let cur = self.cur().steps.len();
         // TODO: Inline nodes
-        let insert_points = doc.iter().filter(|x| match x {
-            Node::Elem(Element::Text(_)) => false,
-            _ => true,
-        });
+        let insert_points = doc
+            .iter()
+            .filter(|x| !matches!(x, Node::Elem(Element::Text(_))));
         let len = insert_points.clone().count();
         let insert_point = get_insert_point(insert_points);
 
