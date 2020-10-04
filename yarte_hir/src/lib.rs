@@ -204,10 +204,8 @@ impl<'a> LoweringContext<'a> {
         if buf.is_empty() {
             buf.push(HIR::Lit("".into()));
         }
-        assert!((0..buf.len() - 1).all(|i| match (&buf[i], &buf[i + 1]) {
-            (HIR::Lit(..), HIR::Lit(..)) => false,
-            _ => true,
-        }));
+        assert!((0..buf.len() - 1)
+            .all(|i| !matches!((&buf[i], &buf[i + 1]), (HIR::Lit(..), HIR::Lit(..)))));
 
         if self.errors.is_empty() {
             Ok(buf)

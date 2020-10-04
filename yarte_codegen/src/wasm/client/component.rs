@@ -136,13 +136,7 @@ impl<'a, 'b> ComponentBuilder<'a, 'b> {
 
     fn set_attrs(&mut self, id: &Ident, attrs: &[Attribute]) {
         for attr in attrs {
-            let all_text = attr.value.iter().all(|x| {
-                if let ExprOrText::Text(_) = x {
-                    true
-                } else {
-                    false
-                }
-            });
+            let all_text = attr.value.iter().all(|x| matches!(x, ExprOrText::Text(_)));
             if all_text {
                 let value = attr.value.iter().fold(String::new(), |mut acc, x| {
                     if let ExprOrText::Text(t) = x {
