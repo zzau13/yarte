@@ -166,9 +166,8 @@ fn serialize_domfmt(sink: Sink, mut ir: Vec<HIR>, opts: SerializerOpt) -> ParseR
     for chunk in chunks {
         if chunk.is_empty() {
             panic!("chunk empty")
-        } else if chunk.starts_with(HASH) {
+        } else if let Some(cut) = chunk.strip_prefix(HASH) {
             resolve_node(ir.next().expect("Some HIR expression"), &mut buff, opts)?;
-            let cut = &chunk[HASH.len()..];
             if !cut.is_empty() {
                 buff.push(HIR::Lit(cut.into()));
             }

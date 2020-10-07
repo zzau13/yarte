@@ -145,9 +145,9 @@ impl<'a> Config<'a> {
             .alias
             .iter()
             .find_map(|(k, v)| {
-                if ident.starts_with(k) {
+                if let Some(stripped) = ident.strip_prefix(k) {
                     let mut path = (*v).to_string();
-                    path.push_str(&ident[k.len()..]);
+                    path.push_str(stripped);
                     Some(PathBuf::from(path))
                 } else {
                     None
