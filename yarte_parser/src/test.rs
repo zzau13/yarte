@@ -287,36 +287,6 @@ fn test_defined() {
     );
 }
 
-#[test]
-#[cfg(disabled)]
-fn test_at_helpers() {
-    let rest = "{{ @json foo }}";
-    assert_eq!(
-        parse(rest),
-        vec![S(
-            Node::AtHelper(
-                (false, false),
-                AtHelperKind::Json,
-                S(vec![parse_str("foo").unwrap()], bytes!(9..12))
-            ),
-            bytes!(0..15)
-        )]
-    );
-
-    let rest = "{{ @json_pretty foo }}";
-    assert_eq!(
-        parse(rest),
-        vec![S(
-            Node::AtHelper(
-                (false, false),
-                AtHelperKind::JsonPretty,
-                S(vec![parse_str("foo").unwrap()], bytes!(16..19))
-            ),
-            bytes!(0..22)
-        )]
-    )
-}
-
 fn test_error(rest: &str, _message: PError, _span: Span) {
     let cursor = Cursor { rest, off: 0 };
     match _parse(cursor) {
