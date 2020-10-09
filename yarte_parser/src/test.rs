@@ -258,35 +258,6 @@ fn test_expr_list() {
     );
 }
 
-#[test]
-#[cfg(disabled)]
-fn test_defined() {
-    let src = "{{#foo bar}}hello{{/foo}}";
-    assert_eq!(&src[12..17], "hello");
-    let span = Span {
-        lo: 0,
-        hi: src.len() as u32,
-    };
-    assert_eq!(
-        parse(src),
-        vec![S(
-            Helper(Box::new(Helper::Defined(
-                (WS, WS),
-                "foo",
-                S(
-                    Box::new(parse_str::<Expr>("bar").unwrap()),
-                    Span { lo: 7, hi: 10 },
-                ),
-                vec![S(
-                    Lit("", S("hello", Span { lo: 12, hi: 17 }), ""),
-                    Span { lo: 12, hi: 17 },
-                )],
-            ))),
-            span,
-        )]
-    );
-}
-
 fn test_error(rest: &str, _message: PError, _span: Span) {
     let cursor = Cursor { rest, off: 0 };
     match _parse(cursor) {
