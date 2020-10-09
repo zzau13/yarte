@@ -220,12 +220,12 @@ impl<'a> LoweringContext<'a> {
                 Node::Local(expr) => {
                     self.skip_ws();
                     self.write_buf_writable(buf);
-                    let mut expr = *expr.t().clone();
+                    let mut expr = (***expr.t()).clone();
                     self.visit_local_mut(&mut expr);
                     buf.push(HIR::Local(Box::new(expr)));
                 }
                 Node::Safe(ws, sexpr) => {
-                    let mut expr = *sexpr.t().clone();
+                    let mut expr = (***sexpr.t()).clone();
 
                     self.handle_ws(*ws);
                     self.visit_expr_mut(&mut expr);
@@ -239,7 +239,7 @@ impl<'a> LoweringContext<'a> {
                     }
                 }
                 Node::Expr(ws, sexpr) => {
-                    let mut expr = *sexpr.t().clone();
+                    let mut expr = (***sexpr.t()).clone();
 
                     self.handle_ws(*ws);
                     self.visit_expr_mut(&mut expr);
@@ -252,7 +252,7 @@ impl<'a> LoweringContext<'a> {
                 }
                 #[cfg(feature = "wasm-app")]
                 Node::RExpr(ws, sexpr) => {
-                    let mut expr = *sexpr.t().clone();
+                    let mut expr = (***sexpr.t()).clone();
 
                     self.handle_ws(*ws);
                     self.visit_expr_mut(&mut expr);
@@ -336,13 +336,13 @@ impl<'a> LoweringContext<'a> {
                     use AtHelperKind::*;
                     match e {
                         Json => {
-                            let mut arg = args.t()[0].clone();
+                            let mut arg = (*args.t()[0]).clone();
                             self.visit_expr_mut(&mut arg);
                             let expr = parse2(quote!((&(#arg).__as_json()))).unwrap();
                             self.buf_w.push(Writable::Expr(Box::new(expr), false))
                         }
                         JsonPretty => {
-                            let mut arg = args.t()[0].clone();
+                            let mut arg = (*args.t()[0]).clone();
                             self.visit_expr_mut(&mut arg);
                             let expr = parse2(quote!(&(#arg).__as_json_pretty())).unwrap();
                             self.buf_w.push(Writable::Expr(Box::new(expr), false))
@@ -357,7 +357,7 @@ impl<'a> LoweringContext<'a> {
 
     // TODO:
     fn format_error(&mut self, err: &SVExpr) -> Option<String> {
-        if let Some(first) = err.t().first() {
+        if let Some(first) = err.t().first().map(|x| &**x) {
             if let syn::Expr::Lit(e) = first {
                 if let syn::Lit::Str(v) = &e.lit {
                     return Some(v.value());
@@ -414,7 +414,7 @@ impl<'a> LoweringContext<'a> {
         nodes: &'a [SNode],
     ) {
         self.spans.push(scond.span());
-        let mut cond = *scond.t().clone();
+        let mut cond = (***scond.t()).clone();
         self.handle_ws(ws.0);
         self.visit_expr_mut(&mut cond);
         self.write_errors(scond.span());
@@ -460,7 +460,7 @@ impl<'a> LoweringContext<'a> {
         validator::scope(args, &mut self.errors);
 
         self.handle_ws(ws.0);
-        let mut arg = *args.t().clone();
+        let mut arg = (***args.t()).clone();
         self.visit_expr_mut(&mut arg);
         self.write_errors(args.span());
         self.on.push(On::With(self.scp.len()));
@@ -489,7 +489,7 @@ impl<'a> LoweringContext<'a> {
             false
         });
 
-        let mut args = *sargs.t().clone();
+        let mut args = (***sargs.t()).clone();
         self.visit_expr_mut(&mut args);
         self.write_errors(sargs.span());
 
@@ -545,7 +545,7 @@ impl<'a> LoweringContext<'a> {
         els: &'a Option<(Ws, Vec<SNode>)>,
     ) {
         self.scp.push_scope(vec![]);
-        let mut cond = *scond.t().clone();
+        let mut cond: syn::Expr = (***scond.t()).clone();
         self.visit_expr_mut(&mut cond);
         self.write_errors(scond.span());
         self.handle_ws(pws.0);
@@ -581,7 +581,7 @@ impl<'a> LoweringContext<'a> {
             }
 
             self.scp.push_scope(vec![]);
-            let mut cond = *scond.t().clone();
+            let mut cond: syn::Expr = (***scond.t()).clone();
             self.visit_expr_mut(&mut cond);
             self.write_errors(scond.span());
 

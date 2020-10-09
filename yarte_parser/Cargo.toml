@@ -26,3 +26,8 @@ proc-macro2 = { version = "1.0", features = ["span-locations"] }
 annotate-snippets = { version = "0.9", features = ["color"] }
 derive_more = "0.99"
 unicode-xid = "0.2"
+serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+ron = "0.6"
+glob = "0.3"
