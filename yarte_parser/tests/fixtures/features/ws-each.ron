@@ -1,0 +1,13 @@
+[
+(
+    src: "{{~#each bar~}}{{~/each~}}",
+    exp: [(
+        Helper(Each(
+            ((true, true), (true, true)),
+            (("bar"), (lo:9, hi:12)),
+            []
+        )),
+        (lo:0, hi:26)
+    )]
+)
+]

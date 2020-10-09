@@ -289,30 +289,6 @@ fn test_defined() {
 
 #[test]
 #[cfg(disabled)]
-fn test_ws_each() {
-    let src = "{{~#each bar~}}{{~/each~}}";
-    let span = Span {
-        lo: 0,
-        hi: src.len() as u32,
-    };
-    assert_eq!(
-        parse(src),
-        vec![S(
-            Helper(Box::new(Helper::Each(
-                ((true, true), (true, true)),
-                S(
-                    Box::new(parse_str::<Expr>("bar").unwrap()),
-                    Span { lo: 9, hi: 12 },
-                ),
-                vec![],
-            ))),
-            span,
-        )]
-    );
-}
-
-#[test]
-#[cfg(disabled)]
 fn test_ws_if() {
     let src = "{{~#if bar~}}{{~/if~}}";
     let span = Span {
