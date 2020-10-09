@@ -35,20 +35,6 @@ fn test_1() {
     );
 }
 
-#[should_panic]
-#[test]
-fn test_eat_expr_panic_a() {
-    let src = r#"{{ fn(|a| {{a}}) }}"#;
-    parse(src);
-}
-
-#[should_panic]
-#[test]
-fn test_eat_expr_panic_b() {
-    let src = r#"{{ let a = mut a  }}"#;
-    parse(src);
-}
-
 #[test]
 fn test_eat_safe() {
     let src = r#"{{{ var }}}"#;
