@@ -1,0 +1,14 @@
+[
+(
+    src: "{{R}}{{#some }}{{/some}}{{/R}}",
+    exp: [(
+        Raw(
+            ((false, false), (false, false)),
+            "",
+             ("{{#some }}{{/some}}", (lo:5, hi:24)),
+             "",
+        ),
+        (lo:0, hi:30),
+    )]
+)
+]
