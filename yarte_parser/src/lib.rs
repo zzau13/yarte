@@ -67,11 +67,8 @@ fn de_local<'de, D>(deserializer: D) -> Result<syn::Local, D::Error>
 where
     D: Deserializer<'de>,
 {
-    #[derive(Deserialize)]
-    struct Wrapper<'a>(#[serde(borrow)] &'a str);
-
-    Wrapper::deserialize(deserializer).and_then(|x| {
-        syn::parse_str::<StmtLocal>(&x.0)
+    <&str>::deserialize(deserializer).and_then(|x| {
+        syn::parse_str::<StmtLocal>(x)
             .map(Into::into)
             .map_err(|_| serde::de::Error::custom("Parse error"))
     })
@@ -116,11 +113,8 @@ fn de_expr<'de, D>(deserializer: D) -> Result<syn::Expr, D::Error>
 where
     D: Deserializer<'de>,
 {
-    #[derive(Deserialize)]
-    struct Wrapper<'a>(#[serde(borrow)] &'a str);
-
-    Wrapper::deserialize(deserializer)
-        .and_then(|x| syn::parse_str(&x.0).map_err(|_| serde::de::Error::custom("Parse error")))
+    <&str>::deserialize(deserializer)
+        .and_then(|x| syn::parse_str(x).map_err(|_| serde::de::Error::custom("Parse error")))
 }
 
 impl Parse for Expr {
