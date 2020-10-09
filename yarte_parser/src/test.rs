@@ -289,45 +289,6 @@ fn test_defined() {
 
 #[test]
 #[cfg(disabled)]
-fn test_ws_raw() {
-    let src = "{{~R~}}{{#some }}{{/some}}{{~/R ~}}";
-    let span = Span {
-        lo: 0,
-        hi: src.len() as u32,
-    };
-    assert_eq!(
-        parse(src),
-        vec![S(
-            Raw(
-                ((true, true), (true, true)),
-                "",
-                S("{{#some }}{{/some}}", Span { lo: 7, hi: 26 }),
-                "",
-            ),
-            span,
-        )]
-    );
-    let src = "{{R  ~}}{{#some }}{{/some}}{{/R ~}}";
-    let span = Span {
-        lo: 0,
-        hi: src.len() as u32,
-    };
-    assert_eq!(
-        parse(src),
-        vec![S(
-            Raw(
-                ((false, true), (false, true)),
-                "",
-                S("{{#some }}{{/some}}", Span { lo: 8, hi: 27 }),
-                "",
-            ),
-            span,
-        )]
-    );
-}
-
-#[test]
-#[cfg(disabled)]
 fn test_partial_ws() {
     let src = "{{~> partial ~}}";
     let span = Span {

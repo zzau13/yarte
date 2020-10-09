@@ -1,0 +1,22 @@
+[
+(
+    src: "{{~R~}}{{#some }}{{/some}}{{~/R ~}}",
+    exp: [(
+        Raw(
+            ((true, true), (true, true)),
+            "", ("{{#some }}{{/some}}", (lo: 7, hi: 26)), ""
+        ),
+        (lo:0, hi: 35),
+    )],
+),
+(
+    src: "{{R  ~}}{{#some }}{{/some}}{{/R ~}}",
+    exp: [(
+        Raw(
+            ((false, true), (false, true)),
+            "", ("{{#some }}{{/some}}", (lo: 8, hi: 27)), ""
+        ),
+        (lo:0, hi: 35),
+    )],
+)
+]
