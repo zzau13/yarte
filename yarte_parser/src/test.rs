@@ -1,8 +1,11 @@
-// use syn::{parse_str, Expr, Stmt};
+use syn::parse_str;
 
-use super::{parse as _parse, *};
+use crate::{
+    eat_expr_list, eat_if, hel, if_else, parse as _parse, trim, Cursor, DOption, ErrorMessage,
+    Helper, Node::*, PError, Span, Ws, S,
+};
 
-// const WS: Ws = (false, false);
+const WS: Ws = (false, false);
 
 macro_rules! bytes {
     ($a:tt..$b:tt) => {
@@ -11,25 +14,6 @@ macro_rules! bytes {
             hi: $b as u32,
         }
     };
-}
-
-#[test]
-#[cfg(disabled)]
-fn test_1() {
-    let src = r#"{{# unless flag}}{{{/ unless}}"#;
-    let span = Span { lo: 17, hi: 18 };
-    let expr: syn::Expr = parse_str("flag").unwrap();
-    assert_eq!(
-        parse(src),
-        vec![S(
-            Node::Helper(Box::new(Helper::Unless(
-                ((false, false), (false, false)),
-                S(Box::new(expr), Span { lo: 11, hi: 15 }),
-                vec![S(Lit("", S("{", span), ""), span)]
-            ))),
-            Span { lo: 0, hi: 30 }
-        )]
-    );
 }
 
 #[test]
@@ -46,7 +30,6 @@ fn test_trim() {
 }
 
 #[test]
-#[cfg(disabled)]
 fn test_eat_if() {
     let rest = r#"foo{{ else }}"#;
     let result = " else }}";
@@ -76,7 +59,7 @@ fn test_eat_if() {
                 Expr(
                     WS,
                     S(
-                        Box::new(parse_str::<Expr>("foo").unwrap()),
+                        Box::new(parse_str::<crate::Expr>("foo").unwrap()),
                         Span { lo: 2, hi: 5 },
                     ),
                 ),
@@ -85,11 +68,7 @@ fn test_eat_if() {
         )
     );
     let rest = r#"{{ let a = foo }}{{else if cond}}{{else}}"#;
-    let local = if let Stmt::Local(local) = parse_str::<Stmt>("let a = foo;").unwrap() {
-        local
-    } else {
-        unreachable!();
-    };
+    let local = parse_str::<crate::Local>("let a = foo").unwrap();
     let result = "else if cond}}{{else}}";
     assert_eq!(
         eat_if(Cursor { rest, off: 0 }).unwrap(),
@@ -107,7 +86,6 @@ fn test_eat_if() {
 }
 
 #[test]
-#[cfg(disabled)]
 fn test_helpers() {
     let rest = "each name }}{{first}} {{last}}{{/each}}";
     assert_eq!(
@@ -120,7 +98,7 @@ fn test_helpers() {
             Helper(Box::new(Helper::Each(
                 (WS, WS),
                 S(
-                    Box::new(parse_str::<Expr>("name").unwrap()),
+                    Box::new(parse_str::<crate::Expr>("name").unwrap()),
                     Span { lo: 5, hi: 9 },
                 ),
                 vec![
@@ -128,7 +106,7 @@ fn test_helpers() {
                         Expr(
                             WS,
                             S(
-                                Box::new(parse_str::<Expr>("first").unwrap()),
+                                Box::new(parse_str::<crate::Expr>("first").unwrap()),
                                 Span { lo: 14, hi: 19 },
                             ),
                         ),
@@ -142,7 +120,7 @@ fn test_helpers() {
                         Expr(
                             WS,
                             S(
-                                Box::new(parse_str::<Expr>("last").unwrap()),
+                                Box::new(parse_str::<crate::Expr>("last").unwrap()),
                                 Span { lo: 24, hi: 28 },
                             ),
                         ),
@@ -155,11 +133,10 @@ fn test_helpers() {
 }
 
 #[test]
-#[cfg(disabled)]
 fn test_if_else() {
     let rest = "foo{{/if}}";
     let args = S(
-        Box::new(parse_str::<Expr>("bar").unwrap()),
+        Box::new(parse_str::<crate::Expr>("bar").unwrap()),
         Span { lo: 0, hi: 0 },
     );
 
@@ -187,7 +164,7 @@ fn test_if_else() {
 
     let rest = "foo{{else}}bar{{/if}}";
     let args = S(
-        Box::new(parse_str::<Expr>("bar").unwrap()),
+        Box::new(parse_str::<crate::Expr>("bar").unwrap()),
         Span { lo: 0, hi: 0 },
     );
 
@@ -221,11 +198,10 @@ fn test_if_else() {
 }
 
 #[test]
-#[cfg(disabled)]
 fn test_else_if() {
     let rest = "foo{{else if cond }}bar{{else}}foO{{/if}}";
     let args = S(
-        Box::new(parse_str::<Expr>("bar").unwrap()),
+        Box::new(parse_str::<crate::Expr>("bar").unwrap()),
         Span { lo: 0, hi: 0 },
     );
 
@@ -248,7 +224,7 @@ fn test_else_if() {
                 vec![(
                     WS,
                     S(
-                        Box::new(parse_str::<Expr>("cond").unwrap()),
+                        Box::new(parse_str::<crate::Expr>("cond").unwrap()),
                         Span { lo: 13, hi: 17 },
                     ),
                     vec![S(
@@ -265,6 +241,20 @@ fn test_else_if() {
                 )),
             )))
         )
+    );
+}
+
+#[test]
+fn test_expr_list() {
+    let src = "bar, foo = \"bar\"\n, fuu = 1  , goo = true,    ";
+    assert_eq!(
+        eat_expr_list(src).unwrap(),
+        vec![
+            parse_str::<crate::Expr>("bar").unwrap(),
+            parse_str::<crate::Expr>("foo=\"bar\"").unwrap(),
+            parse_str::<crate::Expr>("fuu=1").unwrap(),
+            parse_str::<crate::Expr>("goo=true").unwrap(),
+        ]
     );
 }
 
@@ -683,21 +673,6 @@ fn test_raw() {
             ),
             span,
         )]
-    );
-}
-
-#[test]
-#[cfg(disabled)]
-fn test_expr_list() {
-    let src = "bar, foo = \"bar\"\n, fuu = 1  , goo = true,    ";
-    assert_eq!(
-        eat_expr_list(src).unwrap(),
-        vec![
-            parse_str::<Expr>("bar").unwrap(),
-            parse_str::<Expr>("foo=\"bar\"").unwrap(),
-            parse_str::<Expr>("fuu=1").unwrap(),
-            parse_str::<Expr>("goo=true").unwrap(),
-        ]
     );
 }
 
