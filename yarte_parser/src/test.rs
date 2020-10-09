@@ -289,28 +289,6 @@ fn test_defined() {
 
 #[test]
 #[cfg(disabled)]
-fn test_raw() {
-    let src = "{{R}}{{#some }}{{/some}}{{/R}}";
-    let span = Span {
-        lo: 0,
-        hi: src.len() as u32,
-    };
-    assert_eq!(
-        parse(src),
-        vec![S(
-            Raw(
-                (WS, WS),
-                "",
-                S("{{#some }}{{/some}}", Span { lo: 5, hi: 24 }),
-                "",
-            ),
-            span,
-        )]
-    );
-}
-
-#[test]
-#[cfg(disabled)]
 fn test_partial_block() {
     let rest = "{{> @partial-block }}";
     assert_eq!(
