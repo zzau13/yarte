@@ -289,51 +289,6 @@ fn test_defined() {
 
 #[test]
 #[cfg(disabled)]
-fn test_partial_block_ws() {
-    let rest = "{{~> @partial-block ~}}";
-    assert_eq!(
-        parse(rest),
-        vec![S(
-            Node::Block((true, true)),
-            Span {
-                lo: 0,
-                hi: rest.len() as u32
-            }
-        )]
-    );
-}
-
-#[test]
-#[cfg(disabled)]
-fn test_partial_block_ws_1() {
-    let rest = r#"Foo
-    {{~> @partial-block ~}}
-    Bar"#;
-    assert_eq!(
-        parse(rest),
-        vec![
-            S(Lit("", S("Foo", bytes!(0..3)), "\n    "), bytes!(0..8)),
-            S(Block((true, true)), bytes!(8..31)),
-            S(Lit("\n    ", S("Bar", bytes!(36..39)), ""), bytes!(31..39))
-        ]
-    );
-}
-
-#[test]
-#[cfg(disabled)]
-fn test_compile_error() {
-    let rest = "{{$ \"foo\" }}";
-    assert_eq!(
-        parse(rest),
-        vec![S(
-            Error(S(vec![parse_str("\"foo\"").unwrap()], bytes!(4..9))),
-            bytes!(0..12)
-        )]
-    );
-}
-
-#[test]
-#[cfg(disabled)]
 fn test_at_helpers() {
     let rest = "{{ @json foo }}";
     assert_eq!(

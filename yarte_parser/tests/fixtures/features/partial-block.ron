@@ -1,10 +1,7 @@
 [
 (
     src: "{{> @partial-block }}",
-    exp: [(
-        Block((false, false)),
-        (lo:0, hi:21),
-    )]
+    exp: [(Block((false, false)), (lo:0, hi:21))],
 ),
 (
     src: "{{#> some }}foo{{/some }}",
