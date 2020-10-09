@@ -2,7 +2,7 @@
 (
     src: "{{~> partial ~}}",
     exp: [(
-        Partial(Partial(
+        Partial((
             (true, true),
             ("partial", (lo:5, hi:12)),
             ([], (lo:13, hi:13)),
@@ -13,7 +13,7 @@
 (
     src: "{{> partial scope }}",
     exp: [(
-        Partial(Partial(
+        Partial((
             (false, false),
             ("partial", (lo:4, hi:11)),
             ([("scope")], (lo:12, hi:17)),
@@ -24,7 +24,7 @@
 (
     src: "{{> partial scope ~}}",
     exp: [(
-        Partial(Partial(
+        Partial((
             (false, true),
             ("partial", (lo:4, hi:11)),
             ([("scope")], (lo:12, hi:17)),

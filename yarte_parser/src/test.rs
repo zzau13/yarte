@@ -289,43 +289,6 @@ fn test_defined() {
 
 #[test]
 #[cfg(disabled)]
-fn test_partial_block() {
-    let rest = "{{> @partial-block }}";
-    assert_eq!(
-        parse(rest),
-        vec![S(
-            Node::Block((false, false)),
-            Span {
-                lo: 0,
-                hi: rest.len() as u32
-            }
-        )]
-    );
-}
-
-#[test]
-#[cfg(disabled)]
-fn test_partial_block_1() {
-    let rest = "{{#> some }}foo{{/some }}";
-    assert_eq!(
-        parse(rest),
-        vec![S(
-            Node::PartialBlock(PartialBlock(
-                ((false, false), (false, false)),
-                S("some", bytes!(5..9)),
-                S(vec![], bytes!(10..10)),
-                vec![S(
-                    Node::Lit("", S("foo", bytes!(12..15)), ""),
-                    bytes!(12..15)
-                ),]
-            )),
-            bytes!(0..25)
-        )]
-    );
-}
-
-#[test]
-#[cfg(disabled)]
 fn test_partial_block_ws() {
     let rest = "{{~> @partial-block ~}}";
     assert_eq!(
