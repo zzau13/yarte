@@ -36,37 +36,6 @@ fn test_1() {
 }
 
 #[test]
-fn test_eat_comment() {
-    let src = r#"{{! Commentary !}}"#;
-    let span = Span {
-        lo: 0,
-        hi: src.len() as u32,
-    };
-    assert_eq!(parse(src), vec![S(Comment(" Commentary "), span)]);
-    let src = r#"{{!-- Commentary --!}}"#;
-    let span = Span {
-        lo: 0,
-        hi: src.len() as u32,
-    };
-    assert_eq!(parse(src), vec![S(Comment(" Commentary "), span)]);
-    let src = r#"foo {{!-- Commentary --!}}"#;
-    let span = Span {
-        lo: 4,
-        hi: src.len() as u32,
-    };
-    assert_eq!(
-        parse(src),
-        vec![
-            S(
-                Lit("", S("foo", Span { lo: 0, hi: 3 }), " "),
-                Span { lo: 0, hi: 4 },
-            ),
-            S(Comment(" Commentary "), span)
-        ]
-    );
-}
-
-#[test]
 fn test_eat_expr() {
     let src = r#"{{ var }}"#;
     let span = Span {
