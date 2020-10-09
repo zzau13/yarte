@@ -7,8 +7,8 @@ use syn::parse::{Parse, ParseBuffer};
 use syn::parse_str;
 use unicode_xid::UnicodeXID;
 
-// #[cfg(test)]
-// mod test;
+#[cfg(test)]
+mod test;
 
 mod error;
 mod expr_list;
