@@ -1,0 +1,21 @@
+[
+(
+    src: "{{> @partial-block }}",
+    exp: [(
+        Block((false, false)),
+        (lo:0, hi:21),
+    )]
+),
+(
+    src: "{{#> some }}foo{{/some }}",
+    exp: [(
+        PartialBlock((
+            ((false, false), (false, false)),
+            ("some", (lo:5, hi:9)),
+            ([], (lo:10, hi:10)),
+            [(Lit("", ("foo", (lo:12, hi:15)), ""), (lo:12, hi:15))],
+        )),
+        (lo:0, hi:25),
+    )]
+),
+]
