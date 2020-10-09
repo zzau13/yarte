@@ -289,41 +289,6 @@ fn test_defined() {
 
 #[test]
 #[cfg(disabled)]
-fn test_ws_if_else_if() {
-    let src = "{{~#if bar~}}{{~else if bar~}}{{~else~}}{{~/if~}}";
-    let span = Span {
-        lo: 0,
-        hi: src.len() as u32,
-    };
-    assert_eq!(
-        parse(src),
-        vec![S(
-            Helper(Box::new(Helper::If(
-                (
-                    ((true, true), (true, true)),
-                    S(
-                        Box::new(parse_str::<Expr>("bar").unwrap()),
-                        Span { lo: 7, hi: 10 },
-                    ),
-                    vec![],
-                ),
-                vec![(
-                    (true, true),
-                    S(
-                        Box::new(parse_str::<Expr>("bar").unwrap()),
-                        Span { lo: 24, hi: 27 },
-                    ),
-                    vec![],
-                )],
-                Some(((true, true), vec![])),
-            ))),
-            span,
-        )]
-    );
-}
-
-#[test]
-#[cfg(disabled)]
 fn test_ws_raw() {
     let src = "{{~R~}}{{#some }}{{/some}}{{~/R ~}}";
     let span = Span {
