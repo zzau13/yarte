@@ -1,0 +1,12 @@
+[
+(
+    src: "{{~#if bar~}}{{~else~}}{{~/if~}}",
+    exp: [(
+        Helper(If((
+            ((true, true), (true, true)),
+            (("bar"), (lo:7, hi:10)),
+            []), [], Some(((true, true), []))
+        )), (lo:0, hi:32)
+    )]
+)
+]
