@@ -1,11 +1,14 @@
 #![allow(clippy::many_single_char_names, clippy::cognitive_complexity)]
+use std::ops::{Deref, DerefMut};
 use std::str;
 
-use syn::{parse_str, Expr, Local};
+use serde::{Deserialize, Deserializer};
+use syn::parse::{Parse, ParseBuffer};
+use syn::parse_str;
 use unicode_xid::UnicodeXID;
 
-#[cfg(test)]
-mod test;
+// #[cfg(test)]
+// mod test;
 
 mod error;
 mod expr_list;
@@ -14,20 +17,117 @@ pub mod source_map;
 mod stmt_local;
 #[macro_use]
 mod strnom;
+
 use self::{
     error::{DOption, PError},
     expr_list::ExprList,
     source_map::{spanned, Span, S},
-    strnom::{is_ws, skip_ws, ws, Cursor, LexError, PResult},
+    strnom::{is_ws, skip_ws, ws, LexError, PResult},
 };
 
 pub use self::{
     error::{emitter, ErrorMessage},
     pre_partials::parse_partials,
     stmt_local::StmtLocal,
+    strnom::Cursor,
 };
 
 pub type Ws = (bool, bool);
+
+#[derive(Debug, PartialEq, Clone, Deserialize)]
+pub struct Local(#[serde(deserialize_with = "de_local")] syn::Local);
+
+impl Deref for Local {
+    type Target = syn::Local;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Local {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl AsRef<syn::Local> for Local {
+    fn as_ref(&self) -> &syn::Local {
+        &self.0
+    }
+}
+
+impl AsMut<syn::Local> for Local {
+    fn as_mut(&mut self) -> &mut syn::Local {
+        &mut self.0
+    }
+}
+
+fn de_local<'de, D>(deserializer: D) -> Result<syn::Local, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    struct Wrapper<'a>(#[serde(borrow)] &'a str);
+
+    Wrapper::deserialize(deserializer).and_then(|x| {
+        syn::parse_str::<StmtLocal>(&x.0)
+            .map(Into::into)
+            .map_err(|_| serde::de::Error::custom("Parse error"))
+    })
+}
+
+impl Parse for Local {
+    fn parse(input: &ParseBuffer<'_>) -> syn::Result<Self> {
+        Ok(Local(input.parse::<StmtLocal>()?.into()))
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, Deserialize)]
+pub struct Expr(#[serde(deserialize_with = "de_expr")] syn::Expr);
+
+impl Deref for Expr {
+    type Target = syn::Expr;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Expr {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl AsRef<syn::Expr> for Expr {
+    fn as_ref(&self) -> &syn::Expr {
+        &self.0
+    }
+}
+
+impl AsMut<syn::Expr> for Expr {
+    fn as_mut(&mut self) -> &mut syn::Expr {
+        &mut self.0
+    }
+}
+
+fn de_expr<'de, D>(deserializer: D) -> Result<syn::Expr, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    struct Wrapper<'a>(#[serde(borrow)] &'a str);
+
+    Wrapper::deserialize(deserializer)
+        .and_then(|x| syn::parse_str(&x.0).map_err(|_| serde::de::Error::custom("Parse error")))
+}
+
+impl Parse for Expr {
+    fn parse(input: &ParseBuffer<'_>) -> syn::Result<Self> {
+        Ok(Expr(input.parse()?))
+    }
+}
 
 pub type SExpr = S<Box<Expr>>;
 pub type SLocal = S<Box<Local>>;
@@ -35,50 +135,69 @@ pub type SNode<'a> = S<Node<'a>>;
 pub type SStr<'a> = S<&'a str>;
 pub type SVExpr = S<Vec<Expr>>;
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct Partial<'a>(pub Ws, pub SStr<'a>, pub SVExpr);
+#[derive(Debug, PartialEq, Clone, Deserialize)]
+pub struct Partial<'a>(pub Ws, #[serde(borrow)] pub SStr<'a>, pub SVExpr);
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct PartialBlock<'a>(pub (Ws, Ws), pub SStr<'a>, pub SVExpr, pub Vec<SNode<'a>>);
+#[derive(Debug, PartialEq, Clone, Deserialize)]
+pub struct PartialBlock<'a>(
+    pub (Ws, Ws),
+    #[serde(borrow)] pub SStr<'a>,
+    pub SVExpr,
+    #[serde(borrow)] pub Vec<SNode<'a>>,
+);
 
-#[derive(Debug, PartialEq, Clone)]
 // TODO: reduce size
+#[derive(Debug, PartialEq, Clone, Deserialize)]
 pub enum Node<'a> {
-    Comment(&'a str),
+    Comment(#[serde(borrow)] &'a str),
     Expr(Ws, SExpr),
     AtHelper(Ws, AtHelperKind, SVExpr),
     RExpr(Ws, SExpr),
-    Helper(Box<Helper<'a>>),
-    Lit(&'a str, SStr<'a>, &'a str),
+    Helper(#[serde(borrow)] Box<Helper<'a>>),
+    Lit(
+        #[serde(borrow)] &'a str,
+        #[serde(borrow)] SStr<'a>,
+        #[serde(borrow)] &'a str,
+    ),
     Local(SLocal),
-    Partial(Partial<'a>),
-    PartialBlock(PartialBlock<'a>),
+    Partial(#[serde(borrow)] Partial<'a>),
+    PartialBlock(#[serde(borrow)] PartialBlock<'a>),
     Block(Ws),
-    Raw((Ws, Ws), &'a str, SStr<'a>, &'a str),
+    Raw(
+        (Ws, Ws),
+        #[serde(borrow)] &'a str,
+        #[serde(borrow)] SStr<'a>,
+        #[serde(borrow)] &'a str,
+    ),
     Safe(Ws, SExpr),
     Error(SVExpr),
 }
 
 const JSON: &str = "json";
 const JSON_PRETTY: &str = "json_pretty";
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Deserialize)]
 pub enum AtHelperKind {
     Json,
     JsonPretty,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Deserialize)]
 pub enum Helper<'a> {
-    Each((Ws, Ws), SExpr, Vec<SNode<'a>>),
+    Each((Ws, Ws), SExpr, #[serde(borrow)] Vec<SNode<'a>>),
     If(
         ((Ws, Ws), SExpr, Vec<SNode<'a>>),
         Vec<(Ws, SExpr, Vec<SNode<'a>>)>,
         Option<(Ws, Vec<SNode<'a>>)>,
     ),
-    With((Ws, Ws), SExpr, Vec<SNode<'a>>),
-    Unless((Ws, Ws), SExpr, Vec<SNode<'a>>),
+    With((Ws, Ws), SExpr, #[serde(borrow)] Vec<SNode<'a>>),
+    Unless((Ws, Ws), SExpr, #[serde(borrow)] Vec<SNode<'a>>),
     // TODO:
-    Defined((Ws, Ws), &'a str, SExpr, Vec<SNode<'a>>),
+    Defined(
+        (Ws, Ws),
+        #[serde(borrow)] &'a str,
+        SExpr,
+        #[serde(borrow)] Vec<SNode<'a>>,
+    ),
 }
 
 pub fn parse(i: Cursor) -> Result<Vec<SNode>, ErrorMessage<PError>> {
@@ -659,14 +778,14 @@ impl MiddleError {
 }
 
 /// Parse syn expression
-fn eat_expr(i: &str) -> Result<Box<Expr>, MiddleError> {
+fn eat_expr(i: &str) -> Result<Box<crate::Expr>, MiddleError> {
     parse_str::<Expr>(i)
         .map(Box::new)
         .map_err(|e| MiddleError::new(i, e))
 }
 
 /// Parse syn local
-fn eat_local(i: &str) -> Result<Box<Local>, MiddleError> {
+fn eat_local(i: &str) -> Result<Box<crate::Local>, MiddleError> {
     parse_str::<StmtLocal>(i)
         .map(Into::into)
         .map(Box::new)
@@ -674,7 +793,7 @@ fn eat_local(i: &str) -> Result<Box<Local>, MiddleError> {
 }
 
 /// Parse syn expression comma separated list
-fn eat_expr_list(i: &str) -> Result<Vec<Expr>, MiddleError> {
+fn eat_expr_list(i: &str) -> Result<Vec<crate::Expr>, MiddleError> {
     parse_str::<ExprList>(i)
         .map(Into::into)
         .map_err(|e| MiddleError::new(i, e))

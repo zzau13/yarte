@@ -104,3 +104,9 @@ impl From<Local> for StmtLocal {
         }
     }
 }
+
+impl Into<crate::Local> for StmtLocal {
+    fn into(self) -> crate::Local {
+        crate::Local(self.into())
+    }
+}

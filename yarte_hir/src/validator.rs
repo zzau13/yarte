@@ -6,7 +6,7 @@ use crate::error::{GError, MiddleError};
 
 pub(super) fn expression(e: &SExpr, out: &mut Vec<ErrorMessage<GError>>) {
     use syn::Expr::*;
-    match **e.t() {
+    match ***e.t() {
         Binary(..) | Call(..) | MethodCall(..) | Index(..) | Field(..) | Path(..) | Paren(..)
         | Macro(..) | Lit(..) | Try(..) | Unary(..) | Unsafe(..) | If(..) | Loop(..)
         | Match(..) | Block(..) => (),
@@ -19,7 +19,7 @@ pub(super) fn expression(e: &SExpr, out: &mut Vec<ErrorMessage<GError>>) {
 
 pub(super) fn ifs(e: &SExpr, out: &mut Vec<ErrorMessage<GError>>) {
     use syn::Expr::*;
-    match **e.t() {
+    match ***e.t() {
         Binary(..) | Call(..) | MethodCall(..) | Index(..) | Field(..) | Path(..) | Paren(..)
         | Macro(..) | Lit(..) | Try(..) | Unary(..) | Unsafe(..) | If(..) | Loop(..)
         | Match(..) | Let(..) => (),
@@ -32,7 +32,7 @@ pub(super) fn ifs(e: &SExpr, out: &mut Vec<ErrorMessage<GError>>) {
 
 pub(super) fn each(e: &SExpr, out: &mut Vec<ErrorMessage<GError>>) {
     use syn::Expr::*;
-    match **e.t() {
+    match ***e.t() {
         Call(..) | MethodCall(..) | Index(..) | Field(..) | Path(..) | Paren(..) | Macro(..)
         | Try(..) | Unsafe(..) | If(..) | Loop(..) | Match(..) | Range(..) | Reference(..) => (),
         _ => out.push(ErrorMessage {
@@ -44,7 +44,7 @@ pub(super) fn each(e: &SExpr, out: &mut Vec<ErrorMessage<GError>>) {
 
 pub(super) fn unless(e: &SExpr, out: &mut Vec<ErrorMessage<GError>>) {
     use syn::Expr::*;
-    match **e.t() {
+    match ***e.t() {
         Binary(..) | Call(..) | MethodCall(..) | Index(..) | Field(..) | Path(..) | Paren(..)
         | Macro(..) | Lit(..) | Try(..) | Match(..) => (),
         Unary(syn::ExprUnary { op, .. }) => {
@@ -61,7 +61,7 @@ pub(super) fn unless(e: &SExpr, out: &mut Vec<ErrorMessage<GError>>) {
 
 pub(super) fn scope(e: &SExpr, out: &mut Vec<ErrorMessage<GError>>) {
     use syn::Expr::*;
-    match **e.t() {
+    match ***e.t() {
         Path(..) | Field(..) | Index(..) => (),
         _ => out.push(ErrorMessage {
             message: GError::ValidatorPartialScope,
@@ -71,9 +71,13 @@ pub(super) fn scope(e: &SExpr, out: &mut Vec<ErrorMessage<GError>>) {
 }
 
 #[allow(clippy::trivially_copy_pass_by_ref)]
-pub(super) fn partial_assign(e: &syn::Expr, span: Span, out: &mut Vec<ErrorMessage<GError>>) {
+pub(super) fn partial_assign<T: AsRef<syn::Expr>>(
+    e: T,
+    span: Span,
+    out: &mut Vec<ErrorMessage<GError>>,
+) {
     use syn::Expr::*;
-    match e {
+    match e.as_ref() {
         Path(..) | Field(..) | Index(..) | Lit(..) | Reference(..) | Array(..) | Range(..)
         | Binary(..) | Call(..) | MethodCall(..) | Paren(..) | Macro(..) | Try(..) | Unary(..)
         | Unsafe(..) => (),

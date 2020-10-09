@@ -70,7 +70,7 @@ impl<'a> FindEach<'a> {
                 let nodes = self.ctx.get(&p).unwrap();
                 let expr = $expr.t();
                 if !expr.is_empty() {
-                    let at = if let syn::Expr::Assign(_) = expr[0] {
+                    let at = if let syn::Expr::Assign(_) = *expr[0] {
                         0
                     } else {
                         1

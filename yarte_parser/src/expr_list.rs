@@ -16,9 +16,12 @@ impl Parse for ExprList {
     }
 }
 
-impl Into<Vec<Expr>> for ExprList {
-    fn into(self) -> Vec<Expr> {
-        self.list.into_pairs().map(|p| p.into_value()).collect()
+impl Into<Vec<crate::Expr>> for ExprList {
+    fn into(self) -> Vec<crate::Expr> {
+        self.list
+            .into_pairs()
+            .map(|p| crate::Expr(p.into_value()))
+            .collect()
     }
 }
 
@@ -31,18 +34,18 @@ mod test {
     fn test() {
         let src = "bar, foo = \"bar,\"\n, fuu = 1  , goo = true,    ";
         let expected = vec![
-            parse_str::<Expr>("bar").unwrap(),
-            parse_str::<Expr>("foo=\"bar,\"").unwrap(),
-            parse_str::<Expr>("fuu=1").unwrap(),
-            parse_str::<Expr>("goo=true").unwrap(),
+            parse_str::<crate::Expr>("bar").unwrap(),
+            parse_str::<crate::Expr>("foo=\"bar,\"").unwrap(),
+            parse_str::<crate::Expr>("fuu=1").unwrap(),
+            parse_str::<crate::Expr>("goo=true").unwrap(),
         ];
 
-        let res: Vec<Expr> = parse_str::<ExprList>(src).unwrap().into();
+        let res: Vec<crate::Expr> = parse_str::<ExprList>(src).unwrap().into();
 
         assert_eq!(expected, res);
 
         let src = "bar, foo = \"bar,\"\n, fuu = 1  , goo = true";
-        let res: Vec<Expr> = parse_str::<ExprList>(src).unwrap().into();
+        let res: Vec<crate::Expr> = parse_str::<ExprList>(src).unwrap().into();
 
         assert_eq!(expected, res);
     }
