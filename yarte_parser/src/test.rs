@@ -18,29 +18,6 @@ fn parse(rest: &str) -> Vec<SNode> {
 }
 
 #[test]
-fn test_empty() {
-    let src = r#""#;
-    assert_eq!(parse(src), vec![]);
-}
-
-#[test]
-fn test_fallback() {
-    let src = r#"{{"#;
-    let span = Span { lo: 0, hi: 2 };
-    assert_eq!(parse(src), vec![S(Lit("", S("{{", span), ""), span)]);
-    let src = r#"{{{"#;
-    let span = Span { lo: 0, hi: 3 };
-    assert_eq!(parse(src), vec![S(Lit("", S("{{{", span), ""), span)]);
-    let src = r#"{{#"#;
-    assert_eq!(parse(src), vec![S(Lit("", S("{{#", span), ""), span)]);
-    let src = r#"{{>"#;
-    assert_eq!(parse(src), vec![S(Lit("", S("{{>", span), ""), span)]);
-    let src = r#"{"#;
-    let span = Span { lo: 0, hi: 1 };
-    assert_eq!(parse(src), vec![S(Lit("", S("{", span), ""), span)]);
-}
-
-#[test]
 fn test_1() {
     let src = r#"{{# unless flag}}{{{/ unless}}"#;
     let span = Span { lo: 17, hi: 18 };
