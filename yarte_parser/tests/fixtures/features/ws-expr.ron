@@ -1,0 +1,8 @@
+[
+(src: "{{~foo~}}", exp: [(Expr((true, true), (("foo"), (lo:3, hi:6))), (lo: 0, hi:9))]),
+(src: "{{~ foo~}}", exp: [(Expr((true, true), (("foo"), (lo:4, hi:7))), (lo: 0, hi:10))]),
+(src: "{{~ foo}}", exp: [(Expr((true, false), (("foo"), (lo:4, hi:7))), (lo: 0, hi:9))]),
+(src: "{{foo   ~}}", exp: [(Expr((false, true), (("foo"), (lo:2, hi:5))), (lo: 0, hi:11))]),
+(src: "{{~{foo }~}}", exp: [(Safe((true, true), (("foo"), (lo:4, hi:7))), (lo: 0, hi:12))]),
+(src: "{{{foo }~}}", exp: [(Safe((false, true), (("foo"), (lo:3, hi:6))), (lo: 0, hi:11))]),
+]
