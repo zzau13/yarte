@@ -289,66 +289,6 @@ fn test_defined() {
 
 #[test]
 #[cfg(disabled)]
-fn test_partial_ws() {
-    let src = "{{~> partial ~}}";
-    let span = Span {
-        lo: 0,
-        hi: src.len() as u32,
-    };
-
-    assert_eq!(
-        parse(src),
-        vec![S(
-            Node::Partial(Partial(
-                (true, true),
-                S("partial", Span { lo: 5, hi: 12 }),
-                S(vec![], Span { lo: 13, hi: 13 }),
-            )),
-            span,
-        )]
-    );
-    let src = "{{> partial scope }}";
-    let span = Span {
-        lo: 0,
-        hi: src.len() as u32,
-    };
-    assert_eq!(
-        parse(src),
-        vec![S(
-            Node::Partial(Partial(
-                WS,
-                S("partial", Span { lo: 4, hi: 11 }),
-                S(
-                    vec![parse_str::<Expr>("scope").unwrap()],
-                    Span { lo: 12, hi: 17 },
-                ),
-            )),
-            span,
-        )]
-    );
-    let src = "{{> partial scope ~}}";
-    let span = Span {
-        lo: 0,
-        hi: src.len() as u32,
-    };
-    assert_eq!(
-        parse(src),
-        vec![S(
-            Node::Partial(Partial(
-                (false, true),
-                S("partial", Span { lo: 4, hi: 11 }),
-                S(
-                    vec![parse_str::<Expr>("scope").unwrap()],
-                    Span { lo: 12, hi: 17 },
-                ),
-            )),
-            span,
-        )]
-    );
-}
-
-#[test]
-#[cfg(disabled)]
 fn test_partial() {
     let src = "{{> partial }}";
     let span = Span {
