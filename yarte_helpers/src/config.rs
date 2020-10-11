@@ -208,9 +208,11 @@ pub struct PrintOption<'a> {
     pub grid: Option<bool>,
     pub paging: Option<bool>,
     pub header: Option<bool>,
+    #[deprecated]
     pub short: Option<bool>,
 }
 
+#[allow(deprecated)]
 impl<'a> Default for PrintOption<'a> {
     fn default() -> Self {
         Self {

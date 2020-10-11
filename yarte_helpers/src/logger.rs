@@ -5,7 +5,7 @@ use std::{
     process::{Command, Stdio},
 };
 
-use bat::{PagingMode, PrettyPrinter};
+use bat::{Input, PagingMode, PrettyPrinter};
 
 use crate::{config::PrintOption, definitely_not_nightly};
 
@@ -36,18 +36,6 @@ fn logger(s: &str, path: String, option: &PrintOption) {
         .stderr(Stdio::null())
         .status();
 
-    let mut s = fs::read_to_string(&outfile_path).unwrap();
-    if option.short.unwrap_or(false) {
-        let lines: Vec<&str> = s.lines().collect();
-        s = if cfg!(feature = "actix-web") {
-            lines[0..lines.len() - 25].join("\n")
-        } else {
-            // TODO: Count lines
-            lines[0..lines.len() - 5].join("\n")
-        };
-        s.push('\n');
-    }
-
     let mut builder = PrettyPrinter::new();
     builder.language("rust");
     builder.header(option.header.unwrap_or(true));
@@ -72,8 +60,9 @@ fn logger(s: &str, path: String, option: &PrintOption) {
         builder.theme(DEFAULT_THEME);
     };
 
+    let input = Input::from_file(outfile_path).name(path);
+    builder.input(input);
     // Ignore any errors.
-    builder.input_from_bytes_with_name(s.as_bytes(), path);
     let _ = builder.print();
 }
 
