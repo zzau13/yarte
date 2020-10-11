@@ -1,8 +1,13 @@
 use syn::parse_str;
 
 use crate::{
-    eat_expr_list, eat_if, hel, if_else, parse as _parse, trim, Cursor, DOption, ErrorMessage,
-    Helper, Node::*, PError, Span, Ws, S,
+    eat_expr_list, eat_if,
+    error::{DOption, PError},
+    hel, if_else, parse as _parse,
+    source_map::{Span, S},
+    trim, Cursor, ErrorMessage, Helper,
+    Node::*,
+    Ws,
 };
 
 const WS: Ws = (false, false);
@@ -300,14 +305,7 @@ fn test_error_safe() {
 fn test_error_local() {
     test_error(
         "{{ let @ }}",
-        PError::Local(DOption::Some(String::from("expected one of: identifier, `::`, `<`, `_`, literal, `ref`, `mut`, `&`, parentheses, square brackets, `..`"))),
-        bytes!(7..8)
-    );
-    // TODO: Why `span-locations` runs here and not when use in derive
-    let rest = String::from("{{ let") + " @ }}";
-    test_error(
-        &rest,
-        PError::Local(DOption::Some(String::from("expected one of: identifier, `::`, `<`, `_`, literal, `ref`, `mut`, `&`, parentheses, square brackets, `..`"))),
+        PError::Local(DOption::Some(String::from("expected one of: `::`, `<`, `_`, literal, `ref`, `mut`, `&`, parentheses, square brackets, `..`"))),
         bytes!(7..8)
     );
 }
@@ -316,7 +314,7 @@ fn test_error_local() {
 fn test_error_if() {
     test_error(
         "{{# if let @ }}{{/if }}",
-        PError::Argument(DOption::Some(String::from("expected one of: identifier, `::`, `<`, `_`, literal, `ref`, `mut`, `&`, parentheses, square brackets, `..`"))),
+        PError::Argument(DOption::Some(String::from("expected one of: `::`, `<`, `_`, literal, `ref`, `mut`, `&`, parentheses, square brackets, `..`"))),
         bytes!(11..12));
 }
 
