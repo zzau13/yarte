@@ -9,6 +9,8 @@ Don't believe the liars, frustrated and others and **put the code on a "real" ex
 
 Due to the high degree of idiocy on forums like reddit, I recommend that you use another solution. I can't ban it by license, but I hope this is enough.
 
+And thanks to you who collaborate, thanks for continuing to download, for my part I will give everything to give you the best.
+
 # Yarte [![Latest version](https://img.shields.io/crates/v/yarte.svg)](https://crates.io/crates/yarte) [![Build Status](https://travis-ci.org/botika/yarte.svg?branch=master)](https://travis-ci.org/botika/yarte)
 Yarte stands for **Y**et **A**nother **R**ust **T**emplate **E**ngine. Uses a Handlebars-like syntax, 
 well-known and intuitive for most developers. Yarte is an optimized, and easy-to-use 
