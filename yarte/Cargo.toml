@@ -28,7 +28,7 @@ bytes-buf = ["buf-min", "yarte_helpers/bytes-buf", "yarte_derive/bytes-buf"]
 [dependencies]
 yarte_derive = { version = "0.12.2", path = "../yarte_derive" }
 yarte_helpers = { version = "0.12.2", path = "../yarte_helpers" }
-buf-min = { version = "0.1", features = ["bytes-buf"], optional = true }
+buf-min = { version = "0.2", features = ["bytes-buf"], optional = true }
 
 [dev-dependencies]
 bytes = "0.6"

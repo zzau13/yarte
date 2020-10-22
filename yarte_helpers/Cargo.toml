@@ -40,7 +40,7 @@ serde = { version = "1.0", features = ["derive"], optional = true }
 toml = { version = "0.5", optional = true }
 serde_json = { version = "1.0", optional = true }
 
-buf-min = { version = "0.1", optional = true}
+buf-min = { version = "0.2", optional = true}
 
 bat = { version = "0.16", default-features = false, features = ["regex-fancy", "paging"], optional = true }
 tempfile = { version = "3.0", optional = true }
