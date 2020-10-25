@@ -1,4 +1,23 @@
 # Changes
+### [0.13.0] (2020-10-25)
+## Update
+- `buf-min` version to `0.2`
+- Parser coverage
+
+## Refactor
+- Move App runtime to delorean-rs
+
+### [0.12.0] (2020-07-05)
+## Added
+- Json serializer
+- Use `buf-min::Buffer` as default bytes buffer
+
+## [0.11.0] (2020-06-22)
+## Added
+- `TemplateBytesTrait` for render to `&mut BytesMut`
+- sse2 iota over `BytesMut` 
+- `ccall` for consume struct
+
 ## [0.10.0] (2020-06-15)
 ## Added
 - `TemplateFixedTrait` for render to `&mut [u8]`
