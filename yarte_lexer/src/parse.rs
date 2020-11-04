@@ -19,7 +19,7 @@ pub fn build_parser<Kind>(opt: Options) -> Parser<Kind> {
     }
 }
 
-impl<'a, Kind> Parser<Kind>
+impl<Kind> Parser<Kind>
 where
     Kind: Lexer + Debug + PartialEq + Clone,
 {
@@ -35,7 +35,7 @@ where
         }
     }
 
-    fn eat(i: Cursor<'a>, _opt: Options) -> PResult<Vec<SNode<'a, Kind>>> {
+    fn eat(i: Cursor, _opt: Options) -> PResult<Vec<SNode<Kind>>> {
         Err(LexError::Fail(PError::Uncompleted, Span::from_len(i, 1)))
     }
 }
