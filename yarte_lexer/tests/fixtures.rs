@@ -5,7 +5,7 @@ use std::{fs::File, io, io::prelude::*};
 use glob::glob;
 use serde::Deserialize;
 
-use yarte_lexer::{build_parser, Cursor, Lexer, Options, PResult, SNode};
+use yarte_lexer::{build_parser, Comment, Cursor, Lexer, Options, PResult, SNode};
 
 fn read_file<P: AsRef<Path>>(path: P) -> Result<String, io::Error> {
     let mut f = File::open(path)?;
@@ -17,7 +17,7 @@ fn read_file<P: AsRef<Path>>(path: P) -> Result<String, io::Error> {
 #[derive(Debug, Deserialize)]
 struct Fixture<'a, Kind>
 where
-    Kind: PartialEq + Clone + Debug + Lexer,
+    Kind: PartialEq + Clone + Debug + Lexer + Comment,
 {
     #[serde(borrow)]
     src: &'a str,
@@ -35,6 +35,29 @@ enum Kind {
 
 impl Lexer for Kind {
     fn parse(_c: Cursor) -> PResult<'_, Self>
+    where
+        Self: Sized,
+    {
+        unimplemented!()
+    }
+}
+
+impl Comment for Kind {
+    fn open(_c: Cursor) -> PResult<'_, Self>
+    where
+        Self: Sized,
+    {
+        unimplemented!()
+    }
+
+    fn close(_c: Cursor) -> PResult<'_, Self>
+    where
+        Self: Sized,
+    {
+        unimplemented!()
+    }
+
+    fn inline(_c: Cursor) -> PResult<'_, Self>
     where
         Self: Sized,
     {

@@ -188,18 +188,33 @@ pub type SNode<'a, Kind> = S<Node<'a, Kind>>;
 pub type SStr<'a> = S<&'a str>;
 pub type SVExpr = S<Vec<Expr>>;
 
-// TODO: do something more solid or complex. is it necessary?
-pub trait Lexer {
-    fn parse(c: Cursor) -> PResult<Self>
-    where
-        Self: Sized;
+macro_rules! api {
+    ([$ty:ident, $($method:ident)+] $($t:tt)*) => {
+        api!($ty, $($method)+);
+        api!($($t)*);
+    };
+    ($ty:ident, $($method:ident)+) => {
+        pub trait $ty {
+            $(
+            fn $method(c: Cursor) -> PResult<Self>
+            where
+                Self: Sized;
+            )+
+        }
+    };
+    () => {};
 }
+
+api!(
+    [Lexer, parse]
+    [Comment, open close inline]
+);
 
 // TODO: Visit trait
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub enum Node<'a, Kind>
 where
-    Kind: Lexer,
+    Kind: Lexer + Comment,
 {
     Arm(Ws, SArm),
     ArmKind(Ws, Kind, SArm),
