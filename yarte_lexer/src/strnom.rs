@@ -67,7 +67,11 @@ impl<'a> Cursor<'a> {
 #[derive(Debug, Clone)]
 pub enum LexError {
     Fail(PError, Span),
-    Next,
+    Next(PError, Span),
+}
+
+pub const fn next() -> LexError {
+    LexError::Next(PError::Empty, Span { lo: 0, hi: 0 })
 }
 
 pub type PResult<'a, O> = Result<(Cursor<'a>, O), LexError>;
@@ -147,14 +151,14 @@ macro_rules! tag {
         if $i.starts_with($tag) {
             Ok(($i.adv($tag.len()), &$i.rest[..$tag.len()]))
         } else {
-            Err(LexError::Next)
+            Err(LexError::Next(PError::Tag, Span::from($i)))
         }
     };
 }
 
 pub fn ws(input: Cursor) -> PResult<()> {
     if input.is_empty() {
-        return Err(LexError::Next);
+        return Err(LexError::Next(PError::Whitespace, Span::from(input)));
     }
 
     take_while!(input, is_ws).map(|(c, _)| (c, ()))
