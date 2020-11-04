@@ -15,6 +15,14 @@ impl<'a> Cursor<'a> {
         if amt == 0 {
             return *self;
         }
+
+        let len = self.len();
+        if amt >= len {
+            return Cursor {
+                rest: "",
+                off: self.off + (len as u32),
+            };
+        }
         let next = self
             .rest
             .char_indices()
@@ -172,4 +180,33 @@ pub fn skip_ws(input: Cursor) -> Cursor {
 #[inline]
 pub fn is_ws(ch: char) -> bool {
     ch.is_whitespace()
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn cursor() {
+        let rest = "foó bañ tuú";
+        let len = rest.chars().count();
+
+        let c = Cursor { rest, off: 0 };
+        assert!(c.adv(0).starts_with("f"));
+        assert!(c.adv(1).starts_with("o"));
+        assert!(c.adv(2).starts_with("ó"));
+        assert!(c.adv(3).starts_with(" "));
+        assert!(c.adv(6).starts_with("ñ"));
+        assert!(c.adv(len).starts_with(""));
+        assert!(!c.adv(len).starts_with("ú"));
+
+        assert!(c.adv_starts_with(6, "ñ"));
+        assert!(c.adv_starts_with(len, ""));
+
+        assert_eq!(c.find('f'), Some(0));
+        assert_eq!(c.find('ñ'), Some(6));
+        assert_eq!(c.find('h'), None);
+
+        assert_eq!(c.adv_find(3, 'ñ'), Some(3));
+    }
 }
