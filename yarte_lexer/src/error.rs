@@ -1,3 +1,4 @@
+use std::iter::once;
 use std::{
     collections::BTreeMap,
     fmt::{self, Display, Write},
@@ -111,16 +112,13 @@ where
         .map(|(label, origin, span)| {
             let ((lo_line, hi_line), (lo, hi)) = span.range_in_file();
             let start = span.start();
-            let source = sources
-                .get(origin)
-                .unwrap()
-                .get(lo_line..hi_line)
-                .unwrap()
-                .trim_end();
+            // TODO: without reallocate
+            let source = sources.get(origin).unwrap();
+
             let origin = origin.strip_prefix(&prefix).unwrap().to_str().unwrap();
 
             Slice {
-                source,
+                source: get_chars(source, lo_line, hi_line),
                 line_start: start.line,
                 origin: Some(origin),
                 annotations: vec![SourceAnnotation {
@@ -148,4 +146,43 @@ where
     };
 
     panic!("{}", DisplayList::from(s))
+}
+
+fn get_chars(text: &str, left: usize, right: usize) -> &str {
+    let mut ended = false;
+    let mut taken = 0;
+    let range = text
+        .char_indices()
+        .skip(left)
+        // Complete char iterator with final character
+        .chain(once((text.len(), '\0')))
+        // Take until the next one to the final condition
+        .take_while(|(_, ch)| {
+            // Fast return to iterate over final byte position
+            if ended {
+                return false;
+            }
+            // Make sure that the trimming on the right will fall within the terminal width.
+            // FIXME: `unicode_width` sometimes disagrees with terminals on how wide a `char` is.
+            // For now, just accept that sometimes the code line will be longer than desired.
+            taken += unicode_width::UnicodeWidthChar::width(*ch).unwrap_or(1);
+            if taken > right - left {
+                ended = true;
+            }
+            true
+        })
+        // Reduce to start and end byte position
+        .fold((None, 0), |acc, (i, _)| {
+            if acc.0.is_some() {
+                (acc.0, i)
+            } else {
+                (Some(i), i)
+            }
+        });
+
+    if let Some(left) = range.0 {
+        &text[left..range.1]
+    } else {
+        ""
+    }
 }

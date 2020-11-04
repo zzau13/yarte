@@ -87,7 +87,7 @@ impl FileInfo {
 fn lines_offsets(s: &str) -> Vec<usize> {
     let mut lines = vec![0];
     let mut prev = 0;
-    while let Some(len) = s[prev..].find('\n') {
+    while let Some(len) = s.chars().skip(prev).position(|x| x == '\n') {
         prev += len + 1;
         lines.push(prev);
     }
@@ -110,7 +110,7 @@ impl SourceMap {
         let lo = self.next_start_pos();
         let span = Span {
             lo,
-            hi: lo + (src.len() as u32),
+            hi: lo + (src.chars().count() as u32),
         };
 
         self.files.push(FileInfo {
@@ -122,7 +122,7 @@ impl SourceMap {
         span
     }
 
-    fn fileinfo(&self, span: Span) -> &FileInfo {
+    fn file_info(&self, span: Span) -> &FileInfo {
         for file in &self.files {
             if file.span_within(span) {
                 return file;
@@ -176,7 +176,7 @@ impl Span {
         } else {
             SOURCE_MAP.with(|cm| {
                 let cm = cm.borrow();
-                let fi = cm.fileinfo(self);
+                let fi = cm.file_info(self);
                 fi.lines[start.line + p_start.line - 2] as u32 + p_start.column as u32
             })
         };
@@ -185,7 +185,7 @@ impl Span {
         } else {
             SOURCE_MAP.with(|cm| {
                 let cm = cm.borrow();
-                let fi = cm.fileinfo(self);
+                let fi = cm.file_info(self);
                 fi.lines[start.line + p_end.line - 2] as u32 + p_end.column as u32
             })
         };
@@ -197,7 +197,7 @@ impl Span {
     pub fn range_in_file(self) -> ((usize, usize), (usize, usize)) {
         SOURCE_MAP.with(|cm| {
             let cm = cm.borrow();
-            let fi = cm.fileinfo(self);
+            let fi = cm.file_info(self);
             fi.get_ranges(self)
         })
     }
@@ -205,7 +205,7 @@ impl Span {
     pub fn file_path(self) -> PathBuf {
         SOURCE_MAP.with(|cm| {
             let cm = cm.borrow();
-            let fi = cm.fileinfo(self);
+            let fi = cm.file_info(self);
             fi.name.clone()
         })
     }
@@ -213,7 +213,7 @@ impl Span {
     pub fn start(self) -> LineColumn {
         SOURCE_MAP.with(|cm| {
             let cm = cm.borrow();
-            let fi = cm.fileinfo(self);
+            let fi = cm.file_info(self);
             fi.offset_line_column(self.lo as usize)
         })
     }

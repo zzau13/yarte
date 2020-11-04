@@ -5,7 +5,6 @@ use std::str::Chars;
 use crate::{error::PError, source_map::Span};
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-// TODO: to utf-8 chars
 pub struct Cursor<'a> {
     pub rest: &'a str,
     pub off: u32,
@@ -13,26 +12,35 @@ pub struct Cursor<'a> {
 
 impl<'a> Cursor<'a> {
     pub fn adv(&self, amt: usize) -> Cursor<'a> {
+        if amt == 0 {
+            return *self;
+        }
+        let next = self
+            .rest
+            .char_indices()
+            .nth(amt)
+            .map_or(self.rest.len(), |(i, _)| i);
         Cursor {
-            rest: &self.rest[amt..],
+            rest: &self.rest[next..],
             off: self.off + (amt as u32),
         }
     }
 
     pub fn find(&self, p: char) -> Option<usize> {
-        self.rest.find(p)
+        self.chars().position(|x| x == p)
     }
 
     pub fn adv_find(&self, amt: usize, p: char) -> Option<usize> {
-        self.rest[amt..].find(p)
+        self.chars().skip(amt).position(|x| x == p)
     }
 
     pub fn adv_starts_with(&self, amt: usize, s: &str) -> bool {
-        self.rest[amt..].starts_with(s)
+        let len = amt + s.chars().count();
+        len <= self.len() && self.chars().skip(amt).zip(s.chars()).all(|(a, b)| a == b)
     }
 
     pub fn starts_with(&self, s: &str) -> bool {
-        self.rest.starts_with(s)
+        s.chars().count() <= self.len() && self.chars().zip(s.chars()).all(|(a, b)| a == b)
     }
 
     pub fn is_empty(&self) -> bool {
@@ -40,7 +48,7 @@ impl<'a> Cursor<'a> {
     }
 
     pub fn len(&self) -> usize {
-        self.rest.len()
+        self.chars().count()
     }
 
     pub fn chars(&self) -> Chars<'a> {
