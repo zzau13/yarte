@@ -15,7 +15,7 @@ pub use self::{
     error::{emitter, ErrorMessage, PError},
     parse::{build_parser, Parser},
     stmt_local::StmtLocal,
-    strnom::{Cursor, LexError, PResult},
+    strnom::{next, Cursor, LexError, PResult},
 };
 
 #[macro_use]
@@ -195,7 +195,7 @@ macro_rules! api {
             fn $method(_: Cursor) -> PResult<$ret>
             where
                 Self: Sized {
-                    Err(LexError::Next)
+                    Err(next())
                 }
             )+
         }
@@ -204,8 +204,8 @@ macro_rules! api {
 
 api!(
     Kinder:
-    parse -> Self
-    parse_comment -> &str
+        parse -> Self
+        comment -> &str
 );
 
 // TODO: Visit trait

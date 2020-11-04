@@ -79,11 +79,10 @@ impl From<LexError> for ErrorMessage<PError> {
     fn from(e: LexError) -> Self {
         use LexError::*;
         match e {
-            Fail(m, s) => ErrorMessage {
+            Next(m, s) | Fail(m, s) => ErrorMessage {
                 message: m,
                 span: s,
             },
-            Next => panic!("something bad happens"),
         }
     }
 }
