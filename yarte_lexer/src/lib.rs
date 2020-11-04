@@ -188,21 +188,19 @@ pub type SNode<'a, Kind> = S<Node<'a, Kind>>;
 pub type SStr<'a> = S<&'a str>;
 pub type SVExpr = S<Vec<Expr>>;
 
-macro_rules! api {
+macro_rules! ki {
     ($ty:ident: $($method:ident -> $ret:ty)+) => {
-        pub trait $ty {
+        pub trait $ty: Sized {
             $(
-            fn $method(_: Cursor) -> PResult<$ret>
-            where
-                Self: Sized {
-                    Err(next())
-                }
+            fn $method(_: Cursor) -> PResult<$ret> {
+                Err(next())
+            }
             )+
         }
     };
 }
 
-api!(
+ki!(
     Kinder:
         parse -> Self
         comment -> &str
