@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 use crate::error::{ErrorMessage, PError};
 use crate::source_map::Span;
 use crate::strnom::{is_ws, Cursor, LexError, PResult};
-use crate::{Lexer, Options, SNode};
+use crate::{Comment, Lexer, Options, SNode};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Parser<Kind> {
@@ -21,7 +21,7 @@ pub fn build_parser<Kind>(opt: Options) -> Parser<Kind> {
 
 impl<Kind> Parser<Kind>
 where
-    Kind: Lexer + Debug + PartialEq + Clone,
+    Kind: Lexer + Comment + Debug + PartialEq + Clone,
 {
     pub fn parse(self, i: Cursor) -> Result<Vec<SNode<Kind>>, ErrorMessage<PError>> {
         let (c, res) = Self::eat(i, self.opt)?;
