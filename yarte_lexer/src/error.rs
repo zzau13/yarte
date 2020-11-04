@@ -71,16 +71,19 @@ pub enum PError {
     AtHelperNotExist,
     #[display(fmt = "@ helper need only {} argument", _0)]
     AtHelperArgsLen(usize),
+    #[display(fmt = "report please")]
+    Empty,
 }
 
 impl From<LexError> for ErrorMessage<PError> {
     fn from(e: LexError) -> Self {
         use LexError::*;
         match e {
-            Next(m, s) | Fail(m, s) => ErrorMessage {
+            Fail(m, s) => ErrorMessage {
                 message: m,
                 span: s,
             },
+            Next => panic!("something bad happens"),
         }
     }
 }

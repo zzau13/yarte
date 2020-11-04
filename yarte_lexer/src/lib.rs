@@ -9,14 +9,6 @@ use syn::parse::{Parse, ParseBuffer, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::{Pat, PatOr, Token};
 
-#[macro_use]
-mod strnom;
-mod error;
-mod expr_list;
-mod parse;
-mod source_map;
-mod stmt_local;
-
 use crate::source_map::S;
 
 pub use self::{
@@ -25,6 +17,14 @@ pub use self::{
     stmt_local::StmtLocal,
     strnom::{Cursor, LexError, PResult},
 };
+
+#[macro_use]
+mod strnom;
+mod error;
+mod expr_list;
+mod parse;
+mod source_map;
+mod stmt_local;
 
 pub type Ws = (bool, bool);
 
@@ -189,32 +189,30 @@ pub type SStr<'a> = S<&'a str>;
 pub type SVExpr = S<Vec<Expr>>;
 
 macro_rules! api {
-    ([$ty:ident, $($method:ident)+] $($t:tt)*) => {
-        api!($ty, $($method)+);
-        api!($($t)*);
-    };
-    ($ty:ident, $($method:ident)+) => {
+    ($ty:ident: $($method:ident -> $ret:ty)+) => {
         pub trait $ty {
             $(
-            fn $method(c: Cursor) -> PResult<Self>
+            fn $method(_: Cursor) -> PResult<$ret>
             where
-                Self: Sized;
+                Self: Sized {
+                    Err(LexError::Next)
+                }
             )+
         }
     };
-    () => {};
 }
 
 api!(
-    [Lexer, parse]
-    [Comment, open close inline]
+    Kinder:
+    parse -> Self
+    parse_comment -> &str
 );
 
 // TODO: Visit trait
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub enum Node<'a, Kind>
 where
-    Kind: Lexer + Comment,
+    Kind: Kinder,
 {
     Arm(Ws, SArm),
     ArmKind(Ws, Kind, SArm),
