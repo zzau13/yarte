@@ -18,6 +18,7 @@ maintenance = { status = "actively-developed" }
 
 [features]
 wasm-app = []
+deser = ["serde"]
 
 [dependencies]
 yarte_helpers = { version = "0.13.0", path = "../yarte_helpers" }
@@ -31,6 +32,8 @@ quote = "1.0"
 syn = { version= "1.0", features = ["full", "visit", "visit-mut", "extra-traits"] }
 
 derive_more = "0.99"
+
+serde = { version = "1.0.117", optional = true }
 
 [package.metadata.docs.rs]
 all-features = true
