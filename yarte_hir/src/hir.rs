@@ -1,4 +1,5 @@
 /// High level intermediate representation after lowering Ast
+// TODO: serialize and deserialize for container builder
 #[derive(Debug, Clone, PartialEq)]
 pub enum HIR {
     Lit(String),
@@ -9,6 +10,7 @@ pub enum HIR {
     Local(Box<syn::Local>),
 }
 
+// TODO: to switch
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfElse {
     pub ifs: (syn::Expr, Vec<HIR>),
