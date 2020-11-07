@@ -5,7 +5,7 @@ use std::{fs::File, io, io::prelude::*};
 use glob::glob;
 use serde::Deserialize;
 
-use yarte_lexer::{build_parser, Cursor, Kinder, Options, SNode};
+use yarte_lexer::{parse, Cursor, Kinder, SNode};
 
 fn read_file<P: AsRef<Path>>(path: P) -> Result<String, io::Error> {
     let mut f = File::open(path)?;
@@ -33,14 +33,12 @@ enum Kind {
     Some,
 }
 
-impl Kinder for Kind {}
-
-static OPT: Options = Options {
-    open: '{',
-    close: '}',
-    ws: '~',
-    ws_after: false,
-};
+impl Kinder for Kind {
+    const OPEN: char = '{';
+    const CLOSE: char = '}';
+    const WS: char = '~';
+    const WS_AFTER: bool = false;
+}
 
 #[test]
 fn test() {
@@ -52,9 +50,7 @@ fn test() {
             .expect("Valid Fixtures");
 
         for Fixture { src, exp } in fixtures {
-            let res = build_parser::<Kind>(OPT)
-                .parse(Cursor { rest: src, off: 0 })
-                .expect("Valid parse");
+            let res = parse::<Kind>(Cursor { rest: src, off: 0 }).expect("Valid parse");
             assert_eq!(res, exp);
         }
     }
@@ -70,9 +66,7 @@ fn test_panic() {
             .expect("Valid Fixtures");
 
         for FixturePanic(src) in fixtures {
-            assert!(build_parser::<Kind>(OPT)
-                .parse(Cursor { rest: src, off: 0 })
-                .is_err());
+            assert!(parse::<Kind>(Cursor { rest: src, off: 0 }).is_err());
         }
     }
 }

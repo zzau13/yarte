@@ -13,7 +13,7 @@ use crate::source_map::S;
 
 pub use self::{
     error::{emitter, ErrorMessage, PError},
-    parse::{build_parser, Parser},
+    parse::parse,
     stmt_local::StmtLocal,
     strnom::{next, Cursor, LexError, PResult},
 };
@@ -191,8 +191,11 @@ pub type SStr<'a> = S<&'a str>;
 pub type SVExpr = S<Vec<Expr>>;
 
 macro_rules! ki {
-    ($ty:ident: $($method:ident -> $ret:ty)+) => {
+    ($ty:ident: $($cname:ident: $cty:ty)+; $($method:ident -> $ret:ty)+) => {
         pub trait $ty: Sized {
+            $(
+            const $cname: $cty;
+            )+
             $(
             #[inline]
             fn $method(_: Cursor) -> PResult<$ret> {
@@ -205,6 +208,11 @@ macro_rules! ki {
 
 ki!(
     Kinder:
+        OPEN: char
+        CLOSE: char
+        WS: char
+        WS_AFTER: bool
+    ;
         parse -> Self
         comment -> &str
 );
@@ -238,12 +246,4 @@ where
     Close(Ws, Kind),
     CloseStr(Ws, #[serde(borrow)] &'a str),
     Error(SVExpr),
-}
-
-#[derive(Debug, PartialEq, Clone, Copy, Deserialize)]
-pub struct Options {
-    pub open: char,
-    pub close: char,
-    pub ws: char,
-    pub ws_after: bool,
 }

@@ -1,43 +1,27 @@
 use std::fmt::Debug;
-use std::marker::PhantomData;
 
 use crate::error::{ErrorMessage, PError};
 use crate::source_map::Span;
 use crate::strnom::{is_ws, Cursor, LexError, PResult};
-use crate::{Kinder, Options, SNode};
+use crate::{Kinder, SNode};
 
-#[derive(Debug, Copy, Clone)]
-pub struct Parser<Kind> {
-    opt: Options,
-    _kind: PhantomData<Kind>,
-}
+pub trait Ki: Kinder + Debug + PartialEq + Clone {}
+impl<T: Kinder + Debug + PartialEq + Clone> Ki for T {}
 
-pub fn build_parser<Kind>(opt: Options) -> Parser<Kind> {
-    Parser {
-        opt,
-        _kind: PhantomData::default(),
+pub fn parse<K: Ki>(i: Cursor) -> Result<Vec<SNode<K>>, ErrorMessage<PError>> {
+    let (c, res) = eat(i)?;
+    if c.is_empty() {
+        Ok(res)
+    } else {
+        Err(ErrorMessage {
+            message: PError::Uncompleted,
+            span: Span::from_len(c, 1),
+        })
     }
 }
 
-impl<Kind> Parser<Kind>
-where
-    Kind: Kinder + Debug + PartialEq + Clone,
-{
-    pub fn parse(self, i: Cursor) -> Result<Vec<SNode<Kind>>, ErrorMessage<PError>> {
-        let (c, res) = Self::eat(i, self.opt)?;
-        if c.is_empty() {
-            Ok(res)
-        } else {
-            Err(ErrorMessage {
-                message: PError::Uncompleted,
-                span: Span::from_len(c, 1),
-            })
-        }
-    }
-
-    fn eat(i: Cursor, _opt: Options) -> PResult<Vec<SNode<Kind>>> {
-        Err(LexError::Fail(PError::Uncompleted, Span::from_len(i, 1)))
-    }
+fn eat<K: Ki>(i: Cursor) -> PResult<Vec<SNode<K>>> {
+    Err(LexError::Fail(PError::Uncompleted, Span::from_len(i, 1)))
 }
 
 /// TODO: Define chars in path
