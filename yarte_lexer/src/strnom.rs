@@ -172,7 +172,7 @@ macro_rules! take_while {
 }
 
 #[inline]
-fn tag<'a, E: KiError>(i: Cursor<'a>, tag: &'static str) -> PResult<'a, &'static str, E> {
+pub fn tag<'a, E: KiError>(i: Cursor<'a>, tag: &'static str) -> PResult<'a, &'static str, E> {
     debug_assert!(!tag.is_empty());
 
     if i.starts_with(tag) {
@@ -186,7 +186,7 @@ fn tag<'a, E: KiError>(i: Cursor<'a>, tag: &'static str) -> PResult<'a, &'static
 }
 
 #[inline]
-fn tac<E: KiError>(i: Cursor, tag: char) -> PResult<char, E> {
+pub fn tac<E: KiError>(i: Cursor, tag: char) -> PResult<char, E> {
     if i.next_is(tag) {
         Ok((i.adv(1), tag))
     } else {

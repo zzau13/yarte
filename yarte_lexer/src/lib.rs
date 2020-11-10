@@ -193,14 +193,14 @@ pub type SVExpr = S<Vec<Expr>>;
 
 macro_rules! ki {
     ($ty:ident: $($cname:ident: $cty:ty)+; $($method:ident -> $ret:ty)+) => {
-        pub trait $ty: Sized {
+        pub trait $ty<'a>: Sized + 'a {
             type Error: KiError;
             $(
             const $cname: $cty;
             )+
             $(
             #[inline]
-            fn $method(_: Cursor) -> PResult<$ret, Self::Error> {
+            fn $method(_: Cursor<'a>) -> PResult<'a, $ret, Self::Error> {
                 Err(next!(Self::Error))
             }
             )+
@@ -227,7 +227,7 @@ ki!(
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub enum Node<'a, Kind>
 where
-    Kind: Kinder,
+    Kind: Kinder<'a>,
 {
     Arm(Ws, SArm),
     ArmKind(Ws, Kind, SArm),
