@@ -1,19 +1,11 @@
 use std::fmt::{self, Debug, Display, Formatter};
-use std::path::Path;
-use std::{fs::File, io, io::prelude::*};
+use std::fs::read_to_string;
 
 use glob::glob;
 use serde::Deserialize;
 
 use std::error::Error;
 use yarte_lexer::{handlebars, parse, Cursor, Ki, KiError, Kinder, PResult, SToken};
-
-fn read_file<P: AsRef<Path>>(path: P) -> Result<String, io::Error> {
-    let mut f = File::open(path)?;
-    let mut s = String::new();
-    (f.read_to_string(&mut s))?;
-    Ok(s.trim_end().to_string())
-}
 
 #[derive(Debug, Deserialize)]
 struct Fixture<'a, Kind: Ki<'a>> {
@@ -27,12 +19,12 @@ struct Fixture<'a, Kind: Ki<'a>> {
 struct FixturePanic<'a>(#[serde(borrow)] &'a str);
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
-enum Kind<'a> {
+enum MyKind<'a> {
     Some,
     Str(&'a str),
 }
 
-impl<'a> Kinder<'a> for Kind<'a> {
+impl<'a> Kinder<'a> for MyKind<'a> {
     type Error = MyError;
     const OPEN: char = '{';
     const CLOSE: char = '}';
@@ -43,7 +35,7 @@ impl<'a> Kinder<'a> for Kind<'a> {
     const WS: char = '~';
     const WS_AFTER: bool = false;
     fn parse(i: Cursor<'a>) -> PResult<Self, Self::Error> {
-        Ok((i, Kind::Str(i.rest)))
+        Ok((i, MyKind::Str(i.rest)))
     }
     fn comment(i: Cursor<'a>) -> PResult<&'a str, Self::Error> {
         handlebars::comment(i)
@@ -84,13 +76,13 @@ impl KiError for MyError {
 fn test() {
     for entry in glob("./tests/fixtures/features/**/*.ron").expect("Failed to read glob pattern") {
         let name = entry.expect("File name");
-        let src = read_file(name).expect("Valid file");
-        let fixtures: Vec<Fixture<'_, Kind>> = ron::from_str(&src)
+        let src = read_to_string(name).expect("Valid file");
+        let fixtures: Vec<Fixture<'_, MyKind>> = ron::from_str(&src)
             .map_err(|e| eprintln!("{:?}", e))
             .expect("Valid Fixtures");
 
         for Fixture { src, exp } in fixtures {
-            let res = parse::<Kind>(Cursor { rest: src, off: 0 }).expect("Valid parse");
+            let res = parse::<MyKind>(Cursor { rest: src, off: 0 }).expect("Valid parse");
             eprintln!("BASE {:?} \nEXPR {:?}", exp, res);
             assert_eq!(res, exp);
         }
@@ -101,13 +93,13 @@ fn test() {
 fn test_panic() {
     for entry in glob("./tests/fixtures/panic/**/*.ron").expect("Failed to read glob pattern") {
         let name = entry.expect("File name");
-        let src = read_file(name).expect("Valid file");
+        let src = read_to_string(name).expect("Valid file");
         let fixtures: Vec<FixturePanic> = ron::from_str(&src)
             .map_err(|e| eprintln!("{:?}", e))
             .expect("Valid Fixtures");
 
         for FixturePanic(src) in fixtures {
-            assert!(parse::<Kind>(Cursor { rest: src, off: 0 }).is_err());
+            assert!(parse::<MyKind>(Cursor { rest: src, off: 0 }).is_err());
         }
     }
 }
