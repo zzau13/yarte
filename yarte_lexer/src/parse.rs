@@ -20,8 +20,8 @@ pub fn parse<K: Ki>(i: Cursor) -> Result<Vec<SNode<K>>, ErrorMessage<PError>> {
     }
 }
 
-fn eat<K: Ki>(i: Cursor) -> PResult<Vec<SNode<K>>> {
-    Err(LexError::Fail(PError::Uncompleted, Span::from_len(i, 1)))
+fn eat<K: Ki>(_i: Cursor) -> PResult<Vec<SNode<K>>> {
+    unimplemented!()
 }
 
 /// TODO: Define chars in path
