@@ -6,7 +6,7 @@ use glob::glob;
 use serde::Deserialize;
 
 use std::error::Error;
-use yarte_lexer::{handlebars, parse, Cursor, Ki, KiError, Kinder, PResult, SNode};
+use yarte_lexer::{handlebars, parse, Cursor, Ki, KiError, Kinder, PResult, SToken};
 
 fn read_file<P: AsRef<Path>>(path: P) -> Result<String, io::Error> {
     let mut f = File::open(path)?;
@@ -20,7 +20,7 @@ struct Fixture<'a, Kind: Ki<'a>> {
     #[serde(borrow)]
     src: &'a str,
     #[serde(borrow)]
-    exp: Vec<SNode<'a, Kind>>,
+    exp: Vec<SToken<'a, Kind>>,
 }
 
 #[derive(Debug, Deserialize)]
