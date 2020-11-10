@@ -1,11 +1,12 @@
-use std::fmt::Debug;
+use std::fmt::{self, Debug, Display, Formatter};
 use std::path::Path;
 use std::{fs::File, io, io::prelude::*};
 
 use glob::glob;
 use serde::Deserialize;
 
-use yarte_lexer::{parse, Cursor, Kinder, SNode};
+use std::error::Error;
+use yarte_lexer::{parse, Cursor, KiError, Kinder, SNode};
 
 fn read_file<P: AsRef<Path>>(path: P) -> Result<String, io::Error> {
     let mut f = File::open(path)?;
@@ -44,6 +45,35 @@ impl Kinder for Kind {
     const WS_AFTER: bool = false;
 }
 
+#[derive(Debug, Copy, Clone, PartialEq)]
+enum MyError {
+    Some,
+    Str(&'static str),
+}
+
+impl Display for MyError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        Debug::fmt(self, f)
+    }
+}
+
+impl Error for MyError {}
+
+impl KiError for MyError {
+    const EMPTY: Self = MyError::Some;
+    const PATH: Self = MyError::Some;
+    const UNCOMPLETED: Self = MyError::Some;
+    const WHITESPACE: Self = MyError::Some;
+
+    fn tag(s: &'static str) -> Self {
+        MyError::Str(s)
+    }
+
+    fn tac(_: char) -> Self {
+        MyError::Some
+    }
+}
+
 #[test]
 fn test() {
     for entry in glob("./tests/fixtures/features/**/*.ron").expect("Failed to read glob pattern") {
@@ -54,7 +84,7 @@ fn test() {
             .expect("Valid Fixtures");
 
         for Fixture { src, exp } in fixtures {
-            let res = parse::<Kind>(Cursor { rest: src, off: 0 }).expect("Valid parse");
+            let res = parse::<Kind, MyError>(Cursor { rest: src, off: 0 }).expect("Valid parse");
             assert_eq!(res, exp);
         }
     }
@@ -70,7 +100,7 @@ fn test_panic() {
             .expect("Valid Fixtures");
 
         for FixturePanic(src) in fixtures {
-            assert!(parse::<Kind>(Cursor { rest: src, off: 0 }).is_err());
+            assert!(parse::<Kind, MyError>(Cursor { rest: src, off: 0 }).is_err());
         }
     }
 }

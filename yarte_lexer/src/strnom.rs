@@ -3,7 +3,8 @@
 use std::iter::once;
 use std::str::Chars;
 
-use crate::{error::PError, source_map::Span};
+use crate::error::{KiError, LexError, PResult};
+use crate::source_map::Span;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Cursor<'a> {
@@ -53,6 +54,14 @@ impl<'a> Cursor<'a> {
         s.chars().count() <= self.len() && self.chars().zip(s.chars()).all(|(a, b)| a == b)
     }
 
+    pub fn next_is(&self, c: char) -> bool {
+        self.chars().next().map_or(false, |x| c == x)
+    }
+
+    pub fn adv_next_is(&self, amt: usize, c: char) -> bool {
+        self.adv(amt).chars().next().map_or(false, |x| c == x)
+    }
+
     pub fn is_empty(&self) -> bool {
         self.rest.is_empty()
     }
@@ -63,6 +72,11 @@ impl<'a> Cursor<'a> {
 
     pub fn chars(&self) -> Chars<'a> {
         self.rest.chars()
+    }
+
+    #[inline]
+    pub fn get_chars(&self, left: usize, right: usize) -> &str {
+        get_chars(self.rest, left, right)
     }
 }
 
@@ -84,18 +98,6 @@ pub fn get_chars(text: &str, left: usize, right: usize) -> &str {
 
     left.map_or("", |left| &text[left..right])
 }
-
-#[derive(Debug, Clone)]
-pub enum LexError {
-    Fail(PError, Span),
-    Next(PError, Span),
-}
-
-pub const fn next() -> LexError {
-    LexError::Next(PError::Empty, Span { lo: 0, hi: 0 })
-}
-
-pub type PResult<'a, O> = Result<(Cursor<'a>, O), LexError>;
 
 #[macro_export]
 macro_rules! do_parse {
@@ -159,22 +161,34 @@ macro_rules! take_while {
             Ok(($i, ""))
         } else {
             match $i.chars().position(|c| !$f(c)) {
-                Some(i) => Ok(($i.adv(i), &$i.rest[..i])),
-                None => Ok(($i.adv($i.len()), &$i.rest[..$i.len()])),
+                Some(c) => Ok(($i.adv(c), crate::strnom::get_chars(&$i.rest, 0, c))),
+                None => Ok((
+                    $i.adv($i.len()),
+                    crate::strnom::get_chars(&$i.rest, 0, $i.len()),
+                )),
             }
         }
     }};
 }
 
-#[macro_export]
-macro_rules! tag {
-    ($i:expr, $tag:expr) => {
-        if $i.starts_with($tag) {
-            Ok(($i.adv($tag.len()), &$i.rest[..$tag.len()]))
-        } else {
-            Err(LexError::Next(PError::Tag, Span::from($i)))
-        }
-    };
+#[inline]
+fn tag<'a, E: KiError>(i: Cursor<'a>, tag: &'static str) -> PResult<'a, &'static str, E> {
+    debug_assert!(!tag.is_empty());
+
+    if i.starts_with(tag) {
+        Ok((i.adv(tag.chars().count()), tag))
+    } else {
+        Err(LexError::Next(E::tag(tag), Span::from(i)))
+    }
+}
+
+#[inline]
+fn tac<E: KiError>(i: Cursor, tag: char) -> PResult<char, E> {
+    if i.next_is(tag) {
+        Ok((i.adv(1), tag))
+    } else {
+        Err(LexError::Next(E::tac(tag), Span::from(i)))
+    }
 }
 
 #[macro_export]
@@ -187,16 +201,16 @@ macro_rules! map_fail {
     };
 }
 
-pub fn ws(input: Cursor) -> PResult<()> {
+pub fn ws<E: KiError>(input: Cursor) -> PResult<(), E> {
     if input.is_empty() {
-        return Err(LexError::Next(PError::Whitespace, Span::from(input)));
+        return Err(LexError::Next(E::WHITESPACE, Span::from(input)));
     }
 
     take_while!(input, is_ws).map(|(c, _)| (c, ()))
 }
 
-pub fn skip_ws(input: Cursor) -> Cursor {
-    match ws(input) {
+pub fn skip_ws<E: KiError>(input: Cursor) -> Cursor {
+    match ws::<E>(input) {
         Ok((rest, _)) => rest,
         Err(_) => input,
     }

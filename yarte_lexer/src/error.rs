@@ -1,21 +1,58 @@
-use std::{
-    collections::BTreeMap,
-    fmt::{self, Display, Write},
-    path::PathBuf,
-};
+use std::collections::BTreeMap;
+use std::error::Error;
+use std::fmt::{self, Display, Write};
+use std::path::PathBuf;
 
 use annotate_snippets::{
     display_list::{DisplayList, FormatOptions},
     snippet::{Annotation, AnnotationType, Slice, Snippet, SourceAnnotation},
 };
-use derive_more::Display;
 
 use yarte_helpers::config::Config;
 
-use crate::{
-    source_map::Span,
-    strnom::{get_chars, LexError},
-};
+use crate::{source_map::Span, strnom::get_chars, Cursor};
+
+pub trait KiError: Error + PartialEq + Clone + Copy {
+    const EMPTY: Self;
+    const PATH: Self;
+    const UNCOMPLETED: Self;
+    const WHITESPACE: Self;
+
+    fn tag(s: &'static str) -> Self;
+    fn tac(c: char) -> Self;
+}
+
+#[derive(Debug, Clone)]
+pub enum LexError<K: KiError> {
+    Fail(K, Span),
+    Next(K, Span),
+}
+
+// TODO: const
+pub fn next<K: KiError>() -> LexError<K> {
+    LexError::Next(K::EMPTY, Span { lo: 0, hi: 0 })
+}
+
+pub type PResult<'a, O, E> = Result<(Cursor<'a>, O), LexError<E>>;
+
+impl<E: KiError> From<LexError<E>> for ErrorMessage<E> {
+    fn from(e: LexError<E>) -> Self {
+        use LexError::*;
+        match e {
+            Next(m, s) | Fail(m, s) => ErrorMessage {
+                message: m,
+                span: s,
+            },
+        }
+    }
+}
+
+// TODO: T: Priority trait
+#[derive(Debug)]
+pub struct ErrorMessage<T: Error> {
+    pub message: T,
+    pub span: Span,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum DOption {
@@ -36,71 +73,11 @@ impl Display for DOption {
     }
 }
 
-// TODO: #39 improve error messages
-#[derive(Debug, Display, Clone, PartialEq)]
-pub enum PError {
-    #[display(fmt = "problems parsing template source")]
-    Uncompleted,
-    #[display(fmt = "whitespace")]
-    Whitespace,
-    #[display(fmt = "tag")]
-    Tag,
-    #[display(fmt = "comment")]
-    Comment,
-    #[display(fmt = "expression{}", _0)]
-    Expr(DOption),
-    #[display(fmt = "safe{}", _0)]
-    Safe(DOption),
-    #[display(fmt = "local{}", _0)]
-    Local(DOption),
-    #[display(fmt = "if else")]
-    IfElse,
-    #[display(fmt = "raw")]
-    Raw,
-    #[display(fmt = "helpers")]
-    Helpers,
-    #[display(fmt = "partial block")]
-    PartialBlock,
-    #[display(fmt = "partial path")]
-    PartialPath,
-    #[display(fmt = "identifier")]
-    Ident,
-    #[display(fmt = "end expression")]
-    EndExpression,
-    #[display(fmt = "argument{}", _0)]
-    Argument(DOption),
-    #[display(fmt = "Not exist @ helper")]
-    AtHelperNotExist,
-    #[display(fmt = "@ helper need only {} argument", _0)]
-    AtHelperArgsLen(usize),
-    #[display(fmt = "report please")]
-    Empty,
-}
-
-impl From<LexError> for ErrorMessage<PError> {
-    fn from(e: LexError) -> Self {
-        use LexError::*;
-        match e {
-            Next(m, s) | Fail(m, s) => ErrorMessage {
-                message: m,
-                span: s,
-            },
-        }
-    }
-}
-
-// TODO: T: Priority trait
-#[derive(Debug)]
-pub struct ErrorMessage<T: Display> {
-    pub message: T,
-    pub span: Span,
-}
-
 // TODO: Accumulate by priority
 pub fn emitter<I, T>(sources: &BTreeMap<PathBuf, String>, config: &Config, errors: I) -> !
 where
     I: Iterator<Item = ErrorMessage<T>>,
-    T: Display,
+    T: Error,
 {
     let mut prefix = config.get_dir().clone();
     prefix.pop();
