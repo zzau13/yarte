@@ -42,11 +42,8 @@ impl<'a> Kinder<'a> for Kind<'a> {
     const CLOSE_BLOCK: char = '}';
     const WS: char = '~';
     const WS_AFTER: bool = false;
-    fn parse(i: Cursor<'a>) -> PResult<Self, Self::Error>
-    where
-        Self: 'a,
-    {
-        Ok((i, Kind::Str(&i.rest)))
+    fn parse(i: Cursor<'a>) -> PResult<Self, Self::Error> {
+        Ok((i, Kind::Str(i.rest)))
     }
 }
 
