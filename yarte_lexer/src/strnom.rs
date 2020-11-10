@@ -82,11 +82,7 @@ pub fn get_chars(text: &str, left: usize, right: usize) -> &str {
             }
         });
 
-    if let Some(left) = left {
-        &text[left..right]
-    } else {
-        ""
-    }
+    left.map_or("", |left| &text[left..right])
 }
 
 #[derive(Debug, Clone)]
