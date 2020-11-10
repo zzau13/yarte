@@ -74,9 +74,9 @@ pub fn get_chars(text: &str, left: usize, right: usize) -> &str {
         .chain(once((text.len(), '\0')))
         .skip(left)
         .take(right - left + 1)
-        .fold((None, 0), |acc, (i, _)| {
-            if acc.0.is_some() {
-                (acc.0, i)
+        .fold((None, 0), |(left, _), (i, _)| {
+            if left.is_some() {
+                (left, i)
             } else {
                 (Some(i), i)
             }
