@@ -16,10 +16,7 @@ fn read_file<P: AsRef<Path>>(path: P) -> Result<String, io::Error> {
 }
 
 #[derive(Debug, Deserialize)]
-struct Fixture<'a, Kind>
-where
-    Kind: Ki,
-{
+struct Fixture<'a, Kind: Ki> {
     #[serde(borrow)]
     src: &'a str,
     #[serde(borrow)]
