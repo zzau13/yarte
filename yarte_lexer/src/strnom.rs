@@ -178,7 +178,10 @@ fn tag<'a, E: KiError>(i: Cursor<'a>, tag: &'static str) -> PResult<'a, &'static
     if i.starts_with(tag) {
         Ok((i.adv(tag.chars().count()), tag))
     } else {
-        Err(LexError::Next(E::tag(tag), Span::from_len(i, tag.chars().count())))
+        Err(LexError::Next(
+            E::tag(tag),
+            Span::from_len(i, tag.chars().count()),
+        ))
     }
 }
 

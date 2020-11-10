@@ -35,6 +35,7 @@ enum Kind {
 }
 
 impl Kinder for Kind {
+    type Error = MyError;
     const OPEN: char = '{';
     const CLOSE: char = '}';
     const OPEN_EXPR: char = '{';
@@ -84,7 +85,7 @@ fn test() {
             .expect("Valid Fixtures");
 
         for Fixture { src, exp } in fixtures {
-            let res = parse::<Kind, MyError>(Cursor { rest: src, off: 0 }).expect("Valid parse");
+            let res = parse::<Kind>(Cursor { rest: src, off: 0 }).expect("Valid parse");
             assert_eq!(res, exp);
         }
     }
@@ -100,7 +101,7 @@ fn test_panic() {
             .expect("Valid Fixtures");
 
         for FixturePanic(src) in fixtures {
-            assert!(parse::<Kind, MyError>(Cursor { rest: src, off: 0 }).is_err());
+            assert!(parse::<Kind>(Cursor { rest: src, off: 0 }).is_err());
         }
     }
 }
