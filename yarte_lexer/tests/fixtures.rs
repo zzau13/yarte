@@ -6,7 +6,7 @@ use glob::glob;
 use serde::Deserialize;
 
 use std::error::Error;
-use yarte_lexer::{parse, Cursor, KiError, Kinder, SNode};
+use yarte_lexer::{parse, Cursor, Ki, KiError, Kinder, SNode};
 
 fn read_file<P: AsRef<Path>>(path: P) -> Result<String, io::Error> {
     let mut f = File::open(path)?;
@@ -18,7 +18,7 @@ fn read_file<P: AsRef<Path>>(path: P) -> Result<String, io::Error> {
 #[derive(Debug, Deserialize)]
 struct Fixture<'a, Kind>
 where
-    Kind: PartialEq + Clone + Debug + Kinder,
+    Kind: Ki,
 {
     #[serde(borrow)]
     src: &'a str,
