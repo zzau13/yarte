@@ -5,7 +5,9 @@ use std::{
     path::PathBuf,
 };
 
-use crate::strnom::{skip_ws, Cursor, PResult};
+use crate::error::{KiError, PResult};
+use crate::parse::Ki;
+use crate::strnom::{skip_ws, Cursor};
 
 thread_local! {
     static SOURCE_MAP: RefCell<SourceMap> = RefCell::new(Default::default());
@@ -243,11 +245,11 @@ impl<T: Debug + PartialEq + Clone> S<T> {
     }
 }
 
-pub(crate) fn spanned<'a, T: Debug + PartialEq + Clone>(
+pub(crate) fn spanned<'a, T: Ki, E: KiError>(
     input: Cursor<'a>,
-    f: fn(Cursor<'a>) -> PResult<'a, T>,
-) -> PResult<'a, S<T>> {
-    let input = skip_ws(input);
+    f: fn(Cursor<'a>) -> PResult<'a, T, E>,
+) -> PResult<'a, S<T>, E> {
+    let input = skip_ws::<E>(input);
     let lo = input.off;
     let (a, b) = f(input)?;
     let hi = a.off;

@@ -12,10 +12,10 @@ use syn::{Pat, PatOr, Token};
 use crate::source_map::S;
 
 pub use self::{
-    error::{emitter, ErrorMessage, PError},
+    error::{emitter, next, ErrorMessage, KiError, LexError, PResult},
     parse::parse,
     stmt_local::StmtLocal,
-    strnom::{next, Cursor, LexError, PResult},
+    strnom::Cursor,
 };
 
 #[macro_use]
@@ -198,7 +198,7 @@ macro_rules! ki {
             )+
             $(
             #[inline]
-            fn $method(_: Cursor) -> PResult<$ret> {
+            fn $method<E: KiError>(_: Cursor) -> PResult<$ret, E> {
                 Err(next())
             }
             )+

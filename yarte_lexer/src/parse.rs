@@ -1,36 +1,36 @@
 use std::fmt::Debug;
 
-use crate::error::{ErrorMessage, PError};
+use crate::error::{ErrorMessage, KiError, LexError, PResult};
 use crate::source_map::Span;
-use crate::strnom::{is_ws, Cursor, LexError, PResult};
+use crate::strnom::{is_ws, Cursor};
 use crate::{Kinder, SNode};
 
 pub trait Ki: Kinder + Debug + PartialEq + Clone {}
 impl<T: Kinder + Debug + PartialEq + Clone> Ki for T {}
 
-pub fn parse<K: Ki>(i: Cursor) -> Result<Vec<SNode<K>>, ErrorMessage<PError>> {
+pub fn parse<K: Ki, E: KiError>(i: Cursor) -> Result<Vec<SNode<K>>, ErrorMessage<E>> {
     let (c, res) = eat(i)?;
     if c.is_empty() {
         Ok(res)
     } else {
         Err(ErrorMessage {
-            message: PError::Uncompleted,
+            message: E::UNCOMPLETED,
             span: Span::from_len(c, 1),
         })
     }
 }
 
-fn eat<K: Ki>(_i: Cursor) -> PResult<Vec<SNode<K>>> {
+fn eat<K: Ki, E: KiError>(_i: Cursor) -> PResult<Vec<SNode<K>>, E> {
     unimplemented!()
 }
 
 /// TODO: Define chars in path
 /// Eat path at partial
 /// Next white space close path
-fn path(i: Cursor) -> PResult<&str> {
+fn path<E: KiError>(i: Cursor) -> PResult<&str, E> {
     take_while!(i, |i| !is_ws(i)).and_then(|(c, s)| {
         if s.is_empty() {
-            Err(LexError::Fail(PError::PartialPath, Span::from(c)))
+            Err(LexError::Fail(E::PATH, Span::from(c)))
         } else {
             Ok((c, s))
         }
