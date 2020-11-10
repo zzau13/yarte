@@ -188,7 +188,7 @@ impl Parse for Arm {
 pub type SArm = S<Box<Arm>>;
 pub type SExpr = S<Box<Expr>>;
 pub type SLocal = S<Box<Local>>;
-pub type SNode<'a, Kind> = S<Node<'a, Kind>>;
+pub type SToken<'a, Kind> = S<Token<'a, Kind>>;
 pub type SStr<'a> = S<&'a str>;
 pub type SVExpr = S<Vec<Expr>>;
 
@@ -226,7 +226,7 @@ ki!(
 
 // TODO: Visit trait
 #[derive(Debug, Clone, PartialEq, Deserialize)]
-pub enum Node<'a, Kind>
+pub enum Token<'a, Kind>
 where
     Kind: Kinder<'a>,
 {

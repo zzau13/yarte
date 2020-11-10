@@ -3,13 +3,13 @@ use std::fmt::Debug;
 use crate::error::{ErrorMessage, KiError, LexError, PResult};
 use crate::source_map::{Span, S};
 use crate::strnom::{get_chars, is_ws, Cursor};
-use crate::{Kinder, Node, SNode};
+use crate::{Kinder, SToken, Token};
 
 pub trait Ki<'a>: Kinder<'a> + Debug + PartialEq + Clone {}
 
 impl<'a, T: Kinder<'a> + Debug + PartialEq + Clone> Ki<'a> for T {}
 
-pub fn parse<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Vec<SNode<'a, K>>, ErrorMessage<K::Error>> {
+pub fn parse<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Vec<SToken<'a, K>>, ErrorMessage<K::Error>> {
     let (c, res) = eat(i)?;
     if c.is_empty() {
         Ok(res)
@@ -21,7 +21,7 @@ pub fn parse<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Vec<SNode<'a, K>>, ErrorMes
     }
 }
 
-fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SNode<'a, K>>, K::Error> {
+fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SToken<'a, K>>, K::Error> {
     let mut nodes = vec![];
     let mut at = 0;
     loop {
@@ -33,7 +33,7 @@ fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SNode<'a, K>>, K::Error>
                     match K::comment(cur.adv(1)) {
                         Ok((c, s)) => {
                             eat_lit(i, at + j, &mut nodes);
-                            nodes.push(S(Node::Comment(s), Span::from_cursor(i.adv(at + j), c)));
+                            nodes.push(S(Token::Comment(s), Span::from_cursor(i.adv(at + j), c)));
                             i = c;
                             at = 0;
                         }
@@ -57,7 +57,7 @@ fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SNode<'a, K>>, K::Error>
 }
 
 /// Push literal at cursor with length
-fn eat_lit<'a, K: Ki<'a>>(i: Cursor<'a>, len: usize, nodes: &mut Vec<SNode<'a, K>>) {
+fn eat_lit<'a, K: Ki<'a>>(i: Cursor<'a>, len: usize, nodes: &mut Vec<SToken<'a, K>>) {
     let lit = get_chars(i.rest, 0, len);
     if !lit.is_empty() {
         let (l, lit, r) = trim(lit);
@@ -69,7 +69,7 @@ fn eat_lit<'a, K: Ki<'a>>(i: Cursor<'a>, len: usize, nodes: &mut Vec<SNode<'a, K
             lo: i.off,
             hi: i.off + (len as u32),
         };
-        nodes.push(S(Node::Lit(l, S(lit, ins), r), out));
+        nodes.push(S(Token::Lit(l, S(lit, ins), r), out));
     }
 }
 
