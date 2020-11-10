@@ -236,8 +236,6 @@ where
     ExprList(Ws, SVExpr),
     ExprListKind(Ws, Kind, SVExpr),
     Kind(Ws, Kind),
-    ExprListStr(Ws, #[serde(borrow)] &'a str, SVExpr),
-    Str(Ws, #[serde(borrow)] &'a str),
     Lit(
         #[serde(borrow)] &'a str,
         #[serde(borrow)] SStr<'a>,
@@ -245,7 +243,5 @@ where
     ),
     Block(Ws, Kind),
     BlockExpr(Ws, Kind, SVExpr),
-    BlockStr(Ws, #[serde(borrow)] &'a str),
-    BlockStrExpr(Ws, #[serde(borrow)] &'a str, SVExpr),
     Error(SVExpr),
 }
