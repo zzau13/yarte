@@ -240,5 +240,7 @@ mod test {
         assert_eq!(&rest[1..], get_chars(rest, 1, len));
         assert_eq!(&rest[4..], get_chars(rest, 3, len));
         assert_eq!(&rest[4..rest.len() - 3], get_chars(rest, 3, len - 2));
+        assert_eq!(&rest[4..rest.len() - 2], get_chars(rest, 3, len - 1));
+        assert_eq!(&rest[7..rest.len() - 5], get_chars(rest, 6, len - 4));
     }
 }
