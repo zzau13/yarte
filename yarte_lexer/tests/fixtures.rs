@@ -6,7 +6,7 @@ use glob::glob;
 use serde::Deserialize;
 
 use std::error::Error;
-use yarte_lexer::{parse, Cursor, Ki, KiError, Kinder, SNode};
+use yarte_lexer::{parse, Cursor, Ki, KiError, Kinder, PResult, SNode};
 
 fn read_file<P: AsRef<Path>>(path: P) -> Result<String, io::Error> {
     let mut f = File::open(path)?;
@@ -16,7 +16,7 @@ fn read_file<P: AsRef<Path>>(path: P) -> Result<String, io::Error> {
 }
 
 #[derive(Debug, Deserialize)]
-struct Fixture<'a, Kind: Ki> {
+struct Fixture<'a, Kind: Ki<'a>> {
     #[serde(borrow)]
     src: &'a str,
     #[serde(borrow)]
@@ -27,11 +27,12 @@ struct Fixture<'a, Kind: Ki> {
 struct FixturePanic<'a>(#[serde(borrow)] &'a str);
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
-enum Kind {
+enum Kind<'a> {
     Some,
+    Str(&'a str),
 }
 
-impl Kinder for Kind {
+impl<'a> Kinder<'a> for Kind<'a> {
     type Error = MyError;
     const OPEN: char = '{';
     const CLOSE: char = '}';
@@ -41,6 +42,12 @@ impl Kinder for Kind {
     const CLOSE_BLOCK: char = '}';
     const WS: char = '~';
     const WS_AFTER: bool = false;
+    fn parse(i: Cursor<'a>) -> PResult<Self, Self::Error>
+    where
+        Self: 'a,
+    {
+        Ok((i, Kind::Str(&i.rest)))
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]

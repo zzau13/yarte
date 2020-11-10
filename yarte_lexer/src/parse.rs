@@ -5,10 +5,10 @@ use crate::source_map::Span;
 use crate::strnom::{is_ws, Cursor};
 use crate::{Kinder, SNode};
 
-pub trait Ki: Kinder + Debug + PartialEq + Clone {}
-impl<T: Kinder + Debug + PartialEq + Clone> Ki for T {}
+pub trait Ki<'a>: Kinder<'a> + Debug + PartialEq + Clone {}
+impl<'a, T: Kinder<'a> + Debug + PartialEq + Clone> Ki<'a> for T {}
 
-pub fn parse<K: Ki>(i: Cursor) -> Result<Vec<SNode<K>>, ErrorMessage<K::Error>> {
+pub fn parse<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Vec<SNode<'a, K>>, ErrorMessage<K::Error>> {
     let (c, res) = eat(i)?;
     if c.is_empty() {
         Ok(res)
@@ -20,7 +20,7 @@ pub fn parse<K: Ki>(i: Cursor) -> Result<Vec<SNode<K>>, ErrorMessage<K::Error>> 
     }
 }
 
-fn eat<K: Ki>(_i: Cursor) -> PResult<Vec<SNode<K>>, K::Error> {
+fn eat<'a, K: Ki<'a>>(_i: Cursor<'a>) -> PResult<Vec<SNode<'a, K>>, K::Error> {
     unimplemented!()
 }
 

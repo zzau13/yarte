@@ -245,7 +245,7 @@ impl<T: Debug + PartialEq + Clone> S<T> {
     }
 }
 
-pub(crate) fn spanned<'a, T: Ki, E: KiError>(
+pub(crate) fn spanned<'a, T: Ki<'a>, E: KiError>(
     input: Cursor<'a>,
     f: fn(Cursor<'a>) -> PResult<'a, T, E>,
 ) -> PResult<'a, S<T>, E> {
