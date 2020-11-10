@@ -67,7 +67,9 @@ impl<'a> Cursor<'a> {
 }
 
 pub fn get_chars(text: &str, left: usize, right: usize) -> &str {
-    let range = text
+    debug_assert!(right.checked_sub(left).is_some());
+
+    let (left, right) = text
         .char_indices()
         .chain(once((text.len(), '\0')))
         .skip(left)
@@ -80,8 +82,8 @@ pub fn get_chars(text: &str, left: usize, right: usize) -> &str {
             }
         });
 
-    if let Some(left) = range.0 {
-        &text[left..range.1]
+    if let Some(left) = left {
+        &text[left..right]
     } else {
         ""
     }
