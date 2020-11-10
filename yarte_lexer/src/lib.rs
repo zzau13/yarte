@@ -22,7 +22,7 @@ use crate::source_map::S;
 
 pub use self::{
     error::{emitter, ErrorMessage, KiError, LexError, PResult},
-    parse::parse,
+    parse::{parse, Ki},
     stmt_local::StmtLocal,
     strnom::Cursor,
 };
