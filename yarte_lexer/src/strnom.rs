@@ -177,6 +177,16 @@ macro_rules! tag {
     };
 }
 
+#[macro_export]
+macro_rules! map_fail {
+    ($($t:tt)*) => {
+        ($($t)*).map_err(|e| match e {
+            LexError::Next(m, s) => LexError::Fail(m, s),
+            e => e,
+        });
+    };
+}
+
 pub fn ws(input: Cursor) -> PResult<()> {
     if input.is_empty() {
         return Err(LexError::Next(PError::Whitespace, Span::from(input)));
