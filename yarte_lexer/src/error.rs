@@ -1,4 +1,3 @@
-use std::iter::once;
 use std::{
     collections::BTreeMap,
     fmt::{self, Display, Write},
@@ -13,7 +12,10 @@ use derive_more::Display;
 
 use yarte_helpers::config::Config;
 
-use crate::{source_map::Span, strnom::LexError};
+use crate::{
+    source_map::Span,
+    strnom::{get_chars, LexError},
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum DOption {
@@ -148,43 +150,4 @@ where
     };
 
     panic!("{}", DisplayList::from(s))
-}
-
-fn get_chars(text: &str, left: usize, right: usize) -> &str {
-    let mut ended = false;
-    let mut taken = 0;
-    let range = text
-        .char_indices()
-        .skip(left)
-        // Complete char iterator with final character
-        .chain(once((text.len(), '\0')))
-        // Take until the next one to the final condition
-        .take_while(|(_, ch)| {
-            // Fast return to iterate over final byte position
-            if ended {
-                return false;
-            }
-            // Make sure that the trimming on the right will fall within the terminal width.
-            // FIXME: `unicode_width` sometimes disagrees with terminals on how wide a `char` is.
-            // For now, just accept that sometimes the code line will be longer than desired.
-            taken += unicode_width::UnicodeWidthChar::width(*ch).unwrap_or(1);
-            if taken > right - left {
-                ended = true;
-            }
-            true
-        })
-        // Reduce to start and end byte position
-        .fold((None, 0), |acc, (i, _)| {
-            if acc.0.is_some() {
-                (acc.0, i)
-            } else {
-                (Some(i), i)
-            }
-        });
-
-    if let Some(left) = range.0 {
-        &text[left..range.1]
-    } else {
-        ""
-    }
 }

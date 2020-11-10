@@ -210,6 +210,10 @@ ki!(
     Kinder:
         OPEN: char
         CLOSE: char
+        OPEN_EXPR: char
+        CLOSE_EXPR: char
+        OPEN_BLOCK: char
+        CLOSE_BLOCK: char
         WS: char
         WS_AFTER: bool
     ;
@@ -239,11 +243,9 @@ where
         #[serde(borrow)] SStr<'a>,
         #[serde(borrow)] &'a str,
     ),
-    Open(Ws, Kind),
-    OpenStr(Ws, #[serde(borrow)] &'a str),
-    OpenExpr(Ws, Kind, SVExpr),
-    OpenStrExpr(Ws, #[serde(borrow)] &'a str, SVExpr),
-    Close(Ws, Kind),
-    CloseStr(Ws, #[serde(borrow)] &'a str),
+    Block(Ws, Kind),
+    BlockExpr(Ws, Kind, SVExpr),
+    BlockStr(Ws, #[serde(borrow)] &'a str),
+    BlockStrExpr(Ws, #[serde(borrow)] &'a str, SVExpr),
     Error(SVExpr),
 }

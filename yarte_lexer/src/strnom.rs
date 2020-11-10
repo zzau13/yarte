@@ -1,5 +1,6 @@
 //! Adapted from [`proc-macro2`](https://github.com/alexcrichton/proc-macro2).
 
+use std::iter::once;
 use std::str::Chars;
 
 use crate::{error::PError, source_map::Span};
@@ -38,6 +39,7 @@ impl<'a> Cursor<'a> {
         self.chars().position(|x| x == p)
     }
 
+    #[inline]
     pub fn adv_find(&self, amt: usize, p: char) -> Option<usize> {
         self.chars().skip(amt).position(|x| x == p)
     }
@@ -61,6 +63,27 @@ impl<'a> Cursor<'a> {
 
     pub fn chars(&self) -> Chars<'a> {
         self.rest.chars()
+    }
+}
+
+pub fn get_chars(text: &str, left: usize, right: usize) -> &str {
+    let range = text
+        .char_indices()
+        .chain(once((text.len(), '\0')))
+        .skip(left)
+        .take(right - left + 1)
+        .fold((None, 0), |acc, (i, _)| {
+            if acc.0.is_some() {
+                (acc.0, i)
+            } else {
+                (Some(i), i)
+            }
+        });
+
+    if let Some(left) = range.0 {
+        &text[left..range.1]
+    } else {
+        ""
     }
 }
 
@@ -202,5 +225,18 @@ mod test {
         assert_eq!(c.find('h'), None);
 
         assert_eq!(c.adv_find(3, 'ñ'), Some(3));
+    }
+
+    #[test]
+    fn test_get_chars() {
+        let rest = "foó bañ tuú";
+        let len = rest.chars().count();
+        assert_eq!("", get_chars(rest, len, len));
+        assert_eq!("", get_chars(rest, 0, 0));
+        assert_eq!(rest, get_chars(rest, 0, std::usize::MAX - 1));
+        assert_eq!(rest, get_chars(rest, 0, len));
+        assert_eq!(&rest[1..], get_chars(rest, 1, len));
+        assert_eq!(&rest[4..], get_chars(rest, 3, len));
+        assert_eq!(&rest[4..rest.len() - 3], get_chars(rest, 3, len - 2));
     }
 }

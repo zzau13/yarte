@@ -36,6 +36,10 @@ enum Kind {
 impl Kinder for Kind {
     const OPEN: char = '{';
     const CLOSE: char = '}';
+    const OPEN_EXPR: char = '{';
+    const CLOSE_EXPR: char = '}';
+    const OPEN_BLOCK: char = '{';
+    const CLOSE_BLOCK: char = '}';
     const WS: char = '~';
     const WS_AFTER: bool = false;
 }
