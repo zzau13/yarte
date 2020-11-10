@@ -8,19 +8,19 @@ use crate::{Kinder, SNode};
 pub trait Ki: Kinder + Debug + PartialEq + Clone {}
 impl<T: Kinder + Debug + PartialEq + Clone> Ki for T {}
 
-pub fn parse<K: Ki, E: KiError>(i: Cursor) -> Result<Vec<SNode<K>>, ErrorMessage<E>> {
+pub fn parse<K: Ki>(i: Cursor) -> Result<Vec<SNode<K>>, ErrorMessage<K::Error>> {
     let (c, res) = eat(i)?;
     if c.is_empty() {
         Ok(res)
     } else {
         Err(ErrorMessage {
-            message: E::UNCOMPLETED,
+            message: K::Error::UNCOMPLETED,
             span: Span::from_len(c, 1),
         })
     }
 }
 
-fn eat<K: Ki, E: KiError>(_i: Cursor) -> PResult<Vec<SNode<K>>, E> {
+fn eat<K: Ki>(_i: Cursor) -> PResult<Vec<SNode<K>>, K::Error> {
     unimplemented!()
 }
 

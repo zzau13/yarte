@@ -193,12 +193,13 @@ pub type SVExpr = S<Vec<Expr>>;
 macro_rules! ki {
     ($ty:ident: $($cname:ident: $cty:ty)+; $($method:ident -> $ret:ty)+) => {
         pub trait $ty: Sized {
+            type Error: KiError;
             $(
             const $cname: $cty;
             )+
             $(
             #[inline]
-            fn $method<E: KiError>(_: Cursor) -> PResult<$ret, E> {
+            fn $method(_: Cursor) -> PResult<$ret, Self::Error> {
                 Err(next())
             }
             )+
