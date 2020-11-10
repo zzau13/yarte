@@ -14,6 +14,7 @@ mod strnom;
 #[macro_use]
 mod error;
 mod expr_list;
+pub mod handlebars;
 mod parse;
 mod source_map;
 mod stmt_local;
