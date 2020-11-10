@@ -1,10 +1,10 @@
 use crate::source_map::Span;
-use crate::strnom::tag;
+use crate::strnom::tac;
 use crate::{Cursor, KiError, LexError, PResult};
 
 /// Eat comment
 pub fn comment<E: KiError>(i: Cursor) -> PResult<&str, E> {
-    let (j, _) = tag(i, "{!")?;
+    let (j, _) = tac(i, '!')?;
     let (c, expected) = if j.starts_with("--") {
         (j.adv(2), "--!}}")
     } else {

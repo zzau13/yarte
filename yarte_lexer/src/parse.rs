@@ -21,6 +21,22 @@ pub fn parse<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Vec<SToken<'a, K>>, ErrorMe
     }
 }
 
+macro_rules! comment {
+    ($K:ty, $cur:expr, $i:ident, $at:ident, $j:ident, $nodes:ident) => {
+        match <$K>::comment($cur) {
+            Ok((c, s)) => {
+                eat_lit($i, $at + $j, &mut $nodes);
+                $nodes.push(S(Token::Comment(s), Span::from_cursor($i.adv($at + $j), c)));
+                $i = c;
+                $at = 0;
+                continue;
+            }
+            Err(LexError::Next(..)) => (),
+            Err(e) => break Err(e),
+        }
+    };
+}
+
 fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SToken<'a, K>>, K::Error> {
     let mut nodes = vec![];
     let mut at = 0;
@@ -28,21 +44,14 @@ fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SToken<'a, K>>, K::Error
         if let Some(j) = i.adv_find(at, K::OPEN) {
             let cur = i.adv(j + at);
             let next = cur.chars().next();
+            let cur = cur.adv(2);
             if let Some(next) = next {
-                if next == K::OPEN_EXPR {
-                    match K::comment(cur.adv(1)) {
-                        Ok((c, s)) => {
-                            eat_lit(i, at + j, &mut nodes);
-                            nodes.push(S(Token::Comment(s), Span::from_cursor(i.adv(at + j), c)));
-                            i = c;
-                            at = 0;
-                        }
-                        Err(_) => {
-                            unimplemented!();
-                        }
-                    }
+                if K::OPEN_BLOCK == K::OPEN_EXPR && next == K::OPEN_EXPR {
+                    comment!(K, cur, i, at, j, nodes);
+                } else if next == K::OPEN_EXPR {
+                    unimplemented!()
                 } else if next == K::OPEN_BLOCK {
-                    unimplemented!();
+                    comment!(K, cur, i, at, j, nodes);
                 } else {
                     at += j + 1;
                 }
