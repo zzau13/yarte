@@ -9,22 +9,23 @@ use syn::parse::{Parse, ParseBuffer, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::{Pat, PatOr, Token};
 
-use crate::source_map::S;
-
-pub use self::{
-    error::{emitter, next, ErrorMessage, KiError, LexError, PResult},
-    parse::parse,
-    stmt_local::StmtLocal,
-    strnom::Cursor,
-};
-
 #[macro_use]
 mod strnom;
+#[macro_use]
 mod error;
 mod expr_list;
 mod parse;
 mod source_map;
 mod stmt_local;
+
+use crate::source_map::S;
+
+pub use self::{
+    error::{emitter, ErrorMessage, KiError, LexError, PResult},
+    parse::parse,
+    stmt_local::StmtLocal,
+    strnom::Cursor,
+};
 
 pub type Ws = (bool, bool);
 
@@ -200,7 +201,7 @@ macro_rules! ki {
             $(
             #[inline]
             fn $method(_: Cursor) -> PResult<$ret, Self::Error> {
-                Err(next())
+                Err(next!(Self::Error))
             }
             )+
         }

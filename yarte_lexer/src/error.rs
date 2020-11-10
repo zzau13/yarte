@@ -28,9 +28,11 @@ pub enum LexError<K: KiError> {
     Next(K, Span),
 }
 
-// TODO: const
-pub fn next<K: KiError>() -> LexError<K> {
-    LexError::Next(K::EMPTY, Span { lo: 0, hi: 0 })
+#[macro_export]
+macro_rules! next {
+    ($ty:ty) => {
+        $crate::error::LexError::Next(<$ty>::EMPTY, $crate::source_map::Span { lo: 0, hi: 0 })
+    };
 }
 
 pub type PResult<'a, O, E> = Result<(Cursor<'a>, O), LexError<E>>;
