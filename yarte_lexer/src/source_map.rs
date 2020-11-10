@@ -6,7 +6,6 @@ use std::{
 };
 
 use crate::error::{KiError, PResult};
-use crate::parse::Ki;
 use crate::strnom::{skip_ws, Cursor};
 
 thread_local! {
@@ -245,7 +244,7 @@ impl<T: Debug + PartialEq + Clone> S<T> {
     }
 }
 
-pub(crate) fn spanned<'a, T: Ki<'a>, E: KiError>(
+pub(crate) fn spanned<'a, T: Debug + PartialEq + Clone, E: KiError>(
     input: Cursor<'a>,
     f: fn(Cursor<'a>) -> PResult<'a, T, E>,
 ) -> PResult<'a, S<T>, E> {

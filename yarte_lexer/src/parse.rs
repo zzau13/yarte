@@ -1,11 +1,12 @@
 use std::fmt::Debug;
 
 use crate::error::{ErrorMessage, KiError, LexError, PResult};
-use crate::source_map::Span;
-use crate::strnom::{is_ws, Cursor};
-use crate::{Kinder, SNode};
+use crate::source_map::{Span, S};
+use crate::strnom::{get_chars, is_ws, Cursor};
+use crate::{Kinder, Node, SNode};
 
 pub trait Ki<'a>: Kinder<'a> + Debug + PartialEq + Clone {}
+
 impl<'a, T: Kinder<'a> + Debug + PartialEq + Clone> Ki<'a> for T {}
 
 pub fn parse<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Vec<SNode<'a, K>>, ErrorMessage<K::Error>> {
@@ -20,8 +21,56 @@ pub fn parse<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Vec<SNode<'a, K>>, ErrorMes
     }
 }
 
-fn eat<'a, K: Ki<'a>>(_i: Cursor<'a>) -> PResult<Vec<SNode<'a, K>>, K::Error> {
-    unimplemented!()
+fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SNode<'a, K>>, K::Error> {
+    let mut nodes = vec![];
+    let mut at = 0;
+    loop {
+        if let Some(j) = i.adv_find(at, K::OPEN) {
+            let cur = i.adv(j + at);
+            let next = cur.chars().next();
+            if let Some(next) = next {
+                if next == K::OPEN_EXPR {
+                    match K::comment(cur.adv(1)) {
+                        Ok((c, s)) => {
+                            eat_lit(i, at + j, &mut nodes);
+                            nodes.push(S(Node::Comment(s), Span::from_cursor(i.adv(at + j), c)));
+                            i = c;
+                            at = 0;
+                        }
+                        Err(_) => {
+                            unimplemented!();
+                        }
+                    }
+                } else if next == K::OPEN_BLOCK {
+                    unimplemented!();
+                } else {
+                    at += j + 1;
+                }
+            } else {
+                at += j + 1;
+            }
+        } else {
+            eat_lit(i, i.len(), &mut nodes);
+            break Ok((i.adv(i.len()), nodes));
+        }
+    }
+}
+
+/// Push literal at cursor with length
+fn eat_lit<'a, K: Ki<'a>>(i: Cursor<'a>, len: usize, nodes: &mut Vec<SNode<'a, K>>) {
+    let lit = get_chars(i.rest, 0, len);
+    if !lit.is_empty() {
+        let (l, lit, r) = trim(lit);
+        let ins = Span {
+            lo: i.off + (l.len() as u32),
+            hi: i.off + ((len - r.len()) as u32),
+        };
+        let out = Span {
+            lo: i.off,
+            hi: i.off + (len as u32),
+        };
+        nodes.push(S(Node::Lit(l, S(lit, ins), r), out));
+    }
 }
 
 /// TODO: Define chars in path

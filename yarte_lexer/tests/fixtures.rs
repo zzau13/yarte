@@ -6,7 +6,7 @@ use glob::glob;
 use serde::Deserialize;
 
 use std::error::Error;
-use yarte_lexer::{parse, Cursor, Ki, KiError, Kinder, PResult, SNode};
+use yarte_lexer::{handlebars, parse, Cursor, Ki, KiError, Kinder, PResult, SNode};
 
 fn read_file<P: AsRef<Path>>(path: P) -> Result<String, io::Error> {
     let mut f = File::open(path)?;
@@ -45,6 +45,9 @@ impl<'a> Kinder<'a> for Kind<'a> {
     fn parse(i: Cursor<'a>) -> PResult<Self, Self::Error> {
         Ok((i, Kind::Str(i.rest)))
     }
+    fn comment(i: Cursor<'a>) -> PResult<&'a str, Self::Error> {
+        handlebars::comment(i)
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -66,6 +69,7 @@ impl KiError for MyError {
     const PATH: Self = MyError::Some;
     const UNCOMPLETED: Self = MyError::Some;
     const WHITESPACE: Self = MyError::Some;
+    const COMMENTARY: Self = MyError::Some;
 
     fn tag(s: &'static str) -> Self {
         MyError::Str(s)
@@ -87,6 +91,7 @@ fn test() {
 
         for Fixture { src, exp } in fixtures {
             let res = parse::<Kind>(Cursor { rest: src, off: 0 }).expect("Valid parse");
+            eprintln!("BASE {:?} \nEXPR {:?}", exp, res);
             assert_eq!(res, exp);
         }
     }
