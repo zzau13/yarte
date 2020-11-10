@@ -220,7 +220,7 @@ ki!(
         WS_AFTER: bool
     ;
         parse -> Self
-        comment -> &str
+        comment -> &'a str
 );
 
 // TODO: Visit trait
