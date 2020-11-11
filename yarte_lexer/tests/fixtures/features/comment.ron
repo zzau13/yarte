@@ -1,5 +1,6 @@
 [
     (src: "{{! Commentary !}}", exp: [(Comment(" Commentary "), (lo:0, hi:18))]),
+    (src: "{{! çommentary !}}", exp: [(Comment(" çommentary "), (lo:0, hi:18))]),
     (src: "{{!-- Commentary --!}}", exp: [(Comment(" Commentary "), (lo:0, hi:22))]),
     (
         src: "foo {{!-- Commentary --!}}",

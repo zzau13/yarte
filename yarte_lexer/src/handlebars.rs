@@ -1,5 +1,5 @@
 use crate::source_map::Span;
-use crate::strnom::tac;
+use crate::strnom::{get_chars, tac};
 use crate::{Cursor, KiError, LexError, PResult};
 
 /// Eat comment
@@ -17,7 +17,7 @@ pub fn comment<E: KiError>(i: Cursor) -> PResult<&str, E> {
     loop {
         if let Some(j) = c.adv_find(at, ch) {
             if c.adv_starts_with(at + j + 1, rest) {
-                break Ok((c.adv(at + j + expected.len()), &c.rest[..at + j]));
+                break Ok((c.adv(at + j + expected.len()), get_chars(c.rest, 0, at + j)));
             } else {
                 at += j + 1;
             }
