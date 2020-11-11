@@ -1,28 +1,39 @@
+use crate::parse::close_block;
 use crate::source_map::Span;
 use crate::strnom::{get_chars, tac};
-use crate::{Cursor, KiError, LexError, PResult};
+use crate::{Cursor, Ki, KiError, LexError, PResult};
 
 /// Eat comment
-pub fn comment<E: KiError>(i: Cursor) -> PResult<&str, E> {
-    let (j, _) = tac(i, '!')?;
-    let (c, expected) = if j.starts_with("--") {
-        (j.adv(2), "--!}}")
+pub fn comment<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<&'a str, K::Error> {
+    let (c, _) = tac(i, '!')?;
+    let (c, expected) = if c.starts_with("--") {
+        (c.adv(2), "--")
     } else {
-        (j, "!}}")
+        (c, "")
     };
 
-    let ch = expected.chars().next().unwrap();
-    let rest = &expected[1..];
     let mut at = 0;
     loop {
-        if let Some(j) = c.adv_find(at, ch) {
-            if c.adv_starts_with(at + j + 1, rest) {
-                break Ok((c.adv(at + j + expected.len()), get_chars(c.rest, 0, at + j)));
-            } else {
-                at += j + 1;
+        let next = c.adv(at);
+        if next.is_empty() {
+            break Err(LexError::Next(
+                K::Error::COMMENTARY,
+                Span::from_cursor(i, c),
+            ));
+        }
+
+        match close_block::<'a, K>(next) {
+            Ok((cur, _)) => {
+                if let Some(pre) = at.checked_sub(expected.len()) {
+                    let end = get_chars(c.rest, pre, at);
+                    if end == expected {
+                        return Ok((cur, get_chars(c.rest, 0, pre)));
+                    }
+                }
+
+                at += 1
             }
-        } else {
-            break Err(LexError::Next(E::COMMENTARY, Span::from_cursor(i, c)));
+            Err(_) => at += 1,
         }
     }
 }

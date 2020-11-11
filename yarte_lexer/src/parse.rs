@@ -82,6 +82,19 @@ fn eat_lit<'a, K: Ki<'a>>(i: Cursor<'a>, len: usize, nodes: &mut Vec<SToken<'a, 
     }
 }
 
+#[inline]
+pub fn close_block<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<(), K::Error> {
+    if i.next_is(K::CLOSE_BLOCK) {
+        if i.adv_next_is(1, K::CLOSE) {
+            Ok((i.adv(2), ()))
+        } else {
+            Err(LexError::Next(K::Error::CLOSE_BLOCK, Span::from(i.adv(1))))
+        }
+    } else {
+        Err(LexError::Next(K::Error::CLOSE_BLOCK, Span::from(i)))
+    }
+}
+
 /// TODO: Define chars in path
 /// Eat path at partial
 /// Next white space close path
