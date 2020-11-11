@@ -25,7 +25,7 @@ pub use self::{
     error::{emitter, ErrorMessage, KiError, LexError, PResult},
     parse::{parse, Ki},
     stmt_local::StmtLocal,
-    strnom::Cursor,
+    strnom::{Ascii, Cursor},
 };
 
 pub type Ws = (bool, bool);
@@ -219,6 +219,7 @@ ki!(
         CLOSE_BLOCK: char
         WS: char
         WS_AFTER: bool
+        ANOTHER: Ascii
     ;
         parse -> Self
         comment -> &'a str
