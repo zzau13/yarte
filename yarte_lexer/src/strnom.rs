@@ -12,6 +12,7 @@ pub struct Cursor<'a> {
     pub off: u32,
 }
 
+// TODO: this do a multiple chars counts can improve changing
 impl<'a> Cursor<'a> {
     pub fn adv(&self, amt: usize) -> Cursor<'a> {
         if amt == 0 {
@@ -51,7 +52,7 @@ impl<'a> Cursor<'a> {
     }
 
     pub fn starts_with(&self, s: &str) -> bool {
-        s.chars().count() <= self.len() && self.chars().zip(s.chars()).all(|(a, b)| a == b)
+        self.rest.starts_with(s)
     }
 
     pub fn next_is(&self, c: char) -> bool {
@@ -77,6 +78,34 @@ impl<'a> Cursor<'a> {
     #[inline]
     pub fn get_chars(&self, left: usize, right: usize) -> &str {
         get_chars(self.rest, left, right)
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+struct Ascii(u8);
+macro_rules! ascii_builder {
+    ($($n:literal)+) => {
+        #[macro_export]
+        macro_rules! ascii {
+            $(($n) => { Ascii($n) };)+
+            ($t:tt) => { compile_error!(concat!("No valid ascii token select another or report: ", stringify!($t))); }
+        }
+    };
+}
+
+#[rustfmt::skip]
+ascii_builder!(
+    b'!' b'"' b'#' b'$' b'%' b'&' b'\'' b'(' b')' b'*' b'+' b',' b'-' b'.' b'/' b'\\'
+    b'0' b'1' b'2' b'3' b'4' b'5' b'6' b'7' b'8' b'9' b':' b';' b'<' b'=' b'>' b'?'
+    b'@' b'A' b'B' b'C' b'D' b'E' b'F' b'G' b'H' b'I' b'J' b'K' b'L' b'M' b'N' b'O'
+    b'P' b'Q' b'R' b'S' b'T' b'U' b'V' b'W' b'X' b'Y' b'Z' b'[' b']' b'^' b'_' b'`'
+    b'a' b'b' b'c' b'd' b'e' b'f' b'g' b'h' b'i' b'j' b'k' b'l' b'm' b'n' b'o' b'p'
+    b'q' b'r' b's' b't' b'u' b'v' b'w' b'x' b'y' b'z' b'{' b'|' b'}' b'~'
+);
+
+impl Ascii {
+    const fn g(self) -> u8 {
+        self.0
     }
 }
 
@@ -161,10 +190,10 @@ macro_rules! take_while {
             Ok(($i, ""))
         } else {
             match $i.chars().position(|c| !$f(c)) {
-                Some(c) => Ok(($i.adv(c), crate::strnom::get_chars(&$i.rest, 0, c))),
+                Some(c) => Ok(($i.adv(c), $crate::strnom::get_chars(&$i.rest, 0, c))),
                 None => Ok((
                     $i.adv($i.len()),
-                    crate::strnom::get_chars(&$i.rest, 0, $i.len()),
+                    $crate::strnom::get_chars(&$i.rest, 0, $i.len()),
                 )),
             }
         }
