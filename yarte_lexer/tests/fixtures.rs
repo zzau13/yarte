@@ -38,7 +38,7 @@ impl<'a> Kinder<'a> for MyKind<'a> {
         Ok((i, MyKind::Str(i.rest)))
     }
     fn comment(i: Cursor<'a>) -> PResult<&'a str, Self::Error> {
-        handlebars::comment(i)
+        handlebars::comment::<Self>(i)
     }
 }
 
@@ -62,6 +62,7 @@ impl KiError for MyError {
     const UNCOMPLETED: Self = MyError::Some;
     const WHITESPACE: Self = MyError::Some;
     const COMMENTARY: Self = MyError::Some;
+    const CLOSE_BLOCK: Self = MyError::Some;
 
     fn tag(s: &'static str) -> Self {
         MyError::Str(s)
