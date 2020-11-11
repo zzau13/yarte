@@ -82,12 +82,33 @@ impl<'a> Cursor<'a> {
 }
 
 #[derive(Debug, Copy, Clone)]
-struct Ascii(u8);
+pub struct Ascii(u8);
 macro_rules! ascii_builder {
     ($($n:literal)+) => {
+        /// New ascii
+        /// ```rust
+        /// # use yarte_lexer::{Ascii, ascii};
+        /// // valid syntax `b'[char]'`
+        /// const BAR: Ascii = ascii!(b'f');
+        /// ```
+        ///
+        /// ```compile_fail
+        /// # use yarte_lexer::{Ascii, ascii};
+        /// const BAR: Ascii = ascii!(b' ');
+        /// ```
+        ///
+        /// ```compile_fail
+        /// # use yarte_lexer::{Ascii, ascii};
+        /// const BAR: Ascii = ascii!(1);
+        /// ```
+        ///
+        /// ```compile_fail
+        /// # use yarte_lexer::{Ascii, ascii};
+        /// const BAR: Ascii = ascii!(0x01);
+        /// ```
         #[macro_export]
         macro_rules! ascii {
-            $(($n) => { Ascii($n) };)+
+            $(($n) => { unsafe { Ascii::new($n) } };)+
             ($t:tt) => { compile_error!(concat!("No valid ascii token select another or report: ", stringify!($t))); }
         }
     };
@@ -104,7 +125,15 @@ ascii_builder!(
 );
 
 impl Ascii {
-    const fn g(self) -> u8 {
+    /// Unchecked new ascii
+    ///
+    /// # Safety
+    /// Use `ascii!(b'[char]')` macro instead
+    pub const unsafe fn new(n: u8) -> Self {
+        Self(n)
+    }
+
+    pub const fn g(self) -> u8 {
         self.0
     }
 }

@@ -5,7 +5,7 @@ use glob::glob;
 use serde::Deserialize;
 
 use std::error::Error;
-use yarte_lexer::{handlebars, parse, Cursor, Ki, KiError, Kinder, PResult, SToken};
+use yarte_lexer::{ascii, handlebars, parse, Ascii, Cursor, Ki, KiError, Kinder, PResult, SToken};
 
 #[derive(Debug, Deserialize)]
 struct Fixture<'a, Kind: Ki<'a>> {
@@ -34,6 +34,8 @@ impl<'a> Kinder<'a> for MyKind<'a> {
     const CLOSE_BLOCK: char = '}';
     const WS: char = '~';
     const WS_AFTER: bool = false;
+    const ANOTHER: Ascii = ascii!(b'}');
+
     fn parse(i: Cursor<'a>) -> PResult<Self, Self::Error> {
         Ok((i, MyKind::Str(i.rest)))
     }
