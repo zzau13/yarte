@@ -26,15 +26,14 @@ enum MyKind<'a> {
 
 impl<'a> Kinder<'a> for MyKind<'a> {
     type Error = MyError;
-    const OPEN: char = '{';
-    const CLOSE: char = '}';
-    const OPEN_EXPR: char = '{';
-    const CLOSE_EXPR: char = '}';
-    const OPEN_BLOCK: char = '{';
-    const CLOSE_BLOCK: char = '}';
-    const WS: char = '~';
+    const OPEN: Ascii = ascii!(b'{');
+    const CLOSE: Ascii = ascii!(b'}');
+    const OPEN_EXPR: Ascii = ascii!(b'{');
+    const CLOSE_EXPR: Ascii = ascii!(b'}');
+    const OPEN_BLOCK: Ascii = ascii!(b'{');
+    const CLOSE_BLOCK: Ascii = ascii!(b'}');
+    const WS: Ascii = ascii!(b'~');
     const WS_AFTER: bool = false;
-    const ANOTHER: Ascii = ascii!(b'}');
 
     fn parse(i: Cursor<'a>) -> PResult<Self, Self::Error> {
         Ok((i, MyKind::Str(i.rest)))
