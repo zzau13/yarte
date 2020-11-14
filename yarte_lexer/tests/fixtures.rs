@@ -76,6 +76,7 @@ impl KiError for MyError {
 
 #[test]
 fn test() {
+    const _A: Ascii = ascii!(b'-');
     for entry in glob("./tests/fixtures/features/**/*.ron").expect("Failed to read glob pattern") {
         let name = entry.expect("File name");
         let src = read_to_string(name).expect("Valid file");
