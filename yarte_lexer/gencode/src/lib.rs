@@ -14,9 +14,8 @@ fn _asciis(s: String) -> Option<TokenStream> {
     let mut tokens = Vec::with_capacity(s.len());
     for c in s.chars() {
         if c.len_utf8() == 1 {
-            let c = format!("{:?}", c.to_string());
-            let c = format!("b'{}'", &c[1..c.len() - 1]);
-            let c: syn::LitByte = syn::parse_str(&c).ok()?;
+            let c = format!("{:?}", c);
+            let c: syn::LitChar = syn::parse_str(&c).ok()?;
             tokens.push(c);
         } else {
             return None;
