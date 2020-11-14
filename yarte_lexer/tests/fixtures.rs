@@ -5,7 +5,9 @@ use glob::glob;
 use serde::Deserialize;
 
 use std::error::Error;
-use yarte_lexer::{ascii, asciis, next, parse, Ascii, Cursor, Ki, KiError, Kinder, PResult, SToken};
+use yarte_lexer::{
+    ascii, asciis, next, parse, Ascii, Cursor, Ki, KiError, Kinder, PResult, SToken,
+};
 
 #[derive(Debug, Deserialize)]
 struct Fixture<'a, Kind: Ki<'a>> {
@@ -26,13 +28,13 @@ enum MyKind<'a> {
 
 impl<'a> Kinder<'a> for MyKind<'a> {
     type Error = MyError;
-    const OPEN: Ascii = ascii!(b'{');
-    const CLOSE: Ascii = ascii!(b'}');
-    const OPEN_EXPR: Ascii = ascii!(b'{');
-    const CLOSE_EXPR: Ascii = ascii!(b'}');
-    const OPEN_BLOCK: Ascii = ascii!(b'{');
-    const CLOSE_BLOCK: Ascii = ascii!(b'}');
-    const WS: Ascii = ascii!(b'~');
+    const OPEN: Ascii = ascii!('{');
+    const CLOSE: Ascii = ascii!('}');
+    const OPEN_EXPR: Ascii = ascii!('{');
+    const CLOSE_EXPR: Ascii = ascii!('}');
+    const OPEN_BLOCK: Ascii = ascii!('{');
+    const CLOSE_BLOCK: Ascii = ascii!('}');
+    const WS: Ascii = ascii!('~');
     const WS_AFTER: bool = false;
 
     fn parse(i: Cursor<'a>) -> PResult<Self, Self::Error> {
@@ -77,7 +79,7 @@ impl KiError for MyError {
 /// Eat comment
 pub fn comment<'a, K: Ki<'a>>(_: Cursor<'a>) -> PResult<&'a str, K::Error> {
     // TODO: shorter ascii token builders
-    const _A: Ascii = ascii!(b'-');
+    const _A: Ascii = ascii!('-');
     const _B: &[Ascii] = asciis!("--");
 
     Err(next!(K::Error))
@@ -85,7 +87,7 @@ pub fn comment<'a, K: Ki<'a>>(_: Cursor<'a>) -> PResult<&'a str, K::Error> {
 
 #[test]
 fn test() {
-    const _A: Ascii = ascii!(b'-');
+    const _A: Ascii = ascii!('-');
     for entry in glob("./tests/fixtures/features/**/*.ron").expect("Failed to read glob pattern") {
         let name = entry.expect("File name");
         let src = read_to_string(name).expect("Valid file");
