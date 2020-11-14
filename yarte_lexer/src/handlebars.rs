@@ -1,39 +1,10 @@
-use crate::parse::close_block;
-use crate::source_map::Span;
-use crate::strnom::{get_chars, tac};
-use crate::{Cursor, Ki, KiError, LexError, PResult};
+use crate::{Cursor, Ki, KiError, PResult};
 
 /// Eat comment
-pub fn comment<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<&'a str, K::Error> {
-    let (c, _) = tac(i, '!')?;
-    let (c, expected) = if c.starts_with("--") {
-        (c.adv(2), "--")
-    } else {
-        (c, "")
-    };
+pub fn comment<'a, K: Ki<'a>>(_: Cursor<'a>) -> PResult<&'a str, K::Error> {
+    // TODO: shorter ascii token builders
+    // TODO: why not run here ... is a literal and run in trait const
+    // const A: Ascii = ascii!(b'-');
 
-    let mut at = 0;
-    loop {
-        let next = c.adv(at);
-        if next.is_empty() {
-            break Err(LexError::Next(
-                K::Error::COMMENTARY,
-                Span::from_cursor(i, c),
-            ));
-        }
-
-        match close_block::<'a, K>(next) {
-            Ok((cur, _)) => {
-                if let Some(pre) = at.checked_sub(expected.len()) {
-                    let end = get_chars(c.rest, pre, at);
-                    if end == expected {
-                        return Ok((cur, get_chars(c.rest, 0, pre)));
-                    }
-                }
-
-                at += 1
-            }
-            Err(_) => at += 1,
-        }
-    }
+    Err(next!(K::Error))
 }

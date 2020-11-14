@@ -1,3 +1,6 @@
+#![allow(unused_macros)]
+#![allow(unused_imports)]
+
 use std::fmt::Debug;
 
 use crate::error::{ErrorMessage, KiError, LexError, PResult};
@@ -37,62 +40,10 @@ macro_rules! comment {
     };
 }
 
-fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SToken<'a, K>>, K::Error> {
-    let mut nodes = vec![];
-    let mut at = 0;
-    loop {
-        if let Some(j) = i.adv_find(at, K::OPEN) {
-            let cur = i.adv(j + at);
-            let next = cur.chars().next();
-            let cur = cur.adv(2);
-            if let Some(next) = next {
-                if K::OPEN_BLOCK == K::OPEN_EXPR && next == K::OPEN_EXPR {
-                    comment!(K, cur, i, at, j, nodes);
-                } else if next == K::OPEN_EXPR {
-                    unimplemented!()
-                } else if next == K::OPEN_BLOCK {
-                    comment!(K, cur, i, at, j, nodes);
-                } else {
-                    at += j + 1;
-                }
-            } else {
-                at += j + 1;
-            }
-        } else {
-            eat_lit(i, i.len(), &mut nodes);
-            break Ok((i.adv(i.len()), nodes));
-        }
-    }
-}
-
-/// Push literal at cursor with length
-fn eat_lit<'a, K: Ki<'a>>(i: Cursor<'a>, len: usize, nodes: &mut Vec<SToken<'a, K>>) {
-    let lit = get_chars(i.rest, 0, len);
-    if !lit.is_empty() {
-        let (l, lit, r) = trim(lit);
-        let ins = Span {
-            lo: i.off + (l.len() as u32),
-            hi: i.off + ((len - r.len()) as u32),
-        };
-        let out = Span {
-            lo: i.off,
-            hi: i.off + (len as u32),
-        };
-        nodes.push(S(Token::Lit(l, S(lit, ins), r), out));
-    }
-}
-
-#[inline]
-pub fn close_block<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<(), K::Error> {
-    if i.next_is(K::CLOSE_BLOCK) {
-        if i.adv_next_is(1, K::CLOSE) {
-            Ok((i.adv(2), ()))
-        } else {
-            Err(LexError::Next(K::Error::CLOSE_BLOCK, Span::from(i.adv(1))))
-        }
-    } else {
-        Err(LexError::Next(K::Error::CLOSE_BLOCK, Span::from(i)))
-    }
+fn eat<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<Vec<SToken<'a, K>>, K::Error> {
+    let mut _nodes = vec![];
+    let mut _at = 0;
+    Ok((i.adv(i.len()), _nodes))
 }
 
 /// TODO: Define chars in path

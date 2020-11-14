@@ -211,15 +211,14 @@ macro_rules! ki {
 
 ki!(
     Kinder:
-        OPEN: char
-        CLOSE: char
-        OPEN_EXPR: char
-        CLOSE_EXPR: char
-        OPEN_BLOCK: char
-        CLOSE_BLOCK: char
-        WS: char
+        OPEN: Ascii
+        CLOSE: Ascii
+        OPEN_EXPR: Ascii
+        CLOSE_EXPR: Ascii
+        OPEN_BLOCK: Ascii
+        CLOSE_BLOCK: Ascii
+        WS: Ascii
         WS_AFTER: bool
-        ANOTHER: Ascii
     ;
         parse -> Self
         comment -> &'a str
