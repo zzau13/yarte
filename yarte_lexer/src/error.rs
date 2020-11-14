@@ -33,7 +33,7 @@ pub enum LexError<K: KiError> {
 #[macro_export]
 macro_rules! next {
     ($ty:ty) => {
-        $crate::error::LexError::Next(<$ty>::EMPTY, $crate::source_map::Span { lo: 0, hi: 0 })
+        $crate::LexError::Next(<$ty>::EMPTY, $crate::Span { lo: 0, hi: 0 })
     };
 }
 
