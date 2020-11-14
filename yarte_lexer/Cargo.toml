@@ -28,6 +28,7 @@ derive_more = "0.99"
 unicode-xid = "0.2"
 unicode-width = "0.1"
 serde = { version = "1.0", features = ["derive"] }
+gencode = { path = "gencode" }
 
 [dev-dependencies]
 ron = "0.6"
