@@ -42,12 +42,12 @@ impl<'a> Cursor<'a> {
     }
 
     #[inline]
-    pub fn adv_starts_with(&self, amt: usize, s: &[Ascii]) -> bool {
+    pub fn adv_starts_with(&self, amt: usize, s: &'static [Ascii]) -> bool {
         start_with_ascii(&self.as_bytes()[amt..], s)
     }
 
     #[inline]
-    pub fn starts_with(&self, s: &[Ascii]) -> bool {
+    pub fn starts_with(&self, s: &'static [Ascii]) -> bool {
         start_with_ascii(self.as_bytes(), s)
     }
 

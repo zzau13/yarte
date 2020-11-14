@@ -14,7 +14,6 @@ mod strnom;
 #[macro_use]
 mod error;
 mod expr_list;
-pub mod handlebars;
 mod parse;
 mod source_map;
 mod stmt_local;
@@ -24,6 +23,7 @@ use crate::source_map::S;
 pub use self::{
     error::{emitter, ErrorMessage, KiError, LexError, PResult},
     parse::{parse, Ki},
+    source_map::Span,
     stmt_local::StmtLocal,
     strnom::{Ascii, Cursor},
 };
