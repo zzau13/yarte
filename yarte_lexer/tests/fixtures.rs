@@ -5,7 +5,7 @@ use glob::glob;
 use serde::Deserialize;
 
 use std::error::Error;
-use yarte_lexer::{ascii, next, parse, Ascii, Cursor, Ki, KiError, Kinder, PResult, SToken};
+use yarte_lexer::{ascii, asciis, next, parse, Ascii, Cursor, Ki, KiError, Kinder, PResult, SToken};
 
 #[derive(Debug, Deserialize)]
 struct Fixture<'a, Kind: Ki<'a>> {
@@ -78,6 +78,7 @@ impl KiError for MyError {
 pub fn comment<'a, K: Ki<'a>>(_: Cursor<'a>) -> PResult<&'a str, K::Error> {
     // TODO: shorter ascii token builders
     const _A: Ascii = ascii!(b'-');
+    const _B: &[Ascii] = asciis!("--");
 
     Err(next!(K::Error))
 }

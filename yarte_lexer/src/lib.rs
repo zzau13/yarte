@@ -20,6 +20,8 @@ mod stmt_local;
 
 use crate::source_map::S;
 
+pub use gencode::asciis;
+
 pub use self::{
     error::{emitter, ErrorMessage, KiError, LexError, PResult},
     parse::{parse, Ki},
