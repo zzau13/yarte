@@ -15,5 +15,5 @@
                 (Lit("", ("çoo", (lo:0, hi:3)), " "), (lo:0, hi:4)),
                 (Comment(" Commentary "), (lo:4, hi:25))
             ]
-        ),
+    ),
 ]
