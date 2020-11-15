@@ -238,14 +238,13 @@ where
     Safe(Ws, SExpr),
     Local(Ws, SLocal),
     Expr(Ws, SVExpr),
-    ExprListKind(Ws, Kind, SVExpr),
-    Kind(Ws, Kind),
+    ExprKind(Ws, Kind, SVExpr),
     Lit(
         #[serde(borrow)] &'a str,
         #[serde(borrow)] SStr<'a>,
         #[serde(borrow)] &'a str,
     ),
-    Block(Ws, Kind),
-    BlockExpr(Ws, Kind, SVExpr),
+    Block(Ws, SVExpr),
+    BlockKind(Ws, Kind, SVExpr),
     Error(SVExpr),
 }

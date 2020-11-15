@@ -6,7 +6,8 @@ use serde::Deserialize;
 
 use std::error::Error;
 use yarte_lexer::{
-    ascii, asciis, parse, tac, Ascii, Cursor, Ki, KiError, Kinder, LexError, PResult, SToken, Span,
+    ascii, asciis, do_parse, is_ws, parse, tac, take_while, ws, Ascii, Cursor, Ki, KiError, Kinder,
+    LexError, PResult, SToken, Span,
 };
 
 #[derive(Debug, Deserialize)]
@@ -22,6 +23,7 @@ struct FixturePanic<'a>(#[serde(borrow)] &'a str);
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 enum MyKind<'a> {
+    Partial(&'a str),
     Some,
     Str(&'a str),
 }
@@ -37,9 +39,17 @@ impl<'a> Kinder<'a> for MyKind<'a> {
     const WS: Ascii = ascii!('~');
     const WS_AFTER: bool = false;
 
-    fn parse(_i: Cursor<'a>) -> PResult<Self, Self::Error> {
-        unimplemented!()
+    fn parse(i: Cursor<'a>) -> PResult<Self, Self::Error> {
+        const PARTIAL: Ascii = ascii!('>');
+        let (i, partial) = do_parse!(i,
+            tac(PARTIAL) >>
+            ws() >>
+            p: take_while(|x| !is_ws(x)) >>
+            (p)
+        )?;
+        Ok((i, MyKind::Partial(partial)))
     }
+
     fn comment(i: Cursor<'a>) -> PResult<&'a str, Self::Error> {
         const E: Ascii = ascii!('!');
         const B: &[Ascii] = asciis!("--");

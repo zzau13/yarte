@@ -118,11 +118,22 @@ fn eat_lit<'a, K: Ki<'a>>(i: Cursor<'a>, len: usize, nodes: &mut Vec<SToken<'a, 
 // TODO: Safe
 // TODO: more todo
 fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>, end: u32) -> Result<Token<'a, K>, LexError<K::Error>> {
+    let (i, _kind) = match K::parse(i) {
+        Ok((c, kind)) => (c, Some(kind)),
+        Err(LexError::Next(..)) => (i, None),
+        Err(e @ LexError::Fail(..)) => return Err(e),
+    };
     let (l, s, r) = trim(i.rest);
     let init = i.off + l.len() as u32;
-    eat_expr_list(s)
-        .map(|e| Token::<K>::Expr((false, false), S(e, Span::new(init, end - r.len() as u32))))
-        .map_err(|e| LexError::Fail(K::Error::EXPR, Span::new(init + e.span.0, init + e.span.1)))
+    let expr = eat_expr_list(s)
+        .map(|e| S(e, Span::new(init, end - r.len() as u32)))
+        .map_err(|e| LexError::Fail(K::Error::EXPR, Span::new(init + e.span.0, init + e.span.1)))?;
+
+    if let Some(kind) = _kind {
+        Ok(Token::ExprKind((false, false), kind, expr))
+    } else {
+        Ok(Token::Expr((false, false), expr))
+    }
 }
 
 fn eat_block<'a, K: Ki<'a>>(_i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Error>> {
@@ -211,7 +222,7 @@ fn end<'a, K: Ki<'a>>(i: Cursor<'a>, expr: bool) -> PResult<Cursor<'a>, K::Error
 /// TODO: Define chars in path
 /// Eat path at partial
 /// Next white space close path
-fn path<E: KiError>(i: Cursor) -> PResult<&str, E> {
+pub fn path<E: KiError>(i: Cursor) -> PResult<&str, E> {
     take_while(i, |i| !is_ws(i)).and_then(|(c, s)| {
         if s.is_empty() {
             Err(LexError::Fail(E::PATH, Span::from(c)))
