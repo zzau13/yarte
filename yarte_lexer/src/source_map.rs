@@ -144,6 +144,10 @@ pub struct Span {
 // impl !Sync for Span {}
 
 impl Span {
+    pub const fn new(lo: u32, hi: u32) -> Self {
+        Span { lo, hi }
+    }
+
     /// Assume a <= b
     #[inline]
     pub fn from_cursor(a: Cursor, b: Cursor) -> Self {

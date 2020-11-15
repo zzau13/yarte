@@ -56,15 +56,7 @@ fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SToken<'a, K>>, K::Error
                         nodes.push(
                             eat_expr::<K>(inner, c.off - 2)
                                 .or_else(|_| eat_block::<K>(inner))
-                                .map(|x| {
-                                    S(
-                                        x,
-                                        Span {
-                                            lo: next.off - 2,
-                                            hi: c.off,
-                                        },
-                                    )
-                                })?,
+                                .map(|x| S(x, Span::new(next.off - 2, c.off)))?,
                         );
                         at = 0;
                         i = c;
@@ -77,15 +69,10 @@ fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SToken<'a, K>>, K::Error
                     let next = i.adv(at + j + 2);
                     if let Ok((c, inner)) = end::<K>(next, true) {
                         eat_lit(i, at + j, &mut nodes);
-                        nodes.push(eat_expr::<K>(inner, c.off - 2).map(|x| {
-                            S(
-                                x,
-                                Span {
-                                    lo: next.off - 2,
-                                    hi: c.off,
-                                },
-                            )
-                        })?);
+                        nodes.push(
+                            eat_expr::<K>(inner, c.off - 2)
+                                .map(|x| S(x, Span::new(next.off - 2, c.off)))?,
+                        );
                         at = 0;
                         i = c;
                         continue;
@@ -98,15 +85,9 @@ fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SToken<'a, K>>, K::Error
                     comment!(K, i.adv(at + j + 2), i, at, j, nodes);
                     if let Ok((c, inner)) = end::<K>(next, false) {
                         eat_lit(i, at + j, &mut nodes);
-                        nodes.push(eat_block::<K>(inner).map(|x| {
-                            S(
-                                x,
-                                Span {
-                                    lo: next.off - 2,
-                                    hi: c.off,
-                                },
-                            )
-                        })?);
+                        nodes.push(
+                            eat_block::<K>(inner).map(|x| S(x, Span::new(next.off - 2, c.off)))?,
+                        );
                         at = 0;
                         i = c;
                         continue;
@@ -149,34 +130,14 @@ fn eat_lit<'a, K: Ki<'a>>(i: Cursor<'a>, len: usize, nodes: &mut Vec<SToken<'a, 
 // TODO: Kind
 // TODO: local
 // TODO: Arm
+// TODO: Safe
 // TODO: more todo
 fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>, end: u32) -> Result<Token<'a, K>, LexError<K::Error>> {
     let (l, s, r) = trim(i.rest);
+    let init = i.off + l.len() as u32;
     eat_expr_list(s)
-        .map(|e| {
-            Token::<K>::Expr(
-                (false, false),
-                S(
-                    e,
-                    Span {
-                        lo: i.off + l.len() as u32,
-                        hi: end - r.len() as u32,
-                    },
-                ),
-            )
-        })
-        .map_err(|e| {
-            LexError::Fail(
-                K::Error::EXPR,
-                Span::from_range(
-                    Cursor {
-                        rest: i.rest,
-                        off: i.off + l.len() as u32,
-                    },
-                    e.span,
-                ),
-            )
-        })
+        .map(|e| Token::<K>::Expr((false, false), S(e, Span::new(init, end - r.len() as u32))))
+        .map_err(|e| LexError::Fail(K::Error::EXPR, Span::new(init + e.span.0, init + e.span.1)))
 }
 
 fn eat_block<'a, K: Ki<'a>>(_i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Error>> {
@@ -187,7 +148,7 @@ fn eat_block<'a, K: Ki<'a>>(_i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::
 #[derive(Debug)]
 pub(crate) struct MiddleError {
     pub message: String,
-    pub span: (usize, usize),
+    pub span: (u32, u32),
 }
 
 fn get_line_offset(src: &str, line_num: usize) -> usize {
@@ -222,7 +183,7 @@ impl MiddleError {
         };
         Self {
             message: e.to_string(),
-            span: (lo, hi),
+            span: (lo as u32, hi as u32),
         }
     }
 }
