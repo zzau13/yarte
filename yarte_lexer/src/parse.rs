@@ -43,58 +43,43 @@ macro_rules! comment {
 fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SToken<'a, K>>, K::Error> {
     let mut nodes = vec![];
     let mut at = 0;
+
     loop {
         if let Some(j) = i.adv_find(at, K::OPEN) {
             let n = i.rest[at + j + 1..].as_bytes();
             if 3 < n.len() {
+                macro_rules! inner {
+                    ($f:expr, $next:ident) => {
+                        if let Ok((c, inner)) = end::<K>($next, true) {
+                            eat_lit(i, at + j, &mut nodes);
+                            nodes.push(
+                                $f(inner, c.off - 2)
+                                    .map(|x| S(x, Span::new($next.off - 2, c.off)))?,
+                            );
+                            at = 0;
+                            i = c;
+                            continue;
+                        } else {
+                            eat_lit(i, i.len(), &mut nodes);
+                            break Ok((i.adv(i.len()), nodes));
+                        }
+                    };
+                }
                 let next = n[0];
                 if K::OPEN_BLOCK == K::OPEN_EXPR && next == K::OPEN_EXPR.g() {
                     let next = i.adv(at + j + 2);
                     comment!(K, next, i, at, j, nodes);
-                    if let Ok((c, inner)) = end::<K>(next, true) {
-                        eat_lit(i, at + j, &mut nodes);
-                        nodes.push(
-                            eat_expr::<K>(inner, c.off - 2)
-                                .or_else(|_| eat_block::<K>(inner))
-                                .map(|x| S(x, Span::new(next.off - 2, c.off)))?,
-                        );
-                        at = 0;
-                        i = c;
-                        continue;
-                    } else {
-                        eat_lit(i, i.len(), &mut nodes);
-                        break Ok((i.adv(i.len()), nodes));
-                    }
+                    inner!(
+                        |inner, len| eat_expr::<K>(inner, len).or_else(|_| eat_block::<K>(inner)),
+                        next
+                    );
                 } else if next == K::OPEN_EXPR.g() {
                     let next = i.adv(at + j + 2);
-                    if let Ok((c, inner)) = end::<K>(next, true) {
-                        eat_lit(i, at + j, &mut nodes);
-                        nodes.push(
-                            eat_expr::<K>(inner, c.off - 2)
-                                .map(|x| S(x, Span::new(next.off - 2, c.off)))?,
-                        );
-                        at = 0;
-                        i = c;
-                        continue;
-                    } else {
-                        eat_lit(i, i.len(), &mut nodes);
-                        break Ok((i.adv(i.len()), nodes));
-                    }
+                    inner!(eat_expr::<K>, next);
                 } else if next == K::OPEN_BLOCK.g() {
                     let next = i.adv(at + j + 2);
                     comment!(K, i.adv(at + j + 2), i, at, j, nodes);
-                    if let Ok((c, inner)) = end::<K>(next, false) {
-                        eat_lit(i, at + j, &mut nodes);
-                        nodes.push(
-                            eat_block::<K>(inner).map(|x| S(x, Span::new(next.off - 2, c.off)))?,
-                        );
-                        at = 0;
-                        i = c;
-                        continue;
-                    } else {
-                        eat_lit(i, i.len(), &mut nodes);
-                        break Ok((i.adv(i.len()), nodes));
-                    }
+                    inner!(|inner, _| eat_block::<K>(inner), next);
                 } else {
                     at += j + 1;
                 }
@@ -241,22 +226,11 @@ pub fn trim(i: &str) -> (&str, &str, &str) {
         return ("", "", "");
     }
 
-    let b = i.as_bytes();
+    if let Some(ln) = i.as_bytes().iter().position(|x| !is_ws(*x)) {
+        let rn = i.as_bytes().iter().rposition(|x| !is_ws(*x)).unwrap();
 
-    if let Some(ln) = b.iter().position(|x| !is_ws((*x).into())) {
-        let rn = b.iter().rposition(|x| !is_ws((*x).into())).unwrap();
-        (
-            safe_utf8(&b[..ln]),
-            safe_utf8(&b[ln..=rn]),
-            safe_utf8(&b[rn + 1..]),
-        )
+        (&i[..ln], &i[ln..=rn], &i[rn + 1..])
     } else {
         (i, "", "")
     }
-}
-
-/// Convert from bytes to str
-/// Use when previous check bytes it's valid utf8
-fn safe_utf8(s: &[u8]) -> &str {
-    unsafe { ::std::str::from_utf8_unchecked(s) }
 }
