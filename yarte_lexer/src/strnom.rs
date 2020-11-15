@@ -269,21 +269,16 @@ macro_rules! opt {
     };
 }
 
-#[macro_export]
-macro_rules! take_while {
-    ($i:expr, $f:expr) => {{
-        if $i.len() == 0 {
-            Ok(($i, ""))
-        } else {
-            match $i.chars().position(|c| !$f(c)) {
-                Some(c) => Ok(($i.adv(c), $crate::strnom::get_chars(&$i.rest, 0, c))),
-                None => Ok((
-                    $i.adv($i.len()),
-                    $crate::strnom::get_chars(&$i.rest, 0, $i.len()),
-                )),
-            }
+#[inline]
+pub fn take_while<E: KiError>(i: Cursor, f: fn(u8) -> bool) -> PResult<&str, E> {
+    if i.is_empty() {
+        Ok((i, ""))
+    } else {
+        match i.as_bytes().iter().copied().position(|x| !f(x)) {
+            None => Ok((i.unsafe_adv(i.len()), i.rest)),
+            Some(j) => Ok((i.unsafe_adv(j), &i.rest[..j])),
         }
-    }};
+    }
 }
 
 #[inline]
@@ -321,7 +316,7 @@ macro_rules! map_fail {
 
 #[inline]
 pub fn ws<E: KiError>(input: Cursor) -> PResult<(), E> {
-    take_while!(input, is_ws).map(|(c, _)| (c, ()))
+    take_while(input, is_ws).map(|(c, _)| (c, ()))
 }
 
 #[inline]
@@ -333,8 +328,8 @@ pub fn skip_ws<E: KiError>(input: Cursor) -> Cursor {
 }
 
 #[inline]
-pub fn is_ws(ch: char) -> bool {
-    ch.is_whitespace()
+pub fn is_ws(ch: u8) -> bool {
+    ch.is_ascii_whitespace()
 }
 
 #[cfg(test)]
