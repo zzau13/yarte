@@ -210,14 +210,12 @@ pub fn get_chars(text: &str, left: usize, right: usize) -> &str {
 }
 
 pub fn get_bytes_to_chars(text: &str, left: usize, right: usize) -> (usize, usize) {
-    eprintln!("\n\n#######");
     let mut taken = false;
     let (left, right) = text
         .char_indices()
         .chain(once((text.len(), '\0')))
         .enumerate()
-        .skip_while(|(_, (i, c))| {
-            eprintln!("Skip {} {}", i, c);
+        .skip_while(|(_, (i, _))| {
             if *i >= left {
                 false
             } else {
@@ -225,8 +223,7 @@ pub fn get_bytes_to_chars(text: &str, left: usize, right: usize) -> (usize, usiz
             }
         })
         .take_while(
-            |(_, (i, c))| {
-                eprintln!("Take {} {}", i, c);
+            |(_, (i, _))| {
                 if taken {
                     return false;
                 }
