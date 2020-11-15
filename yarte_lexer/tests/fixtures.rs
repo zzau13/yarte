@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use std::error::Error;
 use yarte_lexer::{
-    ascii, asciis, next, parse, Ascii, Cursor, Ki, KiError, Kinder, PResult, SToken,
+    ascii, asciis, parse, tac, Ascii, Cursor, Ki, KiError, Kinder, LexError, PResult, SToken, Span,
 };
 
 #[derive(Debug, Deserialize)]
@@ -77,12 +77,33 @@ impl KiError for MyError {
 }
 
 /// Eat comment
-pub fn comment<'a, K: Ki<'a>>(_: Cursor<'a>) -> PResult<&'a str, K::Error> {
-    // TODO: shorter ascii token builders
-    const _A: Ascii = ascii!('-');
-    const _B: &[Ascii] = asciis!("--");
+pub fn comment<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<&'a str, K::Error> {
+    const E: Ascii = ascii!('!');
+    const B: &[Ascii] = asciis!("--");
+    const END_B: &[Ascii] = asciis!("--}}");
+    const END_A: &[Ascii] = asciis!("}}");
 
-    Err(next!(K::Error))
+    let (c, _) = tac(i, E)?;
+    let (c, expected) = if c.starts_with(B) {
+        (c.adv_ascii(B), END_B)
+    } else {
+        (c, END_A)
+    };
+
+    let mut at = 0;
+    loop {
+        if c.adv_starts_with(at, expected) {
+            break Ok((c.adv(at + expected.len()), &c.rest[..at]));
+        } else {
+            at += 1;
+            if at >= c.rest.len() {
+                break Err(LexError::Next(
+                    K::Error::UNCOMPLETED,
+                    Span::from_cursor(i, c),
+                ));
+            }
+        }
+    }
 }
 
 #[test]

@@ -24,10 +24,10 @@ pub use gencode::asciis;
 
 pub use self::{
     error::{emitter, ErrorMessage, KiError, LexError, PResult},
-    parse::{parse, Ki},
+    parse::*,
     source_map::Span,
     stmt_local::StmtLocal,
-    strnom::{Ascii, Cursor},
+    strnom::*,
 };
 
 pub type Ws = (bool, bool);

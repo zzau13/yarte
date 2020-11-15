@@ -40,10 +40,50 @@ macro_rules! comment {
     };
 }
 
-fn eat<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<Vec<SToken<'a, K>>, K::Error> {
-    let mut _nodes = vec![];
-    let mut _at = 0;
-    Ok((i.adv(i.len()), _nodes))
+fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SToken<'a, K>>, K::Error> {
+    let mut nodes = vec![];
+    let mut at = 0;
+    loop {
+        if let Some(j) = i.adv_find(at, K::OPEN) {
+            let n = i.rest[at + j + 1..].as_bytes();
+            if 3 < n.len() {
+                let next = n[0];
+                if K::OPEN_BLOCK == K::OPEN_EXPR && next == K::OPEN_EXPR.g() {
+                    comment!(K, i.unsafe_adv(at + j + 2), i, at, j, nodes);
+                    unimplemented!()
+                } else if next == K::OPEN_EXPR.g() {
+                    unimplemented!()
+                } else if next == K::OPEN_BLOCK.g() {
+                    comment!(K, i.unsafe_adv(at + j + 2), i, at, j, nodes);
+                    unimplemented!()
+                } else {
+                    at += j + 1;
+                }
+            } else {
+                at += j + 1;
+            };
+        } else {
+            eat_lit(i, i.len(), &mut nodes);
+            break Ok((i.adv(i.len()), nodes));
+        }
+    }
+}
+
+/// Push literal at cursor with length
+fn eat_lit<'a, K: Ki<'a>>(i: Cursor<'a>, len: usize, nodes: &mut Vec<SToken<'a, K>>) {
+    let lit = &i.rest[..len];
+    if !lit.is_empty() {
+        let (l, lit, r) = trim(lit);
+        let ins = Span {
+            lo: i.off + (l.len() as u32),
+            hi: i.off + ((len - r.len()) as u32),
+        };
+        let out = Span {
+            lo: i.off,
+            hi: i.off + (len as u32),
+        };
+        nodes.push(S(Token::Lit(l, S(lit, ins), r), out));
+    }
 }
 
 /// TODO: Define chars in path
