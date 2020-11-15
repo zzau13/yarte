@@ -9,7 +9,7 @@ use annotate_snippets::{
 
 use yarte_helpers::config::Config;
 
-use crate::{source_map::Span, Cursor, get_bytes_to_chars};
+use crate::{get_bytes_to_chars, source_map::Span, Cursor};
 
 pub trait KiError: Error + PartialEq + Clone {
     const EMPTY: Self;
