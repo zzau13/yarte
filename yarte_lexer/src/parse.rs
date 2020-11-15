@@ -3,10 +3,13 @@
 
 use std::fmt::Debug;
 
-use crate::error::{ErrorMessage, KiError, LexError, PResult};
+use syn::parse_str;
+
+use crate::error::{DOption, ErrorMessage, KiError, LexError, PResult};
+use crate::expr_list::ExprList;
 use crate::source_map::{Span, S};
 use crate::strnom::{get_chars, is_ws, Cursor};
-use crate::{Kinder, SToken, Token};
+use crate::{skip_ws, Ascii, Expr, Kinder, SToken, StmtLocal, Token};
 
 pub trait Ki<'a>: Kinder<'a> + Debug + PartialEq + Clone {}
 
@@ -49,13 +52,71 @@ fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SToken<'a, K>>, K::Error
             if 3 < n.len() {
                 let next = n[0];
                 if K::OPEN_BLOCK == K::OPEN_EXPR && next == K::OPEN_EXPR.g() {
-                    comment!(K, i.adv(at + j + 2), i, at, j, nodes);
-                    unimplemented!()
+                    let next = i.adv(at + j + 2);
+                    comment!(K, next, i, at, j, nodes);
+                    if let Ok((c, inner)) = end::<K>(next, true) {
+                        eat_lit(i, at + j, &mut nodes);
+                        nodes.push(
+                            eat_expr::<K>(inner, c.off - 2)
+                                .or_else(|_| eat_block::<K>(inner))
+                                .map(|x| {
+                                    S(
+                                        x,
+                                        Span {
+                                            lo: next.off - 2,
+                                            hi: c.off,
+                                        },
+                                    )
+                                })?,
+                        );
+                        at = 0;
+                        i = c;
+                        continue;
+                    } else {
+                        eat_lit(i, i.len(), &mut nodes);
+                        break Ok((i.adv(i.len()), nodes));
+                    }
                 } else if next == K::OPEN_EXPR.g() {
-                    unimplemented!()
+                    let next = i.adv(at + j + 2);
+                    if let Ok((c, inner)) = end::<K>(next, true) {
+                        eat_lit(i, at + j, &mut nodes);
+                        nodes.push(eat_expr::<K>(inner, c.off - 2).map(|x| {
+                            S(
+                                x,
+                                Span {
+                                    lo: next.off - 2,
+                                    hi: c.off,
+                                },
+                            )
+                        })?);
+                        at = 0;
+                        i = c;
+                        continue;
+                    } else {
+                        eat_lit(i, i.len(), &mut nodes);
+                        break Ok((i.adv(i.len()), nodes));
+                    }
                 } else if next == K::OPEN_BLOCK.g() {
+                    let next = i.adv(at + j + 2);
                     comment!(K, i.adv(at + j + 2), i, at, j, nodes);
-                    unimplemented!()
+                    if let Ok((c, inner)) = end::<K>(next, false) {
+                        eat_lit(i, at + j, &mut nodes);
+                        nodes.push(eat_block::<K>(inner).map(|x| {
+                            S(
+                                x,
+                                Span {
+                                    lo: next.off - 2,
+                                    hi: c.off,
+                                },
+                            )
+                        })?);
+                        at = 0;
+                        i = c;
+                        continue;
+                    } else {
+                        eat_lit(i, i.len(), &mut nodes);
+                        break Ok((i.adv(i.len()), nodes));
+                    }
                 } else {
                     at += j + 1;
                 }
@@ -84,6 +145,117 @@ fn eat_lit<'a, K: Ki<'a>>(i: Cursor<'a>, len: usize, nodes: &mut Vec<SToken<'a, 
             hi: i.off + (l.len() + lit_len + r.len()) as u32,
         };
         nodes.push(S(Token::Lit(l, S(lit, ins), r), out));
+    }
+}
+
+// TODO: whitespace
+// TODO: Kind
+// TODO: local
+// TODO: Arm
+// TODO: more todo
+fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>, end: u32) -> Result<Token<'a, K>, LexError<K::Error>> {
+    let (l, s, r) = trim(i.rest);
+    eat_expr_list(s)
+        .map(|e| {
+            Token::<K>::Expr(
+                (false, false),
+                S(
+                    e,
+                    Span {
+                        lo: i.off + l.len() as u32,
+                        hi: end - r.len() as u32,
+                    },
+                ),
+            )
+        })
+        .map_err(|e| {
+            LexError::Fail(
+                K::Error::EXPR,
+                Span::from_range(skip_ws::<K::Error>(i), e.span),
+            )
+        })
+}
+
+fn eat_block<'a, K: Ki<'a>>(_i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Error>> {
+    unimplemented!()
+}
+
+/// Intermediate error representation
+#[derive(Debug)]
+pub(crate) struct MiddleError {
+    pub message: String,
+    pub span: (usize, usize),
+}
+
+fn get_line_offset(src: &str, line_num: usize) -> usize {
+    assert!(1 < line_num);
+    let mut line_num = line_num - 1;
+    let mut prev = 0;
+    while let Some(len) = src[prev..].find('\n') {
+        prev += len + 1;
+        line_num -= 1;
+        if line_num == 0 {
+            break;
+        }
+    }
+    assert_eq!(line_num, 0);
+
+    prev
+}
+
+impl MiddleError {
+    fn new(src: &str, e: syn::Error) -> Self {
+        let start = e.span().start();
+        let end = e.span().end();
+        let lo = if start.line == 1 {
+            start.column
+        } else {
+            get_line_offset(src, start.line) + start.column
+        };
+        let hi = if end.line == 1 {
+            end.column
+        } else {
+            get_line_offset(src, end.line) + end.column
+        };
+        Self {
+            message: e.to_string(),
+            span: (lo, hi),
+        }
+    }
+}
+
+/// Parse syn local
+fn eat_local(i: &str) -> Result<Box<crate::Local>, MiddleError> {
+    parse_str::<StmtLocal>(i)
+        .map(Into::into)
+        .map(Box::new)
+        .map_err(|e| MiddleError::new(i, e))
+}
+
+/// Parse syn expression comma separated list
+pub(crate) fn eat_expr_list(i: &str) -> Result<Vec<crate::Expr>, MiddleError> {
+    parse_str::<ExprList>(i)
+        .map(Into::into)
+        .map_err(|e| MiddleError::new(i, e))
+}
+
+#[inline]
+fn end<'a, K: Ki<'a>>(i: Cursor<'a>, expr: bool) -> PResult<Cursor<'a>, K::Error> {
+    let mut at = 0;
+    loop {
+        if let Some(j) = i.adv_find(at, if expr { K::CLOSE_EXPR } else { K::CLOSE_BLOCK }) {
+            if i.adv_next_is(at + j + 1, K::CLOSE) {
+                let inner = Cursor {
+                    rest: &i.rest[..at + j],
+                    off: i.off,
+                };
+                break Ok((i.adv(at + j + 2), inner));
+            } else {
+                at += j + 1;
+            }
+        } else {
+            break Err(LexError::Next(K::Error::UNCOMPLETED, Span::from(i)));
+        }
     }
 }
 

@@ -66,6 +66,7 @@ impl KiError for MyError {
     const WHITESPACE: Self = MyError::Some;
     const COMMENTARY: Self = MyError::Some;
     const CLOSE_BLOCK: Self = MyError::Some;
+    const EXPR: Self = MyError::Some;
 
     fn tag(s: &'static str) -> Self {
         MyError::Str(s)
