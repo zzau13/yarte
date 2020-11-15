@@ -303,7 +303,7 @@ pub fn tag<'a, E: KiError>(i: Cursor<'a>, tag: &'static [Ascii]) -> PResult<'a, 
 #[inline]
 pub fn tac<E: KiError>(i: Cursor, tag: Ascii) -> PResult<char, E> {
     if i.next_is(tag) {
-        Ok((i.adv(1), tag.into()))
+        Ok((i.unsafe_adv(1), tag.into()))
     } else {
         Err(LexError::Next(E::tac(tag.into()), Span::from(i)))
     }
