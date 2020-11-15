@@ -94,11 +94,11 @@ fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SToken<'a, K>>, K::Error
                     );
                 } else if next == K::OPEN_EXPR.g() {
                     let next = i.adv(at + j + 2);
+                    safe!(K, next, i, at, j, nodes);
                     inner!(eat_expr::<K>, next);
                 } else if next == K::OPEN_BLOCK.g() {
                     let next = i.adv(at + j + 2);
                     comment!(K, i.adv(at + j + 2), i, at, j, nodes);
-                    safe!(K, next, i, at, j, nodes);
                     inner!(|inner, _| eat_block::<K>(inner), next);
                 } else {
                     at += j + 1;
