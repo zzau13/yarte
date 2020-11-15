@@ -1,6 +1,5 @@
 use std::collections::BTreeMap;
 use std::error::Error;
-use std::fmt::{self, Display, Write};
 use std::path::PathBuf;
 
 use annotate_snippets::{
@@ -57,25 +56,6 @@ impl<E: KiError> From<LexError<E>> for ErrorMessage<E> {
 pub struct ErrorMessage<T: Error> {
     pub message: T,
     pub span: Span,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum DOption {
-    Some(String),
-    None,
-}
-
-impl Display for DOption {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use DOption::*;
-        match self {
-            Some(s) => {
-                f.write_char(' ')?;
-                f.write_str(s)
-            }
-            None => Ok(()),
-        }
-    }
 }
 
 // TODO: Accumulate by priority

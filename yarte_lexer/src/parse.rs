@@ -1,15 +1,12 @@
-#![allow(unused_macros)]
-#![allow(unused_imports)]
-
 use std::fmt::Debug;
 
 use syn::parse_str;
 
-use crate::error::{DOption, ErrorMessage, KiError, LexError, PResult};
+use crate::error::{ErrorMessage, KiError, LexError, PResult};
 use crate::expr_list::ExprList;
 use crate::source_map::{Span, S};
-use crate::strnom::{get_chars, is_ws, Cursor};
-use crate::{skip_ws, Ascii, Expr, Kinder, SToken, StmtLocal, Token};
+use crate::strnom::{is_ws, Cursor};
+use crate::{Kinder, SToken, StmtLocal, Token};
 
 pub trait Ki<'a>: Kinder<'a> + Debug + PartialEq + Clone {}
 
@@ -171,7 +168,13 @@ fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>, end: u32) -> Result<Token<'a, K>, LexE
         .map_err(|e| {
             LexError::Fail(
                 K::Error::EXPR,
-                Span::from_range(skip_ws::<K::Error>(i), e.span),
+                Span::from_range(
+                    Cursor {
+                        rest: i.rest,
+                        off: i.off + l.len() as u32,
+                    },
+                    e.span,
+                ),
             )
         })
 }
