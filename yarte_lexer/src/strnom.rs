@@ -215,24 +215,16 @@ pub fn get_bytes_to_chars(text: &str, left: usize, right: usize) -> (usize, usiz
         .char_indices()
         .chain(once((text.len(), '\0')))
         .enumerate()
-        .skip_while(|(_, (i, _))| {
-            if *i >= left {
-                false
-            } else {
-                true
+        .skip_while(|(_, (i, _))| *i < left)
+        .take_while(|(_, (i, _))| {
+            if taken {
+                return false;
             }
+            if *i >= right {
+                taken = true;
+            }
+            true
         })
-        .take_while(
-            |(_, (i, _))| {
-                if taken {
-                    return false;
-                }
-                if *i >= right {
-                    taken = true;
-                }
-                true
-            }
-        )
         .fold((None, 0), |(left, _), (i, _)| {
             if left.is_some() {
                 (left, i)
