@@ -65,8 +65,8 @@ fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SToken<'a, K>>, K::Error
             let n = i.rest[at + j + 1..].as_bytes();
             if 3 < n.len() {
                 macro_rules! inner {
-                    ($f:expr, $next:ident) => {
-                        if let Ok((c, inner)) = end::<K>($next, true) {
+                    ($f:expr, $next:ident, $is_expr:literal) => {
+                        if let Ok((c, inner)) = end::<K>($next, $is_expr) {
                             eat_lit(i, at + j, &mut nodes);
                             nodes.push(
                                 $f(inner, c.off - 2)
@@ -81,25 +81,26 @@ fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SToken<'a, K>>, K::Error
                 }
                 let next = n[0];
                 if K::OPEN_BLOCK == K::OPEN_EXPR && next == K::OPEN_EXPR.g() {
+                    let inner = |inner, len| {
+                        eat_expr::<K>(inner, len).or_else(|pe| {
+                            eat_block::<K>(inner).map_err(|e| match e {
+                                LexError::Next(..) => pe,
+                                e => e,
+                            })
+                        })
+                    };
                     let next = i.adv(at + j + 2);
                     comment!(K, next, i, at, j, nodes);
                     safe!(K, next, i, at, j, nodes);
-                    inner!(
-                        |inner, len| eat_expr::<K>(inner, len).or_else(|pe| eat_block::<K>(inner)
-                            .map_err(|e| match e {
-                                LexError::Next(..) => pe,
-                                e => e,
-                            })),
-                        next
-                    );
+                    inner!(inner, next, true);
                 } else if next == K::OPEN_EXPR.g() {
                     let next = i.adv(at + j + 2);
                     safe!(K, next, i, at, j, nodes);
-                    inner!(eat_expr::<K>, next);
+                    inner!(eat_expr::<K>, next, true);
                 } else if next == K::OPEN_BLOCK.g() {
                     let next = i.adv(at + j + 2);
                     comment!(K, i.adv(at + j + 2), i, at, j, nodes);
-                    inner!(|inner, _| eat_block::<K>(inner), next);
+                    inner!(|inner, _| eat_block::<K>(inner), next, false);
                 } else {
                     at += j + 1;
                 }
