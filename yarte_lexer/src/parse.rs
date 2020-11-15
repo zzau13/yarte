@@ -49,12 +49,12 @@ fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SToken<'a, K>>, K::Error
             if 3 < n.len() {
                 let next = n[0];
                 if K::OPEN_BLOCK == K::OPEN_EXPR && next == K::OPEN_EXPR.g() {
-                    comment!(K, i.unsafe_adv(at + j + 2), i, at, j, nodes);
+                    comment!(K, i.adv(at + j + 2), i, at, j, nodes);
                     unimplemented!()
                 } else if next == K::OPEN_EXPR.g() {
                     unimplemented!()
                 } else if next == K::OPEN_BLOCK.g() {
-                    comment!(K, i.unsafe_adv(at + j + 2), i, at, j, nodes);
+                    comment!(K, i.adv(at + j + 2), i, at, j, nodes);
                     unimplemented!()
                 } else {
                     at += j + 1;
@@ -74,13 +74,14 @@ fn eat_lit<'a, K: Ki<'a>>(i: Cursor<'a>, len: usize, nodes: &mut Vec<SToken<'a, 
     let lit = &i.rest[..len];
     if !lit.is_empty() {
         let (l, lit, r) = trim(lit);
+        let lit_len = lit.chars().count();
         let ins = Span {
-            lo: i.off + (l.len() as u32),
-            hi: i.off + ((len - r.len()) as u32),
+            lo: i.off + l.len() as u32,
+            hi: i.off + lit_len as u32,
         };
         let out = Span {
             lo: i.off,
-            hi: i.off + (len as u32),
+            hi: i.off + (l.len() + lit_len + r.len()) as u32,
         };
         nodes.push(S(Token::Lit(l, S(lit, ins), r), out));
     }

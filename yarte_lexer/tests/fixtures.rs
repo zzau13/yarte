@@ -96,7 +96,7 @@ pub fn comment<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<&'a str, K::Error> {
             break Ok((c.adv(at + expected.len()), &c.rest[..at]));
         } else {
             at += 1;
-            if at >= c.rest.len() {
+            if at >= c.len() {
                 break Err(LexError::Next(
                     K::Error::UNCOMPLETED,
                     Span::from_cursor(i, c),
