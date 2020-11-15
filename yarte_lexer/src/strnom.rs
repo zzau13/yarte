@@ -24,6 +24,14 @@ impl<'a> Cursor<'a> {
     }
 
     #[inline]
+    pub fn unsafe_adv(&self, amt: usize) -> Cursor<'a> {
+        Cursor {
+            rest: &self.rest[amt..],
+            off: self.off + amt as u32,
+        }
+    }
+
+    #[inline]
     pub fn adv_ascii(&self, s: &[Ascii]) -> Cursor<'a> {
         Cursor {
             rest: &self.rest[s.len()..],
@@ -102,7 +110,7 @@ fn start_with_ascii(rest: &[u8], s: &[Ascii]) -> bool {
             .all(|(a, b)| a == b)
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[repr(transparent)]
 pub struct Ascii(u8);
 macro_rules! ascii_builder {
