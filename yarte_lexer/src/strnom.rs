@@ -220,23 +220,30 @@ macro_rules! do_parse {
         Ok(($i, ( $($rest),* )))
     };
 
-    ($i:expr, $e:ident >> $($rest:tt)*) => {
-        do_parse!($i, call!($e) >> $($rest)*)
+    ($i:expr, $fun:ident( $($args:tt)* ) >> $($rest:tt)*) => {
+        match $crate::call!($i, $fun, $($args)*) {
+            Err(e) => Err(e),
+            Ok((i, o)) => do_parse!(i, $($rest)*),
+        }
+    };
+    ($i:expr, $field:ident : $fun:ident( $($args:tt)* ) >> $($rest:tt)*) => {
+        match $crate::call!($i, $fun, $($args)*) {
+            Err(e) => Err(e),
+            Ok((i, o)) => {
+                let $field = o;
+                do_parse!(i, $($rest)*)
+            },
+        }
     };
 
-    ($i:expr, $submac:ident!( $($args:tt)* ) >> $($rest:tt)*) => {
-        match $submac!($i, $($args)*) {
+    ($i:expr, $e:path| $($arg:tt)*  >> $($rest:tt)*) => {
+        match $e!($i, $($arg)*) {
             Err(e) => Err(e),
             Ok((i, _)) => do_parse!(i, $($rest)*),
         }
     };
-
-    ($i:expr, $field:ident : $e:ident >> $($rest:tt)*) => {
-        do_parse!($i, $field: call!($e) >> $($rest)*)
-    };
-
-    ($i:expr, $field:ident : $submac:ident!( $($args:tt)* ) >> $($rest:tt)*) => {
-        match $submac!($i, $($args)*) {
+    ($i:expr, $field:ident : $e:path| $($args:tt)*  >> $($rest:tt)*) => {
+        match $e!($i, $($args)*) {
             Err(e) => Err(e),
             Ok((i, o)) => {
                 let $field = o;
@@ -248,8 +255,8 @@ macro_rules! do_parse {
 
 #[macro_export]
 macro_rules! call {
-    ($i:expr, $fun:expr $(, $args:expr)*) => {
-        $fun($i $(, $args)*)
+    ($i:expr, $fun:expr, $($args:tt)*) => {
+        $fun($i, $($args)*)
     };
 }
 
@@ -275,8 +282,8 @@ pub fn take_while<E: KiError>(i: Cursor, f: fn(u8) -> bool) -> PResult<&str, E> 
         Ok((i, ""))
     } else {
         match i.as_bytes().iter().copied().position(|x| !f(x)) {
-            None => Ok((i.unsafe_adv(i.len()), i.rest)),
-            Some(j) => Ok((i.unsafe_adv(j), &i.rest[..j])),
+            None => Ok((i.adv(i.len()), i.rest)),
+            Some(j) => Ok((i.adv(j), &i.rest[..j])),
         }
     }
 }

@@ -1,0 +1,24 @@
+[
+(
+    src: "{{> partial }}",
+    exp: [(
+        ExprKind(
+            (false, false),
+            Partial("partial"),
+            ([], (lo:12, hi:12)),
+        ),
+        (lo:0, hi:14),
+    )]
+),
+(
+    src: "{{> partial scope }}",
+    exp: [(
+        ExprKind(
+            (false, false),
+            Partial("partial"),
+            (["scope"], (lo:12, hi:17)),
+        ),
+        (lo:0, hi:20),
+    )]
+)
+]
