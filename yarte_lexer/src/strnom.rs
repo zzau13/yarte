@@ -1,7 +1,7 @@
 //! Adapted from [`proc-macro2`](https://github.com/alexcrichton/proc-macro2).
 
 use std::iter::once;
-use std::str::Chars;
+use std::str::{Bytes, Chars};
 
 use crate::error::{KiError, LexError, PResult};
 use crate::source_map::Span;
@@ -12,19 +12,9 @@ pub struct Cursor<'a> {
     pub off: u32,
 }
 
-// TODO: this do a multiple chars counts can improve changing
 impl<'a> Cursor<'a> {
     #[inline]
     pub fn adv(&self, amt: usize) -> Cursor<'a> {
-        let (front, rest) = self.rest.split_at(amt);
-        Cursor {
-            rest,
-            off: self.off + front.chars().count() as u32,
-        }
-    }
-
-    #[inline]
-    pub fn unsafe_adv(&self, amt: usize) -> Cursor<'a> {
         Cursor {
             rest: &self.rest[amt..],
             off: self.off + amt as u32,
@@ -77,6 +67,11 @@ impl<'a> Cursor<'a> {
     #[inline]
     pub fn as_bytes(&self) -> &[u8] {
         self.rest.as_bytes()
+    }
+
+    #[inline]
+    pub fn bytes(&self) -> Bytes<'_> {
+        self.rest.bytes()
     }
 
     #[inline]
@@ -214,6 +209,44 @@ pub fn get_chars(text: &str, left: usize, right: usize) -> &str {
     left.map_or("", |left| &text[left..right])
 }
 
+pub fn get_bytes_to_chars(text: &str, left: usize, right: usize) -> (usize, usize) {
+    eprintln!("\n\n#######");
+    let mut taken = false;
+    let (left, right) = text
+        .char_indices()
+        .chain(once((text.len(), '\0')))
+        .enumerate()
+        .skip_while(|(_, (i, c))| {
+            eprintln!("Skip {} {}", i, c);
+            if *i >= left {
+                false
+            } else {
+                true
+            }
+        })
+        .take_while(
+            |(_, (i, c))| {
+                eprintln!("Take {} {}", i, c);
+                if taken {
+                    return false;
+                }
+                if *i >= right {
+                    taken = true;
+                }
+                true
+            }
+        )
+        .fold((None, 0), |(left, _), (i, _)| {
+            if left.is_some() {
+                (left, i)
+            } else {
+                (Some(i), i)
+            }
+        });
+
+    left.map_or((0, 0), |left| (left, right))
+}
+
 #[macro_export]
 macro_rules! do_parse {
     ($i:expr, ( $($rest:expr),* )) => {
@@ -281,7 +314,7 @@ pub fn take_while<E: KiError>(i: Cursor, f: fn(u8) -> bool) -> PResult<&str, E> 
     if i.is_empty() {
         Ok((i, ""))
     } else {
-        match i.as_bytes().iter().copied().position(|x| !f(x)) {
+        match i.bytes().position(|x| !f(x)) {
             None => Ok((i.adv(i.len()), i.rest)),
             Some(j) => Ok((i.adv(j), &i.rest[..j])),
         }
@@ -305,7 +338,7 @@ pub fn tag<'a, E: KiError>(i: Cursor<'a>, tag: &'static [Ascii]) -> PResult<'a, 
 #[inline]
 pub fn tac<E: KiError>(i: Cursor, tag: Ascii) -> PResult<char, E> {
     if i.next_is(tag) {
-        Ok((i.unsafe_adv(1), tag.into()))
+        Ok((i.adv(1), tag.into()))
     } else {
         Err(LexError::Next(E::tac(tag.into()), Span::from(i)))
     }
@@ -362,5 +395,20 @@ mod test {
         assert_eq!(&rest[4..rest.len() - 3], get_chars(rest, 3, len - 2));
         assert_eq!(&rest[4..rest.len() - 2], get_chars(rest, 3, len - 1));
         assert_eq!(&rest[7..rest.len() - 5], get_chars(rest, 6, len - 4));
+    }
+
+    #[test]
+    fn test_get_bytes_chars() {
+        let rest = "foó bañ tuú";
+        assert_eq!(get_bytes_to_chars(rest, 0, 1), (0, 1));
+        assert_eq!(get_bytes_to_chars(rest, 1, 2), (1, 2));
+        assert_eq!(get_bytes_to_chars(rest, 2, 4), (2, 3));
+        assert_eq!(get_bytes_to_chars(rest, 4, 5), (3, 4));
+        assert_eq!(get_bytes_to_chars(rest, 5, 6), (4, 5));
+        assert_eq!(get_bytes_to_chars(rest, 1, 6), (1, 5));
+        assert_eq!(get_bytes_to_chars(rest, 1, 8), (1, 7));
+        assert_eq!(get_bytes_to_chars(rest, 1, 9), (1, 7));
+        assert_eq!(get_bytes_to_chars(rest, 1, 10), (1, 8));
+        assert_eq!(get_bytes_to_chars(rest, 9, 10), (7, 8));
     }
 }

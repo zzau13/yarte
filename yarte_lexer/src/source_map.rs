@@ -88,7 +88,7 @@ impl FileInfo {
 fn lines_offsets(s: &str) -> Vec<usize> {
     let mut lines = vec![0];
     let mut prev = 0;
-    while let Some(len) = s.chars().skip(prev).position(|x| x == '\n') {
+    while let Some(len) = s.bytes().skip(prev).position(|x| x == b'\n') {
         prev += len + 1;
         lines.push(prev);
     }
@@ -111,7 +111,7 @@ impl SourceMap {
         let lo = self.next_start_pos();
         let span = Span {
             lo,
-            hi: lo + (src.chars().count() as u32),
+            hi: lo + (src.len() as u32),
         };
 
         self.files.push(FileInfo {
