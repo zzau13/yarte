@@ -319,14 +319,12 @@ macro_rules! map_fail {
     };
 }
 
+#[inline]
 pub fn ws<E: KiError>(input: Cursor) -> PResult<(), E> {
-    if input.is_empty() {
-        return Err(LexError::Next(E::WHITESPACE, Span::from(input)));
-    }
-
     take_while!(input, is_ws).map(|(c, _)| (c, ()))
 }
 
+#[inline]
 pub fn skip_ws<E: KiError>(input: Cursor) -> Cursor {
     match ws::<E>(input) {
         Ok((rest, _)) => rest,

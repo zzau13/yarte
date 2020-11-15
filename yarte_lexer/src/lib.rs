@@ -237,8 +237,7 @@ where
     Comment(#[serde(borrow)] &'a str),
     Safe(Ws, SExpr),
     Local(Ws, SLocal),
-    Expr(Ws, SExpr),
-    ExprList(Ws, SVExpr),
+    Expr(Ws, SVExpr),
     ExprListKind(Ws, Kind, SVExpr),
     Kind(Ws, Kind),
     Lit(

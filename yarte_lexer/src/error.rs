@@ -19,6 +19,7 @@ pub trait KiError: Error + PartialEq + Clone + Copy {
     const WHITESPACE: Self;
     const COMMENTARY: Self;
     const CLOSE_BLOCK: Self;
+    const EXPR: Self;
 
     fn tag(s: &'static str) -> Self;
     fn tac(c: char) -> Self;
