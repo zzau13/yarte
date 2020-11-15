@@ -37,11 +37,33 @@ impl<'a> Kinder<'a> for MyKind<'a> {
     const WS: Ascii = ascii!('~');
     const WS_AFTER: bool = false;
 
-    fn parse(i: Cursor<'a>) -> PResult<Self, Self::Error> {
-        Ok((i, MyKind::Str(i.rest)))
+    fn parse(_i: Cursor<'a>) -> PResult<Self, Self::Error> {
+        unimplemented!()
     }
     fn comment(i: Cursor<'a>) -> PResult<&'a str, Self::Error> {
-        comment::<Self>(i)
+        const E: Ascii = ascii!('!');
+        const B: &[Ascii] = asciis!("--");
+        const END_B: &[Ascii] = asciis!("--}}");
+        const END_A: &[Ascii] = asciis!("}}");
+
+        let (c, _) = tac(i, E)?;
+        let (c, expected) = if c.starts_with(B) {
+            (c.adv_ascii(B), END_B)
+        } else {
+            (c, END_A)
+        };
+
+        let mut at = 0;
+        loop {
+            if c.adv_starts_with(at, expected) {
+                break Ok((c.adv(at + expected.len()), &c.rest[..at]));
+            } else {
+                at += 1;
+                if at >= c.len() {
+                    break Err(LexError::Next(MyError::Some, Span::from_cursor(i, c)));
+                }
+            }
+        }
     }
 }
 
@@ -74,36 +96,6 @@ impl KiError for MyError {
 
     fn tac(_: char) -> Self {
         MyError::Some
-    }
-}
-
-/// Eat comment
-pub fn comment<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<&'a str, K::Error> {
-    const E: Ascii = ascii!('!');
-    const B: &[Ascii] = asciis!("--");
-    const END_B: &[Ascii] = asciis!("--}}");
-    const END_A: &[Ascii] = asciis!("}}");
-
-    let (c, _) = tac(i, E)?;
-    let (c, expected) = if c.starts_with(B) {
-        (c.adv_ascii(B), END_B)
-    } else {
-        (c, END_A)
-    };
-
-    let mut at = 0;
-    loop {
-        if c.adv_starts_with(at, expected) {
-            break Ok((c.adv(at + expected.len()), &c.rest[..at]));
-        } else {
-            at += 1;
-            if at >= c.len() {
-                break Err(LexError::Next(
-                    K::Error::UNCOMPLETED,
-                    Span::from_cursor(i, c),
-                ));
-            }
-        }
     }
 }
 
