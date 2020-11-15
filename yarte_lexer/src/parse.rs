@@ -6,7 +6,7 @@ use crate::error::{ErrorMessage, KiError, LexError, PResult};
 use crate::expr_list::ExprList;
 use crate::source_map::{Span, S};
 use crate::strnom::{is_ws, Cursor};
-use crate::{take_while, Kinder, SToken, StmtLocal, Token};
+use crate::{get_chars, take_while, Kinder, SToken, StmtLocal, Token};
 
 pub trait Ki<'a>: Kinder<'a> + Debug + PartialEq + Clone {}
 
@@ -58,10 +58,8 @@ fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SToken<'a, K>>, K::Error
                             );
                             at = 0;
                             i = c;
-                            continue;
                         } else {
-                            eat_lit(i, i.len(), &mut nodes);
-                            break Ok((i.adv(i.len()), nodes));
+                            at += j + 1;
                         }
                     };
                 }
@@ -98,14 +96,13 @@ fn eat_lit<'a, K: Ki<'a>>(i: Cursor<'a>, len: usize, nodes: &mut Vec<SToken<'a, 
     let lit = &i.rest[..len];
     if !lit.is_empty() {
         let (l, lit, r) = trim(lit);
-        let lit_len = lit.chars().count();
         let ins = Span {
             lo: i.off + l.len() as u32,
-            hi: i.off + lit_len as u32,
+            hi: i.off + lit.len() as u32,
         };
         let out = Span {
             lo: i.off,
-            hi: i.off + (l.len() + lit_len + r.len()) as u32,
+            hi: i.off + len as u32,
         };
         nodes.push(S(Token::Lit(l, S(lit, ins), r), out));
     }
@@ -127,7 +124,12 @@ fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>, end: u32) -> Result<Token<'a, K>, LexE
     let init = i.off + l.len() as u32;
     let expr = eat_expr_list(s)
         .map(|e| S(e, Span::new(init, end - r.len() as u32)))
-        .map_err(|e| LexError::Fail(K::Error::EXPR, Span::new(init + e.span.0, init + e.span.1)))?;
+        .map_err(|e| {
+            LexError::Fail(
+                K::Error::expr(e.message),
+                Span::new(init + e.span.0, init + e.span.1),
+            )
+        })?;
 
     if let Some(kind) = _kind {
         Ok(Token::ExprKind((false, false), kind, expr))
@@ -137,7 +139,7 @@ fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>, end: u32) -> Result<Token<'a, K>, LexE
 }
 
 fn eat_block<'a, K: Ki<'a>>(_i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Error>> {
-    unimplemented!()
+    Err(next!(K::Error))
 }
 
 /// Intermediate error representation
@@ -147,7 +149,7 @@ pub(crate) struct MiddleError {
     pub span: (u32, u32),
 }
 
-fn get_line_offset(src: &str, line_num: usize) -> usize {
+fn get_line_offset(src: &str, line_num: usize, column: usize) -> usize {
     assert!(1 < line_num);
     let mut line_num = line_num - 1;
     let mut prev = 0;
@@ -160,7 +162,7 @@ fn get_line_offset(src: &str, line_num: usize) -> usize {
     }
     assert_eq!(line_num, 0);
 
-    prev
+    prev + get_chars(&src[prev..], 0, column).len()
 }
 
 impl MiddleError {
@@ -168,14 +170,14 @@ impl MiddleError {
         let start = e.span().start();
         let end = e.span().end();
         let lo = if start.line == 1 {
-            start.column
+            get_chars(src, 0, start.column).len()
         } else {
-            get_line_offset(src, start.line) + start.column
+            get_line_offset(src, start.line, start.column)
         };
         let hi = if end.line == 1 {
             end.column
         } else {
-            get_line_offset(src, end.line) + end.column
+            get_line_offset(src, end.line, end.column)
         };
         Self {
             message: e.to_string(),
@@ -237,8 +239,8 @@ pub fn trim(i: &str) -> (&str, &str, &str) {
         return ("", "", "");
     }
 
-    if let Some(ln) = i.as_bytes().iter().position(|x| !is_ws(*x)) {
-        let rn = i.as_bytes().iter().rposition(|x| !is_ws(*x)).unwrap();
+    if let Some(ln) = i.bytes().position(|x| !is_ws(x)) {
+        let rn = i.bytes().rposition(|x| !is_ws(x)).unwrap();
 
         (&i[..ln], &i[ln..=rn], &i[rn + 1..])
     } else {

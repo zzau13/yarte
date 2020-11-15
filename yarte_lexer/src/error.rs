@@ -9,19 +9,19 @@ use annotate_snippets::{
 
 use yarte_helpers::config::Config;
 
-use crate::{source_map::Span, strnom::get_chars, Cursor};
+use crate::{source_map::Span, Cursor, get_bytes_to_chars};
 
-pub trait KiError: Error + PartialEq + Clone + Copy {
+pub trait KiError: Error + PartialEq + Clone {
     const EMPTY: Self;
     const PATH: Self;
     const UNCOMPLETED: Self;
     const WHITESPACE: Self;
     const COMMENTARY: Self;
     const CLOSE_BLOCK: Self;
-    const EXPR: Self;
 
     fn tag(s: &'static str) -> Self;
     fn tac(c: char) -> Self;
+    fn expr(s: String) -> Self;
 }
 
 #[derive(Debug, Clone)]
@@ -58,7 +58,7 @@ pub struct ErrorMessage<T: Error> {
     pub span: Span,
 }
 
-// TODO: Accumulate by priority
+// TODO: chars
 pub fn emitter<I, T>(sources: &BTreeMap<PathBuf, String>, config: &Config, errors: I) -> !
 where
     I: Iterator<Item = ErrorMessage<T>>,
@@ -78,18 +78,18 @@ where
         .map(|(label, origin, span)| {
             let ((lo_line, hi_line), (lo, hi)) = span.range_in_file();
             let start = span.start();
-            // TODO: without reallocate
             let source = sources.get(origin).unwrap();
+            let source = &source[lo_line..hi_line];
 
             let origin = origin.strip_prefix(&prefix).unwrap().to_str().unwrap();
 
             Slice {
-                source: get_chars(source, lo_line, hi_line),
+                source,
                 line_start: start.line,
                 origin: Some(origin),
                 annotations: vec![SourceAnnotation {
                     label,
-                    range: (lo, hi),
+                    range: get_bytes_to_chars(source, lo, hi),
                     annotation_type: AnnotationType::Error,
                 }],
                 fold: false,

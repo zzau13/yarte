@@ -1,6 +1,6 @@
 [
     (src: "{{! Commentary }}", exp: [(Comment(" Commentary "), (lo:0, hi:17))]),
-    (src: "{{! çommentary }}", exp: [(Comment(" çommentary "), (lo:0, hi:17))]),
+    (src: "{{! çommentary }}", exp: [(Comment(" çommentary "), (lo:0, hi:18))]),
     (src: "{{!-- Commentary --}}", exp: [(Comment(" Commentary "), (lo:0, hi:21))]),
     (
         src: "foo {{!-- Commentary --}}",
@@ -12,8 +12,8 @@
     (
         src: "çoo {{!-- Commentary --}}",
         exp: [
-            (Lit("", ("çoo", (lo:0, hi:3)), " "), (lo:0, hi:4)),
-            (Comment(" Commentary "), (lo:4, hi:25))
+            (Lit("", ("çoo", (lo:0, hi:4)), " "), (lo:0, hi:5)),
+            (Comment(" Commentary "), (lo:5, hi:26))
         ]
     ),
 ]

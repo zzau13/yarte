@@ -77,10 +77,11 @@ impl<'a> Kinder<'a> for MyKind<'a> {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 enum MyError {
     Some,
     Str(&'static str),
+    StrO(String),
 }
 
 impl Display for MyError {
@@ -98,7 +99,6 @@ impl KiError for MyError {
     const WHITESPACE: Self = MyError::Some;
     const COMMENTARY: Self = MyError::Some;
     const CLOSE_BLOCK: Self = MyError::Some;
-    const EXPR: Self = MyError::Some;
 
     fn tag(s: &'static str) -> Self {
         MyError::Str(s)
@@ -106,6 +106,10 @@ impl KiError for MyError {
 
     fn tac(_: char) -> Self {
         MyError::Some
+    }
+
+    fn expr(s: String) -> Self {
+        MyError::StrO(s)
     }
 }
 
