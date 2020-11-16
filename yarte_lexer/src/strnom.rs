@@ -9,10 +9,23 @@ use crate::source_map::Span;
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Cursor<'a> {
     pub rest: &'a str,
-    pub off: u32,
+    pub(crate) off: u32,
 }
 
 impl<'a> Cursor<'a> {
+    /// Create new unregistered cursor
+    ///
+    /// # Safety
+    /// Use get_cursor function instead for registered cursor
+    pub unsafe fn new(rest: &str, off: u32) -> Cursor {
+        Cursor { rest, off }
+    }
+
+    #[inline]
+    pub fn off(&self) -> usize {
+        self.off as usize
+    }
+
     #[inline]
     pub fn adv(&self, amt: usize) -> Cursor<'a> {
         Cursor {

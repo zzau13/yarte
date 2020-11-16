@@ -124,7 +124,7 @@ fn test() {
             .expect("Valid Fixtures");
 
         for Fixture { src, exp } in fixtures {
-            let res = parse::<MyKind>(Cursor { rest: src, off: 0 }).expect("Valid parse");
+            let res = parse::<MyKind>(unsafe { Cursor::new(src, 0) }).expect("Valid parse");
             eprintln!("BASE {:?} \nEXPR {:?}", exp, res);
             assert_eq!(res, exp);
         }
@@ -141,7 +141,7 @@ fn test_panic() {
             .expect("Valid Fixtures");
 
         for FixturePanic(src) in fixtures {
-            assert!(parse::<MyKind>(Cursor { rest: src, off: 0 }).is_err());
+            assert!(parse::<MyKind>(unsafe { Cursor::new(src, 0) }).is_err());
         }
     }
 }
