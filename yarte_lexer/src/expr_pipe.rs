@@ -10,10 +10,11 @@ pub(super) struct ExprPipe {
 
 impl Parse for ExprPipe {
     fn parse(input: ParseStream) -> Result<Self> {
-        let mut list = Punctuated::new();
-        if !input.is_empty() {
-            list = Punctuated::parse_separated_nonempty(input)?;
-        }
+        let list = if input.is_empty() {
+            Punctuated::new()
+        } else {
+            Punctuated::parse_separated_nonempty(input)?
+        };
         Ok(ExprPipe { list })
     }
 }
