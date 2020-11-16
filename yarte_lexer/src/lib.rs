@@ -14,6 +14,7 @@ mod strnom;
 #[macro_use]
 mod error;
 mod expr_list;
+mod expr_pipe;
 mod parse;
 mod source_map;
 mod stmt_local;
