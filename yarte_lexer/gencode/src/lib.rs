@@ -5,7 +5,7 @@ use quote::quote;
 pub fn asciis(t: proc_macro::TokenStream) -> proc_macro::TokenStream {
     match syn::parse::<syn::LitStr>(t) {
         Ok(s) => _asciis(s.value()).expect("only ascii valid").into(),
-        Err(e) => e.to_compile_error().into()
+        Err(e) => e.to_compile_error().into(),
     }
 }
 
