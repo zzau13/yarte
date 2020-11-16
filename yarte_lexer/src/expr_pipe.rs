@@ -12,15 +12,7 @@ impl Parse for ExprPipe {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut list = Punctuated::new();
         if !input.is_empty() {
-            loop {
-                let value = input.parse()?;
-                list.push_value(value);
-                if !input.peek(Token![=>]) {
-                    break;
-                }
-                let punc = input.parse()?;
-                list.push_punct(punc);
-            }
+            list = Punctuated::parse_separated_nonempty(input)?;
         }
         Ok(ExprPipe { list })
     }
