@@ -36,7 +36,12 @@ mod test {
 
     #[test]
     fn test() {
-        let src = "another_bar.field => match fo { A | B => \"foo\", _ => \"bar\" } => bar => foo = \"bar => \"\n => fuu = 1  => goo = true    ";
+        let src = "another_bar.field \
+            => match fo { A | B => \"foo\", _ => \"bar\" } \
+            => bar \
+            => foo = \"bar => \"\n \
+            => fuu = 1  \
+            => goo = true    ";
         let expected = vec![
             parse_str::<crate::Expr>("another_bar.field").unwrap(),
             parse_str::<crate::Expr>("match fo { A | B => \"foo\", _ => \"bar\" }").unwrap(),
