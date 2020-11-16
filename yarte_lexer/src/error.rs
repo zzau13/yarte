@@ -9,6 +9,7 @@ use annotate_snippets::{
 
 use yarte_helpers::config::Config;
 
+use crate::source_map::clean;
 use crate::{get_bytes_to_chars, source_map::Span, Cursor};
 
 pub trait KiError: Error + PartialEq + Clone {
@@ -51,15 +52,31 @@ impl<E: KiError> From<LexError<E>> for ErrorMessage<E> {
     }
 }
 
-// TODO: T: Priority trait
 #[derive(Debug)]
 pub struct ErrorMessage<T: Error> {
     pub message: T,
     pub span: Span,
 }
 
-// TODO: chars
-pub fn emitter<I, T>(sources: &BTreeMap<PathBuf, String>, config: &Config, errors: I) -> !
+// TODO:
+pub struct EmitterConfig<'a> {
+    pub config: &'a Config<'a>,
+    pub color: bool,
+}
+
+pub trait Emitter {
+    fn callback() {
+        clean();
+    }
+}
+
+impl<'a> Emitter for EmitterConfig<'a> {}
+
+pub fn emitter<I, T>(
+    sources: &BTreeMap<PathBuf, String>,
+    EmitterConfig { config, color }: EmitterConfig,
+    errors: I,
+) -> !
 where
     I: Iterator<Item = ErrorMessage<T>>,
     T: Error,
@@ -81,7 +98,11 @@ where
             let source = sources.get(origin).unwrap();
             let source = &source[lo_line..hi_line];
 
-            let origin = origin.strip_prefix(&prefix).unwrap().to_str().unwrap();
+            let origin = origin
+                .strip_prefix(&prefix)
+                .expect("template prefix")
+                .to_str()
+                .unwrap();
 
             Slice {
                 source,
@@ -106,10 +127,64 @@ where
         footer: vec![],
         slices,
         opt: FormatOptions {
-            color: true,
+            color,
             ..Default::default()
         },
     };
 
+    EmitterConfig::callback();
     panic!("{}", DisplayList::from(s))
+}
+
+#[cfg(test)]
+mod test {
+    use std::collections::BTreeMap;
+    use std::error::Error;
+    use std::fmt::{self, Display};
+    use std::iter::once;
+
+    use yarte_helpers::config::Config;
+
+    use crate::error::EmitterConfig;
+    use crate::source_map::get_cursor;
+    use crate::{emitter, ErrorMessage, Span};
+
+    #[derive(Debug)]
+    struct Errr(&'static str);
+    impl Error for Errr {}
+    impl Display for Errr {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            self.0.fmt(f)
+        }
+    }
+
+    // TODO: check annotate-snipped
+    #[test]
+    #[should_panic(
+        expected = "error\n --> foo.hbs:1:9\n  |\n1 | foó bañ tuú foú\n  |         ^^^ bar\n  |"
+    )]
+    fn test_chars() {
+        let config = Config::new("");
+        let mut path = config.get_dir().clone();
+        path.pop();
+        path.push("foo.hbs");
+
+        let src = "foó bañ tuú foú";
+        let mut sources = BTreeMap::new();
+        let _ = get_cursor(&path, src);
+        sources.insert(path, src.to_owned());
+
+        emitter(
+            &sources,
+            EmitterConfig {
+                config: &config,
+                color: false,
+            },
+            // TODO: Check this numbers
+            once(ErrorMessage {
+                message: Errr("bar"),
+                span: Span { lo: 10, hi: 14 },
+            }),
+        )
+    }
 }
