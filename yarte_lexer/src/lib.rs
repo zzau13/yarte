@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-#![allow(clippy::declare_interior_mutable_const)]
 
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};

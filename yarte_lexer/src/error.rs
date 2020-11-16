@@ -12,6 +12,7 @@ use yarte_helpers::config::Config;
 use crate::source_map::clean;
 use crate::{get_bytes_to_chars, source_map::Span, Cursor};
 
+#[allow(clippy::declare_interior_mutable_const)]
 pub trait KiError: Error + PartialEq + Clone {
     const EMPTY: Self;
     const PATH: Self;
@@ -85,7 +86,7 @@ where
     prefix.pop();
     let mut errors: Vec<ErrorMessage<T>> = errors.collect();
 
-    errors.sort_unstable_by(|a, b| a.span.lo.cmp(&b.span.lo));
+    errors.sort_by(|a, b| a.span.lo.cmp(&b.span.lo));
     let slices: Vec<(String, PathBuf, Span)> = errors
         .into_iter()
         .map(|err| (err.message.to_string(), err.span.file_path(), err.span))
