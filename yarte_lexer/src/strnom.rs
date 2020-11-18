@@ -263,21 +263,32 @@ macro_rules! do_parse {
     ($i:expr, $field:ident: $fun:path => $($rest:tt)+) => {
         do_parse!($i, $field: $fun[] => $($rest)+)
     };
-    ($i:expr, $fun:path [ $($args:tt)* ]  => $($rest:tt)+) => {
-        match $crate::call!($i, $fun, $($args)*) {
+    ($i:expr, $fun:path [ $($args:tt)* ]$(:$pipe:path)*  => $($rest:tt)+) => {
+        match $crate::pipes!($i, $fun[$($args)*]$(:$pipe)*) {
             Err(e) => Err(e),
             Ok((i, _)) => do_parse!(i, $($rest)+),
         }
     };
-    ($i:expr, $field:ident : $fun:path [ $($args:tt)* ] => $($rest:tt)+) => {
-        match $crate::call!($i, $fun, $($args)*) {
+    ($i:expr, $field:ident : $fun:path [ $($args:tt)* ]$(:$pipe:path)* => $($rest:tt)+) => {{
+        match $crate::pipes!($i, $fun[$($args)*]$(:$pipe)*) {
             Err(e) => Err(e),
             Ok((i, o)) => {
                 let $field = o;
                 do_parse!(i, $($rest)+)
             },
         }
-    };
+    }};
+}
+
+#[macro_export]
+macro_rules! pipes {
+    ($i:expr, $fun:path [ $($args:tt)* ]$(:$pipe:path)*) => {{
+        let r = $crate::call!($i, $fun, $($args)*);
+        $(
+        let r = $pipe($i, r);
+        )*
+        r
+    }};
 }
 
 #[macro_export]
@@ -285,6 +296,36 @@ macro_rules! call {
     ($i:expr, $fun:expr, $($args:tt)*) => {
         $fun($i, $($args)*)
     };
+}
+
+#[inline]
+pub fn is_some<'a, E: KiError, O>(
+    _: Cursor<'a>,
+    next: PResult<'a, Option<O>, E>,
+) -> PResult<'a, bool, E> {
+    match next {
+        Ok((i, o)) => Ok((i, o.is_some())),
+        Err(e) => Err(e),
+    }
+}
+
+#[inline]
+pub fn is_none<'a, E: KiError, O>(
+    _: Cursor<'a>,
+    next: PResult<'a, Option<O>, E>,
+) -> PResult<'a, bool, E> {
+    match next {
+        Ok((i, o)) => Ok((i, o.is_none())),
+        Err(e) => Err(e),
+    }
+}
+
+#[inline]
+pub fn opt<'a, E: KiError, O>(i: Cursor<'a>, next: PResult<'a, O, E>) -> PResult<'a, Option<O>, E> {
+    match next {
+        Ok((i, o)) => Ok((i, Some(o))),
+        Err(_) => Ok((i, None)),
+    }
 }
 
 #[inline]
