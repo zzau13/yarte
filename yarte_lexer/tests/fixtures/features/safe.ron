@@ -1,0 +1,6 @@
+[
+(src: "{{{ var }}}", exp: [(Safe((false, false), ("var", (lo:4, hi:7))), (lo:0, hi:11))]),
+(src: "{{{ fun() }}}", exp: [(Safe((false, false), ("fun()", (lo:4, hi:9))), (lo:0, hi:13))]),
+(src: "{{{ fun(|a| a) }}}", exp: [(Safe((false, false), ("fun(|a| a)", (lo:4, hi:14))), (lo:0, hi:18))]),
+(src: "{{{ fun(|a| { {a} }) }}}", exp: [(Safe((false, false), ("fun(|a| {{a}})", (lo:4, hi:20))), (lo:0, hi:24))])
+]

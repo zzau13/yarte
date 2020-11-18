@@ -37,14 +37,14 @@ impl<'a> Kinder<'a> for MyKind<'a> {
     const OPEN_BLOCK: Ascii = ascii!('{');
     const CLOSE_BLOCK: Ascii = ascii!('}');
     const WS: Ascii = ascii!('~');
-    const WS_AFTER: bool = false;
+    const WS_AFTER: bool = true;
 
     fn parse(i: Cursor<'a>) -> PResult<Self, Self::Error> {
         const PARTIAL: Ascii = ascii!('>');
         let (i, partial) = do_parse!(i,
-            tac(PARTIAL) >>
-            ws() >>
-            p: take_while(|x| !is_ws(x)) >>
+            tac[PARTIAL]                    =>
+            ws                              =>
+            p: take_while[|x| !is_ws(x)]    =>
             (p)
         )?;
         Ok((i, MyKind::Partial(partial)))
