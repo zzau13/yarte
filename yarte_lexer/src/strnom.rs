@@ -257,11 +257,11 @@ macro_rules! do_parse {
     };
 
     ($i:expr, $fun:path => $($rest:tt)+) => {
-        do_parse!($i, $fun[] => $($rest)+)
+        do_parse!($i, $fun[]  => $($rest)+)
     };
 
-    ($i:expr, $field:ident: $fun:path => $($rest:tt)+) => {
-        do_parse!($i, $field: $fun[] => $($rest)+)
+    ($i:expr, $field:ident: $fun:path $(:$pipe:path)* => $($rest:tt)+) => {
+        do_parse!($i, $field: $fun[] $(:$pipe)* => $($rest)+)
     };
     ($i:expr, $fun:path [ $($args:tt)* ]$(:$pipe:path)*  => $($rest:tt)+) => {
         match $crate::pipes!($i, $fun[$($args)*]$(:$pipe)*) {
@@ -325,6 +325,40 @@ pub fn opt<'a, E: KiError, O>(i: Cursor<'a>, next: PResult<'a, O, E>) -> PResult
     match next {
         Ok((i, o)) => Ok((i, Some(o))),
         Err(_) => Ok((i, None)),
+    }
+}
+
+pub trait IsEmpty {
+    fn is_empty(&self) -> bool;
+}
+
+macro_rules! impl_is_empty {
+    ($($ty:ty)+) => {
+        $(
+        impl IsEmpty for $ty {
+            fn is_empty(&self) -> bool {
+                self.is_empty()
+            }
+        }
+        )+
+    };
+}
+
+impl_is_empty!(String str);
+impl<T> IsEmpty for Vec<T> {
+    fn is_empty(&self) -> bool {
+        self.is_empty()
+    }
+}
+
+#[inline]
+pub fn is_empty<'a, E: KiError, O: IsEmpty>(
+    _: Cursor<'a>,
+    next: PResult<'a, O, E>,
+) -> PResult<'a, bool, E> {
+    match next {
+        Ok((i, o)) => Ok((i, o.is_empty())),
+        Err(e) => Err(e),
     }
 }
 
