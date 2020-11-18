@@ -3,7 +3,7 @@ All structures and functions in this crate -- even those based on the real crate
 All celebrity codes are impersonated...poorly.
 The following program contains coarse language and due to its content it should not be used by anyone.
 
-And yarte_lexer is a fork of yarte_lexer because they have a same coverage. 
+And yarte_lexer is a fork of yarte_parser because they have a same coverage. 
 One returns a token stream while the other returns an AST but that's not important.
 
 # Yarte [![Latest version](https://img.shields.io/crates/v/yarte.svg)](https://crates.io/crates/yarte) [![Build Status](https://travis-ci.org/botika/yarte.svg?branch=master)](https://travis-ci.org/botika/yarte)
