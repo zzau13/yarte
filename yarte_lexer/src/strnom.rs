@@ -251,17 +251,24 @@ pub fn get_bytes_to_chars(text: &str, left: usize, right: usize) -> (usize, usiz
 
 #[macro_export]
 macro_rules! do_parse {
-    ($i:expr, ( $($rest:expr),* )) => {
-        Ok(($i, ( $($rest),* )))
+    ($i:expr, ( $($rest:tt)* )) => {
+        Ok(($i, ( $($rest)* )))
     };
 
-    ($i:expr, $fun:ident( $($args:tt)* ) >> $($rest:tt)*) => {
+    ($i:expr, $fun:path => $($rest:tt)*) => {
+        do_parse!($i, $fun[] => $($rest)*)
+    };
+
+    ($i:expr, $field:ident: $fun:path => $($rest:tt)*) => {
+        do_parse!($i, $field: $fun[] => $($rest)*)
+    };
+    ($i:expr, $fun:path [ $($args:tt)* ]  => $($rest:tt)*) => {
         match $crate::call!($i, $fun, $($args)*) {
             Err(e) => Err(e),
-            Ok((i, o)) => do_parse!(i, $($rest)*),
+            Ok((i, _)) => do_parse!(i, $($rest)*),
         }
     };
-    ($i:expr, $field:ident : $fun:ident( $($args:tt)* ) >> $($rest:tt)*) => {
+    ($i:expr, $field:ident : $fun:path [ $($args:tt)* ] => $($rest:tt)*) => {
         match $crate::call!($i, $fun, $($args)*) {
             Err(e) => Err(e),
             Ok((i, o)) => {
@@ -271,13 +278,13 @@ macro_rules! do_parse {
         }
     };
 
-    ($i:expr, $e:path| $($arg:tt)*  >> $($rest:tt)*) => {
+    ($i:expr, $e:path| $($arg:tt)*  => $($rest:tt)*) => {
         match $e!($i, $($arg)*) {
             Err(e) => Err(e),
             Ok((i, _)) => do_parse!(i, $($rest)*),
         }
     };
-    ($i:expr, $field:ident : $e:path| $($args:tt)*  >> $($rest:tt)*) => {
+    ($i:expr, $field:ident : $e:path| $($args:tt)*  => $($rest:tt)*) => {
         match $e!($i, $($args)*) {
             Err(e) => Err(e),
             Ok((i, o)) => {

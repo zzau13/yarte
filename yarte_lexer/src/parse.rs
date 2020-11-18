@@ -177,8 +177,65 @@ fn eat_block<'a, K: Ki<'a>>(_i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::
     Err(next!(K::Error))
 }
 
-fn safe<'a, K: Ki<'a>>(_i: Cursor<'a>) -> PResult<Token<'a, K>, K::Error> {
-    Err(next!(K::Error))
+#[inline]
+fn end_safe_after<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<(Cursor, bool), K::Error> {
+    let ws_end = &[K::WS, K::CLOSE_EXPR, K::CLOSE];
+    let end = &[K::CLOSE_EXPR, K::CLOSE];
+
+    let mut at = 0;
+
+    loop {
+        if let Some(j) = i.adv_find(at, K::CLOSE_EXPR) {
+            if 0 < at + j && i.adv_starts_with(at + j - 1, ws_end) {
+                let next = i.adv(at + j - 1 + ws_end.len());
+                let cur = Cursor {
+                    rest: &i.rest[..at + j - 2],
+                    off: i.off,
+                };
+                break Ok((next, (cur, true)));
+            } else if i.adv_starts_with(at + j, end) {
+                let next = i.adv(at + j + 1 + end.len());
+                let cur = Cursor {
+                    rest: &i.rest[..at + j],
+                    off: i.off,
+                };
+                break Ok((next, (cur, false)));
+            }
+
+            at += j + 1;
+        } else {
+            break Err(LexError::Next(
+                K::Error::UNCOMPLETED,
+                Span::from_cursor(i, i.adv(at)),
+            ));
+        }
+    }
+}
+
+fn safe<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<Token<'a, K>, K::Error> {
+    let (c, (i, ws)) = if K::WS_AFTER {
+        let (i, lws) = match tac::<K::Error>(i, K::WS) {
+            Ok((c, _)) => (c, true),
+            Err(_) => (i, false),
+        };
+        let (i, _) = tac(i, K::OPEN_EXPR)?;
+        end_safe_after::<K>(i).map(|(c, (i, rws))| (c, (i, (lws, rws))))?
+    } else {
+        unimplemented!()
+    };
+
+    let (l, s, _) = trim(i.rest);
+    let init = i.off + l.len() as u32;
+    let expr = eat_expression(s)
+        .map(|e| S(e, Span::new(init, init + s.len() as u32)))
+        .map_err(|e| {
+            LexError::Fail(
+                K::Error::expr(e.message),
+                Span::new(init + e.span.0, init + e.span.1),
+            )
+        })?;
+
+    Ok((c, Token::Safe(ws, expr)))
 }
 
 /// Intermediate error representation
@@ -237,6 +294,13 @@ fn eat_local(i: &str) -> Result<Box<crate::Local>, MiddleError> {
 pub(crate) fn eat_expr_list(i: &str) -> Result<Vec<crate::Expr>, MiddleError> {
     parse_str::<ExprList>(i)
         .map(Into::into)
+        .map_err(|e| MiddleError::new(i, e))
+}
+
+/// Parse syn expression comma separated list
+pub(crate) fn eat_expression(i: &str) -> Result<Box<crate::Expr>, MiddleError> {
+    parse_str::<crate::Expr>(i)
+        .map(Box::new)
         .map_err(|e| MiddleError::new(i, e))
 }
 
