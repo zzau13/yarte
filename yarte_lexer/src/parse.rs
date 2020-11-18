@@ -5,8 +5,8 @@ use syn::parse_str;
 use crate::error::{ErrorMessage, KiError, LexError, PResult};
 use crate::expr_list::ExprList;
 use crate::source_map::{Span, S};
-use crate::strnom::{is_ws, Cursor};
-use crate::{get_chars, tac, take_while, Kinder, SToken, StmtLocal, Token};
+use crate::strnom::{get_chars, is_some, is_ws, opt, tac, take_while, Cursor};
+use crate::{Kinder, SToken, StmtLocal, Token};
 
 pub trait Ki<'a>: Kinder<'a> + Debug + PartialEq + Clone {}
 
@@ -215,12 +215,12 @@ fn end_safe_after<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<(Cursor, bool), K::Er
 #[inline]
 fn safe<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<Token<'a, K>, K::Error> {
     let (c, (i, ws)) = if K::WS_AFTER {
-        let (i, lws) = match tac::<K::Error>(i, K::WS) {
-            Ok((c, _)) => (c, true),
-            Err(_) => (i, false),
-        };
-        let (i, _) = tac(i, K::OPEN_EXPR)?;
-        end_safe_after::<K>(i).map(|(c, (i, rws))| (c, (i, (lws, rws))))?
+        do_parse!(i,
+            lws: tac[K::WS]:opt:is_some =>
+            tac[K::OPEN_EXPR] =>
+            end: end_safe_after::<K> =>
+            ((end.0, (lws, end.1)))
+        )?
     } else {
         unimplemented!()
     };
