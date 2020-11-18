@@ -6,7 +6,7 @@ use crate::error::{ErrorMessage, KiError, LexError, PResult};
 use crate::expr_list::ExprList;
 use crate::source_map::{Span, S};
 use crate::strnom::{is_ws, Cursor};
-use crate::{get_chars, take_while, Kinder, SToken, StmtLocal, Token};
+use crate::{get_chars, tac, take_while, Kinder, SToken, StmtLocal, Token};
 
 pub trait Ki<'a>: Kinder<'a> + Debug + PartialEq + Clone {}
 
@@ -68,10 +68,7 @@ fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SToken<'a, K>>, K::Error
                     ($f:expr, $next:ident, $is_expr:literal) => {
                         if let Ok((c, inner)) = end::<K>($next, $is_expr) {
                             eat_lit(i, at + j, &mut nodes);
-                            nodes.push(
-                                $f(inner, c.off - 2)
-                                    .map(|x| S(x, Span::new($next.off - 2, c.off)))?,
-                            );
+                            nodes.push($f(inner).map(|x| S(x, Span::new($next.off - 2, c.off)))?);
                             at = 0;
                             i = c;
                         } else {
@@ -81,8 +78,8 @@ fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SToken<'a, K>>, K::Error
                 }
                 let next = n[0];
                 if K::OPEN_BLOCK == K::OPEN_EXPR && next == K::OPEN_EXPR.g() {
-                    let inner = |inner, len| {
-                        eat_expr::<K>(inner, len).or_else(|pe| {
+                    let inner = |inner| {
+                        eat_expr::<K>(inner).or_else(|pe| {
                             eat_block::<K>(inner).map_err(|e| match e {
                                 LexError::Next(..) => pe,
                                 e => e,
@@ -100,7 +97,7 @@ fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SToken<'a, K>>, K::Error
                 } else if next == K::OPEN_BLOCK.g() {
                     let next = i.adv(at + j + 2);
                     comment!(K, i.adv(at + j + 2), i, at, j, nodes);
-                    inner!(|inner, _| eat_block::<K>(inner), next, false);
+                    inner!(eat_block::<K>, next, false);
                 } else {
                     at += j + 1;
                 }
@@ -132,21 +129,21 @@ fn eat_lit<'a, K: Ki<'a>>(i: Cursor<'a>, len: usize, nodes: &mut Vec<SToken<'a, 
 }
 
 // TODO: whitespace
-// TODO: Kind
 // TODO: local
 // TODO: Arm
 // TODO: Safe
 // TODO: more todo
-fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>, end: u32) -> Result<Token<'a, K>, LexError<K::Error>> {
+fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Error>> {
+    let (i, ws) = eat_ws::<K>(i)?;
     let (i, _kind) = match K::parse(i) {
         Ok((c, kind)) => (c, Some(kind)),
         Err(LexError::Next(..)) => (i, None),
         Err(e @ LexError::Fail(..)) => return Err(e),
     };
-    let (l, s, r) = trim(i.rest);
+    let (l, s, _) = trim(i.rest);
     let init = i.off + l.len() as u32;
     let expr = eat_expr_list(s)
-        .map(|e| S(e, Span::new(init, end - r.len() as u32)))
+        .map(|e| S(e, Span::new(init, init + s.len() as u32)))
         .map_err(|e| {
             LexError::Fail(
                 K::Error::expr(e.message),
@@ -155,10 +152,27 @@ fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>, end: u32) -> Result<Token<'a, K>, LexE
         })?;
 
     if let Some(kind) = _kind {
-        Ok(Token::ExprKind((false, false), kind, expr))
+        Ok(Token::ExprKind(ws, kind, expr))
     } else {
-        Ok(Token::Expr((false, false), expr))
+        Ok(Token::Expr(ws, expr))
     }
+}
+
+fn eat_ws<'a, K: Ki<'a>>(i: Cursor) -> PResult<(bool, bool), K::Error> {
+    if i.len() < 3 {
+        return Err(LexError::Next(K::Error::WHITESPACE, Span::from(i)));
+    }
+
+    let (i, lws) = match tac::<K::Error>(i, K::WS) {
+        Ok((c, _)) => (c, true),
+        _ => (i, false),
+    };
+    let (rest, rws) = match tac::<K::Error>(i.adv(i.len() - 1), K::WS) {
+        Ok(_) => (&i.rest[..i.len() - 1], true),
+        _ => (i.rest, false),
+    };
+
+    Ok((Cursor { rest, off: i.off }, (lws, rws)))
 }
 
 fn eat_block<'a, K: Ki<'a>>(_i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Error>> {
