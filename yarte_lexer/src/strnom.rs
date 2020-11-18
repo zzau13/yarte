@@ -100,7 +100,7 @@ impl<'a> Cursor<'a> {
 
 #[inline]
 fn find_ascii(rest: &[u8], p: Ascii) -> Option<usize> {
-    rest.iter().copied().position(|x| x == p.g())
+    memchr::memchr(p.g(), rest)
 }
 
 #[inline]
