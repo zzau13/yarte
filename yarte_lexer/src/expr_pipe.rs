@@ -5,6 +5,8 @@ use syn::{
 };
 
 // TODO
+// TODO: Add pipes in compile time evaluator
+// TODO: Pipes like tensors for avoid multiple reallocation
 pub(super) struct ExprPipe {
     list: Punctuated<Expr, Token![=>]>,
 }
