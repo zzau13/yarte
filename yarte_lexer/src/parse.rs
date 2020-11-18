@@ -212,6 +212,7 @@ fn end_safe_after<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<(Cursor, bool), K::Er
     }
 }
 
+#[inline]
 fn safe<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<Token<'a, K>, K::Error> {
     let (c, (i, ws)) = if K::WS_AFTER {
         let (i, lws) = match tac::<K::Error>(i, K::WS) {
