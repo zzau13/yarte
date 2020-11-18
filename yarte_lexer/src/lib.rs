@@ -146,8 +146,6 @@ pub fn multi_pat_with_leading_vert(input: ParseStream) -> syn::Result<Pat> {
     multi_pat_impl(input, leading_vert)
 }
 
-// TODO: Pipes with |> or @ or another no rust token
-// TODO: Pipes like tensors for avoid multiple reallocation
 fn multi_pat_impl(input: ParseStream, leading_vert: Option<Token![|]>) -> syn::Result<Pat> {
     let mut pat: Pat = input.parse()?;
     if leading_vert.is_some()
