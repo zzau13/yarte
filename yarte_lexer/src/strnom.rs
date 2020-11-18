@@ -363,7 +363,7 @@ pub fn is_empty<'a, E: KiError, O: IsEmpty>(
 }
 
 #[inline]
-pub fn fail<'a, E: KiError, O>(_: Cursor<'a>, next: PResult<'a, O, E>) -> PResult<'a, O, E> {
+pub fn important<'a, E: KiError, O>(_: Cursor<'a>, next: PResult<'a, O, E>) -> PResult<'a, O, E> {
     match next {
         Ok(o) => Ok(o),
         Err(LexError::Next(m, s)) => Err(LexError::Fail(m, s)),
