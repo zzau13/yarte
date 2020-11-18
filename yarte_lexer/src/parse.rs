@@ -128,14 +128,13 @@ fn eat_lit<'a, K: Ki<'a>>(i: Cursor<'a>, len: usize, nodes: &mut Vec<SToken<'a, 
     }
 }
 
-// TODO: whitespace
 // TODO: local
 // TODO: Arm
 // TODO: Safe
 // TODO: more todo
 fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Error>> {
     let (i, ws) = eat_ws::<K>(i)?;
-    let (i, _kind) = match K::parse(i) {
+    let (i, kind) = match K::parse(i) {
         Ok((c, kind)) => (c, Some(kind)),
         Err(LexError::Next(..)) => (i, None),
         Err(e @ LexError::Fail(..)) => return Err(e),
@@ -151,7 +150,7 @@ fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Er
             )
         })?;
 
-    if let Some(kind) = _kind {
+    if let Some(kind) = kind {
         Ok(Token::ExprKind(ws, kind, expr))
     } else {
         Ok(Token::Expr(ws, expr))
@@ -159,14 +158,13 @@ fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Er
 }
 
 fn eat_ws<'a, K: Ki<'a>>(i: Cursor) -> PResult<(bool, bool), K::Error> {
-    if i.len() < 3 {
-        return Err(LexError::Next(K::Error::WHITESPACE, Span::from(i)));
-    }
-
     let (i, lws) = match tac::<K::Error>(i, K::WS) {
         Ok((c, _)) => (c, true),
         _ => (i, false),
     };
+    if i.is_empty() {
+        return Err(LexError::Next(K::Error::WHITESPACE, Span::from(i)));
+    }
     let (rest, rws) = match tac::<K::Error>(i.adv(i.len() - 1), K::WS) {
         Ok(_) => (&i.rest[..i.len() - 1], true),
         _ => (i.rest, false),
