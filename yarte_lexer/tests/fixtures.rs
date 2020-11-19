@@ -6,8 +6,8 @@ use serde::Deserialize;
 
 use std::error::Error;
 use yarte_lexer::{
-    ascii, asciis, do_parse, is_empty, not_true, parse, path, tac, ws, Ascii, Cursor, Ki, KiError,
-    Kinder, LexError, PResult, SToken, Span,
+    alt, ascii, asciis, do_parse, is_empty, not_true, parse, path, tac, tag, ws, Ascii, Cursor, Ki,
+    KiError, Kinder, LexError, PResult, SToken, Span,
 };
 
 #[derive(Debug, Deserialize)]
@@ -75,20 +75,34 @@ impl<'a> Kinder<'a> for MyKind<'a> {
     const WS_AFTER: bool = false;
 
     fn parse(i: Cursor<'a>) -> PResult<Self, Self::Error> {
-        const PARTIAL: Ascii = ascii!('>');
-        let (i, partial) = do_parse!(i,
-            tac[PARTIAL]            =>
-            ws:is_empty:not_true    =>
-            p= path                 =>
-            ws:is_empty:not_true    =>
-            (p)
-        )?;
-        Ok((i, MyKind::Partial(partial)))
+        alt!(i, some | partial)
     }
 
     fn comment(i: Cursor<'a>) -> PResult<&'a str, Self::Error> {
         comment::<Self>(i)
     }
+}
+
+fn partial(i: Cursor) -> PResult<MyKind, MyError> {
+    const PARTIAL: Ascii = ascii!('>');
+    let (i, partial) = do_parse!(i,
+        tac[PARTIAL]            =>
+        ws:is_empty:not_true    =>
+        p= path                 =>
+        ws:is_empty:not_true    =>
+        (p)
+    )?;
+    Ok((i, MyKind::Partial(partial)))
+}
+
+fn some(i: Cursor) -> PResult<MyKind, MyError> {
+    const SOME: &[Ascii] = asciis!("some");
+    let (i, _) = do_parse!(i,
+        tag[SOME]            =>
+        ws:is_empty:not_true    =>
+        ()
+    )?;
+    Ok((i, MyKind::Some))
 }
 
 fn comment<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<&'a str, K::Error> {
