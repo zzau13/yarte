@@ -263,16 +263,16 @@ fn end_safe<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<(Cursor, bool), K::Error> {
 fn safe<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<Token<'a, K>, K::Error> {
     let (c, (i, ws)) = if K::WS_AFTER {
         do_parse!(i,
-            lws: tac[K::WS]:opt:is_some =>
+            lws= tac[K::WS]:opt:is_some =>
             tac[K::OPEN_EXPR]           =>
-            end: end_safe_after::<K>    =>
+            end= end_safe_after::<K>    =>
             ((end.0, (lws, end.1)))
         )?
     } else {
         do_parse!(i,
             tac[K::OPEN_EXPR]           =>
-            lws: tac[K::WS]:opt:is_some =>
-            end: end_safe::<K>          =>
+            lws= tac[K::WS]:opt:is_some =>
+            end= end_safe::<K>          =>
             ((end.0, (lws, end.1)))
         )?
     };

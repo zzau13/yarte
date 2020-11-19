@@ -274,12 +274,12 @@ macro_rules! do_parse {
         Ok(($i, ( $($rest)* )))
     };
 
-    ($i:expr, $fun:path => $($rest:tt)+) => {
-        do_parse!($i, $fun[]  => $($rest)+)
+    ($i:expr, $fun:path $(:$pipe:path)* => $($rest:tt)+) => {
+        do_parse!($i, $fun[] $(:$pipe)* => $($rest)+)
     };
 
-    ($i:expr, $field:ident: $fun:path $(:$pipe:path)* => $($rest:tt)+) => {
-        do_parse!($i, $field: $fun[] $(:$pipe)* => $($rest)+)
+    ($i:expr, $field:ident = $fun:path $(:$pipe:path)* => $($rest:tt)+) => {
+        do_parse!($i, $field = $fun[] $(:$pipe)* => $($rest)+)
     };
     ($i:expr, $fun:path [ $($args:tt)* ]$(:$pipe:path)*  => $($rest:tt)+) => {
         match $crate::pipes!($i, $fun[$($args)*]$(:$pipe)*) {
@@ -287,7 +287,7 @@ macro_rules! do_parse {
             Ok((i, _)) => do_parse!(i, $($rest)+),
         }
     };
-    ($i:expr, $field:ident : $fun:path [ $($args:tt)* ]$(:$pipe:path)* => $($rest:tt)+) => {{
+    ($i:expr, $field:ident = $fun:path [ $($args:tt)* ]$(:$pipe:path)* => $($rest:tt)+) => {{
         match $crate::pipes!($i, $fun[$($args)*]$(:$pipe)*) {
             Err(e) => Err(e),
             Ok((i, o)) => {

@@ -43,8 +43,8 @@ impl<'a> Kinder<'a> for MyKindAfter<'a> {
         const PARTIAL: Ascii = ascii!('>');
         let (i, partial) = do_parse!(i,
             tac[PARTIAL]                    =>
-            ws[]:is_empty:not_true          =>
-            p: take_while[|x| !is_ws(x)]    =>
+            ws:is_empty:not_true            =>
+            p= take_while[|x| !is_ws(x)]    =>
             (p)
         )?;
         Ok((i, MyKindAfter::Partial(partial)))
@@ -77,8 +77,8 @@ impl<'a> Kinder<'a> for MyKind<'a> {
         const PARTIAL: Ascii = ascii!('>');
         let (i, partial) = do_parse!(i,
             tac[PARTIAL]                    =>
-            ws                              =>
-            p: take_while[|x| !is_ws(x)]    =>
+            ws:is_empty:not_true            =>
+            p= take_while[|x| !is_ws(x)]    =>
             (p)
         )?;
         Ok((i, MyKind::Partial(partial)))
