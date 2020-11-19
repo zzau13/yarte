@@ -350,24 +350,19 @@ pub fn opt<'a, E: KiError, O>(i: Cursor<'a>, next: PResult<'a, O, E>) -> PResult
 }
 
 pub trait IsEmpty {
-    fn is_empty(&self) -> bool;
+    fn is_empty_(&self) -> bool;
 }
 
-macro_rules! impl_is_empty {
-    ($($ty:ty)+) => {
-        $(
-        impl IsEmpty for $ty {
-            fn is_empty(&self) -> bool {
-                self.is_empty()
-            }
-        }
-        )+
-    };
+impl IsEmpty for &str {
+    #[inline]
+    fn is_empty_(&self) -> bool {
+        self.is_empty()
+    }
 }
 
-impl_is_empty!(String str);
 impl<T> IsEmpty for Vec<T> {
-    fn is_empty(&self) -> bool {
+    #[inline]
+    fn is_empty_(&self) -> bool {
         self.is_empty()
     }
 }
@@ -379,7 +374,7 @@ pub fn is_empty<'a, E: KiError, O: IsEmpty>(
     next: PResult<'a, O, E>,
 ) -> PResult<'a, bool, E> {
     match next {
-        Ok((i, o)) => Ok((i, o.is_empty())),
+        Ok((i, o)) => Ok((i, o.is_empty_())),
         Err(e) => Err(e),
     }
 }
@@ -390,6 +385,7 @@ pub trait NotTrue {
 }
 
 impl NotTrue for bool {
+    #[inline]
     fn not_true(&self) -> bool {
         !*self
     }
@@ -414,6 +410,7 @@ pub trait NotFalse {
 }
 
 impl NotFalse for bool {
+    #[inline]
     fn not_false(&self) -> bool {
         *self
     }
@@ -497,11 +494,11 @@ pub fn next_ws<E: KiError>(i: Cursor) -> PResult<(), E> {
 
 /// Take ascii whitespaces, next error if is empty
 #[inline]
-pub fn ws<E: KiError>(i: Cursor) -> PResult<(), E> {
+pub fn ws<E: KiError>(i: Cursor) -> PResult<&str, E> {
     if i.is_empty() {
         return Err(LexError::Next(E::WHITESPACE, Span::from(i)));
     }
-    take_while(i, is_ws).map(|(c, _)| (c, ()))
+    take_while(i, is_ws)
 }
 
 #[inline]
