@@ -197,6 +197,7 @@ fn eat_ws<'a, K: Ki<'a>>(i: Cursor) -> PResult<(bool, bool), K::Error> {
     Ok((Cursor { rest, off: i.off }, (lws, rws)))
 }
 
+// TODO
 fn eat_block<'a, K: Ki<'a>>(_i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Error>> {
     Err(next!(K::Error))
 }
