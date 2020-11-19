@@ -6,8 +6,8 @@ use serde::Deserialize;
 
 use std::error::Error;
 use yarte_lexer::{
-    ascii, asciis, do_parse, is_empty, is_ws, not_true, parse, tac, take_while, ws, Ascii, Cursor,
-    Ki, KiError, Kinder, LexError, PResult, SToken, Span,
+    ascii, asciis, do_parse, is_empty, not_true, parse, path, tac, ws, Ascii, Cursor, Ki, KiError,
+    Kinder, LexError, PResult, SToken, Span,
 };
 
 #[derive(Debug, Deserialize)]
@@ -42,9 +42,9 @@ impl<'a> Kinder<'a> for MyKindAfter<'a> {
     fn parse(i: Cursor<'a>) -> PResult<Self, Self::Error> {
         const PARTIAL: Ascii = ascii!('>');
         let (i, partial) = do_parse!(i,
-            tac[PARTIAL]                    =>
-            ws:is_empty:not_true            =>
-            p= take_while[|x| !is_ws(x)]    =>
+            tac[PARTIAL]            =>
+            ws:is_empty:not_true    =>
+            p= path                 =>
             (p)
         )?;
         Ok((i, MyKindAfter::Partial(partial)))
@@ -76,9 +76,9 @@ impl<'a> Kinder<'a> for MyKind<'a> {
     fn parse(i: Cursor<'a>) -> PResult<Self, Self::Error> {
         const PARTIAL: Ascii = ascii!('>');
         let (i, partial) = do_parse!(i,
-            tac[PARTIAL]                    =>
-            ws:is_empty:not_true            =>
-            p= take_while[|x| !is_ws(x)]    =>
+            tac[PARTIAL]            =>
+            ws:is_empty:not_true    =>
+            p= path                 =>
             (p)
         )?;
         Ok((i, MyKind::Partial(partial)))
