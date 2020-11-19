@@ -248,7 +248,7 @@ fn safe<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<Token<'a, K>, K::Error> {
         do_parse!(i,
             tac[K::OPEN_EXPR]           =>
             lws: tac[K::WS]:opt:is_some =>
-            end: end_safe::<K>    =>
+            end: end_safe::<K>          =>
             ((end.0, (lws, end.1)))
         )?
     };
