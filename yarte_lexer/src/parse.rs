@@ -131,7 +131,6 @@ fn eat_lit<'a, K: Ki<'a>>(i: Cursor<'a>, len: usize, nodes: &mut Vec<SToken<'a, 
     }
 }
 
-// TODO: more todo
 fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Error>> {
     const LET: &[Ascii] = unsafe { unsafe_asciis!("let ") };
 
@@ -196,9 +195,29 @@ fn eat_ws<'a, K: Ki<'a>>(i: Cursor) -> PResult<(bool, bool), K::Error> {
     Ok((Cursor { rest, off: i.off }, (lws, rws)))
 }
 
-// TODO
-fn eat_block<'a, K: Ki<'a>>(_i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Error>> {
-    Err(next!(K::Error))
+fn eat_block<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Error>> {
+    let (i, gws) = eat_ws::<K>(i)?;
+    let (i, kind) = match K::parse(i) {
+        Ok((c, kind)) => (c, Some(kind)),
+        Err(LexError::Next(..)) => (i, None),
+        Err(e @ LexError::Fail(..)) => return Err(e),
+    };
+    let (l, s, _) = trim(i.rest);
+    let init = i.off + l.len() as u32;
+    let expr = eat_expr_list(s)
+        .map(|e| S(e, Span::new(init, init + s.len() as u32)))
+        .map_err(|e| {
+            LexError::Fail(
+                K::Error::expr(e.message),
+                Span::new(init + e.span.0, init + e.span.1),
+            )
+        })?;
+
+    if let Some(kind) = kind {
+        Ok(Token::BlockKind(gws, kind, expr))
+    } else {
+        Ok(Token::Block(gws, expr))
+    }
 }
 
 #[inline]
