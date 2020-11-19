@@ -6,8 +6,8 @@ use serde::Deserialize;
 
 use std::error::Error;
 use yarte_lexer::{
-    ascii, asciis, do_parse, is_ws, parse, tac, take_while, ws, Ascii, Cursor, Ki, KiError, Kinder,
-    LexError, PResult, SToken, Span,
+    ascii, asciis, do_parse, is_empty, is_ws, not_true, parse, tac, take_while, ws, Ascii, Cursor,
+    Ki, KiError, Kinder, LexError, PResult, SToken, Span,
 };
 
 #[derive(Debug, Deserialize)]
@@ -43,7 +43,7 @@ impl<'a> Kinder<'a> for MyKindAfter<'a> {
         const PARTIAL: Ascii = ascii!('>');
         let (i, partial) = do_parse!(i,
             tac[PARTIAL]                    =>
-            ws                              =>
+            ws[]:is_empty:not_true          =>
             p: take_while[|x| !is_ws(x)]    =>
             (p)
         )?;

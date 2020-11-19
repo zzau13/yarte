@@ -131,7 +131,6 @@ fn eat_lit<'a, K: Ki<'a>>(i: Cursor<'a>, len: usize, nodes: &mut Vec<SToken<'a, 
     }
 }
 
-// TODO: Arm
 // TODO: more todo
 fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Error>> {
     const LET: &[Ascii] = unsafe { unsafe_asciis!("let ") };
