@@ -17,8 +17,14 @@ impl<'a> Cursor<'a> {
     ///
     /// # Safety
     /// Use get_cursor function instead for registered cursor
+    #[inline]
     pub unsafe fn new(rest: &str, off: u32) -> Cursor {
         Cursor { rest, off }
+    }
+
+    #[inline]
+    pub(crate) fn _new(rest: &str, off: u32) -> Cursor {
+        unsafe { Self::new(rest, off) }
     }
 
     #[inline]

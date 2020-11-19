@@ -22,13 +22,13 @@ struct Fixture<'a, Kind: Ki<'a>> {
 struct FixturePanic<'a>(#[serde(borrow)] &'a str);
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
-enum MyKind<'a> {
+enum MyKindAfter<'a> {
     Partial(&'a str),
     Some,
     Str(&'a str),
 }
 
-impl<'a> Kinder<'a> for MyKind<'a> {
+impl<'a> Kinder<'a> for MyKindAfter<'a> {
     type Error = MyError;
     const OPEN: Ascii = ascii!('{');
     const CLOSE: Ascii = ascii!('}');
@@ -47,31 +47,72 @@ impl<'a> Kinder<'a> for MyKind<'a> {
             p: take_while[|x| !is_ws(x)]    =>
             (p)
         )?;
+        Ok((i, MyKindAfter::Partial(partial)))
+    }
+
+    fn comment(i: Cursor<'a>) -> PResult<&'a str, Self::Error> {
+        comment::<Self>(i)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+enum MyKind<'a> {
+    Partial(&'a str),
+    Some,
+    Str(&'a str),
+}
+
+impl<'a> Kinder<'a> for MyKind<'a> {
+    type Error = MyError;
+    const OPEN: Ascii = ascii!('{');
+    const CLOSE: Ascii = ascii!('}');
+    const OPEN_EXPR: Ascii = ascii!('{');
+    const CLOSE_EXPR: Ascii = ascii!('}');
+    const OPEN_BLOCK: Ascii = ascii!('{');
+    const CLOSE_BLOCK: Ascii = ascii!('}');
+    const WS: Ascii = ascii!('~');
+    const WS_AFTER: bool = false;
+
+    fn parse(i: Cursor<'a>) -> PResult<Self, Self::Error> {
+        const PARTIAL: Ascii = ascii!('>');
+        let (i, partial) = do_parse!(i,
+            tac[PARTIAL]                    =>
+            ws                              =>
+            p: take_while[|x| !is_ws(x)]    =>
+            (p)
+        )?;
         Ok((i, MyKind::Partial(partial)))
     }
 
     fn comment(i: Cursor<'a>) -> PResult<&'a str, Self::Error> {
-        const E: Ascii = ascii!('!');
-        const B: &[Ascii] = asciis!("--");
-        const END_B: &[Ascii] = asciis!("--}}");
-        const END_A: &[Ascii] = asciis!("}}");
+        comment::<Self>(i)
+    }
+}
 
-        let (c, _) = tac(i, E)?;
-        let (c, expected) = if c.starts_with(B) {
-            (c.adv_ascii(B), END_B)
+fn comment<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<&'a str, K::Error> {
+    const E: Ascii = ascii!('!');
+    const B: &[Ascii] = asciis!("--");
+    const END_B: &[Ascii] = asciis!("--}}");
+    const END_A: &[Ascii] = asciis!("}}");
+
+    let (c, _) = tac(i, E)?;
+    let (c, expected) = if c.starts_with(B) {
+        (c.adv_ascii(B), END_B)
+    } else {
+        (c, END_A)
+    };
+
+    let mut at = 0;
+    loop {
+        if c.adv_starts_with(at, expected) {
+            break Ok((c.adv(at + expected.len()), &c.rest[..at]));
         } else {
-            (c, END_A)
-        };
-
-        let mut at = 0;
-        loop {
-            if c.adv_starts_with(at, expected) {
-                break Ok((c.adv(at + expected.len()), &c.rest[..at]));
-            } else {
-                at += 1;
-                if at >= c.len() {
-                    break Err(LexError::Next(MyError::Some, Span::from_cursor(i, c)));
-                }
+            at += 1;
+            if at >= c.len() {
+                break Err(LexError::Next(
+                    K::Error::COMMENTARY,
+                    Span::from_cursor(i, c),
+                ));
             }
         }
     }
@@ -113,23 +154,38 @@ impl KiError for MyError {
     }
 }
 
-#[test]
-fn test() {
-    const _A: Ascii = ascii!('-');
-    for entry in glob("./tests/fixtures/features/**/*.ron").expect("Failed to read glob pattern") {
-        let name = entry.expect("File name");
-        let src = read_to_string(name).expect("Valid file");
-        let fixtures: Vec<Fixture<'_, MyKind>> = ron::from_str(&src)
-            .map_err(|e| eprintln!("{:?}", e))
-            .expect("Valid Fixtures");
+macro_rules! features {
+    ($name:ident: $path:literal $kind:ty) => {
+        #[test]
+        fn $name() {
+            for entry in glob($path).expect("Failed to read glob pattern") {
+                let name = entry.expect("File name");
+                eprintln!("\n{:?}\n", name);
+                let src = read_to_string(name).expect("Valid file");
+                let fixtures: Vec<Fixture<'_, $kind>> =
+                    ron::from_str(&src).expect("Valid Fixtures");
 
-        for Fixture { src, exp } in fixtures {
-            let res = parse::<MyKind>(unsafe { Cursor::new(src, 0) }).expect("Valid parse");
-            eprintln!("BASE {:?} \nEXPR {:?}", exp, res);
-            assert_eq!(res, exp);
+                for (i, Fixture { src, exp }) in fixtures.into_iter().enumerate() {
+                    let res = parse::<$kind>(unsafe { Cursor::new(src, 0) }).expect("Valid parse");
+                    eprintln!("{:2}:\nBASE {:?} \nEXPR {:?}", i, exp, res);
+                    assert_eq!(res, exp);
+                }
+            }
         }
-    }
+    };
+    ($name:ident: $path:literal $kind:ty, $($t:tt)*) => {
+        features!($name: $path $kind);
+        features!($($t)*);
+    };
+    () => {}
 }
+
+features!(
+    test_after_same_features: "./tests/fixtures/features/**/*.ron" MyKindAfter,
+    test_after_same_features_a: "./tests/fixtures/features_a/**/*.ron" MyKindAfter,
+    test_same_features: "./tests/fixtures/features/**/*.ron" MyKind,
+    test_same_features_b: "./tests/fixtures/features_b/**/*.ron" MyKind,
+);
 
 #[test]
 fn test_panic() {
