@@ -4,6 +4,7 @@ use syn::parse_str;
 
 use gencode::unsafe_asciis;
 
+use crate::arm::Arm;
 use crate::error::{ErrorMessage, KiError, LexError, PResult};
 use crate::expr_list::ExprList;
 use crate::source_map::{Span, S};
@@ -155,6 +156,14 @@ fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Er
         };
         let (l, s, _) = trim(i.rest);
         let init = i.off + l.len() as u32;
+        if let Ok(arm) = eat_arm(s) {
+            let arm = S(arm, Span::new(init, init + s.len() as u32));
+            return if let Some(kind) = kind {
+                Ok(Token::ArmKind(ws, kind, arm))
+            } else {
+                Ok(Token::Arm(ws, arm))
+            };
+        }
         let expr = eat_expr_list(s)
             .map(|e| S(e, Span::new(init, init + s.len() as u32)))
             .map_err(|e| {
@@ -325,6 +334,13 @@ impl MiddleError {
             span: (lo as u32, hi as u32),
         }
     }
+}
+
+/// Parse Arm
+fn eat_arm(i: &str) -> Result<Box<Arm>, MiddleError> {
+    parse_str::<Arm>(i)
+        .map(Box::new)
+        .map_err(|e| MiddleError::new(i, e))
 }
 
 /// Parse syn local
