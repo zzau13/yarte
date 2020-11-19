@@ -299,23 +299,6 @@ macro_rules! do_parse {
 }
 
 #[macro_export]
-macro_rules! pipes {
-    ($i:expr, $fun:path [ $($args:tt)* ]$(:$pipe:path)*) => {{
-        let r = $crate::call!($i, $fun, $($args)*);
-        $(
-        let r = $pipe($i, r);
-        )*
-        r
-    }};
-}
-
-#[macro_export]
-macro_rules! call {
-    ($i:expr, $fun:expr, $($args:tt)*) => {
-        $fun($i, $($args)*)
-    };
-}
-#[macro_export]
 macro_rules! alt {
     ($i:expr, $fun:path $(:$pipe:path)*) => {
         alt!($i, $fun[] $(:$pipe)*)
@@ -334,6 +317,24 @@ macro_rules! alt {
             Err($crate::LexError::Next(..)) => alt!($i, $($rest)*),
             Err(e) => Err(e),
         }
+    };
+}
+
+#[macro_export]
+macro_rules! pipes {
+    ($i:expr, $fun:path [ $($args:tt)* ]$(:$pipe:path)*) => {{
+        let r = $crate::call!($i, $fun, $($args)*);
+        $(
+        let r = $pipe($i, r);
+        )*
+        r
+    }};
+}
+
+#[macro_export]
+macro_rules! call {
+    ($i:expr, $fun:expr, $($args:tt)*) => {
+        $fun($i, $($args)*)
     };
 }
 

@@ -85,24 +85,26 @@ impl<'a> Kinder<'a> for MyKind<'a> {
 
 fn partial(i: Cursor) -> PResult<MyKind, MyError> {
     const PARTIAL: Ascii = ascii!('>');
-    let (i, partial) = do_parse!(i,
+
+    do_parse!(i,
         tac[PARTIAL]            =>
         ws:is_empty:not_true    =>
         p= path                 =>
         ws:is_empty:not_true    =>
         (p)
-    )?;
-    Ok((i, MyKind::Partial(partial)))
+    )
+    .map(|(i, partial)| (i, MyKind::Partial(partial)))
 }
 
 fn some(i: Cursor) -> PResult<MyKind, MyError> {
     const SOME: &[Ascii] = asciis!("some");
-    let (i, _) = do_parse!(i,
+
+    do_parse!(i,
         tag[SOME]            =>
         ws:is_empty:not_true    =>
         ()
-    )?;
-    Ok((i, MyKind::Some))
+    )
+    .map(|(i, _)| (i, MyKind::Some))
 }
 
 fn comment<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<&'a str, K::Error> {
