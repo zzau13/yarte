@@ -203,6 +203,16 @@ impl Into<char> for Ascii {
     }
 }
 
+pub trait AsStr {
+    fn as_str(&self) -> &str;
+}
+
+impl AsStr for [Ascii] {
+    fn as_str(&self) -> &str {
+        ascii_to_str(self)
+    }
+}
+
 pub fn get_chars(text: &str, left: usize, right: usize) -> &str {
     debug_assert!(right.checked_sub(left).is_some());
 
@@ -388,10 +398,10 @@ pub fn tag<'a, E: KiError>(i: Cursor<'a>, tag: &'static [Ascii]) -> PResult<'a, 
     debug_assert!(!tag.is_empty());
 
     if i.starts_with(tag) {
-        Ok((i.adv_ascii(tag), ascii_to_str(tag)))
+        Ok((i.adv_ascii(tag), tag.as_str()))
     } else {
         Err(LexError::Next(
-            E::tag(ascii_to_str(tag)),
+            E::tag(tag.as_str()),
             Span::from_len(i, tag.len()),
         ))
     }
