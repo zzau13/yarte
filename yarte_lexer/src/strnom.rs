@@ -315,8 +315,29 @@ macro_rules! call {
         $fun($i, $($args)*)
     };
 }
+#[macro_export]
+macro_rules! alt {
+    ($i:expr, $fun:path $(:$pipe:path)*) => {
+        alt!($i, $fun[] $(:$pipe)*)
+    };
 
-/// Result Pipe optional is none
+    ($i:expr, $fun:path [ $($args:tt)* ]$(:$pipe:path)*) => {
+        $crate::pipes!($i, $fun[$($args)*]$(:$pipe)*)
+    };
+    ($i:expr, $fun:path $(:$pipe:path)* | $($rest:tt)+) => {
+        alt!($i, $fun[] $(:$pipe)* | $($rest)+)
+    };
+
+    ($i:expr, $fun:path [ $($args:tt)* ]$(:$pipe:path)* | $($rest:tt)+) => {
+        match $crate::pipes!($i, $fun[$($args)*]$(:$pipe)*) {
+            Ok(o) => Ok(o),
+            Err($crate::LexError::Next(..)) => alt!($i, $($rest)*),
+            Err(e) => Err(e),
+        }
+    };
+}
+
+/// Result Pipe optional is some
 #[inline]
 pub fn is_some<'a, E: KiError, O>(
     _: Cursor<'a>,
