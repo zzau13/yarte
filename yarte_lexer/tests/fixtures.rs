@@ -45,6 +45,7 @@ impl<'a> Kinder<'a> for MyKindAfter<'a> {
             tac[PARTIAL]            =>
             ws:is_empty:not_true    =>
             p= path                 =>
+            ws:is_empty:not_true    =>
             (p)
         )?;
         Ok((i, MyKindAfter::Partial(partial)))
@@ -79,6 +80,7 @@ impl<'a> Kinder<'a> for MyKind<'a> {
             tac[PARTIAL]            =>
             ws:is_empty:not_true    =>
             p= path                 =>
+            ws:is_empty:not_true    =>
             (p)
         )?;
         Ok((i, MyKind::Partial(partial)))
