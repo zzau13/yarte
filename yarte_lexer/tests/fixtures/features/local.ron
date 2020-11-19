@@ -1,0 +1,9 @@
+[
+    (src: "{{ let a = b }}", exp: [(Local((false, false), ("let a = b", (lo:3, hi:12))), (lo:0, hi:15))]),
+    (src: "{{ let a = fun() }}", exp: [(Local((false, false), ("let a = fun() ", (lo:3, hi:16))), (lo:0, hi:19))]),
+    (src: "{{ let a: Foo = fun(|a| a) }}", exp: [(Local((false, false), ("let a: Foo = fun(|a| a)", (lo:3, hi:26))), (lo:0, hi:29))]),
+    (src: "{{ let a: usize = fun(|a| { {a} })() }}", exp: [(Local((false, false), ("let a: usize = fun(|a| {{a}})()", (lo:3, hi:36))), (lo:0, hi:39))]),
+    (src: "{{~ let a = b }}", exp: [(Local((true, false), ("let a = b", (lo:4, hi:13))), (lo:0, hi:16))]),
+    (src: "{{ let a = b ~}}", exp: [(Local((false, true), ("let a = b", (lo:3, hi:12))), (lo:0, hi:16))]),
+    (src: "{{~ let a = b ~}}", exp: [(Local((true, true), ("let a = b", (lo:4, hi:13))), (lo:0, hi:17))]),
+]

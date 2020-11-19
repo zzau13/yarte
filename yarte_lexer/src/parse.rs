@@ -2,11 +2,13 @@ use std::fmt::Debug;
 
 use syn::parse_str;
 
+use gencode::unsafe_asciis;
+
 use crate::error::{ErrorMessage, KiError, LexError, PResult};
 use crate::expr_list::ExprList;
 use crate::source_map::{Span, S};
-use crate::strnom::{get_chars, is_some, is_ws, opt, tac, take_while, Cursor};
-use crate::{Kinder, SToken, StmtLocal, Token};
+use crate::strnom::{get_chars, is_some, is_ws, opt, tac, tag, take_while, Cursor};
+use crate::{Ascii, Kinder, SToken, StmtLocal, Token};
 
 pub trait Ki<'a>: Kinder<'a> + Debug + PartialEq + Clone {}
 
@@ -128,32 +130,45 @@ fn eat_lit<'a, K: Ki<'a>>(i: Cursor<'a>, len: usize, nodes: &mut Vec<SToken<'a, 
     }
 }
 
-// TODO: local
 // TODO: Arm
-// TODO: Safe
 // TODO: more todo
 fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Error>> {
-    let (i, ws) = eat_ws::<K>(i)?;
-    let (i, kind) = match K::parse(i) {
-        Ok((c, kind)) => (c, Some(kind)),
-        Err(LexError::Next(..)) => (i, None),
-        Err(e @ LexError::Fail(..)) => return Err(e),
-    };
-    let (l, s, _) = trim(i.rest);
-    let init = i.off + l.len() as u32;
-    let expr = eat_expr_list(s)
-        .map(|e| S(e, Span::new(init, init + s.len() as u32)))
-        .map_err(|e| {
-            LexError::Fail(
-                K::Error::expr(e.message),
-                Span::new(init + e.span.0, init + e.span.1),
-            )
-        })?;
+    const LET: &[Ascii] = unsafe { unsafe_asciis!("let ") };
 
-    if let Some(kind) = kind {
-        Ok(Token::ExprKind(ws, kind, expr))
+    let (i, ws) = eat_ws::<K>(i)?;
+    if do_parse!(i, take_while::<K::Error>[is_ws] => tag::<K::Error>[LET] => ()).is_ok() {
+        let (l, s, _) = trim(i.rest);
+        let init = i.off + l.len() as u32;
+        eat_local(s)
+            .map(|e| Token::Local(ws, S(e, Span::new(init, init + s.len() as u32))))
+            .map_err(|e| {
+                LexError::Fail(
+                    K::Error::expr(e.message),
+                    Span::new(init + e.span.0, init + e.span.1),
+                )
+            })
     } else {
-        Ok(Token::Expr(ws, expr))
+        let (i, kind) = match K::parse(i) {
+            Ok((c, kind)) => (c, Some(kind)),
+            Err(LexError::Next(..)) => (i, None),
+            Err(e @ LexError::Fail(..)) => return Err(e),
+        };
+        let (l, s, _) = trim(i.rest);
+        let init = i.off + l.len() as u32;
+        let expr = eat_expr_list(s)
+            .map(|e| S(e, Span::new(init, init + s.len() as u32)))
+            .map_err(|e| {
+                LexError::Fail(
+                    K::Error::expr(e.message),
+                    Span::new(init + e.span.0, init + e.span.1),
+                )
+            })?;
+
+        if let Some(kind) = kind {
+            Ok(Token::ExprKind(ws, kind, expr))
+        } else {
+            Ok(Token::Expr(ws, expr))
+        }
     }
 }
 
@@ -255,6 +270,7 @@ fn safe<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<Token<'a, K>, K::Error> {
 
     let (l, s, _) = trim(i.rest);
     let init = i.off + l.len() as u32;
+
     let expr = eat_expression(s)
         .map(|e| S(e, Span::new(init, init + s.len() as u32)))
         .map_err(|e| {
