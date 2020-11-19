@@ -99,7 +99,7 @@ impl<'a> Cursor<'a> {
     }
 
     #[inline]
-    pub fn chars(&self) -> Chars<'a> {
+    pub fn chars(&self) -> Chars<'_> {
         self.rest.chars()
     }
 }
@@ -124,6 +124,7 @@ fn start_with_ascii(rest: &[u8], s: &[Ascii]) -> bool {
             .all(|(a, b)| a == b)
 }
 
+/// Bound byte to few ascii character
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[repr(transparent)]
 pub struct Ascii(u8);
@@ -219,6 +220,7 @@ impl AsStr for [Ascii] {
     }
 }
 
+/// Get char range in text
 pub fn get_chars(text: &str, left: usize, right: usize) -> &str {
     debug_assert!(right.checked_sub(left).is_some());
 
@@ -238,6 +240,7 @@ pub fn get_chars(text: &str, left: usize, right: usize) -> &str {
     left.map_or("", |left| &text[left..right])
 }
 
+/// Cast byte range to chars range in text
 pub fn get_bytes_to_chars(text: &str, left: usize, right: usize) -> (usize, usize) {
     let mut taken = false;
     let (left, right) = text
@@ -265,7 +268,6 @@ pub fn get_bytes_to_chars(text: &str, left: usize, right: usize) -> (usize, usiz
     left.map_or((0, 0), |left| (left, right))
 }
 
-// TODO:
 #[macro_export]
 macro_rules! do_parse {
     ($i:expr, ( $($rest:tt)* )) => {
@@ -314,6 +316,7 @@ macro_rules! call {
     };
 }
 
+/// Result Pipe optional is none
 #[inline]
 pub fn is_some<'a, E: KiError, O>(
     _: Cursor<'a>,
@@ -325,6 +328,7 @@ pub fn is_some<'a, E: KiError, O>(
     }
 }
 
+/// Result Pipe optional is none
 #[inline]
 pub fn is_none<'a, E: KiError, O>(
     _: Cursor<'a>,
@@ -336,6 +340,7 @@ pub fn is_none<'a, E: KiError, O>(
     }
 }
 
+/// Result Pipe optional
 #[inline]
 pub fn opt<'a, E: KiError, O>(i: Cursor<'a>, next: PResult<'a, O, E>) -> PResult<'a, Option<O>, E> {
     match next {
@@ -367,6 +372,7 @@ impl<T> IsEmpty for Vec<T> {
     }
 }
 
+/// Result Pipe is_empty
 #[inline]
 pub fn is_empty<'a, E: KiError, O: IsEmpty>(
     _: Cursor<'a>,
@@ -378,6 +384,55 @@ pub fn is_empty<'a, E: KiError, O: IsEmpty>(
     }
 }
 
+// TODO:
+pub trait NotTrue {
+    fn not_true(&self) -> bool;
+}
+
+impl NotTrue for bool {
+    fn not_true(&self) -> bool {
+        !*self
+    }
+}
+
+/// Result Pipe true to error next
+#[inline]
+pub fn not_true<'a, E: KiError, O: NotTrue>(
+    i: Cursor<'a>,
+    next: PResult<'a, O, E>,
+) -> PResult<'a, O, E> {
+    match next {
+        Ok((i, o)) if o.not_true() => Ok((i, o)),
+        Ok(_) => Err(LexError::Next(E::UNCOMPLETED, Span::from(i))),
+        Err(e) => Err(e),
+    }
+}
+
+// TODO:
+pub trait NotFalse {
+    fn not_false(&self) -> bool;
+}
+
+impl NotFalse for bool {
+    fn not_false(&self) -> bool {
+        *self
+    }
+}
+
+/// Result Pipe false to error next
+#[inline]
+pub fn not_false<'a, E: KiError, O: NotFalse>(
+    i: Cursor<'a>,
+    next: PResult<'a, O, E>,
+) -> PResult<'a, O, E> {
+    match next {
+        Ok((i, o)) if o.not_false() => Ok((i, o)),
+        Ok(_) => Err(LexError::Next(E::UNCOMPLETED, Span::from(i))),
+        Err(e) => Err(e),
+    }
+}
+
+/// Cast next error to Fail error
 #[inline]
 pub fn important<'a, E: KiError, O>(_: Cursor<'a>, next: PResult<'a, O, E>) -> PResult<'a, O, E> {
     match next {
@@ -387,6 +442,7 @@ pub fn important<'a, E: KiError, O>(_: Cursor<'a>, next: PResult<'a, O, E>) -> P
     }
 }
 
+/// Take while function is true or empty Ok if is empty
 #[inline]
 pub fn take_while<E: KiError>(i: Cursor, f: fn(u8) -> bool) -> PResult<&str, E> {
     if i.is_empty() {
@@ -399,6 +455,7 @@ pub fn take_while<E: KiError>(i: Cursor, f: fn(u8) -> bool) -> PResult<&str, E> 
     }
 }
 
+/// Take ascii characters or next error
 #[inline]
 pub fn tag<'a, E: KiError>(i: Cursor<'a>, tag: &'static [Ascii]) -> PResult<'a, &'static str, E> {
     debug_assert!(!tag.is_empty());
@@ -413,6 +470,7 @@ pub fn tag<'a, E: KiError>(i: Cursor<'a>, tag: &'static [Ascii]) -> PResult<'a, 
     }
 }
 
+/// Take an ascii character or next error
 #[inline]
 pub fn tac<E: KiError>(i: Cursor, tag: Ascii) -> PResult<char, E> {
     if i.next_is(tag) {
@@ -422,9 +480,28 @@ pub fn tac<E: KiError>(i: Cursor, tag: Ascii) -> PResult<char, E> {
     }
 }
 
+/// Take an ascii whitespace or next error
 #[inline]
-pub fn ws<E: KiError>(input: Cursor) -> PResult<(), E> {
-    take_while(input, is_ws).map(|(c, _)| (c, ()))
+pub fn next_ws<E: KiError>(i: Cursor) -> PResult<(), E> {
+    i.as_bytes()
+        .first()
+        .copied()
+        .map_or(Err(LexError::Next(E::WHITESPACE, Span::from(i))), |b| {
+            if is_ws(b) {
+                Ok((i.adv(1), ()))
+            } else {
+                Err(LexError::Next(E::WHITESPACE, Span::from(i)))
+            }
+        })
+}
+
+/// Take ascii whitespaces, next error if is empty
+#[inline]
+pub fn ws<E: KiError>(i: Cursor) -> PResult<(), E> {
+    if i.is_empty() {
+        return Err(LexError::Next(E::WHITESPACE, Span::from(i)));
+    }
+    take_while(i, is_ws).map(|(c, _)| (c, ()))
 }
 
 #[inline]
@@ -443,12 +520,6 @@ pub fn is_ws(ch: u8) -> bool {
 #[cfg(test)]
 mod test {
     use super::*;
-
-    #[test]
-    #[ignore = "not yet implemented"]
-    fn cursor() {
-        unimplemented!()
-    }
 
     #[test]
     fn test_get_chars() {
