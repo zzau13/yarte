@@ -1,3 +1,5 @@
+#![feature(trace_macros)]
+
 use std::fmt::{self, Debug, Display, Formatter};
 use std::fs::read_to_string;
 
@@ -6,8 +8,8 @@ use serde::Deserialize;
 
 use std::error::Error;
 use yarte_lexer::{
-    alt, ascii, asciis, do_parse, is_empty, not_true, parse, path, tac, tag, ws, Ascii, Cursor, Ki,
-    KiError, Kinder, LexError, PResult, SToken, Span,
+    alt, ascii, asciis, do_parse, is_empty, map, map_err, not_true, parse, path, tac, tag, ws,
+    Ascii, Cursor, Ki, KiError, Kinder, LexError, PResult, SToken, Span,
 };
 
 #[derive(Debug, Deserialize)]
@@ -99,9 +101,10 @@ fn partial(i: Cursor) -> PResult<MyKind, MyError> {
 fn some(i: Cursor) -> PResult<MyKind, MyError> {
     const SOME: &[Ascii] = asciis!("some");
 
+    // TODO: remove unnecessary [] from do_parse
     do_parse!(i,
-        tag[SOME]            =>
-        ws:is_empty:not_true    =>
+        tag[SOME]:map_err[|_| MyError::Some]                =>
+        ws[]:is_empty[]:not_true[]:map[|_| MyKind::Some]    =>
         ()
     )
     .map(|(i, _)| (i, MyKind::Some))

@@ -268,6 +268,7 @@ pub fn get_bytes_to_chars(text: &str, left: usize, right: usize) -> (usize, usiz
     left.map_or((0, 0), |left| (left, right))
 }
 
+// TODO: remove unnecessary on pipe [] from do_parse
 #[macro_export]
 macro_rules! do_parse {
     ($i:expr, ( $($rest:tt)* )) => {
@@ -281,14 +282,32 @@ macro_rules! do_parse {
     ($i:expr, $field:ident = $fun:path $(:$pipe:path)* => $($rest:tt)+) => {
         do_parse!($i, $field = $fun[] $(:$pipe)* => $($rest)+)
     };
+    ($i:expr, $field:ident = $fun:path $(:$pipe:path[$($argsp:tt)*])* => $($rest:tt)+) => {
+        do_parse!($i, $field = $fun[] $(:$pipe[$($argsp)*])* => $($rest)+)
+    };
     ($i:expr, $fun:path [ $($args:tt)* ]$(:$pipe:path)*  => $($rest:tt)+) => {
         match $crate::pipes!($i, $fun[$($args)*]$(:$pipe)*) {
             Err(e) => Err(e),
             Ok((i, _)) => do_parse!(i, $($rest)+),
         }
     };
+    ($i:expr, $fun:path [ $($args:tt)* ]$(:$pipe:path[$($argsp:tt)*])*  => $($rest:tt)+) => {
+        match $crate::pipes!($i, $fun[$($args)*]$(:$pipe[$($argsp)*])*) {
+            Err(e) => Err(e),
+            Ok((i, _)) => do_parse!(i, $($rest)+),
+        }
+    };
     ($i:expr, $field:ident = $fun:path [ $($args:tt)* ]$(:$pipe:path)* => $($rest:tt)+) => {{
         match $crate::pipes!($i, $fun[$($args)*]$(:$pipe)*) {
+            Err(e) => Err(e),
+            Ok((i, o)) => {
+                let $field = o;
+                do_parse!(i, $($rest)+)
+            },
+        }
+    }};
+    ($i:expr, $field:ident = $fun:path [ $($args:tt)* ]$(:$pipe:path[$($argsp:tt)*])* => $($rest:tt)+) => {{
+        match $crate::pipes!($i, $fun[$($args)*]$(:$pipe[$($argsp)*])*) {
             Err(e) => Err(e),
             Ok((i, o)) => {
                 let $field = o;
@@ -322,13 +341,30 @@ macro_rules! alt {
 
 #[macro_export]
 macro_rules! pipes {
-    ($i:expr, $fun:path [ $($args:tt)* ]$(:$pipe:path)*) => {{
-        let r = $crate::call!($i, $fun, $($args)*);
-        $(
-        let r = $pipe($i, r);
-        )*
-        r
-    }};
+    ($i:expr, $fun:path [ $($args:tt)* ]) => {
+        $crate::call!($i, $fun, $($args)*)
+    };
+
+    ($i:expr, $fun:path [ $($args:tt)* ] : $($rest:tt)+) => {
+        $crate::pipes!(impl $i, $crate::pipes!($i, $fun[$($args)*]), : $($rest)+);
+    };
+
+    ($i:expr, $fun:path : $($rest:tt)+) => {
+        $crate::pipes!(impl $i, $crate::pipes!($i, $fun[]), : $($rest)+);
+    };
+
+    (impl $i:expr, $r:expr, :$pipe:path) => {
+        $pipe($i, $r)
+    };
+    (impl $i:expr, $r:expr, :$pipe:path[$($args:tt)*]) => {
+        $pipe($i, $r, $($args)*)
+    };
+    (impl $i:expr, $r:expr, :$pipe:path : $($rest:tt)+) => {
+        $crate::pipes!(impl $i, $pipe($i, $r), : $($rest)+)
+    };
+    (impl $i:expr, $r:expr, :$pipe:path[$($args:tt)*] : $($rest:tt)+) => {
+        $crate::pipes!(impl $i, $pipe($i, $r, $($args)*), : $($rest)+)
+    };
 }
 
 #[macro_export]
@@ -369,6 +405,39 @@ pub fn opt<'a, E: KiError, O>(i: Cursor<'a>, next: PResult<'a, O, E>) -> PResult
         Ok((i, o)) => Ok((i, Some(o))),
         Err(_) => Ok((i, None)),
     }
+}
+
+/// Result Pipe then
+#[inline]
+pub fn then<'a, E: KiError, O, N>(
+    _: Cursor<'a>,
+    next: PResult<'a, O, E>,
+    c: fn(PResult<'a, O, E>) -> PResult<'a, N, E>,
+) -> PResult<'a, N, E> {
+    c(next)
+}
+
+/// Result Pipe map
+#[inline]
+pub fn map<'a, E: KiError, O, N>(
+    _: Cursor<'a>,
+    next: PResult<'a, O, E>,
+    c: fn(O) -> N,
+) -> PResult<'a, N, E> {
+    next.map(|(i, x)| (i, c(x)))
+}
+
+/// Result Pipe map_err
+#[inline]
+pub fn map_err<'a, E: KiError, O>(
+    _: Cursor<'a>,
+    next: PResult<'a, O, E>,
+    c: fn(E) -> E,
+) -> PResult<'a, O, E> {
+    next.map_err(|x| match x {
+        LexError::Next(e, s) => LexError::Next(c(e), s),
+        LexError::Fail(e, s) => LexError::Fail(c(e), s),
+    })
 }
 
 pub trait IsEmpty {
