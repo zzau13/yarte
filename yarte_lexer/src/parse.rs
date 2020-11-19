@@ -8,7 +8,7 @@ use crate::arm::Arm;
 use crate::error::{ErrorMessage, KiError, LexError, PResult};
 use crate::expr_list::ExprList;
 use crate::source_map::{Span, S};
-use crate::strnom::{get_chars, is_some, is_ws, opt, tac, tag, take_while, Cursor};
+use crate::strnom::{get_chars, is_some, is_ws, opt, tac, tag, take_while, ws, Cursor};
 use crate::{Ascii, Kinder, SToken, StmtLocal, Token};
 
 pub trait Ki<'a>: Kinder<'a> + Debug + PartialEq + Clone {}
@@ -135,12 +135,12 @@ fn eat_lit<'a, K: Ki<'a>>(i: Cursor<'a>, len: usize, nodes: &mut Vec<SToken<'a, 
 fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Error>> {
     const LET: &[Ascii] = unsafe { unsafe_asciis!("let ") };
 
-    let (i, ws) = eat_ws::<K>(i)?;
-    if do_parse!(i, take_while::<K::Error>[is_ws] => tag::<K::Error>[LET] => ()).is_ok() {
+    let (i, gws) = eat_ws::<K>(i)?;
+    if do_parse!(i, ws => tag::<K::Error>[LET] => ()).is_ok() {
         let (l, s, _) = trim(i.rest);
         let init = i.off + l.len() as u32;
         eat_local(s)
-            .map(|e| Token::Local(ws, S(e, Span::new(init, init + s.len() as u32))))
+            .map(|e| Token::Local(gws, S(e, Span::new(init, init + s.len() as u32))))
             .map_err(|e| {
                 LexError::Fail(
                     K::Error::expr(e.message),
@@ -158,9 +158,9 @@ fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Er
         if let Ok(arm) = eat_arm(s) {
             let arm = S(arm, Span::new(init, init + s.len() as u32));
             return if let Some(kind) = kind {
-                Ok(Token::ArmKind(ws, kind, arm))
+                Ok(Token::ArmKind(gws, kind, arm))
             } else {
-                Ok(Token::Arm(ws, arm))
+                Ok(Token::Arm(gws, arm))
             };
         }
         let expr = eat_expr_list(s)
@@ -173,9 +173,9 @@ fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Er
             })?;
 
         if let Some(kind) = kind {
-            Ok(Token::ExprKind(ws, kind, expr))
+            Ok(Token::ExprKind(gws, kind, expr))
         } else {
-            Ok(Token::Expr(ws, expr))
+            Ok(Token::Expr(gws, expr))
         }
     }
 }
