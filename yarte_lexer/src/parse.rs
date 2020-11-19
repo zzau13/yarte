@@ -188,17 +188,40 @@ fn end_safe_after<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<(Cursor, bool), K::Er
         if let Some(j) = i.adv_find(at, K::CLOSE_EXPR) {
             if 0 < at + j && i.adv_starts_with(at + j - 1, ws_end) {
                 let next = i.adv(at + j - 1 + ws_end.len());
-                let cur = Cursor {
-                    rest: &i.rest[..at + j - 2],
-                    off: i.off,
-                };
+                let cur = Cursor::_new(&i.rest[..at + j - 2], i.off);
                 break Ok((next, (cur, true)));
             } else if i.adv_starts_with(at + j, end) {
                 let next = i.adv(at + j + 1 + end.len());
-                let cur = Cursor {
-                    rest: &i.rest[..at + j],
-                    off: i.off,
-                };
+                let cur = Cursor::_new(&i.rest[..at + j], i.off);
+                break Ok((next, (cur, false)));
+            }
+
+            at += j + 1;
+        } else {
+            break Err(LexError::Next(
+                K::Error::UNCOMPLETED,
+                Span::from_cursor(i, i.adv(at)),
+            ));
+        }
+    }
+}
+
+#[inline]
+fn end_safe<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<(Cursor, bool), K::Error> {
+    let ws_end = &[K::WS, K::CLOSE_EXPR, K::CLOSE_EXPR, K::CLOSE];
+    let end = &[K::CLOSE_EXPR, K::CLOSE_EXPR, K::CLOSE];
+
+    let mut at = 0;
+
+    loop {
+        if let Some(j) = i.adv_find(at, K::CLOSE_EXPR) {
+            if 0 < at + j && i.adv_starts_with(at + j - 1, ws_end) {
+                let next = i.adv(at + j - 1 + ws_end.len());
+                let cur = Cursor::_new(&i.rest[..at + j - 1], i.off);
+                break Ok((next, (cur, true)));
+            } else if i.adv_starts_with(at + j, end) {
+                let next = i.adv(at + j + end.len());
+                let cur = Cursor::_new(&i.rest[..at + j], i.off);
                 break Ok((next, (cur, false)));
             }
 
@@ -222,7 +245,12 @@ fn safe<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<Token<'a, K>, K::Error> {
             ((end.0, (lws, end.1)))
         )?
     } else {
-        unimplemented!()
+        do_parse!(i,
+            tac[K::OPEN_EXPR]           =>
+            lws: tac[K::WS]:opt:is_some =>
+            end: end_safe::<K>    =>
+            ((end.0, (lws, end.1)))
+        )?
     };
 
     let (l, s, _) = trim(i.rest);
