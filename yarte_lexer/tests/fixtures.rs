@@ -1,5 +1,3 @@
-#![feature(trace_macros)]
-
 use std::fmt::{self, Debug, Display, Formatter};
 use std::fs::read_to_string;
 
