@@ -341,23 +341,24 @@ macro_rules! alt {
 
 #[macro_export]
 macro_rules! pipes {
+    ($i:expr, $fun:path) => {
+        $crate::call!($i, $fun)
+    };
     ($i:expr, $fun:path [ $($args:tt)* ]) => {
         $crate::call!($i, $fun, $($args)*)
     };
-
     ($i:expr, $fun:path [ $($args:tt)* ] : $($rest:tt)+) => {
-        $crate::pipes!(impl $i, $crate::pipes!($i, $fun[$($args)*]), : $($rest)+);
+        $crate::pipes!(impl $i, $crate::pipes!($i, $fun[$($args)*]), : $($rest)+)
     };
-
     ($i:expr, $fun:path : $($rest:tt)+) => {
-        $crate::pipes!(impl $i, $crate::pipes!($i, $fun[]), : $($rest)+);
+        $crate::pipes!(impl $i, $crate::pipes!($i, $fun[]), : $($rest)+)
     };
 
     (impl $i:expr, $r:expr, :$pipe:path) => {
-        $pipe($i, $r)
+        $crate::call!($i, $pipe, $r)
     };
     (impl $i:expr, $r:expr, :$pipe:path[$($args:tt)*]) => {
-        $pipe($i, $r, $($args)*)
+        $crate::call!($i, $pipe, $r, $($args)*)
     };
     (impl $i:expr, $r:expr, :$pipe:path : $($rest:tt)+) => {
         $crate::pipes!(impl $i, $pipe($i, $r), : $($rest)+)
