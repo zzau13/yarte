@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use annotate_snippets::{
     display_list::{DisplayList, FormatOptions},
@@ -100,8 +100,6 @@ pub struct Config {
 
 pub trait Emitter {
     fn callback();
-    fn color(&self) -> bool;
-    fn prefix(&self) -> PathBuf;
     fn get(&self, path: &PathBuf) -> Option<&str>;
     fn config(&self) -> &Config;
 }
@@ -109,14 +107,6 @@ pub trait Emitter {
 impl<'a> Emitter for EmitterConfig<'a> {
     fn callback() {
         clean();
-    }
-
-    fn color(&self) -> bool {
-        self.config.color
-    }
-
-    fn prefix(&self) -> PathBuf {
-        self.config.prefix.clone().unwrap_or_default()
     }
 
     fn get(&self, path: &PathBuf) -> Option<&str> {
@@ -137,7 +127,11 @@ where
     M: Error,
     I: Iterator<Item = E>,
 {
-    let prefix = who.prefix();
+    let Config { prefix, color } = who.config();
+    let prefix = prefix
+        .as_ref()
+        .map(|x| x.as_path())
+        .unwrap_or_else(|| Path::new(""));
     let mut errors: Vec<ErrorMessage<M>> = errors.map(Into::into).collect();
 
     errors.sort_by(|a, b| a.span.lo.cmp(&b.span.lo));
@@ -154,7 +148,7 @@ where
             let source = &source[lo_line..hi_line];
 
             let origin = origin
-                .strip_prefix(&prefix)
+                .strip_prefix(prefix)
                 .expect("template prefix")
                 .to_str()
                 .unwrap();
@@ -182,7 +176,7 @@ where
         footer: vec![],
         slices,
         opt: FormatOptions {
-            color: who.config().color,
+            color: *color,
             ..Default::default()
         },
     };
