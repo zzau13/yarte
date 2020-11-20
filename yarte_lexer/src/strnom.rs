@@ -346,9 +346,10 @@ macro_rules! alt {
 /// use yarte_lexer::{pipes, ws, is_empty, map, do_parse, tac, ascii, Ascii, PResult, error::Empty, Cursor, get_cursor};
 /// # use std::path::PathBuf;
 /// # let path = PathBuf::from("FooFile");
+/// const B: Ascii = ascii!('b');
 ///
 /// let stmt = |i| pipes!(i, ws:is_empty:map[|x| !x]);
-/// let parser = |i| do_parse!(i, ws= stmt => tac[ascii!('b')] => (ws));
+/// let parser = |i| do_parse!(i, ws= stmt => tac[B] => (ws));
 /// let result: PResult<bool, Empty> = parser(get_cursor(&path, " b"));
 /// let (c, result) = result.unwrap();
 ///
