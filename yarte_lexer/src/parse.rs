@@ -27,7 +27,6 @@ pub fn parse<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Vec<SToken<'a, K>>, ErrorMe
     }
 }
 
-// TODO: Simplify
 macro_rules! comment {
     ($K:ty, $cur:expr, $i:ident, $at:ident, $j:ident, $nodes:ident) => {
         match <$K>::comment($cur) {

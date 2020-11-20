@@ -8,8 +8,6 @@ use annotate_snippets::{
     snippet::{Annotation, AnnotationType, Slice, Snippet, SourceAnnotation},
 };
 
-use yarte_helpers::config::Config;
-
 use crate::source_map::clean;
 use crate::{get_bytes_to_chars, source_map::Span, Cursor};
 
@@ -91,33 +89,55 @@ pub struct ErrorMessage<T: Error> {
 
 // TODO:
 pub struct EmitterConfig<'a> {
-    pub config: &'a Config<'a>,
-    pub color: bool,
+    pub sources: &'a BTreeMap<PathBuf, String>,
+    pub config: Config,
+}
+
+pub struct Config {
+    color: bool,
+    prefix: Option<PathBuf>,
 }
 
 pub trait Emitter {
+    fn callback();
+    fn color(&self) -> bool;
+    fn prefix(&self) -> PathBuf;
+    fn get(&self, path: &PathBuf) -> Option<&str>;
+    fn config(&self) -> &Config;
+}
+
+impl<'a> Emitter for EmitterConfig<'a> {
     fn callback() {
         clean();
     }
+
+    fn color(&self) -> bool {
+        self.config.color
+    }
+
+    fn prefix(&self) -> PathBuf {
+        self.config.prefix.clone().unwrap_or_default()
+    }
+
+    fn get(&self, path: &PathBuf) -> Option<&str> {
+        self.sources.get(path).map(|x| x.as_str())
+    }
+
+    fn config(&self) -> &Config {
+        &self.config
+    }
 }
 
-impl<'a> Emitter for EmitterConfig<'a> {}
-
-// TODO: Emitter config should be abstract and include sources
-// TODO: Who?
+// TODO: Source map should be abstract
 // TODO: Warnings and another types
-pub fn emitter<E, M, I>(
-    sources: &BTreeMap<PathBuf, String>,
-    EmitterConfig { config, color }: EmitterConfig,
-    errors: I,
-) -> !
+pub fn emitter<Who, E, M, I>(who: Who, errors: I) -> !
 where
+    Who: Emitter,
     E: Into<ErrorMessage<M>>,
     M: Error,
     I: Iterator<Item = E>,
 {
-    let mut prefix = config.get_dir().clone();
-    prefix.pop();
+    let prefix = who.prefix();
     let mut errors: Vec<ErrorMessage<M>> = errors.map(Into::into).collect();
 
     errors.sort_by(|a, b| a.span.lo.cmp(&b.span.lo));
@@ -130,7 +150,7 @@ where
         .map(|(label, origin, span)| {
             let ((lo_line, hi_line), (lo, hi)) = span.range_in_file();
             let start = span.start();
-            let source = sources.get(origin).unwrap();
+            let source = who.get(origin).unwrap();
             let source = &source[lo_line..hi_line];
 
             let origin = origin
@@ -162,7 +182,7 @@ where
         footer: vec![],
         slices,
         opt: FormatOptions {
-            color,
+            color: who.config().color,
             ..Default::default()
         },
     };
@@ -175,19 +195,14 @@ where
 mod test {
     use super::*;
 
-    use std::collections::BTreeMap;
-    use std::error::Error;
-    use std::fmt::{self, Display};
     use std::iter::once;
 
-    use yarte_helpers::config::Config;
-
-    use crate::source_map::{get_cursor, Span};
+    use crate::source_map::get_cursor;
 
     #[derive(Debug)]
     struct Errr(&'static str);
     impl Error for Errr {}
-    impl Display for Errr {
+    impl fmt::Display for Errr {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             self.0.fmt(f)
         }
@@ -199,10 +214,7 @@ mod test {
         expected = "error\n --> foo.hbs:1:9\n  |\n1 | foó bañ tuú foú\n  |         ^^^ bar\n  |"
     )]
     fn test_chars() {
-        let config = Config::new("");
-        let mut path = config.get_dir().clone();
-        path.pop();
-        path.push("foo.hbs");
+        let path = PathBuf::from("foo.hbs");
 
         let src = "foó bañ tuú foú";
         let mut sources = BTreeMap::new();
@@ -210,10 +222,12 @@ mod test {
         sources.insert(path, src.to_owned());
 
         emitter(
-            &sources,
             EmitterConfig {
-                config: &config,
-                color: false,
+                sources: &sources,
+                config: Config {
+                    color: false,
+                    prefix: None,
+                },
             },
             once(ErrorMessage {
                 message: Errr("bar"),
