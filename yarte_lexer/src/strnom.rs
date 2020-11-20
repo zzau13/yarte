@@ -153,7 +153,7 @@ macro_rules! ascii_builder {
         /// ```
         #[macro_export]
         macro_rules! ascii {
-            $(($n) => { unsafe { Ascii::new($n) } };)+
+            $(($n) => { unsafe { $crate::Ascii::new($n) } };)+
             ($t:tt) => {
                 compile_error!(
                     concat!("No valid ascii token select another or report: ", stringify!($t))
@@ -564,7 +564,7 @@ pub fn tag<'a, E: KiError>(i: Cursor<'a>, tag: &'static [Ascii]) -> PResult<'a, 
         Ok((i.adv_ascii(tag), tag.as_str()))
     } else {
         Err(LexError::Next(
-            E::tag(tag.as_str()),
+            E::str(tag.as_str()),
             Span::from_len(i, tag.len()),
         ))
     }
@@ -576,7 +576,7 @@ pub fn tac<E: KiError>(i: Cursor, tag: Ascii) -> PResult<char, E> {
     if i.next_is(tag) {
         Ok((i.adv(1), tag.into()))
     } else {
-        Err(LexError::Next(E::tac(tag.into()), Span::from(i)))
+        Err(LexError::Next(E::char(tag.into()), Span::from(i)))
     }
 }
 

@@ -129,7 +129,7 @@ fn comment<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<&'a str, K::Error> {
             at += 1;
             if at >= c.len() {
                 break Err(LexError::Next(
-                    K::Error::COMMENTARY,
+                    K::Error::UNCOMPLETED,
                     Span::from_cursor(i, c),
                 ));
             }
@@ -154,21 +154,19 @@ impl Error for MyError {}
 
 impl KiError for MyError {
     const EMPTY: Self = MyError::Some;
-    const PATH: Self = MyError::Some;
     const UNCOMPLETED: Self = MyError::Some;
+    const PATH: Self = MyError::Some;
     const WHITESPACE: Self = MyError::Some;
-    const COMMENTARY: Self = MyError::Some;
-    const CLOSE_BLOCK: Self = MyError::Some;
 
-    fn tag(s: &'static str) -> Self {
+    fn str(s: &'static str) -> Self {
         MyError::Str(s)
     }
 
-    fn tac(_: char) -> Self {
+    fn char(_: char) -> Self {
         MyError::Some
     }
 
-    fn expr(s: String) -> Self {
+    fn string(s: String) -> Self {
         MyError::StrO(s)
     }
 }

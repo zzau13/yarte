@@ -16,15 +16,13 @@ use crate::{get_bytes_to_chars, source_map::Span, Cursor};
 #[allow(clippy::declare_interior_mutable_const)]
 pub trait KiError: Error + PartialEq + Clone {
     const EMPTY: Self;
-    const PATH: Self;
     const UNCOMPLETED: Self;
+    const PATH: Self;
     const WHITESPACE: Self;
-    const COMMENTARY: Self;
-    const CLOSE_BLOCK: Self;
 
-    fn tag(s: &'static str) -> Self;
-    fn tac(c: char) -> Self;
-    fn expr(s: String) -> Self;
+    fn str(s: &'static str) -> Self;
+    fn char(c: char) -> Self;
+    fn string(s: String) -> Self;
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -39,24 +37,22 @@ impl fmt::Display for Empty {
 impl Error for Empty {}
 impl KiError for Empty {
     const EMPTY: Self = Empty;
-    const PATH: Self = Empty;
     const UNCOMPLETED: Self = Empty;
+    const PATH: Self = Empty;
     const WHITESPACE: Self = Empty;
-    const COMMENTARY: Self = Empty;
-    const CLOSE_BLOCK: Self = Empty;
 
     #[inline]
-    fn tag(_: &'static str) -> Self {
+    fn str(_: &'static str) -> Self {
         Empty
     }
 
     #[inline]
-    fn tac(_: char) -> Self {
+    fn char(_: char) -> Self {
         Empty
     }
 
     #[inline]
-    fn expr(_: String) -> Self {
+    fn string(_: String) -> Self {
         Empty
     }
 }
