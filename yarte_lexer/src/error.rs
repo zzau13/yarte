@@ -69,7 +69,7 @@ macro_rules! next {
     };
 }
 
-pub type PResult<'a, O, E> = Result<(Cursor<'a>, O), LexError<E>>;
+pub type Result<'a, O, E> = std::result::Result<(Cursor<'a>, O), LexError<E>>;
 
 impl<E: Error> From<LexError<E>> for ErrorMessage<E> {
     fn from(e: LexError<E>) -> Self {
@@ -169,6 +169,8 @@ where
 
 #[cfg(test)]
 mod test {
+    use super::*;
+
     use std::collections::BTreeMap;
     use std::error::Error;
     use std::fmt::{self, Display};
@@ -176,9 +178,7 @@ mod test {
 
     use yarte_helpers::config::Config;
 
-    use crate::error::EmitterConfig;
-    use crate::source_map::get_cursor;
-    use crate::{emitter, ErrorMessage, Span};
+    use crate::source_map::{get_cursor, Span};
 
     #[derive(Debug)]
     struct Errr(&'static str);

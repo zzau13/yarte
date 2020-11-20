@@ -5,7 +5,7 @@ use syn::parse_str;
 use gencode::unsafe_asciis;
 
 use crate::arm::Arm;
-use crate::error::{ErrorMessage, KiError, LexError, PResult};
+use crate::error::{ErrorMessage, KiError, LexError, Result as PResult};
 use crate::expr_list::ExprList;
 use crate::source_map::{Span, S};
 use crate::strnom::{get_chars, is_some, is_ws, opt, tac, tag, take_while, ws, Cursor};
