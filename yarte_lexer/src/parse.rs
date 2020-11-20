@@ -142,7 +142,7 @@ fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Er
             .map(|e| Token::Local(gws, S(e, Span::new(init, init + s.len() as u32))))
             .map_err(|e| {
                 LexError::Fail(
-                    K::Error::expr(e.message),
+                    K::Error::string(e.message),
                     Span::new(init + e.span.0, init + e.span.1),
                 )
             })
@@ -166,7 +166,7 @@ fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Er
             .map(|e| S(e, Span::new(init, init + s.len() as u32)))
             .map_err(|e| {
                 LexError::Fail(
-                    K::Error::expr(e.message),
+                    K::Error::string(e.message),
                     Span::new(init + e.span.0, init + e.span.1),
                 )
             })?;
@@ -208,7 +208,7 @@ fn eat_block<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::E
         .map(|e| S(e, Span::new(init, init + s.len() as u32)))
         .map_err(|e| {
             LexError::Fail(
-                K::Error::expr(e.message),
+                K::Error::string(e.message),
                 Span::new(init + e.span.0, init + e.span.1),
             )
         })?;
@@ -303,7 +303,7 @@ fn safe<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<Token<'a, K>, K::Error> {
         .map(|e| S(e, Span::new(init, init + s.len() as u32)))
         .map_err(|e| {
             LexError::Fail(
-                K::Error::expr(e.message),
+                K::Error::string(e.message),
                 Span::new(init + e.span.0, init + e.span.1),
             )
         })?;
