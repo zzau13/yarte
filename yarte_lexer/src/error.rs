@@ -90,12 +90,12 @@ pub struct ErrorMessage<T: Error> {
 // TODO:
 pub struct EmitterConfig<'a> {
     pub sources: &'a BTreeMap<PathBuf, String>,
-    pub config: Config,
+    pub config: Config<'a>,
 }
 
-pub struct Config {
+pub struct Config<'a> {
     color: bool,
-    prefix: Option<PathBuf>,
+    prefix: Option<&'a Path>,
 }
 
 pub trait Emitter {
@@ -128,10 +128,7 @@ where
     I: Iterator<Item = E>,
 {
     let Config { prefix, color } = who.config();
-    let prefix = prefix
-        .as_ref()
-        .map(|x| x.as_path())
-        .unwrap_or_else(|| Path::new(""));
+    let prefix = prefix.unwrap_or_else(|| Path::new(""));
     let mut errors: Vec<ErrorMessage<M>> = errors.map(Into::into).collect();
 
     errors.sort_by(|a, b| a.span.lo.cmp(&b.span.lo));
