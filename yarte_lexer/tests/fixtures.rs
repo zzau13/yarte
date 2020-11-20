@@ -6,8 +6,8 @@ use serde::Deserialize;
 
 use std::error::Error;
 use yarte_lexer::{
-    alt, ascii, asciis, do_parse, is_empty, map, map_err, not_true, parse, path, tac, tag, ws,
-    Ascii, Cursor, Ki, KiError, Kinder, LexError, PResult, SToken, Span,
+    alt, ascii, asciis, do_parse, is_empty, map, map_err, not_true, parse, path, pipes, tac, tag,
+    ws, Ascii, Cursor, Ki, KiError, Kinder, LexError, PResult, SToken, Span,
 };
 
 #[derive(Debug, Deserialize)]
@@ -99,13 +99,10 @@ fn partial(i: Cursor) -> PResult<MyKind, MyError> {
 fn some(i: Cursor) -> PResult<MyKind, MyError> {
     const SOME: &[Ascii] = asciis!("some");
 
-    // TODO: remove unnecessary [] from do_parse
-    do_parse!(i,
-        tag[SOME]:map_err[|_| MyError::Some]                =>
-        ws[]:is_empty[]:not_true[]:map[|_| MyKind::Some]    =>
-        ()
-    )
-    .map(|(i, _)| (i, MyKind::Some))
+    let tag = |i| pipes!(i, tag[SOME]:map_err[|_| MyError::Some]);
+    let ws = |i| pipes!(i, ws:is_empty:not_true:map[|_| MyKind::Some]);
+
+    do_parse!(i, tag => ws => ()).map(|(i, _)| (i, MyKind::Some))
 }
 
 fn comment<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<&'a str, K::Error> {
