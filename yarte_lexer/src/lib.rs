@@ -10,7 +10,7 @@ use syn::parse::{Parse, ParseBuffer};
 #[macro_use]
 mod strnom;
 #[macro_use]
-mod error;
+pub mod error;
 mod arm;
 mod expr_list;
 mod expr_pipe;
@@ -26,7 +26,7 @@ pub use gencode::asciis;
 pub use self::{
     error::{emitter, ErrorMessage, KiError, LexError, PResult},
     parse::*,
-    source_map::Span,
+    source_map::{get_cursor, Span},
     stmt_local::StmtLocal,
     strnom::*,
 };

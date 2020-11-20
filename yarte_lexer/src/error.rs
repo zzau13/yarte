@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::error::Error;
+use std::fmt;
 use std::path::PathBuf;
 
 use annotate_snippets::{
@@ -26,8 +27,41 @@ pub trait KiError: Error + PartialEq + Clone {
     fn expr(s: String) -> Self;
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub struct Empty;
+
+impl fmt::Display for Empty {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(self, f)
+    }
+}
+
+impl Error for Empty {}
+impl KiError for Empty {
+    const EMPTY: Self = Empty;
+    const PATH: Self = Empty;
+    const UNCOMPLETED: Self = Empty;
+    const WHITESPACE: Self = Empty;
+    const COMMENTARY: Self = Empty;
+    const CLOSE_BLOCK: Self = Empty;
+
+    #[inline]
+    fn tag(_: &'static str) -> Self {
+        Empty
+    }
+
+    #[inline]
+    fn tac(_: char) -> Self {
+        Empty
+    }
+
+    #[inline]
+    fn expr(_: String) -> Self {
+        Empty
+    }
+}
 #[derive(Debug, Clone)]
-pub enum LexError<K: KiError> {
+pub enum LexError<K> {
     Fail(K, Span),
     Next(K, Span),
 }
@@ -41,7 +75,7 @@ macro_rules! next {
 
 pub type PResult<'a, O, E> = Result<(Cursor<'a>, O), LexError<E>>;
 
-impl<E: KiError> From<LexError<E>> for ErrorMessage<E> {
+impl<E: Error> From<LexError<E>> for ErrorMessage<E> {
     fn from(e: LexError<E>) -> Self {
         use LexError::*;
         match e {

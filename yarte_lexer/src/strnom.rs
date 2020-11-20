@@ -339,6 +339,22 @@ macro_rules! alt {
     };
 }
 
+/// Make a in tail function call
+///
+/// # Syntax:
+/// ```rust
+/// use yarte_lexer::{pipes, ws, is_empty, map, do_parse, tac, ascii, Ascii, PResult, error::Empty, Cursor, get_cursor};
+/// # use std::path::PathBuf;
+/// # let path = PathBuf::from("FooFile");
+///
+/// let stmt = |i| pipes!(i, ws:is_empty:map[|x| !x]);
+/// let parser = |i| do_parse!(i, ws= stmt => tac[ascii!('b')] => (ws));
+/// let result: PResult<bool, Empty> = parser(get_cursor(&path, " b"));
+/// let (c, result) = result.unwrap();
+///
+/// assert!(result);
+/// assert!(c.is_empty());
+/// ```
 #[macro_export]
 macro_rules! pipes {
     ($i:expr, $fun:path) => {
@@ -377,10 +393,7 @@ macro_rules! call {
 
 /// Result Pipe optional is some
 #[inline]
-pub fn is_some<'a, E: KiError, O>(
-    _: Cursor<'a>,
-    next: PResult<'a, Option<O>, E>,
-) -> PResult<'a, bool, E> {
+pub fn is_some<'a, E, O>(_: Cursor<'a>, next: PResult<'a, Option<O>, E>) -> PResult<'a, bool, E> {
     match next {
         Ok((i, o)) => Ok((i, o.is_some())),
         Err(e) => Err(e),
@@ -410,7 +423,7 @@ pub fn opt<'a, E: KiError, O>(i: Cursor<'a>, next: PResult<'a, O, E>) -> PResult
 
 /// Result Pipe then
 #[inline]
-pub fn then<'a, E: KiError, O, N>(
+pub fn then<'a, E, O, N>(
     _: Cursor<'a>,
     next: PResult<'a, O, E>,
     c: fn(PResult<'a, O, E>) -> PResult<'a, N, E>,
@@ -420,7 +433,7 @@ pub fn then<'a, E: KiError, O, N>(
 
 /// Result Pipe map
 #[inline]
-pub fn map<'a, E: KiError, O, N>(
+pub fn map<'a, E, O, N>(
     _: Cursor<'a>,
     next: PResult<'a, O, E>,
     c: fn(O) -> N,
@@ -430,7 +443,7 @@ pub fn map<'a, E: KiError, O, N>(
 
 /// Result Pipe map_err
 #[inline]
-pub fn map_err<'a, E: KiError, O>(
+pub fn map_err<'a, E, O>(
     _: Cursor<'a>,
     next: PResult<'a, O, E>,
     c: fn(E) -> E,
@@ -461,10 +474,7 @@ impl<T> IsEmpty for Vec<T> {
 
 /// Result Pipe is_empty
 #[inline]
-pub fn is_empty<'a, E: KiError, O: IsEmpty>(
-    _: Cursor<'a>,
-    next: PResult<'a, O, E>,
-) -> PResult<'a, bool, E> {
+pub fn is_empty<'a, E, O: IsEmpty>(_: Cursor<'a>, next: PResult<'a, O, E>) -> PResult<'a, bool, E> {
     match next {
         Ok((i, o)) => Ok((i, o.is_empty_())),
         Err(e) => Err(e),
@@ -523,7 +533,7 @@ pub fn not_false<'a, E: KiError, O: NotFalse>(
 
 /// Cast next error to Fail error
 #[inline]
-pub fn important<'a, E: KiError, O>(_: Cursor<'a>, next: PResult<'a, O, E>) -> PResult<'a, O, E> {
+pub fn important<'a, E, O>(_: Cursor<'a>, next: PResult<'a, O, E>) -> PResult<'a, O, E> {
     match next {
         Ok(o) => Ok(o),
         Err(LexError::Next(m, s)) => Err(LexError::Fail(m, s)),
@@ -533,7 +543,7 @@ pub fn important<'a, E: KiError, O>(_: Cursor<'a>, next: PResult<'a, O, E>) -> P
 
 /// Take while function is true or empty Ok if is empty
 #[inline]
-pub fn take_while<E: KiError>(i: Cursor, f: fn(u8) -> bool) -> PResult<&str, E> {
+pub fn take_while<E>(i: Cursor, f: fn(u8) -> bool) -> PResult<&str, E> {
     if i.is_empty() {
         Ok((i, ""))
     } else {
