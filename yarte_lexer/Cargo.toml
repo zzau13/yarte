@@ -17,19 +17,18 @@ travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]
+gencode = { path = "gencode" }
+
 yarte_helpers = { version = "0.13.0", path = "../yarte_helpers" }
 
-memchr = "2.3"
 quote = "1.0"
 syn = { version = "1.0", features = ["full", "extra-traits"] }
 proc-macro2 = { version = "1.0", features = ["span-locations"] }
 
 annotate-snippets = { version = "0.9", features = ["color"] }
 derive_more = "0.99"
-unicode-xid = "0.2"
-unicode-width = "0.1"
+memchr = "2.3"
 serde = { version = "1.0", features = ["derive"] }
-gencode = { path = "gencode" }
 
 [dev-dependencies]
 ron = "0.6"
