@@ -86,11 +86,13 @@ impl<'a> Kinder<'a> for MyKind<'a> {
 fn partial(i: Cursor) -> PResult<MyKind, MyError> {
     const PARTIAL: Ascii = ascii!('>');
 
+    let ws = |i| pipes!(i, ws: is_empty: not_true);
+
     do_parse!(i,
-        tac[PARTIAL]            =>
-        ws:is_empty:not_true    =>
-        p= path                 =>
-        ws:is_empty:not_true    =>
+        tac[PARTIAL]    =>
+        ws              =>
+        p= path         =>
+        ws              =>
         (p)
     )
     .map(|(i, partial)| (i, MyKind::Partial(partial)))
