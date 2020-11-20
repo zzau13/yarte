@@ -19,12 +19,13 @@ mod source_map;
 mod stmt_local;
 
 use self::arm::Arm;
+use self::error::Result as PResult;
 use self::source_map::S;
 
 pub use gencode::asciis;
 
 pub use self::{
-    error::{emitter, ErrorMessage, KiError, LexError, PResult},
+    error::{emitter, KiError, LexError},
     parse::*,
     source_map::{get_cursor, Span},
     stmt_local::StmtLocal,

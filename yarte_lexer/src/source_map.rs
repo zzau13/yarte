@@ -5,7 +5,7 @@ use std::{
     path::PathBuf,
 };
 
-use crate::error::{KiError, PResult};
+use crate::error::{KiError, Result};
 use crate::strnom::Cursor;
 
 thread_local! {
@@ -250,8 +250,8 @@ impl<T: Debug + PartialEq + Clone> S<T> {
 
 pub(crate) fn spanned<'a, T: Debug + PartialEq + Clone, E: KiError>(
     input: Cursor<'a>,
-    f: fn(Cursor<'a>) -> PResult<'a, T, E>,
-) -> PResult<'a, S<T>, E> {
+    f: fn(Cursor<'a>) -> Result<'a, T, E>,
+) -> Result<'a, S<T>, E> {
     let lo = input.off;
     let (a, b) = f(input)?;
     let hi = a.off;

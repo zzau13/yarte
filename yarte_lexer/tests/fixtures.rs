@@ -6,8 +6,8 @@ use serde::Deserialize;
 
 use std::error::Error;
 use yarte_lexer::{
-    alt, ascii, asciis, do_parse, is_empty, map, map_err, not_true, parse, path, pipes, tac, tag,
-    ws, Ascii, Cursor, Ki, KiError, Kinder, LexError, PResult, SToken, Span,
+    alt, ascii, asciis, do_parse, error::Result, is_empty, map, map_err, not_true, parse, path,
+    pipes, tac, tag, ws, Ascii, Cursor, Ki, KiError, Kinder, LexError, SToken, Span,
 };
 
 #[derive(Debug, Deserialize)]
@@ -39,7 +39,7 @@ impl<'a> Kinder<'a> for MyKindAfter<'a> {
     const WS: Ascii = ascii!('~');
     const WS_AFTER: bool = true;
 
-    fn parse(i: Cursor<'a>) -> PResult<Self, Self::Error> {
+    fn parse(i: Cursor<'a>) -> Result<Self, Self::Error> {
         const PARTIAL: Ascii = ascii!('>');
 
         let ws = |i| pipes!(i, ws: is_empty: not_true);
@@ -53,7 +53,7 @@ impl<'a> Kinder<'a> for MyKindAfter<'a> {
         )
     }
 
-    fn comment(i: Cursor<'a>) -> PResult<&'a str, Self::Error> {
+    fn comment(i: Cursor<'a>) -> Result<&'a str, Self::Error> {
         comment::<Self>(i)
     }
 }
@@ -76,16 +76,16 @@ impl<'a> Kinder<'a> for MyKind<'a> {
     const WS: Ascii = ascii!('~');
     const WS_AFTER: bool = false;
 
-    fn parse(i: Cursor<'a>) -> PResult<Self, Self::Error> {
+    fn parse(i: Cursor<'a>) -> Result<Self, Self::Error> {
         alt!(i, some | partial)
     }
 
-    fn comment(i: Cursor<'a>) -> PResult<&'a str, Self::Error> {
+    fn comment(i: Cursor<'a>) -> Result<&'a str, Self::Error> {
         comment::<Self>(i)
     }
 }
 
-fn partial(i: Cursor) -> PResult<MyKind, MyError> {
+fn partial(i: Cursor) -> Result<MyKind, MyError> {
     const PARTIAL: Ascii = ascii!('>');
 
     let ws = |i| pipes!(i, ws: is_empty: not_true);
@@ -99,7 +99,7 @@ fn partial(i: Cursor) -> PResult<MyKind, MyError> {
     )
 }
 
-fn some(i: Cursor) -> PResult<MyKind, MyError> {
+fn some(i: Cursor) -> Result<MyKind, MyError> {
     const SOME: &[Ascii] = asciis!("some");
 
     let tag = |i| pipes!(i, tag[SOME]:map_err[|_| MyError::Some]);
@@ -108,7 +108,7 @@ fn some(i: Cursor) -> PResult<MyKind, MyError> {
     do_parse!(i, tag => ws => (MyKind::Some))
 }
 
-fn comment<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<&'a str, K::Error> {
+fn comment<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<&'a str, K::Error> {
     const E: Ascii = ascii!('!');
     const B: &[Ascii] = asciis!("--");
     const END_B: &[Ascii] = asciis!("--}}");

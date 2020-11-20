@@ -3,7 +3,7 @@
 use std::iter::once;
 use std::str::{Bytes, Chars};
 
-use crate::error::{KiError, LexError, PResult};
+use crate::error::{KiError, LexError, Result};
 use crate::source_map::Span;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -343,14 +343,15 @@ macro_rules! alt {
 ///
 /// # Syntax
 /// ```rust
-/// # use yarte_lexer::{pipes, ws, is_empty, map, do_parse, tac, ascii, Ascii, PResult, error::Empty, Cursor, get_cursor};
-/// # use std::path::PathBuf;
-/// # let path = PathBuf::from("FooFile");
-/// # const B: Ascii = ascii!('b');
+/// use yarte_lexer::{pipes, ws, is_empty, map, do_parse, tac, ascii, Ascii, Cursor, get_cursor};
+/// use yarte_lexer::error::{Empty, Result};
+/// use std::path::PathBuf;
+/// let path = PathBuf::from("FooFile");
+/// const B: Ascii = ascii!('b');
 ///
 /// let stmt = |i| pipes!(i, ws:is_empty:map[|x| !x]);
 /// let parser = |i| do_parse!(i, ws= stmt => tac[B] => (ws));
-/// let result: PResult<bool, Empty> = parser(get_cursor(&path, " b"));
+/// let result: Result<bool, Empty> = parser(get_cursor(&path, " b"));
 /// let (c, result) = result.unwrap();
 ///
 /// assert!(result);
@@ -394,7 +395,7 @@ macro_rules! call {
 
 /// Result Pipe optional is some
 #[inline]
-pub fn is_some<'a, O, E>(_: Cursor<'a>, next: PResult<'a, Option<O>, E>) -> PResult<'a, bool, E> {
+pub fn is_some<'a, O, E>(_: Cursor<'a>, next: Result<'a, Option<O>, E>) -> Result<'a, bool, E> {
     match next {
         Ok((i, o)) => Ok((i, o.is_some())),
         Err(e) => Err(e),
@@ -403,7 +404,7 @@ pub fn is_some<'a, O, E>(_: Cursor<'a>, next: PResult<'a, Option<O>, E>) -> PRes
 
 /// Result Pipe optional is none
 #[inline]
-pub fn is_none<'a, O, E>(_: Cursor<'a>, next: PResult<'a, Option<O>, E>) -> PResult<'a, bool, E> {
+pub fn is_none<'a, O, E>(_: Cursor<'a>, next: Result<'a, Option<O>, E>) -> Result<'a, bool, E> {
     match next {
         Ok((i, o)) => Ok((i, o.is_none())),
         Err(e) => Err(e),
@@ -412,7 +413,7 @@ pub fn is_none<'a, O, E>(_: Cursor<'a>, next: PResult<'a, Option<O>, E>) -> PRes
 
 /// Result Pipe optional
 #[inline]
-pub fn opt<'a, O, E>(i: Cursor<'a>, next: PResult<'a, O, E>) -> PResult<'a, Option<O>, E> {
+pub fn opt<'a, O, E>(i: Cursor<'a>, next: Result<'a, O, E>) -> Result<'a, Option<O>, E> {
     match next {
         Ok((i, o)) => Ok((i, Some(o))),
         Err(_) => Ok((i, None)),
@@ -423,29 +424,21 @@ pub fn opt<'a, O, E>(i: Cursor<'a>, next: PResult<'a, O, E>) -> PResult<'a, Opti
 #[inline]
 pub fn then<'a, O, N, E>(
     _: Cursor<'a>,
-    next: PResult<'a, O, E>,
-    c: fn(PResult<'a, O, E>) -> PResult<'a, N, E>,
-) -> PResult<'a, N, E> {
+    next: Result<'a, O, E>,
+    c: fn(Result<'a, O, E>) -> Result<'a, N, E>,
+) -> Result<'a, N, E> {
     c(next)
 }
 
 /// Result Pipe map
 #[inline]
-pub fn map<'a, O, N, E>(
-    _: Cursor<'a>,
-    next: PResult<'a, O, E>,
-    c: fn(O) -> N,
-) -> PResult<'a, N, E> {
+pub fn map<'a, O, N, E>(_: Cursor<'a>, next: Result<'a, O, E>, c: fn(O) -> N) -> Result<'a, N, E> {
     next.map(|(i, x)| (i, c(x)))
 }
 
 /// Result Pipe map_err
 #[inline]
-pub fn map_err<'a, O, E>(
-    _: Cursor<'a>,
-    next: PResult<'a, O, E>,
-    c: fn(E) -> E,
-) -> PResult<'a, O, E> {
+pub fn map_err<'a, O, E>(_: Cursor<'a>, next: Result<'a, O, E>, c: fn(E) -> E) -> Result<'a, O, E> {
     next.map_err(|x| match x {
         LexError::Next(e, s) => LexError::Next(c(e), s),
         LexError::Fail(e, s) => LexError::Fail(c(e), s),
@@ -472,7 +465,7 @@ impl<T> IsEmpty for Vec<T> {
 
 /// Result Pipe is_empty
 #[inline]
-pub fn is_empty<'a, O: IsEmpty, E>(_: Cursor<'a>, next: PResult<'a, O, E>) -> PResult<'a, bool, E> {
+pub fn is_empty<'a, O: IsEmpty, E>(_: Cursor<'a>, next: Result<'a, O, E>) -> Result<'a, bool, E> {
     match next {
         Ok((i, o)) => Ok((i, o.is_empty_())),
         Err(e) => Err(e),
@@ -495,8 +488,8 @@ impl NotTrue for bool {
 #[inline]
 pub fn not_true<'a, O: NotTrue, E: KiError>(
     i: Cursor<'a>,
-    next: PResult<'a, O, E>,
-) -> PResult<'a, O, E> {
+    next: Result<'a, O, E>,
+) -> Result<'a, O, E> {
     match next {
         Ok((i, o)) if o.not_true() => Ok((i, o)),
         Ok(_) => Err(LexError::Next(E::EMPTY, Span::from(i))),
@@ -520,8 +513,8 @@ impl NotFalse for bool {
 #[inline]
 pub fn not_false<'a, O: NotFalse, E: KiError>(
     i: Cursor<'a>,
-    next: PResult<'a, O, E>,
-) -> PResult<'a, O, E> {
+    next: Result<'a, O, E>,
+) -> Result<'a, O, E> {
     match next {
         Ok((i, o)) if o.not_false() => Ok((i, o)),
         Ok(_) => Err(LexError::Next(E::EMPTY, Span::from(i))),
@@ -531,7 +524,7 @@ pub fn not_false<'a, O: NotFalse, E: KiError>(
 
 /// Cast next error to Fail error
 #[inline]
-pub fn important<'a, O, E>(_: Cursor<'a>, next: PResult<'a, O, E>) -> PResult<'a, O, E> {
+pub fn important<'a, O, E>(_: Cursor<'a>, next: Result<'a, O, E>) -> Result<'a, O, E> {
     match next {
         Ok(o) => Ok(o),
         Err(LexError::Next(m, s)) => Err(LexError::Fail(m, s)),
@@ -541,7 +534,7 @@ pub fn important<'a, O, E>(_: Cursor<'a>, next: PResult<'a, O, E>) -> PResult<'a
 
 /// Take while function is true or empty Ok if is empty
 #[inline]
-pub fn take_while<E>(i: Cursor, f: fn(u8) -> bool) -> PResult<&str, E> {
+pub fn take_while<E>(i: Cursor, f: fn(u8) -> bool) -> Result<&str, E> {
     if i.is_empty() {
         Ok((i, ""))
     } else {
@@ -554,7 +547,7 @@ pub fn take_while<E>(i: Cursor, f: fn(u8) -> bool) -> PResult<&str, E> {
 
 /// Take ascii characters or next error
 #[inline]
-pub fn tag<'a, E: KiError>(i: Cursor<'a>, tag: &'static [Ascii]) -> PResult<'a, &'static str, E> {
+pub fn tag<'a, E: KiError>(i: Cursor<'a>, tag: &'static [Ascii]) -> Result<'a, &'static str, E> {
     debug_assert!(!tag.is_empty());
 
     if i.starts_with(tag) {
@@ -569,7 +562,7 @@ pub fn tag<'a, E: KiError>(i: Cursor<'a>, tag: &'static [Ascii]) -> PResult<'a, 
 
 /// Take an ascii character or next error
 #[inline]
-pub fn tac<E: KiError>(i: Cursor, tag: Ascii) -> PResult<char, E> {
+pub fn tac<E: KiError>(i: Cursor, tag: Ascii) -> Result<char, E> {
     if i.next_is(tag) {
         Ok((i.adv(1), tag.into()))
     } else {
@@ -579,7 +572,7 @@ pub fn tac<E: KiError>(i: Cursor, tag: Ascii) -> PResult<char, E> {
 
 /// Take an ascii whitespace or next error
 #[inline]
-pub fn next_ws<E: KiError>(i: Cursor) -> PResult<(), E> {
+pub fn next_ws<E: KiError>(i: Cursor) -> Result<(), E> {
     i.as_bytes()
         .first()
         .copied()
@@ -594,7 +587,7 @@ pub fn next_ws<E: KiError>(i: Cursor) -> PResult<(), E> {
 
 /// Take ascii whitespaces, next error if is empty
 #[inline]
-pub fn ws<E: KiError>(i: Cursor) -> PResult<&str, E> {
+pub fn ws<E: KiError>(i: Cursor) -> Result<&str, E> {
     if i.is_empty() {
         return Err(LexError::Next(E::WHITESPACE, Span::from(i)));
     }
