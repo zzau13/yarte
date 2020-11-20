@@ -103,6 +103,9 @@ pub trait Emitter {
 
 impl<'a> Emitter for EmitterConfig<'a> {}
 
+// TODO: Emitter config should be abstract and include sources
+// TODO: Who?
+// TODO: Warnings and another types
 pub fn emitter<E, M, I>(
     sources: &BTreeMap<PathBuf, String>,
     EmitterConfig { config, color }: EmitterConfig,
@@ -212,7 +215,6 @@ mod test {
                 config: &config,
                 color: false,
             },
-            // TODO: Check this numbers
             once(ErrorMessage {
                 message: Errr("bar"),
                 span: Span { lo: 10, hi: 14 },

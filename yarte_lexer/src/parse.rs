@@ -27,6 +27,7 @@ pub fn parse<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Vec<SToken<'a, K>>, ErrorMe
     }
 }
 
+// TODO: Simplify
 macro_rules! comment {
     ($K:ty, $cur:expr, $i:ident, $at:ident, $j:ident, $nodes:ident) => {
         match <$K>::comment($cur) {
@@ -95,6 +96,7 @@ fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SToken<'a, K>>, K::Error
                     inner!(inner, next, true);
                 } else if next == K::OPEN_EXPR.g() {
                     let next = i.adv(at + j + 2);
+                    comment!(K, next, i, at, j, nodes);
                     safe!(K, next, i, at, j, nodes);
                     inner!(eat_expr::<K>, next, true);
                 } else if next == K::OPEN_BLOCK.g() {
