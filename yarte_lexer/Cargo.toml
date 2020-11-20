@@ -19,8 +19,6 @@ maintenance = { status = "actively-developed" }
 [dependencies]
 gencode = { path = "gencode" }
 
-yarte_helpers = { version = "0.13.0", path = "../yarte_helpers" }
-
 quote = "1.0"
 syn = { version = "1.0", features = ["full", "extra-traits"] }
 proc-macro2 = { version = "1.0", features = ["span-locations"] }
