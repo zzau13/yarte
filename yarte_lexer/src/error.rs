@@ -103,18 +103,19 @@ pub trait Emitter {
 
 impl<'a> Emitter for EmitterConfig<'a> {}
 
-pub fn emitter<I, T>(
+pub fn emitter<E, M, I>(
     sources: &BTreeMap<PathBuf, String>,
     EmitterConfig { config, color }: EmitterConfig,
     errors: I,
 ) -> !
 where
-    I: Iterator<Item = ErrorMessage<T>>,
-    T: Error,
+    E: Into<ErrorMessage<M>>,
+    M: Error,
+    I: Iterator<Item = E>,
 {
     let mut prefix = config.get_dir().clone();
     prefix.pop();
-    let mut errors: Vec<ErrorMessage<T>> = errors.collect();
+    let mut errors: Vec<ErrorMessage<M>> = errors.map(Into::into).collect();
 
     errors.sort_by(|a, b| a.span.lo.cmp(&b.span.lo));
     let slices: Vec<(String, PathBuf, Span)> = errors
