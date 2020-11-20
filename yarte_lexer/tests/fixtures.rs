@@ -21,6 +21,35 @@ struct Fixture<'a, Kind: Ki<'a>> {
 #[derive(Debug, Deserialize)]
 struct FixturePanic<'a>(#[serde(borrow)] &'a str);
 
+fn comment<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<&'a str, K::Error> {
+    const E: Ascii = ascii!('!');
+    const B: &[Ascii] = asciis!("--");
+    const END_B: &[Ascii] = asciis!("--}}");
+    const END_A: &[Ascii] = asciis!("}}");
+
+    let (c, _) = tac(i, E)?;
+    let (c, expected) = if c.starts_with(B) {
+        (c.adv_ascii(B), END_B)
+    } else {
+        (c, END_A)
+    };
+
+    let mut at = 0;
+    loop {
+        if c.adv_starts_with(at, expected) {
+            break Ok((c.adv(at + expected.len()), &c.rest[..at]));
+        } else {
+            at += 1;
+            if at >= c.len() {
+                break Err(LexError::Next(
+                    K::Error::UNCOMPLETED,
+                    Span::from_cursor(i, c),
+                ));
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 enum MyKindAfter<'a> {
     Partial(&'a str),
@@ -108,32 +137,40 @@ fn some(i: Cursor) -> Result<MyKind, MyError> {
     do_parse!(i, tag => ws => (MyKind::Some))
 }
 
-fn comment<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<&'a str, K::Error> {
-    const E: Ascii = ascii!('!');
-    const B: &[Ascii] = asciis!("--");
-    const END_B: &[Ascii] = asciis!("--}}");
-    const END_A: &[Ascii] = asciis!("}}");
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+enum MyKindBlock<'a> {
+    Partial(&'a str),
+    Some,
+    Str(&'a str),
+}
 
-    let (c, _) = tac(i, E)?;
-    let (c, expected) = if c.starts_with(B) {
-        (c.adv_ascii(B), END_B)
-    } else {
-        (c, END_A)
-    };
+impl<'a> Kinder<'a> for MyKindBlock<'a> {
+    type Error = MyError;
+    const OPEN: Ascii = ascii!('{');
+    const CLOSE: Ascii = ascii!('}');
+    const OPEN_EXPR: Ascii = ascii!('{');
+    const CLOSE_EXPR: Ascii = ascii!('}');
+    const OPEN_BLOCK: Ascii = ascii!('%');
+    const CLOSE_BLOCK: Ascii = ascii!('%');
+    const WS: Ascii = ascii!('~');
+    const WS_AFTER: bool = true;
 
-    let mut at = 0;
-    loop {
-        if c.adv_starts_with(at, expected) {
-            break Ok((c.adv(at + expected.len()), &c.rest[..at]));
-        } else {
-            at += 1;
-            if at >= c.len() {
-                break Err(LexError::Next(
-                    K::Error::UNCOMPLETED,
-                    Span::from_cursor(i, c),
-                ));
-            }
-        }
+    fn parse(i: Cursor<'a>) -> Result<Self, Self::Error> {
+        const PARTIAL: Ascii = ascii!('>');
+
+        let ws = |i| pipes!(i, ws: is_empty: not_true);
+
+        do_parse!(i,
+            tac[PARTIAL]    =>
+            ws              =>
+            p= path         =>
+            ws              =>
+            (MyKindBlock::Partial(p))
+        )
+    }
+
+    fn comment(i: Cursor<'a>) -> Result<&'a str, Self::Error> {
+        comment::<Self>(i)
     }
 }
 
@@ -198,10 +235,13 @@ macro_rules! features {
 }
 
 features!(
+    test_after_block_features: "./tests/fixtures/features/**/*.ron" MyKindBlock,
     test_after_same_features: "./tests/fixtures/features/**/*.ron" MyKindAfter,
     test_after_same_features_a: "./tests/fixtures/features_a/**/*.ron" MyKindAfter,
     test_same_features: "./tests/fixtures/features/**/*.ron" MyKind,
     test_same_features_b: "./tests/fixtures/features_b/**/*.ron" MyKind,
+    test_after_block_features_a: "./tests/fixtures/features_a/**/*.ron" MyKindBlock,
+    test_after_block: "./tests/fixtures/block/**/*.ron" MyKindBlock,
 );
 
 #[test]
