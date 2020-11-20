@@ -341,12 +341,12 @@ macro_rules! alt {
 
 /// Make a in tail function call
 ///
-/// # Syntax:
+/// # Syntax
 /// ```rust
-/// use yarte_lexer::{pipes, ws, is_empty, map, do_parse, tac, ascii, Ascii, PResult, error::Empty, Cursor, get_cursor};
+/// # use yarte_lexer::{pipes, ws, is_empty, map, do_parse, tac, ascii, Ascii, PResult, error::Empty, Cursor, get_cursor};
 /// # use std::path::PathBuf;
 /// # let path = PathBuf::from("FooFile");
-/// const B: Ascii = ascii!('b');
+/// # const B: Ascii = ascii!('b');
 ///
 /// let stmt = |i| pipes!(i, ws:is_empty:map[|x| !x]);
 /// let parser = |i| do_parse!(i, ws= stmt => tac[B] => (ws));
@@ -394,7 +394,7 @@ macro_rules! call {
 
 /// Result Pipe optional is some
 #[inline]
-pub fn is_some<'a, E, O>(_: Cursor<'a>, next: PResult<'a, Option<O>, E>) -> PResult<'a, bool, E> {
+pub fn is_some<'a, O, E>(_: Cursor<'a>, next: PResult<'a, Option<O>, E>) -> PResult<'a, bool, E> {
     match next {
         Ok((i, o)) => Ok((i, o.is_some())),
         Err(e) => Err(e),
@@ -403,10 +403,7 @@ pub fn is_some<'a, E, O>(_: Cursor<'a>, next: PResult<'a, Option<O>, E>) -> PRes
 
 /// Result Pipe optional is none
 #[inline]
-pub fn is_none<'a, E: KiError, O>(
-    _: Cursor<'a>,
-    next: PResult<'a, Option<O>, E>,
-) -> PResult<'a, bool, E> {
+pub fn is_none<'a, O, E>(_: Cursor<'a>, next: PResult<'a, Option<O>, E>) -> PResult<'a, bool, E> {
     match next {
         Ok((i, o)) => Ok((i, o.is_none())),
         Err(e) => Err(e),
@@ -415,7 +412,7 @@ pub fn is_none<'a, E: KiError, O>(
 
 /// Result Pipe optional
 #[inline]
-pub fn opt<'a, E: KiError, O>(i: Cursor<'a>, next: PResult<'a, O, E>) -> PResult<'a, Option<O>, E> {
+pub fn opt<'a, O, E>(i: Cursor<'a>, next: PResult<'a, O, E>) -> PResult<'a, Option<O>, E> {
     match next {
         Ok((i, o)) => Ok((i, Some(o))),
         Err(_) => Ok((i, None)),
@@ -424,7 +421,7 @@ pub fn opt<'a, E: KiError, O>(i: Cursor<'a>, next: PResult<'a, O, E>) -> PResult
 
 /// Result Pipe then
 #[inline]
-pub fn then<'a, E, O, N>(
+pub fn then<'a, O, N, E>(
     _: Cursor<'a>,
     next: PResult<'a, O, E>,
     c: fn(PResult<'a, O, E>) -> PResult<'a, N, E>,
@@ -434,7 +431,7 @@ pub fn then<'a, E, O, N>(
 
 /// Result Pipe map
 #[inline]
-pub fn map<'a, E, O, N>(
+pub fn map<'a, O, N, E>(
     _: Cursor<'a>,
     next: PResult<'a, O, E>,
     c: fn(O) -> N,
@@ -444,7 +441,7 @@ pub fn map<'a, E, O, N>(
 
 /// Result Pipe map_err
 #[inline]
-pub fn map_err<'a, E, O>(
+pub fn map_err<'a, O, E>(
     _: Cursor<'a>,
     next: PResult<'a, O, E>,
     c: fn(E) -> E,
@@ -475,7 +472,7 @@ impl<T> IsEmpty for Vec<T> {
 
 /// Result Pipe is_empty
 #[inline]
-pub fn is_empty<'a, E, O: IsEmpty>(_: Cursor<'a>, next: PResult<'a, O, E>) -> PResult<'a, bool, E> {
+pub fn is_empty<'a, O: IsEmpty, E>(_: Cursor<'a>, next: PResult<'a, O, E>) -> PResult<'a, bool, E> {
     match next {
         Ok((i, o)) => Ok((i, o.is_empty_())),
         Err(e) => Err(e),
@@ -496,13 +493,13 @@ impl NotTrue for bool {
 
 /// Result Pipe true to error next
 #[inline]
-pub fn not_true<'a, E: KiError, O: NotTrue>(
+pub fn not_true<'a, O: NotTrue, E: KiError>(
     i: Cursor<'a>,
     next: PResult<'a, O, E>,
 ) -> PResult<'a, O, E> {
     match next {
         Ok((i, o)) if o.not_true() => Ok((i, o)),
-        Ok(_) => Err(LexError::Next(E::UNCOMPLETED, Span::from(i))),
+        Ok(_) => Err(LexError::Next(E::EMPTY, Span::from(i))),
         Err(e) => Err(e),
     }
 }
@@ -521,20 +518,20 @@ impl NotFalse for bool {
 
 /// Result Pipe false to error next
 #[inline]
-pub fn not_false<'a, E: KiError, O: NotFalse>(
+pub fn not_false<'a, O: NotFalse, E: KiError>(
     i: Cursor<'a>,
     next: PResult<'a, O, E>,
 ) -> PResult<'a, O, E> {
     match next {
         Ok((i, o)) if o.not_false() => Ok((i, o)),
-        Ok(_) => Err(LexError::Next(E::UNCOMPLETED, Span::from(i))),
+        Ok(_) => Err(LexError::Next(E::EMPTY, Span::from(i))),
         Err(e) => Err(e),
     }
 }
 
 /// Cast next error to Fail error
 #[inline]
-pub fn important<'a, E, O>(_: Cursor<'a>, next: PResult<'a, O, E>) -> PResult<'a, O, E> {
+pub fn important<'a, O, E>(_: Cursor<'a>, next: PResult<'a, O, E>) -> PResult<'a, O, E> {
     match next {
         Ok(o) => Ok(o),
         Err(LexError::Next(m, s)) => Err(LexError::Fail(m, s)),
