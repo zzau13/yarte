@@ -3,10 +3,10 @@ use std::error::Error;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use annotate_snippets::{
-    display_list::{DisplayList, FormatOptions},
-    snippet::{Annotation, AnnotationType, Slice, Snippet, SourceAnnotation},
-};
+use annotate_snippets::display_list::{DisplayList, FormatOptions};
+use annotate_snippets::snippet::{Annotation, AnnotationType, Slice, Snippet, SourceAnnotation};
+
+use derive_more::Display;
 
 use crate::source_map::clean;
 use crate::{get_bytes_to_chars, source_map::Span, Cursor};
@@ -54,6 +54,49 @@ impl KiError for Empty {
         Empty
     }
 }
+
+#[derive(Display, Debug, PartialEq, Clone)]
+pub enum Some {
+    #[display(fmt = "Empty")]
+    Empty,
+    #[display(fmt = "Uncompleted")]
+    Uncompleted,
+    #[display(fmt = "Path")]
+    Path,
+    #[display(fmt = "Whitespace")]
+    Whitespace,
+    #[display(fmt = "{}", _0)]
+    Str(&'static str),
+    #[display(fmt = "{}", _0)]
+    Char(char),
+    #[display(fmt = "{}", _0)]
+    String(String),
+}
+
+impl Error for Some {}
+
+impl KiError for Some {
+    const EMPTY: Self = Some::Empty;
+    const UNCOMPLETED: Self = Some::Uncompleted;
+    const PATH: Self = Some::Path;
+    const WHITESPACE: Self = Some::Whitespace;
+
+    #[inline]
+    fn str(s: &'static str) -> Self {
+        Some::Str(s)
+    }
+
+    #[inline]
+    fn char(s: char) -> Self {
+        Some::Char(s)
+    }
+
+    #[inline]
+    fn string(s: String) -> Self {
+        Some::String(s)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum LexError<K> {
     Fail(K, Span),
@@ -100,6 +143,7 @@ pub struct Config<'a> {
 
 pub trait Emitter {
     fn callback();
+    // TODO: Define better path type
     fn get(&self, path: &PathBuf) -> Option<&str>;
     fn config(&self) -> &Config;
 }
@@ -109,6 +153,7 @@ impl<'a> Emitter for EmitterConfig<'a> {
         clean();
     }
 
+    // TODO:
     fn get(&self, path: &PathBuf) -> Option<&str> {
         self.sources.get(path).map(|x| x.as_str())
     }
