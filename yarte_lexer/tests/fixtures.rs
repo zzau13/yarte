@@ -41,14 +41,16 @@ impl<'a> Kinder<'a> for MyKindAfter<'a> {
 
     fn parse(i: Cursor<'a>) -> PResult<Self, Self::Error> {
         const PARTIAL: Ascii = ascii!('>');
-        let (i, partial) = do_parse!(i,
-            tac[PARTIAL]            =>
-            ws:is_empty:not_true    =>
-            p= path                 =>
-            ws:is_empty:not_true    =>
-            (p)
-        )?;
-        Ok((i, MyKindAfter::Partial(partial)))
+
+        let ws = |i| pipes!(i, ws: is_empty: not_true);
+
+        do_parse!(i,
+            tac[PARTIAL]    =>
+            ws              =>
+            p= path         =>
+            ws              =>
+            (MyKindAfter::Partial(p))
+        )
     }
 
     fn comment(i: Cursor<'a>) -> PResult<&'a str, Self::Error> {
@@ -93,9 +95,8 @@ fn partial(i: Cursor) -> PResult<MyKind, MyError> {
         ws              =>
         p= path         =>
         ws              =>
-        (p)
+        (MyKind::Partial(p))
     )
-    .map(|(i, partial)| (i, MyKind::Partial(partial)))
 }
 
 fn some(i: Cursor) -> PResult<MyKind, MyError> {
@@ -104,7 +105,7 @@ fn some(i: Cursor) -> PResult<MyKind, MyError> {
     let tag = |i| pipes!(i, tag[SOME]:map_err[|_| MyError::Some]);
     let ws = |i| pipes!(i, ws:is_empty:not_true:map[|_| MyKind::Some]);
 
-    do_parse!(i, tag => ws => ()).map(|(i, _)| (i, MyKind::Some))
+    do_parse!(i, tag => ws => (MyKind::Some))
 }
 
 fn comment<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<&'a str, K::Error> {
