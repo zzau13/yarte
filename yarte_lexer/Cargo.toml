@@ -1,8 +1,8 @@
 [package]
 name = "yarte_lexer"
-version = "0.13.0"
+version = "0.0.1"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
-description = "Ast and lexer codegen for yarte"
+description = "Lexer for yarte"
 categories = ["template-engine", "web-programming", "gui"]
 documentation = "https://docs.rs/yarte_lexer"
 edition = "2018"
