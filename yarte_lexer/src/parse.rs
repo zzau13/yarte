@@ -8,7 +8,8 @@ use crate::arm::Arm;
 use crate::error::{ErrorMessage, KiError, LexError, Result as PResult};
 use crate::expr_list::ExprList;
 use crate::source_map::{Span, S};
-use crate::strnom::{get_chars, is_some, is_ws, opt, tac, tag, take_while, ws, Cursor};
+use crate::strnom::pipes::{is_some, opt};
+use crate::strnom::{get_chars, is_ws, tac, tag, take_while, ws, Cursor};
 use crate::{Ascii, Kinder, SToken, StmtLocal, Token};
 
 pub trait Ki<'a>: Kinder<'a> + Debug + PartialEq + Clone {}

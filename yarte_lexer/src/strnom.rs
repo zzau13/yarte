@@ -220,6 +220,7 @@ impl AsStr for [Ascii] {
     }
 }
 
+// Char converters
 /// Get char range in text
 pub fn get_chars(text: &str, left: usize, right: usize) -> &str {
     debug_assert!(right.checked_sub(left).is_some());
@@ -268,6 +269,37 @@ pub fn get_bytes_to_chars(text: &str, left: usize, right: usize) -> (usize, usiz
     left.map_or((0, 0), |left| (left, right))
 }
 
+// Macro helpers
+/// Call function
+#[macro_export]
+macro_rules! call {
+    ($i:expr, $fun:expr, $($args:tt)*) => {
+        $fun($i, $($args)*)
+    };
+}
+
+/// Make parser
+///
+/// # Syntax:
+/// ```rust
+/// # use yarte_lexer::{pipes, do_parse, ws, tac, ascii, Ascii, Cursor, get_cursor};
+/// # use yarte_lexer::pipes::*;
+/// # use yarte_lexer::error::{Empty, Result, LexError};
+/// # use std::path::PathBuf;
+/// # let path = PathBuf::from("FooFile");
+/// # const B: Ascii = ascii!('b');
+///
+/// let stmt = |i| pipes!(i, ws:is_empty:not_true);
+/// let parser = |i| do_parse!(i, ws= stmt:important => tac[B] => (ws));
+/// let result: Result<bool, Empty> = parser(get_cursor(&path, " b"));
+/// let (c, result) = result.unwrap();
+///
+/// assert!(!result);
+/// assert!(c.is_empty());
+///
+/// let result: Result<bool, Empty> = parser(get_cursor(&path, "b"));
+/// assert!(matches!(result.err().unwrap(), LexError::Fail(..)))
+/// ```
 // TODO: remove unnecessary on pipe [] from do_parse
 #[macro_export]
 macro_rules! do_parse {
@@ -344,11 +376,12 @@ macro_rules! alt {
 ///
 /// # Syntax
 /// ```rust
-/// use yarte_lexer::{pipes, ws, is_empty, map, do_parse, tac, ascii, Ascii, Cursor, get_cursor};
-/// use yarte_lexer::error::{Empty, Result};
-/// use std::path::PathBuf;
-/// let path = PathBuf::from("FooFile");
-/// const B: Ascii = ascii!('b');
+/// # use yarte_lexer::{pipes, do_parse, ws, tac, ascii, Ascii, Cursor, get_cursor};
+/// # use yarte_lexer::pipes::*;
+/// # use yarte_lexer::error::{Empty, Result};
+/// # use std::path::PathBuf;
+/// # let path = PathBuf::from("FooFile");
+/// # const B: Ascii = ascii!('b');
 ///
 /// let stmt = |i| pipes!(i, ws:is_empty:map[|x| !x]);
 /// let parser = |i| do_parse!(i, ws= stmt => tac[B] => (ws));
@@ -387,149 +420,157 @@ macro_rules! pipes {
     };
 }
 
-#[macro_export]
-macro_rules! call {
-    ($i:expr, $fun:expr, $($args:tt)*) => {
-        $fun($i, $($args)*)
-    };
-}
+pub mod pipes {
+    use super::*;
 
-/// Result Pipe optional is some
-#[inline]
-pub fn is_some<'a, O, E>(_: Cursor<'a>, next: Result<'a, Option<O>, E>) -> Result<'a, bool, E> {
-    match next {
-        Ok((i, o)) => Ok((i, o.is_some())),
-        Err(e) => Err(e),
-    }
-}
-
-/// Result Pipe optional is none
-#[inline]
-pub fn is_none<'a, O, E>(_: Cursor<'a>, next: Result<'a, Option<O>, E>) -> Result<'a, bool, E> {
-    match next {
-        Ok((i, o)) => Ok((i, o.is_none())),
-        Err(e) => Err(e),
-    }
-}
-
-/// Result Pipe optional
-#[inline]
-pub fn opt<'a, O, E>(i: Cursor<'a>, next: Result<'a, O, E>) -> Result<'a, Option<O>, E> {
-    match next {
-        Ok((i, o)) => Ok((i, Some(o))),
-        Err(_) => Ok((i, None)),
-    }
-}
-
-/// Result Pipe then
-#[inline]
-pub fn then<'a, O, N, E>(
-    _: Cursor<'a>,
-    next: Result<'a, O, E>,
-    c: fn(Result<'a, O, E>) -> Result<'a, N, E>,
-) -> Result<'a, N, E> {
-    c(next)
-}
-
-/// Result Pipe map
-#[inline]
-pub fn map<'a, O, N, E>(_: Cursor<'a>, next: Result<'a, O, E>, c: fn(O) -> N) -> Result<'a, N, E> {
-    next.map(|(i, x)| (i, c(x)))
-}
-
-/// Result Pipe map_err
-#[inline]
-pub fn map_err<'a, O, E>(_: Cursor<'a>, next: Result<'a, O, E>, c: fn(E) -> E) -> Result<'a, O, E> {
-    next.map_err(|x| match x {
-        LexError::Next(e, s) => LexError::Next(c(e), s),
-        LexError::Fail(e, s) => LexError::Fail(c(e), s),
-    })
-}
-
-pub trait IsEmpty {
-    fn is_empty_(&self) -> bool;
-}
-
-impl IsEmpty for &str {
+    /// Result Pipe optional is some
     #[inline]
-    fn is_empty_(&self) -> bool {
-        self.is_empty()
+    pub fn is_some<'a, O, E>(_: Cursor<'a>, next: Result<'a, Option<O>, E>) -> Result<'a, bool, E> {
+        match next {
+            Ok((i, o)) => Ok((i, o.is_some())),
+            Err(e) => Err(e),
+        }
     }
-}
 
-impl<T> IsEmpty for Vec<T> {
+    /// Result Pipe optional is none
     #[inline]
-    fn is_empty_(&self) -> bool {
-        self.is_empty()
+    pub fn is_none<'a, O, E>(_: Cursor<'a>, next: Result<'a, Option<O>, E>) -> Result<'a, bool, E> {
+        match next {
+            Ok((i, o)) => Ok((i, o.is_none())),
+            Err(e) => Err(e),
+        }
     }
-}
 
-/// Result Pipe is_empty
-#[inline]
-pub fn is_empty<'a, O: IsEmpty, E>(_: Cursor<'a>, next: Result<'a, O, E>) -> Result<'a, bool, E> {
-    match next {
-        Ok((i, o)) => Ok((i, o.is_empty_())),
-        Err(e) => Err(e),
-    }
-}
-
-// TODO:
-pub trait NotTrue {
-    fn not_true(&self) -> bool;
-}
-
-impl NotTrue for bool {
+    /// Result Pipe optional
     #[inline]
-    fn not_true(&self) -> bool {
-        !*self
+    pub fn opt<'a, O, E>(i: Cursor<'a>, next: Result<'a, O, E>) -> Result<'a, Option<O>, E> {
+        match next {
+            Ok((i, o)) => Ok((i, Some(o))),
+            Err(_) => Ok((i, None)),
+        }
     }
-}
 
-/// Result Pipe true to error next
-#[inline]
-pub fn not_true<'a, O: NotTrue, E: KiError>(
-    i: Cursor<'a>,
-    next: Result<'a, O, E>,
-) -> Result<'a, O, E> {
-    match next {
-        Ok((i, o)) if o.not_true() => Ok((i, o)),
-        Ok(_) => Err(LexError::Next(E::EMPTY, Span::from(i))),
-        Err(e) => Err(e),
-    }
-}
-
-// TODO:
-pub trait NotFalse {
-    fn not_false(&self) -> bool;
-}
-
-impl NotFalse for bool {
+    /// Result Pipe then
     #[inline]
-    fn not_false(&self) -> bool {
-        *self
+    pub fn then<'a, O, N, E>(
+        _: Cursor<'a>,
+        next: Result<'a, O, E>,
+        c: fn(Result<'a, O, E>) -> Result<'a, N, E>,
+    ) -> Result<'a, N, E> {
+        c(next)
     }
-}
 
-/// Result Pipe false to error next
-#[inline]
-pub fn not_false<'a, O: NotFalse, E: KiError>(
-    i: Cursor<'a>,
-    next: Result<'a, O, E>,
-) -> Result<'a, O, E> {
-    match next {
-        Ok((i, o)) if o.not_false() => Ok((i, o)),
-        Ok(_) => Err(LexError::Next(E::EMPTY, Span::from(i))),
-        Err(e) => Err(e),
+    /// Result Pipe map
+    #[inline]
+    pub fn map<'a, O, N, E>(
+        _: Cursor<'a>,
+        next: Result<'a, O, E>,
+        c: fn(O) -> N,
+    ) -> Result<'a, N, E> {
+        next.map(|(i, x)| (i, c(x)))
     }
-}
 
-/// Cast next error to Fail error
-#[inline]
-pub fn important<'a, O, E>(_: Cursor<'a>, next: Result<'a, O, E>) -> Result<'a, O, E> {
-    match next {
-        Ok(o) => Ok(o),
-        Err(LexError::Next(m, s)) => Err(LexError::Fail(m, s)),
-        Err(e) => Err(e),
+    /// Result Pipe map_err
+    #[inline]
+    pub fn map_err<'a, O, E>(
+        _: Cursor<'a>,
+        next: Result<'a, O, E>,
+        c: fn(E) -> E,
+    ) -> Result<'a, O, E> {
+        next.map_err(|x| match x {
+            LexError::Next(e, s) => LexError::Next(c(e), s),
+            LexError::Fail(e, s) => LexError::Fail(c(e), s),
+        })
+    }
+
+    pub trait IsEmpty {
+        fn is_empty_(&self) -> bool;
+    }
+
+    impl IsEmpty for &str {
+        #[inline]
+        fn is_empty_(&self) -> bool {
+            self.is_empty()
+        }
+    }
+
+    impl<T> IsEmpty for Vec<T> {
+        #[inline]
+        fn is_empty_(&self) -> bool {
+            self.is_empty()
+        }
+    }
+
+    /// Result Pipe is_empty
+    #[inline]
+    pub fn is_empty<'a, O: IsEmpty, E>(
+        _: Cursor<'a>,
+        next: Result<'a, O, E>,
+    ) -> Result<'a, bool, E> {
+        match next {
+            Ok((i, o)) => Ok((i, o.is_empty_())),
+            Err(e) => Err(e),
+        }
+    }
+
+    // TODO:
+    pub trait NotTrue {
+        fn not_true(&self) -> bool;
+    }
+
+    impl NotTrue for bool {
+        #[inline]
+        fn not_true(&self) -> bool {
+            !*self
+        }
+    }
+
+    /// Result Pipe true to error next
+    #[inline]
+    pub fn not_true<'a, O: NotTrue, E: KiError>(
+        i: Cursor<'a>,
+        next: Result<'a, O, E>,
+    ) -> Result<'a, O, E> {
+        match next {
+            Ok((i, o)) if o.not_true() => Ok((i, o)),
+            Ok(_) => Err(LexError::Next(E::EMPTY, Span::from(i))),
+            Err(e) => Err(e),
+        }
+    }
+
+    // TODO:
+    pub trait NotFalse {
+        fn not_false(&self) -> bool;
+    }
+
+    impl NotFalse for bool {
+        #[inline]
+        fn not_false(&self) -> bool {
+            *self
+        }
+    }
+
+    /// Result Pipe false to error next
+    #[inline]
+    pub fn not_false<'a, O: NotFalse, E: KiError>(
+        i: Cursor<'a>,
+        next: Result<'a, O, E>,
+    ) -> Result<'a, O, E> {
+        match next {
+            Ok((i, o)) if o.not_false() => Ok((i, o)),
+            Ok(_) => Err(LexError::Next(E::EMPTY, Span::from(i))),
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Cast next error to Fail error
+    #[inline]
+    pub fn important<'a, O, E>(_: Cursor<'a>, next: Result<'a, O, E>) -> Result<'a, O, E> {
+        match next {
+            Ok(o) => Ok(o),
+            Err(LexError::Next(m, s)) => Err(LexError::Fail(m, s)),
+            Err(e) => Err(e),
+        }
     }
 }
 
