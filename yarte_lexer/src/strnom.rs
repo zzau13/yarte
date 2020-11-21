@@ -423,6 +423,7 @@ macro_rules! pipes {
 
 pub mod pipes {
     use super::*;
+    use std::result;
 
     /// Result Pipe optional is some
     #[inline]
@@ -456,9 +457,24 @@ pub mod pipes {
     pub fn then<'a, O, N, E>(
         _: Cursor<'a>,
         next: Result<'a, O, E>,
-        c: fn(Result<'a, O, E>) -> Result<'a, N, E>,
+        callback: fn(Result<'a, O, E>) -> Result<'a, N, E>,
     ) -> Result<'a, N, E> {
-        c(next)
+        callback(next)
+    }
+
+    /// Result Pipe then
+    #[inline]
+    pub fn and_then<'a, O, N, E>(
+        i: Cursor<'a>,
+        next: Result<'a, O, E>,
+        callback: fn(O) -> result::Result<N, E>,
+    ) -> Result<'a, N, E> {
+        match next {
+            Ok((c, o)) => callback(o)
+                .map(|n| (c, n))
+                .map_err(|e| LexError::Next(e, Span::from_cursor(i, c))),
+            Err(e) => Err(e),
+        }
     }
 
     /// Result Pipe map
@@ -466,9 +482,9 @@ pub mod pipes {
     pub fn map<'a, O, N, E>(
         _: Cursor<'a>,
         next: Result<'a, O, E>,
-        c: fn(O) -> N,
+        callback: fn(O) -> N,
     ) -> Result<'a, N, E> {
-        next.map(|(i, x)| (i, c(x)))
+        next.map(|(i, x)| (i, callback(x)))
     }
 
     /// Result Pipe map_err
@@ -575,6 +591,7 @@ pub mod pipes {
     }
 }
 
+// TODO: Should be return a Cursor
 /// Take while function is true or empty Ok if is empty
 #[inline]
 pub fn take_while<E>(i: Cursor, f: fn(u8) -> bool) -> Result<&str, E> {
