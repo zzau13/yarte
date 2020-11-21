@@ -6,9 +6,11 @@ use serde::Deserialize;
 
 use std::error::Error;
 use yarte_lexer::{
-    alt, ascii, asciis, do_parse, error::Result, is_empty, map, map_err, not_true, parse, path,
-    pipes, tac, tag, ws, Ascii, Cursor, Ki, KiError, Kinder, LexError, SToken, Span,
+    alt, ascii, asciis, do_parse, parse, path,
+    pipes, tac, tag, ws, Ascii, Cursor, Ki, Kinder, LexError, SToken, Span,
 };
+use yarte_lexer::error::{Result, KiError};
+use yarte_lexer::pipes::{is_empty, map, map_err, not_true};
 
 #[derive(Debug, Deserialize)]
 struct Fixture<'a, Kind: Ki<'a>> {
@@ -235,11 +237,11 @@ macro_rules! features {
 }
 
 features!(
-    test_after_block_features: "./tests/fixtures/features/**/*.ron" MyKindBlock,
     test_after_same_features: "./tests/fixtures/features/**/*.ron" MyKindAfter,
     test_after_same_features_a: "./tests/fixtures/features_a/**/*.ron" MyKindAfter,
     test_same_features: "./tests/fixtures/features/**/*.ron" MyKind,
     test_same_features_b: "./tests/fixtures/features_b/**/*.ron" MyKind,
+    test_after_block_features: "./tests/fixtures/features/**/*.ron" MyKindBlock,
     test_after_block_features_a: "./tests/fixtures/features_a/**/*.ron" MyKindBlock,
     test_after_block: "./tests/fixtures/block/**/*.ron" MyKindBlock,
 );

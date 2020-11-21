@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
 use std::str;
@@ -19,15 +17,14 @@ mod source_map;
 mod stmt_local;
 
 use self::arm::Arm;
-use self::error::Result as PResult;
-use self::source_map::S;
+use self::error::{Result as PResult, KiError};
 
 pub use gencode::asciis;
 
 pub use self::{
-    error::{emitter, KiError, LexError},
-    parse::*,
-    source_map::{get_cursor, Span},
+    error::LexError,
+    parse::{parse, path, Ki},
+    source_map::{clean, get_cursor, spanned, LineColumn, Span, S},
     stmt_local::StmtLocal,
     strnom::*,
 };
