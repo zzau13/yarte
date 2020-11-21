@@ -5,12 +5,12 @@ use glob::glob;
 use serde::Deserialize;
 
 use std::error::Error;
-use yarte_lexer::{
-    alt, ascii, asciis, do_parse, parse, path,
-    pipes, tac, tag, ws, Ascii, Cursor, Ki, Kinder, LexError, SToken, Span,
-};
-use yarte_lexer::error::{Result, KiError};
+use yarte_lexer::error::{KiError, Result};
 use yarte_lexer::pipes::{is_empty, map, map_err, not_true};
+use yarte_lexer::{
+    alt, ascii, asciis, do_parse, parse, path, pipes, tac, tag, ws, Ascii, Cursor, Ki, Kinder,
+    LexError, SToken, Span,
+};
 
 #[derive(Debug, Deserialize)]
 struct Fixture<'a, Kind: Ki<'a>> {
