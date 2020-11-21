@@ -452,14 +452,25 @@ pub mod pipes {
         }
     }
 
+    // TODO: is it really usable?
     /// Result Pipe then
     #[inline]
-    pub fn then<'a, O, N, E>(
-        _: Cursor<'a>,
+    pub fn then<'a, O, N, E, F>(
+        i: Cursor<'a>,
         next: Result<'a, O, E>,
-        callback: fn(Result<'a, O, E>) -> Result<'a, N, E>,
-    ) -> Result<'a, N, E> {
-        callback(next)
+        callback: fn(result::Result<O, E>) -> result::Result<N, F>,
+    ) -> Result<'a, N, F> {
+        match next {
+            Ok((c, o)) => callback(Ok(o))
+                .map(|n| (c, n))
+                .map_err(|e| LexError::Next(e, Span::from_cursor(i, c))),
+            Err(LexError::Fail(e, s)) => callback(Err(e))
+                .map(|n| (i, n))
+                .map_err(|e| LexError::Fail(e, s)),
+            Err(LexError::Next(e, s)) => callback(Err(e))
+                .map(|n| (i, n))
+                .map_err(|e| LexError::Next(e, s)),
+        }
     }
 
     /// Result Pipe then
