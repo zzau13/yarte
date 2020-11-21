@@ -455,7 +455,7 @@ pub mod pipes {
     // TODO: is it really usable?
     /// Result Pipe then
     #[inline]
-    pub fn then<'a, O, N, E, F>(
+    pub fn then<'a, O, E, N, F>(
         i: Cursor<'a>,
         next: Result<'a, O, E>,
         callback: fn(result::Result<O, E>) -> result::Result<N, F>,
@@ -500,11 +500,11 @@ pub mod pipes {
 
     /// Result Pipe map_err
     #[inline]
-    pub fn map_err<'a, O, E>(
+    pub fn map_err<'a, E, F, O>(
         _: Cursor<'a>,
         next: Result<'a, O, E>,
-        c: fn(E) -> E,
-    ) -> Result<'a, O, E> {
+        c: fn(E) -> F,
+    ) -> Result<'a, O, F> {
         next.map_err(|x| match x {
             LexError::Next(e, s) => LexError::Next(c(e), s),
             LexError::Fail(e, s) => LexError::Fail(c(e), s),
