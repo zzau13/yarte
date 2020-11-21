@@ -1,8 +1,6 @@
-use syn::{
-    parse::{Parse, ParseStream},
-    punctuated::Punctuated,
-    Expr, Result, Token,
-};
+use syn::parse::{Parse, ParseStream};
+use syn::punctuated::Punctuated;
+use syn::{Expr, Result, Token};
 
 pub(super) struct ExprList {
     list: Punctuated<Expr, Token![,]>,

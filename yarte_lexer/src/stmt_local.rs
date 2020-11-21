@@ -1,11 +1,9 @@
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
-use syn::{
-    parse::{Parse, ParseStream},
-    punctuated::Punctuated,
-    token::Semi,
-    Expr, Local, Pat, PatOr, PatType, Result, Token, Type,
-};
+use syn::parse::{Parse, ParseStream};
+use syn::punctuated::Punctuated;
+use syn::token::Semi;
+use syn::{Expr, Local, Pat, PatOr, PatType, Result, Token, Type};
 
 #[derive(Debug, PartialEq)]
 pub struct StmtLocal {
