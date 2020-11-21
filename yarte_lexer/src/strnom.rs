@@ -287,6 +287,7 @@ macro_rules! call {
 /// # use yarte_lexer::error::{Empty, Result, LexError};
 /// # use std::path::PathBuf;
 /// # let path = PathBuf::from("FooFile");
+/// # let path2 = PathBuf::from("FooFile2");
 /// # const B: Ascii = ascii!('b');
 ///
 /// let stmt = |i| pipes!(i, ws:is_empty:not_true);
@@ -297,7 +298,7 @@ macro_rules! call {
 /// assert!(!result);
 /// assert!(c.is_empty());
 ///
-/// let result: Result<bool, Empty> = parser(get_cursor(&path, "b"));
+/// let result: Result<bool, Empty> = parser(get_cursor(&path2, "b"));
 /// assert!(matches!(result.err().unwrap(), LexError::Fail(..)))
 /// ```
 // TODO: remove unnecessary on pipe [] from do_parse
