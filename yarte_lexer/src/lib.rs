@@ -17,7 +17,7 @@ mod source_map;
 mod stmt_local;
 
 use self::arm::Arm;
-use self::error::{Result as PResult, KiError};
+use self::error::{KiError, Result as PResult};
 
 pub use gencode::asciis;
 
