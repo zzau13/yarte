@@ -1,9 +1,8 @@
 [package]
-name = "gencode"
-version = "0.1.0"
+name = "yarte_lexer_gencode"
+version = "0.0.1"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 edition = "2018"
-publish = false
 workspace = "../.."
 
 [lib]

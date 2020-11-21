@@ -17,7 +17,7 @@ travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]
-gencode = { path = "gencode" }
+gencode = { version = "0.0", path = "gencode", package = "yarte_lexer_gencode" }
 
 quote = "1.0"
 syn = { version = "1.0", features = ["full", "extra-traits"] }
