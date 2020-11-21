@@ -1,9 +1,7 @@
 //! Adapted from [`proc-macro2`](https://github.com/alexcrichton/proc-macro2).
-use std::{
-    cell::RefCell,
-    fmt::{self, Debug},
-    path::PathBuf,
-};
+use std::cell::RefCell;
+use std::fmt::{self, Debug};
+use std::path::PathBuf;
 
 use crate::error::{KiError, Result};
 use crate::strnom::Cursor;
