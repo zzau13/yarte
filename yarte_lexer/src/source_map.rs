@@ -107,6 +107,10 @@ impl SourceMap {
     }
 
     fn add_file(&mut self, name: &PathBuf, src: &str) -> Span {
+        assert!(
+            self.files.iter().find(|x| &x.name == name).is_none(),
+            "File is already registered"
+        );
         let lines = lines_offsets(src);
         let lo = self.next_start_pos();
         let span = Span {
