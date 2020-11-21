@@ -317,6 +317,7 @@ macro_rules! do_parse {
     }};
 }
 
+// TODO: remove unnecessary on pipe [] from do_parse
 #[macro_export]
 macro_rules! alt {
     ($i:expr, $fun:path $(:$pipe:path)*) => {
