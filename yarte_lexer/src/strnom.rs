@@ -475,7 +475,7 @@ pub mod pipes {
 
     /// Result Pipe then
     #[inline]
-    pub fn and_then<'a, O, N, E>(
+    pub fn and_then<'a, O, E, N>(
         i: Cursor<'a>,
         next: Result<'a, O, E>,
         callback: fn(O) -> result::Result<N, E>,
@@ -490,7 +490,7 @@ pub mod pipes {
 
     /// Result Pipe map
     #[inline]
-    pub fn map<'a, O, N, E>(
+    pub fn map<'a, O, E, N>(
         _: Cursor<'a>,
         next: Result<'a, O, E>,
         callback: fn(O) -> N,
@@ -500,7 +500,7 @@ pub mod pipes {
 
     /// Result Pipe map_err
     #[inline]
-    pub fn map_err<'a, E, F, O>(
+    pub fn map_err<'a, O, E, F>(
         _: Cursor<'a>,
         next: Result<'a, O, E>,
         c: fn(E) -> F,
