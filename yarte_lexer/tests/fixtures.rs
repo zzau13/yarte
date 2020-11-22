@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use std::error::Error;
 use yarte_lexer::error::{KiError, Result};
-use yarte_lexer::pipes::{and_then, is_empty, map, map_err, not_true, then};
+use yarte_lexer::pipes::{and_then, important, is_empty, map, map_err, not_false, not_true, then};
 use yarte_lexer::{
     alt, ascii, asciis, do_parse, parse, path, pipes, tac, tag, ws, Ascii, Cursor, Ki, Kinder,
     LexError, SToken, Span,
@@ -119,13 +119,13 @@ impl<'a> Kinder<'a> for MyKind<'a> {
 fn partial(i: Cursor) -> Result<MyKind, MyError> {
     const PARTIAL: Ascii = ascii!('>');
 
-    let ws = |i| pipes!(i, ws: is_empty: not_true);
+    let ws = |i| pipes!(i, ws: not_false);
 
     do_parse!(i,
         tac[PARTIAL]    =>
         ws              =>
         p= path         =>
-        ws              =>
+        ws:important              =>
         (MyKind::Partial(p))
     )
 }
