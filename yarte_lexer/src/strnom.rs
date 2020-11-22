@@ -553,6 +553,20 @@ pub mod pipes {
         }
     }
 
+    impl NotTrue for &str {
+        #[inline]
+        fn not_true(&self) -> bool {
+            self.is_empty()
+        }
+    }
+
+    impl<T> NotTrue for Vec<T> {
+        #[inline]
+        fn not_true(&self) -> bool {
+            self.is_empty()
+        }
+    }
+
     /// Result Pipe true to error next
     #[inline]
     pub fn not_true<'a, O: NotTrue, E: KiError>(
@@ -561,7 +575,7 @@ pub mod pipes {
     ) -> Result<'a, O, E> {
         match next {
             Ok((i, o)) if o.not_true() => Ok((i, o)),
-            Ok(_) => Err(LexError::Next(E::EMPTY, Span::from(i))),
+            Ok((c, _)) => Err(LexError::Next(E::EMPTY, Span::from_cursor(i, c))),
             Err(e) => Err(e),
         }
     }
@@ -578,6 +592,20 @@ pub mod pipes {
         }
     }
 
+    impl NotFalse for &str {
+        #[inline]
+        fn not_false(&self) -> bool {
+            !self.is_empty()
+        }
+    }
+
+    impl<T> NotFalse for Vec<T> {
+        #[inline]
+        fn not_false(&self) -> bool {
+            !self.is_empty()
+        }
+    }
+
     /// Result Pipe false to error next
     #[inline]
     pub fn not_false<'a, O: NotFalse, E: KiError>(
@@ -586,7 +614,7 @@ pub mod pipes {
     ) -> Result<'a, O, E> {
         match next {
             Ok((i, o)) if o.not_false() => Ok((i, o)),
-            Ok(_) => Err(LexError::Next(E::EMPTY, Span::from(i))),
+            Ok((c, _)) => Err(LexError::Next(E::EMPTY, Span::from_cursor(i, c))),
             Err(e) => Err(e),
         }
     }
