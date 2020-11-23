@@ -421,6 +421,7 @@ macro_rules! pipes {
     };
 }
 
+// TODO: implement for Cursor
 pub mod pipes {
     use super::*;
     use std::fmt::Debug;
@@ -570,12 +571,12 @@ pub mod pipes {
 
     /// Result Pipe true to error next
     #[inline]
-    pub fn _false<'a, O: False, E: KiError>(
+    pub fn _false<'a, O: False + As<N>, E: KiError, N>(
         i: Cursor<'a>,
         next: Result<'a, O, E>,
-    ) -> Result<'a, O, E> {
+    ) -> Result<'a, N, E> {
         match next {
-            Ok((i, o)) if o._false() => Ok((i, o)),
+            Ok((i, o)) if o._false() => Ok((i, o._as())),
             Ok((c, _)) => Err(LexError::Next(E::EMPTY, Span::from_cursor(i, c))),
             Err(e) => Err(e),
         }
@@ -609,12 +610,12 @@ pub mod pipes {
 
     /// Result Pipe false to error next
     #[inline]
-    pub fn _true<'a, O: True, E: KiError>(
+    pub fn _true<'a, O: True + As<N>, E: KiError, N>(
         i: Cursor<'a>,
         next: Result<'a, O, E>,
-    ) -> Result<'a, O, E> {
+    ) -> Result<'a, N, E> {
         match next {
-            Ok((i, o)) if o._true() => Ok((i, o)),
+            Ok((i, o)) if o._true() => Ok((i, o._as())),
             Ok((c, _)) => Err(LexError::Next(E::EMPTY, Span::from_cursor(i, c))),
             Err(e) => Err(e),
         }
@@ -622,6 +623,33 @@ pub mod pipes {
 
     pub trait As<N> {
         fn _as(self) -> N;
+    }
+
+    macro_rules! impl_as {
+        ($($ty:ty)+) => {
+            $(
+            impl As<$ty> for $ty {
+                #[inline]
+                fn _as(self) -> $ty { self }
+            }
+            )+
+        };
+    }
+
+    impl_as!(char bool usize u64 u32 u16 u8 isize i64 i32 i16 i8);
+
+    impl<'a> As<&'a str> for &'a str {
+        #[inline]
+        fn _as(self) -> &'a str {
+            self
+        }
+    }
+
+    impl<'a> As<Cursor<'a>> for Cursor<'a> {
+        #[inline]
+        fn _as(self) -> Cursor<'a> {
+            self
+        }
     }
 
     /// Result Pipe As
@@ -661,15 +689,55 @@ pub mod pipes {
         }
     }
 
+    #[derive(Debug)]
+    pub struct Not<T>(T);
+
     /// Result Pipe to Len comparator
     #[inline]
-    pub fn is_len<'a, O: IsLen, E: KiError>(
+    pub fn not<'a, O, E: KiError>(_: Cursor<'a>, next: Result<'a, O, E>) -> Result<'a, Not<O>, E> {
+        match next {
+            Ok((i, o)) => Ok((i, Not(o))),
+            Err(e) => Err(e),
+        }
+    }
+
+    impl<T> As<T> for Not<T> {
+        #[inline]
+        fn _as(self) -> T {
+            self.0
+        }
+    }
+
+    impl<T: True> True for Not<T> {
+        #[inline]
+        fn _true(&self) -> bool {
+            !self.0._true()
+        }
+    }
+
+    impl<T: False> False for Not<T> {
+        #[inline]
+        fn _false(&self) -> bool {
+            !self.0._false()
+        }
+    }
+
+    impl<T: IsLen> IsLen for Not<T> {
+        #[inline]
+        fn is_len(&self, len: usize) -> bool {
+            !self.0.is_len(len)
+        }
+    }
+
+    /// Result Pipe to Len comparator
+    #[inline]
+    pub fn is_len<'a, O: IsLen + As<N>, E: KiError, N>(
         i: Cursor<'a>,
         next: Result<'a, O, E>,
         len: usize,
-    ) -> Result<'a, O, E> {
+    ) -> Result<'a, N, E> {
         match next {
-            Ok((i, o)) if o.is_len(len) => Ok((i, o)),
+            Ok((i, o)) if o.is_len(len) => Ok((i, o._as())),
             Ok((c, _)) => Err(LexError::Next(E::EMPTY, Span::from_cursor(i, c))),
             Err(e) => Err(e),
         }
