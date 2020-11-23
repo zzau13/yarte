@@ -423,6 +423,7 @@ macro_rules! pipes {
 
 pub mod pipes {
     use super::*;
+    use std::fmt::Debug;
     use std::result;
 
     /// Result Pipe optional is some
@@ -616,6 +617,52 @@ pub mod pipes {
             Ok((i, o)) if o.not_false() => Ok((i, o)),
             Ok((c, _)) => Err(LexError::Next(E::EMPTY, Span::from_cursor(i, c))),
             Err(e) => Err(e),
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct Len<T>(T, usize);
+
+    #[inline]
+    pub fn debug<'a, O: Debug, E: Debug>(
+        i: Cursor<'a>,
+        next: Result<'a, O, E>,
+        message: &'static str,
+    ) -> Result<'a, O, E> {
+        eprintln!("{}:\n\tCursor: {:?}\n\tnext: {:?}\n", message, i, next);
+        next
+    }
+
+    #[inline]
+    pub fn len<'a, O, E>(
+        _: Cursor<'a>,
+        next: Result<'a, O, E>,
+        len: usize,
+    ) -> Result<'a, Len<O>, E> {
+        next.map(|(c, x)| (c, Len(x, len)))
+    }
+
+    #[inline]
+    pub fn from<'a, O, E, N: From<O>>(_: Cursor<'a>, next: Result<'a, O, E>) -> Result<'a, N, E> {
+        next.map(|(c, x)| (c, N::from(x)))
+    }
+
+    #[inline]
+    pub fn into<'a, O: Into<N>, E, N>(_: Cursor<'a>, next: Result<'a, O, E>) -> Result<'a, N, E> {
+        next.map(|(c, x)| (c, x.into()))
+    }
+
+    impl NotTrue for Len<&str> {
+        #[inline]
+        fn not_true(&self) -> bool {
+            self.0.len() != self.1
+        }
+    }
+
+    impl NotFalse for Len<&str> {
+        #[inline]
+        fn not_false(&self) -> bool {
+            self.0.len() == self.1
         }
     }
 
