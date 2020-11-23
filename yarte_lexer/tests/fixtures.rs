@@ -7,7 +7,7 @@ use serde::Deserialize;
 use std::error::Error;
 use yarte_lexer::error::{KiError, Result};
 use yarte_lexer::pipes::{
-    _as, _false, _true, and_then, debug, important, is_empty, len, map, map_err, then,
+    _false, _true, and_then, debug, important, is_empty, is_len, map, map_err, then,
 };
 use yarte_lexer::{
     _while, alt, ascii, asciis, do_parse, is_ws, parse, path, pipes, tac, tag, ws, Ascii, Cursor,
@@ -170,7 +170,7 @@ impl<'a> Kinder<'a> for MyKindBlock<'a> {
         const PARTIAL: Ascii = ascii!('>');
 
         let ws_not_empty = |i| pipes!(i, ws: is_empty: _false);
-        let ws_0 = |i| pipes!(i, _while[is_ws]:len[0]:debug["Len"]:_true:_as:is_empty:_true);
+        let ws_0 = |i| pipes!(i, _while[is_ws]:is_len[0]:debug["Len"]:_false:is_empty:_true);
 
         // TODO: remove unnecessary []
         do_parse!(i,

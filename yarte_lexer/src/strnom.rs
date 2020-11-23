@@ -633,17 +633,7 @@ pub mod pipes {
         }
     }
 
-    // TODO: Abstract by type containers
     /// Result Pipe to Len comparator
-    #[derive(Debug)]
-    pub struct Len<T>(usize, T);
-
-    impl<T> As<T> for Len<T> {
-        #[inline]
-        fn _as(self) -> T {
-            self.1
-        }
-    }
 
     #[inline]
     pub fn debug<'a, O: Debug, E: Debug>(
@@ -655,14 +645,34 @@ pub mod pipes {
         next
     }
 
+    pub trait IsLen {
+        fn is_len(&self, len: usize) -> bool;
+    }
+
+    impl IsLen for &str {
+        fn is_len(&self, len: usize) -> bool {
+            self.len() == len
+        }
+    }
+
+    impl<T> IsLen for Vec<T> {
+        fn is_len(&self, len: usize) -> bool {
+            self.len() == len
+        }
+    }
+
     /// Result Pipe to Len comparator
     #[inline]
-    pub fn len<'a, O, E>(
-        _: Cursor<'a>,
+    pub fn is_len<'a, O: IsLen, E: KiError>(
+        i: Cursor<'a>,
         next: Result<'a, O, E>,
         len: usize,
-    ) -> Result<'a, Len<O>, E> {
-        next.map(|(c, x)| (c, Len(len, x)))
+    ) -> Result<'a, O, E> {
+        match next {
+            Ok((i, o)) if o.is_len(len) => Ok((i, o)),
+            Ok((c, _)) => Err(LexError::Next(E::EMPTY, Span::from_cursor(i, c))),
+            Err(e) => Err(e),
+        }
     }
 
     #[inline]
@@ -673,20 +683,6 @@ pub mod pipes {
     #[inline]
     pub fn into<'a, O: Into<N>, E, N>(_: Cursor<'a>, next: Result<'a, O, E>) -> Result<'a, N, E> {
         next.map(|(c, x)| (c, x.into()))
-    }
-
-    impl False for Len<&str> {
-        #[inline]
-        fn _false(&self) -> bool {
-            self.1.len() != self.0
-        }
-    }
-
-    impl True for Len<&str> {
-        #[inline]
-        fn _true(&self) -> bool {
-            self.1.len() == self.0
-        }
     }
 
     /// Cast next error to Fail error
