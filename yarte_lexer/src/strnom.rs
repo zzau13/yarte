@@ -636,12 +636,12 @@ pub mod pipes {
     // TODO: Abstract by type containers
     /// Result Pipe to Len comparator
     #[derive(Debug)]
-    pub struct Len<T>(T, usize);
+    pub struct Len<T>(usize, T);
 
     impl<T> As<T> for Len<T> {
         #[inline]
         fn _as(self) -> T {
-            self.0
+            self.1
         }
     }
 
@@ -662,7 +662,7 @@ pub mod pipes {
         next: Result<'a, O, E>,
         len: usize,
     ) -> Result<'a, Len<O>, E> {
-        next.map(|(c, x)| (c, Len(x, len)))
+        next.map(|(c, x)| (c, Len(len, x)))
     }
 
     #[inline]
@@ -678,14 +678,14 @@ pub mod pipes {
     impl False for Len<&str> {
         #[inline]
         fn _false(&self) -> bool {
-            self.0.len() != self.1
+            self.1.len() != self.0
         }
     }
 
     impl True for Len<&str> {
         #[inline]
         fn _true(&self) -> bool {
-            self.0.len() == self.1
+            self.1.len() == self.0
         }
     }
 
