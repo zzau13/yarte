@@ -621,6 +621,7 @@ pub mod pipes {
         }
     }
 
+    // TODO: feature specialized, when is stable?
     pub trait As<N> {
         fn _as(self) -> N;
     }
@@ -637,6 +638,13 @@ pub mod pipes {
     }
 
     impl_as!(char bool usize u64 u32 u16 u8 isize i64 i32 i16 i8);
+
+    impl<T> As<Vec<T>> for Vec<T> {
+        #[inline]
+        fn _as(self) -> Vec<T> {
+            self
+        }
+    }
 
     impl<'a> As<&'a str> for &'a str {
         #[inline]
@@ -669,6 +677,7 @@ pub mod pipes {
         next: Result<'a, O, E>,
         message: &'static str,
     ) -> Result<'a, O, E> {
+        // TODO: use log!
         eprintln!("{}:\n\tCursor: {:?}\n\tnext: {:?}\n", message, i, next);
         next
     }
