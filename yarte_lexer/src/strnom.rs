@@ -290,7 +290,7 @@ macro_rules! call {
 /// # let path2 = PathBuf::from("FooFile2");
 /// # const B: Ascii = ascii!('b');
 ///
-/// let stmt = |i| pipes!(i, ws:is_empty:not_true);
+/// let stmt = |i| pipes!(i, ws:is_empty:_false);
 /// let parser = |i| do_parse!(i, ws= stmt:important => tac[B] => (ws));
 /// let result: Result<bool, Empty> = parser(get_cursor(&path, " b"));
 /// let (c, result) = result.unwrap();
@@ -543,102 +543,104 @@ pub mod pipes {
     }
 
     // TODO:
-    pub trait NotTrue {
-        fn not_true(&self) -> bool;
+    pub trait False {
+        fn _false(&self) -> bool;
     }
 
-    impl NotTrue for bool {
+    impl False for bool {
         #[inline]
-        fn not_true(&self) -> bool {
+        fn _false(&self) -> bool {
             !*self
         }
     }
 
-    impl NotTrue for &str {
+    impl False for &str {
         #[inline]
-        fn not_true(&self) -> bool {
+        fn _false(&self) -> bool {
             self.is_empty()
         }
     }
 
-    impl<T> NotTrue for Vec<T> {
+    impl<T> False for Vec<T> {
         #[inline]
-        fn not_true(&self) -> bool {
+        fn _false(&self) -> bool {
             self.is_empty()
         }
     }
 
     /// Result Pipe true to error next
     #[inline]
-    pub fn not_true<'a, O: NotTrue, E: KiError>(
+    pub fn _false<'a, O: False, E: KiError>(
         i: Cursor<'a>,
         next: Result<'a, O, E>,
     ) -> Result<'a, O, E> {
         match next {
-            Ok((i, o)) if o.not_true() => Ok((i, o)),
+            Ok((i, o)) if o._false() => Ok((i, o)),
             Ok((c, _)) => Err(LexError::Next(E::EMPTY, Span::from_cursor(i, c))),
             Err(e) => Err(e),
         }
     }
 
     // TODO:
-    pub trait NotFalse {
-        fn not_false(&self) -> bool;
+    pub trait True {
+        fn _true(&self) -> bool;
     }
 
-    impl NotFalse for bool {
+    impl True for bool {
         #[inline]
-        fn not_false(&self) -> bool {
+        fn _true(&self) -> bool {
             *self
         }
     }
 
-    impl NotFalse for &str {
+    impl True for &str {
         #[inline]
-        fn not_false(&self) -> bool {
+        fn _true(&self) -> bool {
             !self.is_empty()
         }
     }
 
-    impl<T> NotFalse for Vec<T> {
+    impl<T> True for Vec<T> {
         #[inline]
-        fn not_false(&self) -> bool {
+        fn _true(&self) -> bool {
             !self.is_empty()
         }
     }
 
     /// Result Pipe false to error next
     #[inline]
-    pub fn not_false<'a, O: NotFalse, E: KiError>(
+    pub fn _true<'a, O: True, E: KiError>(
         i: Cursor<'a>,
         next: Result<'a, O, E>,
     ) -> Result<'a, O, E> {
         match next {
-            Ok((i, o)) if o.not_false() => Ok((i, o)),
+            Ok((i, o)) if o._true() => Ok((i, o)),
             Ok((c, _)) => Err(LexError::Next(E::EMPTY, Span::from_cursor(i, c))),
             Err(e) => Err(e),
         }
     }
 
-    pub trait Cas<N> {
-        fn cas(self) -> N;
+    pub trait As<N> {
+        fn _as(self) -> N;
     }
 
-    /// Result Pipe convert as
+    /// Result Pipe As
     #[inline]
-    pub fn cas<'a, O: Cas<N>, E, N>(_: Cursor<'a>, next: Result<'a, O, E>) -> Result<'a, N, E> {
+    pub fn _as<'a, O: As<N>, E, N>(_: Cursor<'a>, next: Result<'a, O, E>) -> Result<'a, N, E> {
         match next {
-            Ok((i, o)) => Ok((i, o.cas())),
+            Ok((i, o)) => Ok((i, o._as())),
             Err(e) => Err(e),
         }
     }
 
+    // TODO: Abstract by type containers
+    /// Result Pipe to Len comparator
     #[derive(Debug)]
     pub struct Len<T>(T, usize);
 
-    impl<T> Cas<T> for Len<T> {
+    impl<T> As<T> for Len<T> {
         #[inline]
-        fn cas(self) -> T {
+        fn _as(self) -> T {
             self.0
         }
     }
@@ -653,6 +655,7 @@ pub mod pipes {
         next
     }
 
+    /// Result Pipe to Len comparator
     #[inline]
     pub fn len<'a, O, E>(
         _: Cursor<'a>,
@@ -672,16 +675,16 @@ pub mod pipes {
         next.map(|(c, x)| (c, x.into()))
     }
 
-    impl NotTrue for Len<&str> {
+    impl False for Len<&str> {
         #[inline]
-        fn not_true(&self) -> bool {
+        fn _false(&self) -> bool {
             self.0.len() != self.1
         }
     }
 
-    impl NotFalse for Len<&str> {
+    impl True for Len<&str> {
         #[inline]
-        fn not_false(&self) -> bool {
+        fn _true(&self) -> bool {
             self.0.len() == self.1
         }
     }
@@ -700,7 +703,7 @@ pub mod pipes {
 // TODO: Should be return a Cursor
 /// Take while function is true or empty Ok if is empty
 #[inline]
-pub fn take_while<E>(i: Cursor, f: fn(u8) -> bool) -> Result<&str, E> {
+pub fn _while<E>(i: Cursor, f: fn(u8) -> bool) -> Result<&str, E> {
     if i.is_empty() {
         Ok((i, ""))
     } else {
@@ -757,7 +760,7 @@ pub fn ws<E: KiError>(i: Cursor) -> Result<&str, E> {
     if i.is_empty() {
         return Err(LexError::Next(E::WHITESPACE, Span::from(i)));
     }
-    take_while(i, is_ws)
+    _while(i, is_ws)
 }
 
 #[inline]
