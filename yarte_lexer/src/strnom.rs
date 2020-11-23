@@ -620,8 +620,28 @@ pub mod pipes {
         }
     }
 
+    pub trait Cas<N> {
+        fn cas(self) -> N;
+    }
+
+    /// Result Pipe convert as
+    #[inline]
+    pub fn cas<'a, O: Cas<N>, E, N>(_: Cursor<'a>, next: Result<'a, O, E>) -> Result<'a, N, E> {
+        match next {
+            Ok((i, o)) => Ok((i, o.cas())),
+            Err(e) => Err(e),
+        }
+    }
+
     #[derive(Debug)]
     pub struct Len<T>(T, usize);
+
+    impl<T> Cas<T> for Len<T> {
+        #[inline]
+        fn cas(self) -> T {
+            self.0
+        }
+    }
 
     #[inline]
     pub fn debug<'a, O: Debug, E: Debug>(
