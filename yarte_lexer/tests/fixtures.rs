@@ -6,10 +6,12 @@ use serde::Deserialize;
 
 use std::error::Error;
 use yarte_lexer::error::{KiError, Result};
-use yarte_lexer::pipes::{and_then, important, is_empty, map, map_err, not_false, not_true, then};
+use yarte_lexer::pipes::{
+    and_then, debug, important, is_empty, len, map, map_err, not_false, not_true, then,
+};
 use yarte_lexer::{
-    alt, ascii, asciis, do_parse, parse, path, pipes, tac, tag, ws, Ascii, Cursor, Ki, Kinder,
-    LexError, SToken, Span,
+    alt, ascii, asciis, do_parse, is_ws, parse, path, pipes, tac, tag, take_while, ws, Ascii,
+    Cursor, Ki, Kinder, LexError, SToken, Span,
 };
 
 #[derive(Debug, Deserialize)]
@@ -125,7 +127,7 @@ fn partial(i: Cursor) -> Result<MyKind, MyError> {
         tac[PARTIAL]    =>
         ws              =>
         p= path         =>
-        ws:important              =>
+        ws:important    =>
         (MyKind::Partial(p))
     )
 }
@@ -167,13 +169,16 @@ impl<'a> Kinder<'a> for MyKindBlock<'a> {
     fn parse(i: Cursor<'a>) -> Result<Self, Self::Error> {
         const PARTIAL: Ascii = ascii!('>');
 
-        let ws = |i| pipes!(i, ws: is_empty: not_true);
+        let ws_not_empty = |i| pipes!(i, ws: is_empty: not_true);
+        let ws_0 = |i| pipes!(i, take_while[is_ws]:len[0]:debug["Len"]:not_false);
 
+        // TODO: remove unnecessary []
         do_parse!(i,
-            tac[PARTIAL]    =>
-            ws              =>
-            p= path         =>
-            ws              =>
+            tac[PARTIAL]                    =>
+            ws_not_empty                    =>
+            p= path                         =>
+            ws_not_empty[]:debug["after"]   =>
+            ws_0[]:debug["ws_0"]            =>
             (MyKindBlock::Partial(p))
         )
     }
