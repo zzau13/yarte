@@ -9,7 +9,7 @@ use crate::error::{ErrorMessage, KiError, LexError, Result as PResult};
 use crate::expr_list::ExprList;
 use crate::source_map::{Span, S};
 use crate::strnom::pipes::{is_some, opt};
-use crate::strnom::{get_chars, is_ws, tac, tag, take_while, ws, Cursor};
+use crate::strnom::{_while, get_chars, is_ws, tac, tag, ws, Cursor};
 use crate::{Ascii, Kinder, SToken, StmtLocal, Token};
 
 pub trait Ki<'a>: Kinder<'a> + Debug + PartialEq + Clone {}
@@ -410,7 +410,7 @@ fn end<'a, K: Ki<'a>>(i: Cursor<'a>, expr: bool) -> PResult<Cursor<'a>, K::Error
 /// Eat path at partial
 /// Next white space close path
 pub fn path<E: KiError>(i: Cursor) -> PResult<&str, E> {
-    take_while(i, |i| !is_ws(i)).and_then(|(c, s)| {
+    _while(i, |i| !is_ws(i)).and_then(|(c, s)| {
         if s.is_empty() {
             Err(LexError::Fail(E::PATH, Span::from(c)))
         } else {

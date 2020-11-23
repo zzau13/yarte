@@ -7,11 +7,11 @@ use serde::Deserialize;
 use std::error::Error;
 use yarte_lexer::error::{KiError, Result};
 use yarte_lexer::pipes::{
-    and_then, cas, debug, important, is_empty, len, map, map_err, not_false, not_true, then,
+    _as, _false, _true, and_then, debug, important, is_empty, len, map, map_err, then,
 };
 use yarte_lexer::{
-    alt, ascii, asciis, do_parse, is_ws, parse, path, pipes, tac, tag, take_while, ws, Ascii,
-    Cursor, Ki, Kinder, LexError, SToken, Span,
+    _while, alt, ascii, asciis, do_parse, is_ws, parse, path, pipes, tac, tag, ws, Ascii, Cursor,
+    Ki, Kinder, LexError, SToken, Span,
 };
 
 #[derive(Debug, Deserialize)]
@@ -75,7 +75,7 @@ impl<'a> Kinder<'a> for MyKindAfter<'a> {
     fn parse(i: Cursor<'a>) -> Result<Self, Self::Error> {
         const PARTIAL: Ascii = ascii!('>');
 
-        let ws = |i| pipes!(i, ws: is_empty: not_true);
+        let ws = |i| pipes!(i, ws: is_empty: _false);
 
         do_parse!(i,
             tac[PARTIAL]    =>
@@ -121,7 +121,7 @@ impl<'a> Kinder<'a> for MyKind<'a> {
 fn partial(i: Cursor) -> Result<MyKind, MyError> {
     const PARTIAL: Ascii = ascii!('>');
 
-    let ws = |i| pipes!(i, ws: not_false);
+    let ws = |i| pipes!(i, ws: _true);
 
     do_parse!(i,
         tac[PARTIAL]    =>
@@ -143,7 +143,7 @@ fn some(i: Cursor) -> Result<MyKind, MyError> {
             and_then[|_| Ok(MyKind::Some)]
         )
     };
-    let ws = |i| pipes!(i, ws:is_empty:not_true:map[|_| MyKind::Some]);
+    let ws = |i| pipes!(i, ws:is_empty:_false:map[|_| MyKind::Some]);
 
     do_parse!(i, tag => ws => (MyKind::Some))
 }
@@ -169,9 +169,8 @@ impl<'a> Kinder<'a> for MyKindBlock<'a> {
     fn parse(i: Cursor<'a>) -> Result<Self, Self::Error> {
         const PARTIAL: Ascii = ascii!('>');
 
-        let ws_not_empty = |i| pipes!(i, ws: is_empty: not_true);
-        let ws_0 =
-            |i| pipes!(i, take_while[is_ws]:len[0]:debug["Len"]:not_false:cas:is_empty:not_false);
+        let ws_not_empty = |i| pipes!(i, ws: is_empty: _false);
+        let ws_0 = |i| pipes!(i, _while[is_ws]:len[0]:debug["Len"]:_true:_as:is_empty:_true);
 
         // TODO: remove unnecessary []
         do_parse!(i,
