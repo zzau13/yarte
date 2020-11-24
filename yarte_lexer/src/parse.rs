@@ -222,6 +222,7 @@ fn eat_block<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::E
     }
 }
 
+// TODO: check rust token groups and LitStr, LitChar, LitBytes
 #[inline]
 fn end_safe_after<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<(Cursor, bool), K::Error> {
     let ws_end = &[K::WS, K::CLOSE_EXPR, K::CLOSE];
@@ -251,6 +252,7 @@ fn end_safe_after<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<(Cursor, bool), K::Er
     }
 }
 
+// TODO: check rust token groups and LitStr, LitChar, LitBytes
 #[inline]
 fn end_safe<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<(Cursor, bool), K::Error> {
     let ws_end = &[K::WS, K::CLOSE_EXPR, K::CLOSE_EXPR, K::CLOSE];
@@ -386,6 +388,7 @@ pub(crate) fn eat_expression(i: &str) -> Result<Box<crate::Expr>, MiddleError> {
         .map_err(|e| MiddleError::new(i, e))
 }
 
+// TODO: check rust token groups and LitStr, LitChar, LitBytes
 #[inline]
 fn end<'a, K: Ki<'a>>(i: Cursor<'a>, expr: bool) -> PResult<Cursor<'a>, K::Error> {
     let mut at = 0;
