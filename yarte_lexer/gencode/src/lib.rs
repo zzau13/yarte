@@ -38,7 +38,7 @@ fn _unsafe_asciis(s: String) -> Option<TokenStream> {
     let mut tokens = Vec::with_capacity(s.len());
     for c in s.chars() {
         if c.len_utf8() == 1 {
-            tokens.push(syn::LitChar::new(c, Span::call_site()));
+            tokens.push(syn::LitByte::new(c as u8, Span::call_site()));
         } else {
             return None;
         }

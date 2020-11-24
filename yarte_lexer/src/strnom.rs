@@ -153,7 +153,7 @@ macro_rules! ascii_builder {
         /// ```
         #[macro_export]
         macro_rules! ascii {
-            $(($n) => { unsafe { $crate::Ascii::new($n) } };)+
+            $(($n) => { unsafe { $crate::Ascii::new($n as u8) } };)+
             ($t:tt) => {
                 compile_error!(
                     concat!("No valid ascii token select another or report: ", stringify!($t))
@@ -178,8 +178,8 @@ impl Ascii {
     ///
     /// # Safety
     /// Use `ascii!(b'[char]')` macro instead
-    pub const unsafe fn new(n: char) -> Self {
-        Self(n as u8)
+    pub const unsafe fn new(n: u8) -> Self {
+        Self(n)
     }
 
     pub const fn g(self) -> u8 {
