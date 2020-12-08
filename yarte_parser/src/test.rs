@@ -302,23 +302,6 @@ fn test_error_safe() {
 }
 
 #[test]
-fn test_error_local() {
-    test_error(
-        "{{ let @ }}",
-        PError::Local(DOption::Some(String::from("expected one of: `::`, `<`, `_`, literal, `ref`, `mut`, `&`, parentheses, square brackets, `..`"))),
-        bytes!(7..8)
-    );
-}
-
-#[test]
-fn test_error_if() {
-    test_error(
-        "{{# if let @ }}{{/if }}",
-        PError::Argument(DOption::Some(String::from("expected one of: `::`, `<`, `_`, literal, `ref`, `mut`, `&`, parentheses, square brackets, `..`"))),
-        bytes!(11..12));
-}
-
-#[test]
 fn test_error_expr_multiline() {
     test_error(
         "{{ foo\n\n.map(|x| x)\n\n   .bar(@)\n.foo() }}",
