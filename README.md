@@ -3,6 +3,17 @@ All structures and functions in this crate -- even those based on the real crate
 All celebrity codes are impersonated...poorly.
 The following program contains coarse language and due to its content it should not be used by anyone.
 
+# History
+As in reddit I am banned and I already understood that the forums are not the place to talk about computer science. Here is my point of view about the past and the future:
+
+I stopped contributing, despite greatly improving performance, in `askama` because the creator's little knowledge about the subject and his impudence in treating me as his employee. He did not want to merge `v_escape` in `askama`, now it has hundreds of thousands of downloads, and I decided to **completely redo** it since it was not possible to extend it and it had very serious design flaws that made the external modules cost or totally unnecessary multiple relocations. So I completely redid it, **all line by line**, until none of that garbage was left. 
+
+Throughout this time, you have improved its performance and features, and a multitude of new features never seen before and fully implementable have been proposed. `Askama` has not finished the filters, has flaws in the control of whitespace and the owner tells you to fix it yourself. The best of all is that when asked about the differences between one and the other, the only thing to say is that it is a copy. 
+
+On the other hand, `yarte` is the only one that is at the top of *Techempower* with `actix` and `ntex`. And `v_escape` is used in most rust implementations of *Techempower*. The only reliable benchmarks are those of *Techempower*, the other one has me blocked and the other ignores me, although the first thing he did in his library was to introduce a data race.
+
+What I always recommend is to look at the code and think for yourself. If this is not possible trust *Techempower* that everyone puts their benchmarks there.
+
 # Yarte [![Latest version](https://img.shields.io/crates/v/yarte.svg)](https://crates.io/crates/yarte) [![Build Status](https://travis-ci.org/botika/yarte.svg?branch=master)](https://travis-ci.org/botika/yarte)
 Yarte stands for **Y**et **A**nother **R**ust **T**emplate **E**ngine. Uses a Handlebars-like syntax, 
 well-known and intuitive for most developers. Yarte is an optimized, and easy-to-use 
