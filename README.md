@@ -34,7 +34,7 @@ HTML templates using conditionals, loops, rust code and template composition.
 - Improved daily and has full coverage (without stupid bugs that take months or years to fix)
 
 ### Is it really fast?
-See it for yourself in the [TechEmpower benchmarks][bench] with [`ntex`][ntex] 
+See it for yourself in the [TechEmpower benchmarks][bench] with [`actix`][actix] and [`ntex`][ntex] 
 
 ## Documentation
 In order to  fully understand Yarte's capabilities take a look at the following documentation:
@@ -50,6 +50,7 @@ is highly influenced by [Handlebars][handlebars].
 [bench]: https://tfb-status.techempower.com/
 [handlebars]: https://handlebarsjs.com/
 [ntex]: https://github.com/ntex-rs/ntex
+[actix]: https://github.com/actix/actix-web
 
 ## Contributing
 
