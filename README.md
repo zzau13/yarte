@@ -1,4 +1,7 @@
 # Warning
+
+`bytes-buf` feature can produce **SIGILL** https://github.com/botika/v_escape/issues/54. It's complitate beacuse the `avx` and `sse` flags are in almost all cpus of `x86` and `x86_64` architectures. I have already warned. More details in the issue.
+
 On `tokio@0.2` (`actix`, `ntex`, ...) use `yarte@0.12`. `yarte@0.13` supports `tokio@0.3`. In `yarte@0.14` there will be both options.
 # Disclaimer
 All structures and functions in this crate -- even those based on the real crates -- are entirely fictional. 
