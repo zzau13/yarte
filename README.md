@@ -1,3 +1,5 @@
+# Warning
+On `tokio@0.2` (`actix`, `ntex`, ...) use `yarte@0.12`. `yarte@0.13` supports `tokio@0.3`. In `yarte@0.14` there will be both options.
 # Disclaimer
 All structures and functions in this crate -- even those based on the real crates -- are entirely fictional. 
 All celebrity codes are impersonated...poorly.
