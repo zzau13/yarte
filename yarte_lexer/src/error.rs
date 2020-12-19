@@ -186,7 +186,7 @@ where
         .map(|(label, origin, span)| {
             let ((lo_line, hi_line), (lo, hi)) = span.range_in_file();
             let start = span.start();
-            let source = who.get(origin).unwrap();
+            let source = who.get(origin).expect("Who get source");
             let source = &source[lo_line..hi_line];
 
             let origin = origin
@@ -209,6 +209,7 @@ where
         })
         .collect();
 
+    // TODO: Margin annotate-snippets
     let s = Snippet {
         title: Some(Annotation {
             id: None,
@@ -268,6 +269,34 @@ mod test {
             once(ErrorMessage {
                 message: Errr("bar"),
                 span: Span { lo: 10, hi: 14 },
+            }),
+        )
+    }
+
+    // TODO: check annotate-snipped multiline should fail not displaying message
+    #[test]
+    #[should_panic(
+        expected = "error\n --> foo.hbs:1:5\n  |\n1 |   foó bañ \n  |  _____^\n2 | | tuú\n3 | |  foú\n  | |____^ bar\n  |"
+    )]
+    fn test_chars_multiline() {
+        let path = PathBuf::from("foo.hbs");
+
+        let src = "foó bañ \ntuú\n foú";
+        let mut sources = BTreeMap::new();
+        let _ = get_cursor(&path, src);
+        sources.insert(path, src.to_owned());
+
+        emitter(
+            EmitterConfig {
+                sources: &sources,
+                config: Config {
+                    color: false,
+                    prefix: None,
+                },
+            },
+            once(ErrorMessage {
+                message: Errr("bar"),
+                span: Span { lo: 5, hi: 19 },
             }),
         )
     }
