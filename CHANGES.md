@@ -1,4 +1,8 @@
 # Changes
+### [0.14.0] (2021-xx-xx)
+### Refactor
+- Add abstract lexer 
+
 ### [0.13.0] (2020-10-25)
 ## Update
 - `buf-min` version to `0.2`
