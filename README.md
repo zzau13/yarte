@@ -47,6 +47,9 @@ is highly influenced by [Handlebars][handlebars].
 Please, contribute to Yarte! The more the better! Feel free to open an issue and/or contacting directly with the 
 owner for any request or suggestion.
 
+I want to move these `yarte`,` v_escape`, `v_eval` and` buf-min` to a team with me as a member. 
+If someone wants to participate in this team, open an issue
+
 ### Code of conduct
 This Code of Conduct is adapted from the [Contributor Covenant][homepage], version 1.4, available at [http://contributor-covenant.org/version/1/4][version]
 
