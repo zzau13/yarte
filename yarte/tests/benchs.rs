@@ -4,10 +4,9 @@
 
 use std::mem::MaybeUninit;
 
-use bytes::{Bytes, BytesMut};
-
 use yarte::{
-    TemplateBytesMin as TemplateBytes, TemplateFixedMin as TemplateFixed, TemplateMin as Template,
+    Bytes, BytesMut, TemplateBytesMin as TemplateBytes, TemplateFixedMin as TemplateFixed,
+    TemplateMin as Template,
 };
 
 #[test]

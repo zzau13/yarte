@@ -27,9 +27,10 @@ script:
     fi
   - cargo test --all-features --all -- --nocapture
   - |
-    cd yarte && cargo test -- --nocapture \
-    && cargo test --features bytes-buf    \
-    && cargo test --features fixed        \
-    && cargo test --features json         \
-    && cargo test --features wasm         \
+    cd yarte && cargo test -- --nocapture       \
+    && cargo test --features bytes-buf          \
+    && cargo test --features bytes-buf-tokio3   \
+    && cargo test --features fixed              \
+    && cargo test --features json               \
+    && cargo test --features wasm               \
     && cd ..

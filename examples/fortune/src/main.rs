@@ -2,9 +2,8 @@ use std::collections::HashMap;
 use std::io::{stdout, Write};
 use std::thread;
 
-use bytes::BytesMut;
 use std::mem::MaybeUninit;
-use yarte::{ywrite_min, Template, TemplateBytesMin, TemplateFixedMin, TemplateMin};
+use yarte::{ywrite_min, BytesMut, Template, TemplateBytesMin, TemplateFixedMin, TemplateMin};
 
 #[derive(Template)]
 #[template(path = "index")]

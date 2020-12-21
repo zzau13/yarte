@@ -115,8 +115,7 @@ mod json {
     #[cfg(feature = "bytes-buf")]
     mod bytes_buf {
         use super::*;
-        use bytes::{Bytes, BytesMut};
-        use yarte::{TemplateBytes, TemplateBytesText};
+        use yarte::{Bytes, BytesMut, TemplateBytes, TemplateBytesText};
 
         #[derive(TemplateBytes)]
         #[template(src = "{{ @json f }}")]

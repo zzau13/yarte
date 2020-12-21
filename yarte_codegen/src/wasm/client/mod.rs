@@ -191,11 +191,9 @@ impl<'a> WASMCodeGen<'a> {
                                 Ok(Meta::Path(p)) => Some(quote!(Default::default())),
                                 Ok(Meta::List(MetaList { nested, .. })) => {
                                     assert_eq!(nested.len(), 1);
-                                    if let NestedMeta::Lit(lit) = &nested[0] {
-                                        if let syn::Lit::Str(l) = lit {
-                                            let path: Path = parse_str(&l.value()).expect("path");
-                                            return Some(quote!(#path()));
-                                        }
+                                    if let NestedMeta::Lit(syn::Lit::Str(l)) = &nested[0] {
+                                        let path: Path = parse_str(&l.value()).expect("path");
+                                        return Some(quote!(#path()));
                                     }
                                     None
                                 }
@@ -525,7 +523,7 @@ impl<'a> WASMCodeGen<'a> {
         if let Some(event) = is_on_attr(&attr) {
             let (id, msg) = match attr.value.as_slice() {
                 [ExprOrText::Expr(Expression::Safe(id, msg))] => (id, &**msg),
-                _ => panic!("only use resolve expressions `{{? .. }}` in on attributes"),
+                _ => panic!("{}", "only use resolve expressions `{? .. }` in on attributes"),
             };
             self.write_event(*id, event, msg);
         } else {

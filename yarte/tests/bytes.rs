@@ -1,9 +1,7 @@
-#![cfg(feature = "bytes-buf")]
+#![cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio3"))]
 #![allow(clippy::uninit_assumed_init)]
 
-use bytes::{Bytes, BytesMut};
-
-use yarte::TemplateBytes;
+use yarte::{Bytes, BytesMut, TemplateBytes};
 
 trait ToBytes {
     fn byteb(self) -> Bytes;

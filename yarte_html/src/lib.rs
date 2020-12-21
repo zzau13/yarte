@@ -3,7 +3,12 @@
     clippy::match_single_binding,
     clippy::unknown_clippy_lints,
     clippy::match_on_vec_items,
-    clippy::match_like_matches_macro
+    clippy::match_like_matches_macro,
+    clippy::collapsible_match,
+    clippy::unused_unit,
+    clippy::suspicious_else_formatting,
+    panic_fmt,
+    unreachable_patterns
 )]
 #[macro_use]
 mod macros;

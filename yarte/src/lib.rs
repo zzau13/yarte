@@ -8,10 +8,13 @@
 //!
 use std::fmt::{self, Write};
 
-#[cfg(all(feature = "bytes-buf", feature = "html-min"))]
+#[cfg(all(
+    any(feature = "bytes-buf", feature = "bytes-buf-tokio3"),
+    feature = "html-min"
+))]
 pub use yarte_derive::ywrite_min;
 pub use yarte_derive::{yformat, yformat_html};
-#[cfg(feature = "bytes-buf")]
+#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio3"))]
 pub use yarte_derive::{ywrite, ywrite_html};
 pub use yarte_helpers::at_helpers::*;
 pub use yarte_helpers::{
@@ -87,7 +90,7 @@ pub use yarte_derive::TemplateFixedMin;
 #[cfg(all(feature = "fixed", feature = "html-min"))]
 pub use TemplateFixedTrait as TemplateFixedMin;
 
-#[cfg(feature = "bytes-buf")]
+#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio3"))]
 /// Template trait
 pub trait TemplateBytesTrait {
     /// Writes to buffer and return it freeze
@@ -112,22 +115,33 @@ pub trait TemplateBytesTrait {
     fn write_ccall<B: Buffer>(self, buf: &mut B);
 }
 
-#[cfg(all(feature = "bytes-buf", feature = "html-min"))]
+#[cfg(all(
+    any(feature = "bytes-buf", feature = "bytes-buf-tokio3"),
+    feature = "html-min"
+))]
 pub use yarte_derive::TemplateBytesMin;
-#[cfg(feature = "bytes-buf")]
+#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio3"))]
 pub use yarte_derive::{TemplateBytes, TemplateBytesText};
-#[cfg(feature = "bytes-buf")]
+#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio3"))]
 pub use TemplateBytesTrait as TemplateBytes;
-#[cfg(feature = "bytes-buf")]
+#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio3"))]
 pub use TemplateBytesTrait as TemplateBytesText;
-#[cfg(all(feature = "bytes-buf", feature = "html-min"))]
+#[cfg(all(
+    any(feature = "bytes-buf", feature = "bytes-buf-tokio3"),
+    feature = "html-min"
+))]
 pub use TemplateBytesTrait as TemplateBytesMin;
 
-#[cfg(feature = "bytes-buf")]
+#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio3"))]
 pub use yarte_helpers::helpers::{RenderBytes, RenderBytesA, RenderBytesSafe, RenderBytesSafeA};
 
-#[cfg(any(feature = "bytes-buf", feature = "json"))]
+#[cfg(feature = "bytes-buf")]
+pub use buf_min::t2::{Bytes, BytesMut};
+#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio3", feature = "json"))]
 pub use buf_min::Buffer;
+
+#[cfg(all(feature = "bytes-buf-tokio3", not(feature = "bytes-buf")))]
+pub use buf_min::t3::{Bytes, BytesMut};
 
 #[cfg(feature = "json")]
 pub use yarte_derive::Serialize;

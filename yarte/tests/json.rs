@@ -13,9 +13,7 @@ use std::i64;
 use std::string::ToString;
 use std::u64;
 
-use bytes::{Bytes, BytesMut};
-
-use yarte::{to_bytes, Serialize};
+use yarte::{to_bytes, Bytes, BytesMut, Serialize};
 
 macro_rules! treemap {
     () => {
