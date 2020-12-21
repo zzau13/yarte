@@ -24,7 +24,7 @@
     clippy::redundant_static_lifetimes,
     clippy::suspicious_else_formatting,
     clippy::unused_unit,
-    clippy::wrong_self_convention,
+    clippy::wrong_self_convention
 )]
 
 use std::{
