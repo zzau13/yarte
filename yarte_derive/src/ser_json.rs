@@ -124,9 +124,15 @@ pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
             let mut body_elements = Vec::new();
             let (simple, variants): (Vec<_>, Vec<_>) =
                 d.variants.into_iter().partition(|v| v.fields.is_empty());
-            let (named, unnamed): (Vec<_>, Vec<_>) = variants
-                .iter()
-                .partition(|v| matches!(v, Variant { fields: Fields::Named(_), .. }));
+            let (named, unnamed): (Vec<_>, Vec<_>) = variants.iter().partition(|v| {
+                matches!(
+                    v,
+                    Variant {
+                        fields: Fields::Named(_),
+                        ..
+                    }
+                )
+            });
 
             let (unnamed1, unnamed): (Vec<_>, Vec<_>) =
                 unnamed.into_iter().partition(|v| v.fields.len() == 1);

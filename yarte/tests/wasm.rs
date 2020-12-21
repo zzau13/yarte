@@ -1,8 +1,7 @@
 #![allow(clippy::into_iter_on_ref)]
 #![cfg(feature = "wasm")]
 
-use bytes::{Bytes, BytesMut};
-use yarte::{Serialize, TemplateWasmServer as Template};
+use yarte::{Bytes, BytesMut, Serialize, TemplateWasmServer as Template};
 
 #[derive(Serialize)]
 struct Fortune {

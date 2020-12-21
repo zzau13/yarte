@@ -1,6 +1,6 @@
 [package]
 name = "yarte"
-version = "0.13.0"
+version = "0.14.0"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "Type-safe, compiled Handlebars"
 categories = ["template-engine", "web-programming", "gui"]
@@ -23,21 +23,21 @@ wasm = ["yarte_derive/wasm-server", "json", "bytes-buf"]
 json = ["yarte_helpers/json", "yarte_derive/json", "bytes-buf"]
 html-min = ["yarte_derive/html-min"]
 fixed = ["yarte_helpers/fixed", "yarte_derive/fixed"]
-bytes-buf = ["buf-min", "yarte_helpers/bytes-buf", "yarte_derive/bytes-buf"]
+bytes-buf = ["buf-min/bytes-buf-tokio2", "yarte_helpers/bytes-buf", "yarte_derive/bytes-buf"]
+bytes-buf-tokio3 = ["buf-min/bytes-buf-tokio3", "yarte_helpers/bytes-buf", "yarte_derive/bytes-buf"]
 
 [dependencies]
-yarte_derive = { version = "0.13.0", path = "../yarte_derive" }
-yarte_helpers = { version = "0.13.0", path = "../yarte_helpers" }
-buf-min = { version = "0.2", features = ["bytes-buf"], optional = true }
+yarte_derive = { version = "0.14.0", path = "../yarte_derive" }
+yarte_helpers = { version = "0.14.0", path = "../yarte_helpers" }
+buf-min = { version = "0.4", optional = true }
 
 [dev-dependencies]
-bytes = "0.6"
 trybuild = { version = "1.0", features = ["diff"] }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 
 [build-dependencies]
-yarte_helpers = { version = "0.13.0", path = "../yarte_helpers" }
+yarte_helpers = { version = "0.14.0", path = "../yarte_helpers" }
 
 [package.metadata.docs.rs]
 all-features = true

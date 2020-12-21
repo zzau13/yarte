@@ -4,11 +4,11 @@ use std::{io, slice};
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-use bytes::BytesMut;
 use itoa;
 use v_htmlescape::f_escape;
 use yarte::{
-    Template, TemplateBytes, TemplateBytesText, TemplateFixed, TemplateFixedText, TemplateText,
+    BytesMut, Template, TemplateBytes, TemplateBytesText, TemplateFixed, TemplateFixedText,
+    TemplateText,
 };
 
 criterion_group!(benches, functions);

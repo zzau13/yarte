@@ -4,9 +4,7 @@
 use std::collections::HashMap;
 use std::mem::MaybeUninit;
 
-use bytes::{Bytes, BytesMut};
-
-use yarte::{TemplateBytesMin, TemplateFixedMin, TemplateMin};
+use yarte::{Bytes, BytesMut, TemplateBytesMin, TemplateFixedMin, TemplateMin};
 
 #[derive(TemplateMin)]
 #[template(path = "example/index")]
