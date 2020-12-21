@@ -523,7 +523,10 @@ impl<'a> WASMCodeGen<'a> {
         if let Some(event) = is_on_attr(&attr) {
             let (id, msg) = match attr.value.as_slice() {
                 [ExprOrText::Expr(Expression::Safe(id, msg))] => (id, &**msg),
-                _ => panic!("{}", "only use resolve expressions `{? .. }` in on attributes"),
+                _ => panic!(
+                    "{}",
+                    "only use resolve expressions `{? .. }` in on attributes"
+                ),
             };
             self.write_event(*id, event, msg);
         } else {
