@@ -7,7 +7,6 @@
     clippy::collapsible_match,
     clippy::unused_unit,
     clippy::suspicious_else_formatting,
-    panic_fmt,
     unreachable_patterns
 )]
 #[macro_use]
