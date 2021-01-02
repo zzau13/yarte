@@ -1,3 +1,4 @@
+
 # Should we start to worry?
 `bytes-buf` feature can produce **SIGILL** https://github.com/botika/v_escape/issues/54. It's complitate because the `avx` and `sse` flags are in almost all cpus of `x86` and `x86_64` architectures. I have already warned. More details in the issue.
 
@@ -11,6 +12,8 @@ Satan has been slaughtered and sent to heaven. Should we start to worry?
 All structures and functions in this crate -- even those based on the real crates -- are entirely fictional. 
 All celebrity codes are impersonated...poorly.
 The following program contains coarse language and due to its content it should not be used by anyone.
+
+<img align="left" src="https://raw.githubusercontent.com/botika/yarte/master/logo.png" alt="Yet Another Rust Template Engine" width="124" height="124">
 
 # Yarte [![Latest version](https://img.shields.io/crates/v/yarte.svg)](https://crates.io/crates/yarte) [![Build Status](https://travis-ci.org/botika/yarte.svg?branch=master)](https://travis-ci.org/botika/yarte)
 Yarte stands for **Y**et **A**nother **R**ust **T**emplate **E**ngine. Uses a Handlebars-like syntax, 
@@ -39,11 +42,13 @@ In order to  fully understand Yarte's capabilities take a look at the following 
 ## Acknowledgment
 Yarte is based on all previous templates engines, syntax as well as its documentation 
 is highly influenced by [Handlebars][handlebars]. 
+Logo is adapted from [Creative Commons][commons]licenced images
 
 [bench]: https://tfb-status.techempower.com/
 [handlebars]: https://handlebarsjs.com/
 [ntex]: https://github.com/ntex-rs/ntex
 [actix]: https://github.com/actix/actix-web
+[commons]: https://commons.wikimedia.org
 
 ## Contributing
 Please, contribute to Yarte! The more the better! Feel free to open an issue and/or contacting directly with the 
