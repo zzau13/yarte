@@ -13,7 +13,7 @@ All structures and functions in this crate -- even those based on the real crate
 All celebrity codes are impersonated...poorly.
 The following program contains coarse language and due to its content it should not be used by anyone.
 
-<img align="left" src="https://raw.githubusercontent.com/botika/yarte/master/logo.png" alt="Yet Another Rust Template Engine" width="124" height="124">
+<img align="left" src="https://raw.githubusercontent.com/botika/yarte/master/logo.png" alt="Yet Another Rust Template Engine" width="160" height="160">
 
 # Yarte [![Latest version](https://img.shields.io/crates/v/yarte.svg)](https://crates.io/crates/yarte) [![Build Status](https://travis-ci.org/botika/yarte.svg?branch=master)](https://travis-ci.org/botika/yarte)
 Yarte stands for **Y**et **A**nother **R**ust **T**emplate **E**ngine. Uses a Handlebars-like syntax, 
