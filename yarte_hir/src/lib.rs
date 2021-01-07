@@ -440,7 +440,7 @@ impl<'a> LoweringContext<'a> {
             let cond = syn::Expr::Unary(syn::ExprUnary {
                 expr: Box::new(syn::Expr::Paren(syn::ExprParen {
                     attrs: vec![],
-                    paren_token: syn::token::Paren(syn::export::Span::call_site()),
+                    paren_token: syn::token::Paren::default(),
                     expr: Box::new(cond),
                 })),
                 attrs: vec![],
@@ -875,7 +875,7 @@ impl<'a> LoweringContext<'a> {
             ($ident:expr, $j:expr) => {{
                 let ident = $ident.as_bytes();
                 if is_tuple_index(ident) {
-                    let field = syn::Index{ index: u32::from_str_radix(str::from_utf8(&ident[1..]).unwrap(), 10).unwrap(), span: syn::export::Span::call_site() };
+                    let field = syn::Index{ index: u32::from_str_radix(str::from_utf8(&ident[1..]).unwrap(), 10).unwrap(), span: proc_macro2::Span::call_site() };
                     let ident = &self.scp[$j][0];
                     writes!(#ident.#field)
                 }
