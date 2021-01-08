@@ -12,9 +12,9 @@ Satan has been slaughtered and sent to heaven. Should we start to worry?
 All structures and functions in this crate -- even those based on the real crates -- are entirely fictional. 
 All celebrity codes are impersonated...poorly.
 The following program contains coarse language and due to its content it should not be used by anyone.
-
-<img align="left" src="https://raw.githubusercontent.com/botika/yarte/master/logo.png" alt="Yet Another Rust Template Engine" width="160" height="160">
-
+<a href="https://commons.wikimedia.org/wiki/File:Logo_yarte.png">
+<img align="left" src="https://upload.wikimedia.org/wikipedia/commons/b/bb/Logo_yarte.png" alt="Yet Another Rust Template Engine" width="160" height="160">
+</a>
 # Yarte [![Latest version](https://img.shields.io/crates/v/yarte.svg)](https://crates.io/crates/yarte) [![Build Status](https://travis-ci.org/botika/yarte.svg?branch=master)](https://travis-ci.org/botika/yarte)
 Yarte stands for **Y**et **A**nother **R**ust **T**emplate **E**ngine. Uses a Handlebars-like syntax, 
 well-known and intuitive for most developers. Yarte is an optimized, and easy-to-use 
@@ -42,7 +42,7 @@ In order to  fully understand Yarte's capabilities take a look at the following 
 ## Acknowledgment
 Yarte is based on all previous templates engines, syntax as well as its documentation 
 is highly influenced by [Handlebars][handlebars]. 
-Logo is adapted from [Creative Commons][commons]licenced images
+Logo adapted from [Creative Commons][commons] images
 
 [bench]: https://tfb-status.techempower.com/
 [handlebars]: https://handlebarsjs.com/
