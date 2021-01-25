@@ -29,7 +29,7 @@ trait UnsafeInteger: Copy {
 }
 
 macro_rules! impl_unsafe_integers {
-    ($($t:tt)+) => {
+    ($($t:ty)+) => {
     $(
     impl UnsafeInteger for $t {
         #[inline(always)]
@@ -331,126 +331,106 @@ pub trait Integer {
     unsafe fn write_to(self, buf: *mut u8) -> usize;
 }
 
-macro_rules! impl_integer {
-    ($unsigned:ty, $signed:ty, $conv:ty, $func:ident, $max_len:expr) => {
-        impl Integer for $unsigned {
-            const MAX_LEN: usize = $max_len;
+macro_rules! implement {
+    ($([$($attr:meta)*] $uint:ty, $int:ty, $ty:ty, $fun:path, $len:literal)+) => {
+        $(
+        $(#[$attr])*
+        impl Integer for $uint{
+            const MAX_LEN: usize = $len;
 
             #[inline]
             unsafe fn write_to(self, buf: *mut u8) -> usize {
-                $func(self as $conv, buf)
+                $fun(self as $ty, buf)
             }
         }
 
-        impl Integer for $signed {
-            const MAX_LEN: usize = $max_len + 1;
+        $(#[$attr])*
+        impl Integer for $int{
+            const MAX_LEN: usize = $len + 1;
 
             #[inline]
             unsafe fn write_to(self, buf: *mut u8) -> usize {
-                if self >= 0 {
-                    $func(self as $conv, buf)
-                } else {
+                if self < 0 {
                     *buf = b'-';
-                    $func((!(self as $conv)).wrapping_add(1), buf.add(1)) + 1
+                    $fun((!(self as $ty)).wrapping_add(1), buf.add(1)) + 1
+                } else {
+                    $fun(self as $ty, buf)
                 }
             }
         }
+        )+
     };
 }
 
-impl_integer!(u8, i8, u8, write_u8, 3);
-impl_integer!(u16, i16, u16, write_u16, 5);
-impl_integer!(u32, i32, u32, write_u32, 10);
-impl_integer!(u64, i64, u64, write_u64, 20);
-
-#[cfg(target_pointer_width = "16")]
-impl_integer!(usize, isize, u16, write_u16, 5);
-
-#[cfg(target_pointer_width = "32")]
-impl_integer!(usize, isize, u32, write_u32, 10);
-
-#[cfg(target_pointer_width = "64")]
-impl_integer!(usize, isize, u64, write_u64, 20);
+implement! {
+    [] u8, i8, u8, write_u8, 3
+    [] u16, i16, u16, write_u16, 5
+    [] u32, i32, u32, write_u32, 10
+    [] u64, i64, u64, write_u64, 20
+    [cfg(target_pointer_width = "16")]
+    usize, isize, u16, write_u16, 5
+    [cfg(target_pointer_width = "32")]
+    usize, isize, u32, write_u32, 10
+    [cfg(target_pointer_width = "64")]
+    usize, isize, u64, write_u64, 20
+}
 
 #[cfg(test)]
 mod tests {
-    use std::time::{SystemTime, UNIX_EPOCH};
+    use super::*;
+    use random_fast_rng::{FastRng, Random};
 
     #[test]
     fn test_i8_all() {
-        use super::Integer;
-        let mut buf = Vec::with_capacity(i8::MAX_LEN);
+        let mut buf = String::with_capacity(i8::MAX_LEN);
 
         for n in std::i8::MIN..=std::i8::MAX {
             unsafe {
                 let l = n.write_to(buf.as_mut_ptr());
-                buf.set_len(l);
-                assert_eq!(std::str::from_utf8_unchecked(&*buf), format!("{}", n));
+                buf.as_mut_vec().set_len(l);
+                assert_eq!(buf, n.to_string());
             }
         }
         for n in std::u8::MIN..=std::u8::MAX {
             unsafe {
                 let l = n.write_to(buf.as_mut_ptr());
-                buf.set_len(l);
-                assert_eq!(std::str::from_utf8_unchecked(&*buf), format!("{}", n));
+                buf.as_mut_vec().set_len(l);
+                assert_eq!(buf, n.to_string());
             }
         }
     }
 
     #[test]
     fn test_16_all() {
-        use super::Integer;
-        let mut buf = Vec::with_capacity(i16::MAX_LEN);
+        let mut buf = String::with_capacity(i16::MAX_LEN);
 
         for n in std::i16::MIN..=std::i16::MAX {
             unsafe {
                 let l = n.write_to(buf.as_mut_ptr());
-                buf.set_len(l);
-                assert_eq!(std::str::from_utf8_unchecked(&*buf), format!("{}", n));
+                buf.as_mut_vec().set_len(l);
+                assert_eq!(buf, n.to_string());
             }
         }
         for n in std::u16::MIN..=std::u16::MAX {
             unsafe {
                 let l = n.write_to(buf.as_mut_ptr());
-                buf.set_len(l);
-                assert_eq!(std::str::from_utf8_unchecked(&*buf), format!("{}", n));
+                buf.as_mut_vec().set_len(l);
+                assert_eq!(buf, n.to_string());
             }
         }
     }
 
     #[test]
     fn test_u64_random() {
-        use super::Integer;
-        let mut buf = Vec::with_capacity(u64::MAX_LEN);
-        let mut state = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos() as u64;
+        let mut buf = String::with_capacity(u64::MAX_LEN);
+        let mut rng = FastRng::new();
 
-        for _ in 0..5_000_000 {
-            // xorshift
-            state ^= state << 13;
-            state ^= state >> 7;
-            state ^= state << 17;
-
+        for _ in 0..10_000_000 {
             unsafe {
-                let l = state.write_to(buf.as_mut_ptr());
-                buf.set_len(l);
-                assert_eq!(std::str::from_utf8_unchecked(&*buf), format!("{}", state));
-            }
-        }
-
-        let mut state = 88172645463325252u64;
-        for _ in 0..5_000_000 {
-            // xorshift
-            state ^= state << 13;
-            state ^= state >> 7;
-            state ^= state << 17;
-
-            unsafe {
-                let l = state.write_to(buf.as_mut_ptr());
-                buf.set_len(l);
-                assert_eq!(std::str::from_utf8_unchecked(&*buf), format!("{}", state));
+                let n = rng.get_u64();
+                let l = n.write_to(buf.as_mut_ptr());
+                buf.as_mut_vec().set_len(l);
+                assert_eq!(buf, n.to_string());
             }
         }
     }
@@ -458,87 +438,16 @@ mod tests {
     #[test]
     fn test_u32_random() {
         use super::Integer;
-        let mut buf = Vec::with_capacity(u32::MAX_LEN);
+        let mut buf = String::with_capacity(u64::MAX_LEN);
+        let mut rng = FastRng::new();
 
-        let mut state = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos() as u32;
         for _ in 0..10_000_000 {
-            // xorshift
-            state ^= state << 13;
-            state ^= state >> 7;
-            state ^= state << 17;
-
             unsafe {
-                let l = state.write_to(buf.as_mut_ptr());
-                buf.set_len(l);
-                assert_eq!(std::str::from_utf8_unchecked(&*buf), format!("{}", state));
-            }
-        }
-
-        let mut state = 88172645463325252u64 as u32;
-        for _ in 0..10_000_000 {
-            // xorshift
-            state ^= state << 13;
-            state ^= state >> 7;
-            state ^= state << 17;
-
-            unsafe {
-                let l = state.write_to(buf.as_mut_ptr());
-                buf.set_len(l);
-                assert_eq!(std::str::from_utf8_unchecked(&*buf), format!("{}", state));
+                let n = rng.get_u32();
+                let l = n.write_to(buf.as_mut_ptr());
+                buf.as_mut_vec().set_len(l);
+                assert_eq!(buf, n.to_string());
             }
         }
     }
-
-    macro_rules! make_test {
-        ($name:ident, $type:ty, $($value:expr),*) => {
-            #[test]
-            fn $name() {
-                use super::Integer;
-
-                let mut buf = Vec::with_capacity(<$type>::MAX_LEN);
-                $(
-                    unsafe {
-                        let l = ($value as $type).write_to(buf.as_mut_ptr());
-                        buf.set_len(l);
-                        assert_eq!(
-                            std::str::from_utf8_unchecked(&*buf),
-                            format!("{}", $value as $type)
-                        );
-                    }
-                )*
-            }
-        }
-    }
-
-    // boundary tests
-    make_test!(test_u8, u8, 0, 1, 9, 10, 99, 100, 254, 255);
-    make_test!(test_u16, u16, 0, 9, 10, 99, 100, 999, 1000, 9999, 10000, 65535);
-    #[rustfmt::skip]
-    make_test!(
-        test_u32,
-        u32,
-        0, 9, 10, 99, 100, 999, 1000, 9999, 10000, 99999, 100000, 999999, 1000000, 9999999,
-        10000000, 99999999, 100000000, 999999999, 1000000000, 4294967295, std::u32::MAX,
-        std::u32::MIN
-    );
-    #[rustfmt::skip]
-    make_test!(
-        test_u64,
-        u64,
-        0, 9, 10, 99, 100, 999, 1000, 9999, 10000, 99999, 100000, 999999, 1000000, 9999999,
-        10000000, 99999999, 100000000, 999999999, 1000000000, 9999999999, 10000000000, 99999999999,
-        100000000000, 999999999999, 1000000000000, 9999999999999, 10000000000000, 99999999999999,
-        100000000000000, 999999999999999, 1000000000000000, 9999999999999999, 10000000000000000,
-        99999999999999999, 100000000000000000, 999999999999999999, 1000000000000000000,
-        9999999999999999999, 10000000000000000000, 18446744073709551615, 88172645463325252,
-        std::u64::MAX, std::u64::MIN
-    );
-
-    make_test!(test_i8, i8, std::i8::MIN, std::i8::MAX);
-    make_test!(test_i16, i16, std::i16::MIN, std::i16::MAX);
-    make_test!(test_i32, i32, std::i32::MIN, std::i32::MAX);
-    make_test!(test_i64, i64, std::i64::MIN, std::i64::MAX);
 }
