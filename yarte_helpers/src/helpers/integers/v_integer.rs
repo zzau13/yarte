@@ -41,7 +41,6 @@ const K_SHIFT_POWERS_VECTOR: A16<[u16; 8]> = A16([
 const K10VECTOR: A16<[u16; 8]> = A16([10; 8]);
 const K_ASCII_ZERO: A16<[u8; 16]> = A16([b'0'; 16]);
 
-// TODO: 16 digits avx
 #[inline]
 unsafe fn convert8digits_sse2(value: u32) -> __m128i {
     debug_assert!(value <= 99999999);
@@ -150,8 +149,6 @@ pub unsafe fn write_u64(value: u64, buf: *mut u8) -> usize {
             .trailing_zeros();
         debug_assert!(digits <= 8);
 
-        // Shift digits to the beginning
-        // unsafe make sure length of slice is greeter than 16 bytes
         _mm_storeu_si128(buf as *mut __m128i, shift_digits_sse2(va, digits as u8));
 
         16u32.wrapping_sub(digits) as usize
@@ -160,8 +157,6 @@ pub unsafe fn write_u64(value: u64, buf: *mut u8) -> usize {
         let value = value.ren(10_000_000_000_000_000);
 
         // value = aaaa_aaaa_bbbb_bbbb in decimal
-        // Shift digits to the beginning
-        // unsafe make sure length of slice is greeter than 16 bytes
         _mm_storeu_si128(
             buf.add(o) as *mut __m128i,
             _mm_add_epi8(
