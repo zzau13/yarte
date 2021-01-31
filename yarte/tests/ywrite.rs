@@ -1,6 +1,5 @@
-#![cfg(features = "bytes-buf")]
-use bytes::BytesMut;
-use yarte::{yformat, yformat_html, ywrite};
+#![cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio3"))]
+use yarte::{auto, yformat, yformat_html, ywrite, BytesMut};
 
 #[test]
 fn test() {
@@ -25,6 +24,14 @@ fn test_w() {
     ywrite!(bytes_mut, "Hello {{ world }}!",);
 
     assert_eq!(&bytes_mut[..], b"Hello 1!")
+}
+
+#[test]
+fn test_auto() {
+    let world = "World";
+    let bytes = auto!(ywrite!(BytesMut, "Hello {{ world }}!"));
+
+    assert_eq!(&bytes[..], b"Hello World!");
 }
 
 #[test]

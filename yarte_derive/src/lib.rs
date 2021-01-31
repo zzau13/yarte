@@ -307,6 +307,52 @@ pub fn yformat(i: TokenStream) -> TokenStream {
     )
 }
 
+struct AutoArg {
+    path: syn::Ident,
+    _a: syn::Token![!],
+    _b: syn::token::Paren,
+    ty: syn::Type,
+    _c: syn::token::Comma,
+    lit: syn::Lit,
+}
+
+#[allow(clippy::eval_order_dependence)]
+impl syn::parse::Parse for AutoArg {
+    fn parse(input: &ParseBuffer) -> syn::Result<Self> {
+        let content;
+        Ok(AutoArg {
+            path: input.parse()?,
+            _a: input.parse()?,
+            _b: syn::parenthesized!(content in input),
+            ty: content.parse()?,
+            _c: content.parse()?,
+            lit: content.parse()?,
+        })
+    }
+}
+
+#[proc_macro]
+pub fn auto(i: TokenStream) -> TokenStream {
+    let AutoArg { path, ty, lit, .. } = syn::parse(i).unwrap();
+
+    let token = quote! {{
+        thread_local! {
+            static SIZE: std::cell::Cell<usize> = std::cell::Cell::new(0);
+        }
+        let mut __buf: #ty = yarte::Buffer::with_capacity(SIZE.with(|v| v.get()));
+
+        #path!(__buf, #lit);
+
+        SIZE.with(|v| if v.get() < __buf.len() {
+            v.set(__buf.len())
+        });
+
+        __buf
+    }};
+
+    token.into()
+}
+
 #[proc_macro]
 #[cfg(feature = "bytes-buf")]
 /// Write handlebars template to `buf-min::Buffer` in this scope without html escape functionality
