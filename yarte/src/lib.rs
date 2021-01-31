@@ -8,6 +8,7 @@
 //!
 use std::fmt::{self, Write};
 
+pub use yarte_derive::auto;
 #[cfg(all(
     any(feature = "bytes-buf", feature = "bytes-buf-tokio3"),
     feature = "html-min"
@@ -18,7 +19,9 @@ pub use yarte_derive::{yformat, yformat_html};
 pub use yarte_derive::{ywrite, ywrite_html};
 pub use yarte_helpers::at_helpers::*;
 pub use yarte_helpers::{
-    helpers::{io_fmt::IoFmt, Aligned256, IntoCopyIterator, Render, RenderA},
+    helpers::{
+        display_fn::DisplayFn, io_fmt::IoFmt, Aligned256, IntoCopyIterator, Render, RenderA,
+    },
     recompile, Error, Result,
 };
 
