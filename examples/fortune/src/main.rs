@@ -1,32 +1,11 @@
 use std::collections::HashMap;
 use std::io::{stdout, Write};
-use std::thread;
 
-use std::mem::MaybeUninit;
-use yarte::{ywrite_min, BytesMut, Template, TemplateBytesMin, TemplateFixedMin, TemplateMin};
+use yarte::*;
 
-#[derive(Template)]
-#[template(path = "index")]
-struct IndexTemplate<'a> {
-    query: &'a HashMap<&'static str, &'static str>,
-}
-
-#[derive(TemplateMin)]
-#[template(path = "index")]
-struct IndexTemplateMin<'a> {
-    query: &'a HashMap<&'static str, &'static str>,
-}
-
-#[derive(TemplateFixedMin)]
-#[template(path = "index_fixed")]
-struct IndexTemplateF<'a> {
-    query: &'a HashMap<&'static str, &'static str>,
-}
-
-#[derive(TemplateBytesMin)]
-#[template(path = "index_bytes")]
-struct IndexTemplateB<'a> {
-    query: Option<(&'a str, &'a str)>,
+struct Card<'a> {
+    title: &'a str,
+    body: &'a str,
 }
 
 fn main() {
@@ -34,47 +13,23 @@ fn main() {
     query.insert("name", "new");
     query.insert("lastname", "user");
 
-    println!("Fmt:\n{}", IndexTemplate { query: &query });
-    println!("\nFmt Min:\n{}", IndexTemplateMin { query: &query });
-
-    unsafe {
-        TemplateFixedMin::call(
-            &IndexTemplateF { query: &query },
-            &mut [MaybeUninit::uninit(); 2048],
-        )
-    }
-    .and_then(|b| {
-        println!("\nFixed Min:");
-        stdout().lock().write_all(b).ok()?;
-        println!();
-        Some(())
-    })
-    .unwrap();
-
-    let buf = TemplateBytesMin::ccall::<BytesMut>(
-        IndexTemplateB {
-            query: query
-                .get("name")
-                .and_then(|name| query.get("lastname").map(|lastname| (*name, *lastname))),
-        },
-        2048,
-    );
-    thread::spawn(move || {
-        println!("\nBytes Min:");
-        stdout().lock().write_all(&buf).unwrap();
-        println!();
-    })
-    .join()
-    .unwrap();
-
-    let mut buf = BytesMut::with_capacity(2048);
     let query = query
         .get("name")
         .and_then(|name| query.get("lastname").map(|lastname| (*name, *lastname)));
 
-    ywrite_min!(buf, "{{> index_bytes }}");
+    let buf = auto!(ywrite_min!(String, "{{> index_bytes }}"));
 
-    println!("\nywrite_min!:");
-    stdout().lock().write_all(&buf.freeze()).unwrap();
+    stdout().lock().write_all(buf.as_bytes()).unwrap();
+    println!();
+
+    let my_card = Card {
+        title: "My Title",
+        body: "My Body",
+    };
+
+    // Auto sized html
+    let buf = auto!(ywrite_html!(String, "{{> hello my_card }}"));
+
+    stdout().lock().write_all(buf.as_bytes()).unwrap();
     println!();
 }
