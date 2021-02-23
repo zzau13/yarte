@@ -17,16 +17,16 @@ impl ToTokens for StrT {
                     .as_bytes()
                     .iter()
                     .enumerate()
-                    .map(|(i, x)| quote!(unsafe { *buf.buf_ptr().add(#i) = #x; }))
+                    .map(|(i, x)| quote!(unsafe { *buf._yarte_in_derive_buf_ptr().add(#i) = #x; }))
                     .flatten()
                     .collect();
                 quote! {
-                    buf.reserve(#len);
+                    buf._yarte_in_derive_reserve(#len);
                     #range
-                    unsafe { buf.advance(#len); }
+                    unsafe { buf._yarte_in_derive_advance(#len); }
                 }
             }
-            _ => quote!(buf.extend_from_slice(#this.as_bytes());),
+            _ => quote!(buf._yarte_in_derive_extend(#this);),
         };
         tokens.extend(t)
     }
@@ -63,6 +63,7 @@ pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
                 quote! {
                     impl #generics yarte::Serialize for #ident #generics {
                         fn to_bytes_mut<B: yarte::Buffer>(&self, buf: &mut B) {
+                            use yarte::*;
                             yarte::begin_array(buf);
                             self.0.to_bytes_mut(buf);
                             #(
@@ -106,6 +107,7 @@ pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
                 impl #generics yarte::Serialize for #ident #generics {
                     #[inline]
                     fn to_bytes_mut<B: yarte::Buffer>(&self, buf: &mut B) {
+                        use yarte::*;
                         #(
                             #keys
                             self.#values.to_bytes_mut(buf);
@@ -273,6 +275,7 @@ pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
                 impl #generics yarte::Serialize for #ident #generics {
                     #[inline]
                     fn to_bytes_mut<B: yarte::Buffer>(&self, buf: &mut B) {
+                        use yarte::*;
                         match self {
                             #match_body
                         }

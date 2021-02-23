@@ -96,8 +96,8 @@ macro_rules! itoa128_display {
             impl RenderBytes for $ty {
                 #[inline(always)]
                  fn render<B: Buffer>(self, buf: &mut B)  {
-                    // Infallible, can panics overflows usize
-                    let _ = itoa::write(Writer::new(buf), self);
+                    // Safety: iota only write valid utf-8 bytes
+                    let _ = itoa::write(UnsafeWriter::new(buf), self);
                 }
             }
         )*
@@ -137,7 +137,7 @@ macro_rules! str_display {
             impl RenderBytesSafe for $ty {
                 #[inline(always)]
                  fn render<B: Buffer>(self, buf: &mut B)  {
-                    buf.extend_from_slice(self.as_bytes());
+                    buf.extend(self);
                 }
             }
         )*
@@ -179,7 +179,8 @@ macro_rules! itoa128_display {
             impl RenderBytesSafe for $ty {
                 #[inline(always)]
                  fn render<B: Buffer>(self, buf: &mut B)  {
-                    let _ = itoa::write(Writer::new(buf), self);
+                    // Safety: iota only write valid utf-8 bytes
+                    let _ = itoa::write(UnsafeWriter::new(buf), self);
                 }
             }
         )*
@@ -197,7 +198,7 @@ macro_rules! ryu_display {
             #[inline(always)]
             fn render<B: Buffer>(self, buf: &mut B)  {
                 if self.is_nonfinite() {
-                    buf.extend_from_slice(self.format_nonfinite().as_bytes());
+                    buf.extend(&self.format_nonfinite());
                 } else {
                     buf.reserve(MAX_SIZE_FLOAT);
                     // Safety: Previous reserve MAX length
@@ -236,21 +237,22 @@ impl RenderBytesSafe for bool {
     }
 }
 
-struct Writer<'a, B> {
+struct UnsafeWriter<'a, B> {
     buf: &'a mut B,
 }
 
-impl<'a, B: Buffer> Writer<'a, B> {
+impl<'a, B: Buffer> UnsafeWriter<'a, B> {
     #[inline]
-    fn new(buf: &mut B) -> Writer<'_, B> {
-        Writer { buf }
+    fn new(buf: &mut B) -> UnsafeWriter<'_, B> {
+        UnsafeWriter { buf }
     }
 }
 
-impl<'a, B: Buffer> io::Write for Writer<'a, B> {
+impl<'a, B: Buffer> io::Write for UnsafeWriter<'a, B> {
     #[inline]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.buf.extend_from_slice(buf);
+        // SAFETY: Writer only use for print checked utf-8
+        unsafe { self.buf.extend_from_slice(buf) };
         Ok(buf.len())
     }
 
@@ -295,11 +297,11 @@ fn render_char<B: Buffer>(c: char, buf: &mut B) {
 
 #[inline(always)]
 pub(crate) fn render_bool<B: Buffer>(b: bool, buf: &mut B) {
-    const T: &[u8] = b"true";
-    const F: &[u8] = b"false";
+    const T: &str = "true";
+    const F: &str = "false";
     if b {
-        buf.extend_from_slice(T);
+        buf.extend(T);
     } else {
-        buf.extend_from_slice(F);
+        buf.extend(F);
     }
 }
