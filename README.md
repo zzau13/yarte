@@ -1,10 +1,9 @@
-
 # Should we start to worry?
-`bytes-buf` feature can produce **SIGILL** https://github.com/botika/v_escape/issues/54. It's complitate because the `avx` and `sse` flags are in almost all cpus of `x86` and `x86_64` architectures. I have already warned. More details in the issue.
+`bytes-buf` feature can produce **SIGILL**.
 
-On `tokio@0.2` (`actix`, `hyper`, `ntex`, ...) use `yarte@0.12`. 
-On `tokio@0.3` use `yarte@0.13`. 
-In `yarte@0.14` there will be both options.
+`avx` and `sse` flags are in almost all cpus of `x86` and `x86_64` architectures. 
+
+More details in https://github.com/botika/v_escape/issues/54.
 
 Satan has been slaughtered and sent to heaven. Should we start to worry?
 
