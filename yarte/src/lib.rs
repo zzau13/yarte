@@ -150,3 +150,44 @@ pub use buf_min::t3::{Bytes, BytesMut};
 pub use yarte_derive::Serialize;
 #[cfg(feature = "json")]
 pub use yarte_helpers::helpers::json::{Serialize, *};
+
+#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio3"))]
+pub trait BufferInDerive: Buffer + Sized {
+    #[inline]
+    fn _yarte_in_derive_with_capacity(capacity: usize) -> Self {
+        Buffer::with_capacity(capacity)
+    }
+
+    #[inline]
+    fn _yarte_in_derive_extend(&mut self, src: &str) {
+        Buffer::extend(self, src)
+    }
+
+    #[inline]
+    unsafe fn _yarte_in_derive_extend_from_slice(&mut self, src: &[u8]) {
+        Buffer::extend_from_slice(self, src)
+    }
+
+    #[inline]
+    fn _yarte_in_derive_reserve(&mut self, additional: usize) {
+        Buffer::reserve(self, additional)
+    }
+
+    #[inline]
+    fn _yarte_in_derive_freeze(self) -> Self::Freeze {
+        Buffer::freeze(self)
+    }
+
+    #[inline]
+    unsafe fn _yarte_in_derive_advance(&mut self, cnt: usize) {
+        Buffer::advance(self, cnt)
+    }
+
+    #[inline]
+    unsafe fn _yarte_in_derive_buf_ptr(&mut self) -> *mut u8 {
+        Buffer::buf_ptr(self)
+    }
+}
+
+#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio3"))]
+impl<T: Buffer + Sized> BufferInDerive for T {}

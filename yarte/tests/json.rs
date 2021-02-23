@@ -285,7 +285,7 @@ fn named() {
     struct Bla {
         f1: u8,
         f2: String,
-    };
+    }
 
     let b = Bla {
         f1: 1,

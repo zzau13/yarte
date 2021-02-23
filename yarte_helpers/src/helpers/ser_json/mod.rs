@@ -109,7 +109,7 @@ ryu_display!(f32 f64);
 
 #[inline]
 pub fn render_null<B: Buffer>(buf: &mut B) {
-    buf.extend_from_slice(b"null");
+    buf.extend("null");
 }
 
 #[inline]
