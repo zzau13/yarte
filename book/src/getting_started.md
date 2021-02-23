@@ -22,7 +22,7 @@ struct Card<'a> {
     body: &'a str,
 }
 
-fn some() -> String {
+fn foo() -> String {
     let my_card = Card {
         title: "My Title",
         body: "My Body",

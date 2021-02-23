@@ -14,8 +14,10 @@ use std::fmt::{self, Write};
 /// # use yarte::*;
 ///
 /// let world = "World";
+/// ##[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"))]
 /// let buf = auto!(ywrite!(String, "Hello, {{ world }}!"));
 ///
+/// ##[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"))]
 /// assert_eq!(buf, "Hello, World!");
 /// ```
 pub use yarte_derive::auto;
