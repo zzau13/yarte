@@ -17,7 +17,8 @@ fn main() {
         .get("name")
         .and_then(|name| query.get("lastname").map(|lastname| (*name, *lastname)));
 
-    let buf = auto!(ywrite_min!(String, "{{> index_bytes }}"));
+    // Auto sized html minimal (Work in progress. Not use in production)
+    let buf = auto!(ywrite_min!(String, "{{> index }}"));
 
     stdout().lock().write_all(buf.as_bytes()).unwrap();
     println!();
