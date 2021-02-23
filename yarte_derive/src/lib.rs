@@ -451,7 +451,7 @@ pub fn ywrite_html(i: TokenStream) -> TokenStream {
 }
 
 #[proc_macro]
-#[cfg(all(feature = "html-min", feature = "fixed"))]
+#[cfg(all(feature = "html-min", feature = "bytes-buf"))]
 /// Write handlebars template to `buf-min::Buffer` in this scope without html escape functionality
 pub fn ywrite_min(i: TokenStream) -> TokenStream {
     const PARENT: &str = "yarte";
