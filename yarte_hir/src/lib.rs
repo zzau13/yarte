@@ -701,10 +701,10 @@ impl<'a> LoweringContext<'a> {
             }
 
             if let Some(scope) = scope {
-                let old = mem::replace(&mut self.opt.resolve_to_self, true);
                 let mut scope = scope.clone();
                 self.visit_expr_mut(&mut scope);
                 self.write_errors(exprs.span());
+                let old = mem::replace(&mut self.opt.resolve_to_self, true);
                 let count = self.scp.count;
                 // TODO: to heap stack without realloc every block
                 let mut parent = mem::replace(&mut self.scp, Scope::new(scope, count));

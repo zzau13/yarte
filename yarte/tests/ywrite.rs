@@ -1,5 +1,5 @@
 #![cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"))]
-use yarte::{auto, yformat, yformat_html, ywrite, BytesMut};
+use yarte::{auto, yformat, yformat_html, ywrite, ywrite_html, BytesMut};
 
 #[test]
 fn test() {
@@ -124,4 +124,29 @@ fn test_json() {
         to_string_pretty(&val).unwrap(),
         yformat!("{{ @json_pretty val }}")
     );
+}
+
+struct Card<'a> {
+    title: &'a str,
+    body: &'a str,
+}
+
+#[test]
+fn resolve_partial_scope() {
+    let my_card = Card {
+        title: "My Title",
+        body: "My Body",
+    };
+
+    // Auto sized html
+    let buf = auto!(ywrite_html!(String, "{{> hello_ex my_card }}"));
+    assert_eq!(
+        buf,
+        r#"<div class="entry">
+  <h1>My Title</h1>
+  <div class="body">
+    My Body
+  </div>
+</div>"#
+    )
 }
