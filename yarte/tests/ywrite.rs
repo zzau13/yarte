@@ -1,4 +1,4 @@
-#![cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio3"))]
+#![cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"))]
 use yarte::{auto, yformat, yformat_html, ywrite, BytesMut};
 
 #[test]
