@@ -10,12 +10,12 @@ use std::fmt::{self, Write};
 
 pub use yarte_derive::auto;
 #[cfg(all(
-    any(feature = "bytes-buf", feature = "bytes-buf-tokio3"),
+    any(feature = "bytes-buf", feature = "bytes-buf-tokio2"),
     feature = "html-min"
 ))]
 pub use yarte_derive::ywrite_min;
 pub use yarte_derive::{yformat, yformat_html};
-#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio3"))]
+#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"))]
 pub use yarte_derive::{ywrite, ywrite_html};
 pub use yarte_helpers::at_helpers::*;
 pub use yarte_helpers::{
@@ -93,7 +93,7 @@ pub use yarte_derive::TemplateFixedMin;
 #[cfg(all(feature = "fixed", feature = "html-min"))]
 pub use TemplateFixedTrait as TemplateFixedMin;
 
-#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio3"))]
+#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"))]
 /// Template trait
 pub trait TemplateBytesTrait {
     /// Writes to buffer and return it freeze
@@ -119,31 +119,31 @@ pub trait TemplateBytesTrait {
 }
 
 #[cfg(all(
-    any(feature = "bytes-buf", feature = "bytes-buf-tokio3"),
+    any(feature = "bytes-buf", feature = "bytes-buf-tokio2"),
     feature = "html-min"
 ))]
 pub use yarte_derive::TemplateBytesMin;
-#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio3"))]
+#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"))]
 pub use yarte_derive::{TemplateBytes, TemplateBytesText};
-#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio3"))]
+#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"))]
 pub use TemplateBytesTrait as TemplateBytes;
-#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio3"))]
+#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"))]
 pub use TemplateBytesTrait as TemplateBytesText;
 #[cfg(all(
-    any(feature = "bytes-buf", feature = "bytes-buf-tokio3"),
+    any(feature = "bytes-buf", feature = "bytes-buf-tokio2"),
     feature = "html-min"
 ))]
 pub use TemplateBytesTrait as TemplateBytesMin;
 
-#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio3"))]
+#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"))]
 pub use yarte_helpers::helpers::{RenderBytes, RenderBytesA, RenderBytesSafe, RenderBytesSafeA};
 
 #[cfg(feature = "bytes-buf")]
 pub use buf_min::t2::{Bytes, BytesMut};
-#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio3", feature = "json"))]
+#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2", feature = "json"))]
 pub use buf_min::Buffer;
 
-#[cfg(all(feature = "bytes-buf-tokio3", not(feature = "bytes-buf")))]
+#[cfg(all(feature = "bytes-buf-tokio2", not(feature = "bytes-buf")))]
 pub use buf_min::t3::{Bytes, BytesMut};
 
 #[cfg(feature = "json")]
@@ -151,7 +151,7 @@ pub use yarte_derive::Serialize;
 #[cfg(feature = "json")]
 pub use yarte_helpers::helpers::json::{Serialize, *};
 
-#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio3"))]
+#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"))]
 pub trait BufferInDerive: Buffer + Sized {
     #[inline]
     fn _yarte_in_derive_with_capacity(capacity: usize) -> Self {
@@ -189,5 +189,5 @@ pub trait BufferInDerive: Buffer + Sized {
     }
 }
 
-#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio3"))]
+#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"))]
 impl<T: Buffer + Sized> BufferInDerive for T {}

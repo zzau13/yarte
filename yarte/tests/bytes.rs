@@ -1,4 +1,4 @@
-#![cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio3"))]
+#![cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"))]
 #![allow(clippy::uninit_assumed_init)]
 
 use yarte::{Bytes, BytesMut, TemplateBytes};
