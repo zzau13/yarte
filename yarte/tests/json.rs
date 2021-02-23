@@ -321,7 +321,7 @@ fn named_lifetime() {
     struct BlaN2L<'a, 'b> {
         f1: &'a str,
         f2: &'b str,
-    };
+    }
 
     let b = BlaN2L {
         f1: "snot",

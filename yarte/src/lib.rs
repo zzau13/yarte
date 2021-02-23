@@ -8,7 +8,18 @@
 //!
 use std::fmt::{self, Write};
 
+/// Add auto sized buffer functionality wrapping ywrites macros
+///
+/// ```
+/// # use yarte::*;
+///
+/// let world = "World";
+/// let buf = auto!(ywrite!(String, "Hello, {{ world }}!"));
+///
+/// assert_eq!(buf, "Hello, World!");
+/// ```
 pub use yarte_derive::auto;
+
 #[cfg(all(
     any(feature = "bytes-buf", feature = "bytes-buf-tokio2"),
     feature = "html-min"
