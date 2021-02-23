@@ -313,7 +313,7 @@ struct AutoArg {
     _b: syn::token::Paren,
     ty: syn::Type,
     _c: syn::token::Comma,
-    lit: syn::Lit,
+    lit: syn::LitStr,
 }
 
 #[allow(clippy::eval_order_dependence)]
@@ -333,7 +333,10 @@ impl syn::parse::Parse for AutoArg {
 
 #[proc_macro]
 pub fn auto(i: TokenStream) -> TokenStream {
-    let AutoArg { path, ty, lit, .. } = syn::parse(i).unwrap();
+    let AutoArg { path, ty, lit, .. } = match syn::parse(i) {
+        Ok(arg) => arg,
+        Err(e) => return e.to_compile_error().into(),
+    };
 
     let token = quote! {{
         thread_local! {
