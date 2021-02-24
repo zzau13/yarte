@@ -1,7 +1,25 @@
 # Changes
-### [0.14.0] (2021-xx-xx)
+### [0.15.0] (2021-02-23)
+### Added 
+- `auto!` auto buffer capacity wrapper for proc_macros
+
 ### Refactor
-- Add abstract lexer 
+- Rename `bytes-buf` feature
+- Remove `bytes-buf-tokio3` feature in favor of `bytes-buf`
+
+### Update
+- `buf-min` version to `0.5`
+
+### Fixed
+- Fix partial scope argument in proc_macros resolved to `self`
+
+### [0.14.0] (2021-12-21)
+## Added
+- `bytes-buf-tokio3` feature
+
+## Update
+- `bat` version to `0.17`
+- `buf-min` version to `0.4`
 
 ### [0.13.0] (2020-10-25)
 ## Update
