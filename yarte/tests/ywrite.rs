@@ -159,7 +159,10 @@ fn resolve_partial_scope_overridden() {
     };
 
     // Auto sized html
-    let buf = auto!(ywrite_html!(String, r#"{{> hello_ex my_card, body="foo" }}"#));
+    let buf = auto!(ywrite_html!(
+        String,
+        r#"{{> hello_ex my_card, body="foo" }}"#
+    ));
     assert_eq!(
         buf,
         r#"<div class="entry">
