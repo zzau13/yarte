@@ -10,6 +10,7 @@ use quote::{format_ident, quote};
 
 use syn::parse::ParseBuffer;
 use syn::spanned::Spanned;
+
 use yarte_codegen::{CodeGen, FmtCodeGen, HTMLCodeGen, TextCodeGen};
 use yarte_helpers::{
     config::{get_source, read_config_file, Config, PrintConfig},
@@ -362,7 +363,7 @@ pub fn auto(i: TokenStream) -> TokenStream {
 pub fn ywrite(i: TokenStream) -> TokenStream {
     const PARENT: &str = "yarte";
 
-    let ParseWriteArg { buf, src, .. } = match syn::parse(i) {
+    let WriteArg { buf, src, .. } = match syn::parse(i) {
         Ok(arg) => arg,
         Err(e) => return e.to_compile_error().into(),
     };
@@ -409,7 +410,7 @@ pub fn ywrite(i: TokenStream) -> TokenStream {
 pub fn ywrite_html(i: TokenStream) -> TokenStream {
     const PARENT: &str = "yarte";
 
-    let ParseWriteArg { buf, src, .. } = match syn::parse(i) {
+    let WriteArg { buf, src, .. } = match syn::parse(i) {
         Ok(arg) => arg,
         Err(e) => return e.to_compile_error().into(),
     };
@@ -456,7 +457,7 @@ pub fn ywrite_html(i: TokenStream) -> TokenStream {
 pub fn ywrite_min(i: TokenStream) -> TokenStream {
     const PARENT: &str = "yarte";
 
-    let ParseWriteArg { buf, src, .. } = match syn::parse(i) {
+    let WriteArg { buf, src, .. } = match syn::parse(i) {
         Ok(arg) => arg,
         Err(e) => return e.to_compile_error().into(),
     };
@@ -497,16 +498,16 @@ pub fn ywrite_min(i: TokenStream) -> TokenStream {
     )
 }
 
-struct ParseWriteArg {
+struct WriteArg {
     buf: syn::Expr,
     _comma: syn::Token![,],
     src: syn::LitStr,
     _end_comma: Option<syn::Token![,]>,
 }
 
-impl syn::parse::Parse for ParseWriteArg {
+impl syn::parse::Parse for WriteArg {
     fn parse(input: &ParseBuffer) -> syn::parse::Result<Self> {
-        Ok(ParseWriteArg {
+        Ok(WriteArg {
             buf: input.parse()?,
             _comma: input.parse()?,
             src: input.parse()?,
