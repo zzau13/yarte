@@ -150,3 +150,23 @@ fn resolve_partial_scope() {
 </div>"#
     )
 }
+
+#[test]
+fn resolve_partial_scope_overridden() {
+    let my_card = Card {
+        title: "My Title",
+        body: "My Body",
+    };
+
+    // Auto sized html
+    let buf = auto!(ywrite_html!(String, r#"{{> hello_ex my_card, body="foo" }}"#));
+    assert_eq!(
+        buf,
+        r#"<div class="entry">
+  <h1>My Title</h1>
+  <div class="body">
+    foo
+  </div>
+</div>"#
+    )
+}
