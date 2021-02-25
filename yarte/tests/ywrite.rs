@@ -138,17 +138,20 @@ fn resolve_partial_scope() {
         body: "My Body",
     };
 
-    // Auto sized html
-    let buf = auto!(ywrite_html!(String, "{{> hello_ex my_card }}"));
-    assert_eq!(
-        buf,
-        r#"<div class="entry">
+    let result = r#"<div class="entry">
   <h1>My Title</h1>
   <div class="body">
     My Body
   </div>
-</div>"#
-    )
+</div>"#;
+
+    // Auto sized html
+    let buf = auto!(ywrite_html!(String, "{{> hello_ex my_card }}"));
+    assert_eq!(buf, result);
+
+    let mut buf = String::new();
+    ywrite_html!(buf, r#"{{> hello_ex my_card }}"#);
+    assert_eq!(buf, result);
 }
 
 #[test]

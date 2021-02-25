@@ -30,7 +30,7 @@ macro_rules! build {
         let config = &Config::new(config_toml);
         let s = &match visit_derive($i, config) {
             Ok(s) => s,
-            Err(tt) => return tt.into(),
+            Err(ts) => return ts.into(),
         };
         proc_macro2::fallback::force();
         let sources = &read(s.path.clone(), s.src.clone(), config);
@@ -267,7 +267,7 @@ pub fn yformat_html(i: TokenStream) -> TokenStream {
     let src: syn::LitStr = syn::parse(i).unwrap();
     let input = quote! {
         #[template(src = #src)]
-        struct __YFormat__;
+        struct __Main__;
     };
 
     let i = &syn::parse2(input).unwrap();
@@ -293,7 +293,7 @@ pub fn yformat(i: TokenStream) -> TokenStream {
     let src: syn::LitStr = syn::parse(i).unwrap();
     let input = quote! {
         #[template(src = #src)]
-        struct __YFormat__;
+        struct __Main__;
     };
 
     let i = &syn::parse2(input).unwrap();
@@ -389,7 +389,7 @@ pub fn ywrite(i: TokenStream) -> TokenStream {
 
     let input = quote! {
         #[template(src = #src)]
-        struct __YFormat__;
+        struct __Main__;
     };
 
     let i = &syn::parse2(input).unwrap();
@@ -436,7 +436,7 @@ pub fn ywrite_html(i: TokenStream) -> TokenStream {
 
     let input = quote! {
         #[template(src = #src)]
-        struct __YFormat__;
+        struct __Main__;
     };
 
     let i = &syn::parse2(input).unwrap();
@@ -483,7 +483,7 @@ pub fn ywrite_min(i: TokenStream) -> TokenStream {
 
     let input = quote! {
         #[template(src = #src)]
-        struct __YFormat__;
+        struct __Main__;
     };
 
     let i = &syn::parse2(input).unwrap();
