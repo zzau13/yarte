@@ -30,6 +30,8 @@ HTML templates using conditionals, loops, rust code and template composition.
 - Emit snipped annotations at error
 - Improved daily and has full coverage (without stupid bugs that take months or years to fix)
 
+Yarte is under development but some of **its parts are stable*. The **derivations** and **proc_macro**, **text** and **html(not minified)**, and the **json serializer** are stable and with enough coverage to put into production. It is also proposed to integrate Jinja or any other template language so you can reuse your favorite templates, do not migrate them, raise an issue and I will try to give it more priority. 
+
 ### Is it really fast?
 See it for yourself in the [TechEmpower benchmarks][bench] with [`actix`][actix] and [`ntex`][ntex] 
 
