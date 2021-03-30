@@ -1,6 +1,20 @@
 # Getting started
 
-Follow with the help of code in `example` directory.
+As yarte files are not compiler-specific, you have to add: 
+
+#### `Cargo.toml`
+```toml
+[build-dependencies]
+yarte = "0.15"
+```
+
+#### `build.rs`
+```rust
+fn main() {
+    yarte::recompile::when_changed();
+}
+```
+In order to recompile when something in the template directory changed ;
 
 Yarte templates look like regular text, with embedded yarte expressions. 
 Create a simple Yarte template called `hello.hbs` in your template directory.
