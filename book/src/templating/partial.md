@@ -1,12 +1,12 @@
 # Partial
 
-Partials is  the tool that Yarte provides for  template composition and is a one line expression of type 
+Partials is the tool that Yarte provides for  template composition and is a one line expression of type 
 `{{> partial_path scope attr=val,...}}`. The performance **is the same** as writing it and the same as an inline code. 
 The partials and their arguments are generated as much as possible within the same `&'static str`. 
 
 
 ## Path
-The path of a partial is the file path with respect to the file using the partial. Also the `config` file can be use to 
+The path of a partial is the file path with respect to the file using the partial. Also the `config` file can be used to 
 create aliases (explained in the aliasing section). The partial template file will use the context used in attribute 
 scope.
 
@@ -23,12 +23,12 @@ scope must have it.
 
 ## Scope
 Attribute `scope` is the only attribute that is not an assignation and the only one that a partial must have. 
-- If `scope` is not given the default context will be the parent's, otherwise  `scope` can only be an expression of type 
+- If `scope` is not given the default context will be the parent's, otherwise `scope` can only be an expression of type 
 `path`, `field`, or `index`.
 
-- When attribute `scope` is given,  the parent scope can not be access using `super::`.
+- When attribute `scope` is given, the parent scope cannot be access using `super::`.
 
-The following  partial will use file `..tempaltes/templates/partial.hbs`, and the parent scope to fill he template:
+The following partial will use file `..tempaltes/templates/partial.hbs`, and the parent scope to fill he template:
 ```handlebars
 {{> ../templates/partial }}
 ```
@@ -72,7 +72,7 @@ Site Content My Content
 ```
 
 When called in this manner, the block will execute under the context of the partial at the time of the call. 
-Depthed paths and block parameters operate relative to the partial block rather than the partial template.
+Depth-ed paths and block parameters operate relative to the partial block rather than the partial template.
 
 ```handlebars
 {{#each children }}
