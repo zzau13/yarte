@@ -10,7 +10,7 @@ defined by Yarte. Each of these features have
 a symbol associated to it (`# { R >`) that is
 added after the opening characters, for example
 `{{#` used for helpers. If no symbol is added 
-Yarte will interpret  inside code as a valid 
+Yarte will interpret inside code as a valid 
 rust expression.
 
 Let's say we want to use the following template `template.html`
