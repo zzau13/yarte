@@ -1,6 +1,6 @@
 # Config File
 
-Right now a Yarte configuration file can have the following:
+Right now, a Yarte configuration file can have the following:
 
 - **`main`** (general configuration - optional): with attribute
   - **`dir`**: name of template directory. If no value is given, a default directory
@@ -17,7 +17,7 @@ will be possible.
 
 - **`debug`** (debugging configuration - optional): in order to visualize clearly generated code
 in a debugging environment Yarte gives it a tabulated format, and the possibility
-to see the number line use a color theme. Options are the following:
+to see the number line, use a colour theme. Options are the following:
 
   - **`number_line`** (default:  `false`): Boolean, if set to `true` number lines will appear
 in debug-mode.
