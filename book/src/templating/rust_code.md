@@ -5,7 +5,7 @@ the HTML files. There are three important facts to take in consideration
 when using rust code in your template, the scope they act upon, resolve ident of variables.
 
 
-- The usage if this feature is limited by its context, meaning that created variables of a scope, will live only in that scope. Also  a valid rust expression, so it will act like Rust.
+- The usage if this feature is limited by its context, meaning that created variables of a scope, will live only in that scope. Also, a valid rust expression, so it will act like Rust.
 
 - Resolve:
   - Resolution uses hierarchical nomenclature system, and its most important function is to 'translate' names depending on the context
