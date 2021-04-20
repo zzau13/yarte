@@ -148,11 +148,11 @@
                 <div id="content" class="content">
                     <main>
                         <h1><a class="header" href="#partial" id="partial">Partial</a></h1>
-<p>Partials is  the tool that Yarte provides for  template composition and is a one line expression of type 
+<p>Partials is the tool that Yarte provides for  template composition and is a one line expression of type 
 <code>{{&gt; partial_path scope attr=val,...}}</code>. The performance <strong>is the same</strong> as writing it and the same as an inline code. 
 The partials and their arguments are generated as much as possible within the same <code>&amp;'static str</code>. </p>
 <h2><a class="header" href="#path" id="path">Path</a></h2>
-<p>The path of a partial is the file path with respect to the file using the partial. Also the <code>config</code> file can be use to 
+<p>The path of a partial is the file path with respect to the file using the partial. Also the <code>config</code> file can be used to 
 create aliases (explained in the aliasing section). The partial template file will use the context used in attribute 
 scope.</p>
 <h2><a class="header" href="#attributes" id="attributes">Attributes</a></h2>
@@ -166,14 +166,14 @@ scope must have it.</p>
 <p>Attribute <code>scope</code> is the only attribute that is not an assignation and the only one that a partial must have. </p>
 <ul>
 <li>
-<p>If <code>scope</code> is not given the default context will be the parent's, otherwise  <code>scope</code> can only be an expression of type 
+<p>If <code>scope</code> is not given the default context will be the parent's, otherwise <code>scope</code> can only be an expression of type 
 <code>path</code>, <code>field</code>, or <code>index</code>.</p>
 </li>
 <li>
-<p>When attribute <code>scope</code> is given,  the parent scope can not be access using <code>super::</code>.</p>
+<p>When attribute <code>scope</code> is given, the parent scope cannot be access using <code>super::</code>.</p>
 </li>
 </ul>
-<p>The following  partial will use file <code>..tempaltes/templates/partial.hbs</code>, and the parent scope to fill he template:</p>
+<p>The following partial will use file <code>..tempaltes/templates/partial.hbs</code>, and the parent scope to fill he template:</p>
 <pre><code class="language-handlebars">{{&gt; ../templates/partial }}
 </code></pre>
 <p>Now the same file will be used but since a scope is defined, the parent scope will be overriding <code>expr_scope</code>:</p>
@@ -201,7 +201,7 @@ can be executed by the specially named partial, <code>@partial-block</code>. A t
 <pre><code>Site Content My Content
 </code></pre>
 <p>When called in this manner, the block will execute under the context of the partial at the time of the call. 
-Depthed paths and block parameters operate relative to the partial block rather than the partial template.</p>
+Depth-ed paths and block parameters operate relative to the partial block rather than the partial template.</p>
 <pre><code class="language-handlebars">{{#each children }}
   {{#&gt; childEntry }}
     {{value}}

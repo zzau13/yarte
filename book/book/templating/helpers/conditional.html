@@ -149,10 +149,10 @@
                     <main>
                         <h1><a class="header" href="#conditional-helper" id="conditional-helper">Conditional helper</a></h1>
 <h2><a class="header" href="#if-helper" id="if-helper">If helper</a></h2>
-<p>The conditional helper must start with an <code>if</code> block, followed by the  condition, 
+<p>The conditional helper must start with an <code>if</code> block, followed by the condition, 
 <code>{{#if condition}}</code>, where <code>condition</code> is a valid rust expression (otherwise an 
 error will be thrown). Inside an <code>if</code> block, users can use as many <code>else if</code> 
-statements as they want  and one <code>else</code> statement to create basic logic in the 
+statements as they want and one <code>else</code> statement to create basic logic in the 
 template, without using <code>#</code>, for example, <code>{{else}}</code> or <code>{{else if condotion}}</code>.
 In order to close the <code>if</code> block, following the helper syntax, <code>{{/if}}</code> is used.</p>
 <pre><code class="language-handlebars">{{#if isLiked}}
@@ -169,7 +169,7 @@ then <code>Seen!</code>, otherwise <code>Sorry...</code> will be shown. So havin
 your HTML code is as intuitive as it should be.</p>
 <h2><a class="header" href="#unless-helper" id="unless-helper">Unless helper</a></h2>
 <p>The <code>unless</code> helper is equivalent to a negated <code>if</code> statement, for that reason, negated <code>unless</code> statements
-are not allowed and and error will be prompt.</p>
+are not allowed and error will be prompt.</p>
 <pre><code class="language-handlebars">{{#unless isAdministrator-}} 
   Ask administrator.
 {{~/unless}}

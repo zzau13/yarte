@@ -153,8 +153,8 @@
 <p>Yarte stands for <strong>Y</strong>et <strong>A</strong>nother <strong>R</strong>ust <strong>T</strong>emplate <strong>E</strong>ngine, 
 is the fastest template engine. Uses a Handlebars-like syntax, 
 well known and intuitive for most developers. Yarte is an optimized, and easy-to-use 
-rust crate, with which developers can create logic around their 
-HTML templates using using conditionals, loops, rust code 
+rust crate, with which developers can create logic around them 
+HTML templates using conditionals, loops, rust code 
 and using templates composition with partials.</p>
 <p>Yarte is intended to be more than just a substitute for PHP, I want to encompass 
 all GUI types with a front end based on Handlebars, HTML5 and Rust.</p>
@@ -165,7 +165,7 @@ and will be subject to several refactors before first release.</p>
 <li><code>src</code>: template sources</li>
 <li><code>path</code>: path to sources relative to template directory</li>
 <li><code>print</code>: <code>all</code>, <code>ast</code> or <code>code</code> display debug info. Overridden by config file print option.</li>
-<li><code>recursion</code>: <code>default: 128</code> Set limit of partial deep, can produce stackoverflow at compile time</li>
+<li><code>recursion</code>: <code>default: 128</code> Set limits of partial deep, can produce stackoverflow at compile time</li>
 </ul>
 <h2><a class="header" href="#rules" id="rules">Rules</a></h2>
 <ul>
@@ -183,7 +183,7 @@ yarte = &quot;0.15&quot;
     yarte::recompile::when_changed();
 }
 </code></pre></pre>
-<p>In order to recompile when something in the template directory changed ;</p>
+<p>In order to recompile when something in the template directory changed;</p>
 <p>Yarte templates look like regular text, with embedded yarte expressions. 
 Create a simple Yarte template called <code>hello.hbs</code> in your template directory.</p>
 <pre><code class="language-handlebars">&lt;div class=&quot;entry&quot;&gt;
@@ -222,7 +222,7 @@ fn foo() -&gt; String {
 &lt;/div&gt;
 </code></pre>
 <h1><a class="header" href="#config-file" id="config-file">Config File</a></h1>
-<p>Right now a Yarte configuration file can have the following:</p>
+<p>Right now, a Yarte configuration file can have the following:</p>
 <ul>
 <li>
 <p><strong><code>main</code></strong> (general configuration - optional): with attribute</p>
@@ -244,7 +244,7 @@ will be possible.</p>
 <li>
 <p><strong><code>debug</code></strong> (debugging configuration - optional): in order to visualize clearly generated code
 in a debugging environment Yarte gives it a tabulated format, and the possibility
-to see the number line use a color theme. Options are the following:</p>
+to see the number line, use a colour theme. Options are the following:</p>
 <ul>
 <li><strong><code>number_line</code></strong> (default:  <code>false</code>): Boolean, if set to <code>true</code> number lines will appear
 in debug-mode.</li>
@@ -308,7 +308,7 @@ defined by Yarte. Each of these features have
 a symbol associated to it (<code># { R &gt;</code>) that is
 added after the opening characters, for example
 <code>{{#</code> used for helpers. If no symbol is added 
-Yarte will interpret  inside code as a valid 
+Yarte will interpret inside code as a valid 
 rust expression.</p>
 <p>Let's say we want to use the following template <code>template.html</code></p>
 <pre><code class="language-html">&lt;h1&gt; Hello, {{name}}! &lt;/h1&gt;
@@ -344,15 +344,15 @@ tag and use <code>--!}}</code> or <code>!}}</code>, respectively, as a closing c
 Whitespaces around the comment block will be ignored.</p>
 <h1><a class="header" href="#helpers" id="helpers">Helpers</a></h1>
 <p>Helpers are given a context and a function to template the context.</p>
-<p>Helpers allow the user to create blocks with a pre defined functionality
+<p>Helpers allow the user to create blocks with a pre-defined functionality
 with certain context. Yarte provides some built-in helpers, but users can
 still define theirs.</p>
 <h1><a class="header" href="#conditional-helper" id="conditional-helper">Conditional helper</a></h1>
 <h2><a class="header" href="#if-helper" id="if-helper">If helper</a></h2>
-<p>The conditional helper must start with an <code>if</code> block, followed by the  condition, 
+<p>The conditional helper must start with an <code>if</code> block, followed by the condition, 
 <code>{{#if condition}}</code>, where <code>condition</code> is a valid rust expression (otherwise an 
 error will be thrown). Inside an <code>if</code> block, users can use as many <code>else if</code> 
-statements as they want  and one <code>else</code> statement to create basic logic in the 
+statements as they want and one <code>else</code> statement to create basic logic in the 
 template, without using <code>#</code>, for example, <code>{{else}}</code> or <code>{{else if condotion}}</code>.
 In order to close the <code>if</code> block, following the helper syntax, <code>{{/if}}</code> is used.</p>
 <pre><code class="language-handlebars">{{#if isLiked}}
@@ -369,7 +369,7 @@ then <code>Seen!</code>, otherwise <code>Sorry...</code> will be shown. So havin
 your HTML code is as intuitive as it should be.</p>
 <h2><a class="header" href="#unless-helper" id="unless-helper">Unless helper</a></h2>
 <p>The <code>unless</code> helper is equivalent to a negated <code>if</code> statement, for that reason, negated <code>unless</code> statements
-are not allowed and and error will be prompt.</p>
+are not allowed and error will be prompt.</p>
 <pre><code class="language-handlebars">{{#unless isAdministrator-}} 
   Ask administrator.
 {{~/unless}}
@@ -483,11 +483,11 @@ struct:</p>
 {{ let (mut h, t)  = name.split_at(1) }}
 </code></pre>
 <h1><a class="header" href="#partial" id="partial">Partial</a></h1>
-<p>Partials is  the tool that Yarte provides for  template composition and is a one line expression of type 
+<p>Partials is the tool that Yarte provides for  template composition and is a one line expression of type 
 <code>{{&gt; partial_path scope attr=val,...}}</code>. The performance <strong>is the same</strong> as writing it and the same as an inline code. 
 The partials and their arguments are generated as much as possible within the same <code>&amp;'static str</code>. </p>
 <h2><a class="header" href="#path" id="path">Path</a></h2>
-<p>The path of a partial is the file path with respect to the file using the partial. Also the <code>config</code> file can be use to 
+<p>The path of a partial is the file path with respect to the file using the partial. Also the <code>config</code> file can be used to 
 create aliases (explained in the aliasing section). The partial template file will use the context used in attribute 
 scope.</p>
 <h2><a class="header" href="#attributes" id="attributes">Attributes</a></h2>
@@ -501,14 +501,14 @@ scope must have it.</p>
 <p>Attribute <code>scope</code> is the only attribute that is not an assignation and the only one that a partial must have. </p>
 <ul>
 <li>
-<p>If <code>scope</code> is not given the default context will be the parent's, otherwise  <code>scope</code> can only be an expression of type 
+<p>If <code>scope</code> is not given the default context will be the parent's, otherwise <code>scope</code> can only be an expression of type 
 <code>path</code>, <code>field</code>, or <code>index</code>.</p>
 </li>
 <li>
-<p>When attribute <code>scope</code> is given,  the parent scope can not be access using <code>super::</code>.</p>
+<p>When attribute <code>scope</code> is given, the parent scope cannot be access using <code>super::</code>.</p>
 </li>
 </ul>
-<p>The following  partial will use file <code>..tempaltes/templates/partial.hbs</code>, and the parent scope to fill he template:</p>
+<p>The following partial will use file <code>..tempaltes/templates/partial.hbs</code>, and the parent scope to fill he template:</p>
 <pre><code class="language-handlebars">{{&gt; ../templates/partial }}
 </code></pre>
 <p>Now the same file will be used but since a scope is defined, the parent scope will be overriding <code>expr_scope</code>:</p>
@@ -536,7 +536,7 @@ can be executed by the specially named partial, <code>@partial-block</code>. A t
 <pre><code>Site Content My Content
 </code></pre>
 <p>When called in this manner, the block will execute under the context of the partial at the time of the call. 
-Depthed paths and block parameters operate relative to the partial block rather than the partial template.</p>
+Depth-ed paths and block parameters operate relative to the partial block rather than the partial template.</p>
 <pre><code class="language-handlebars">{{#each children }}
   {{#&gt; childEntry }}
     {{value}}
@@ -567,7 +567,7 @@ the HTML files. There are three important facts to take in consideration
 when using rust code in your template, the scope they act upon, resolve ident of variables.</p>
 <ul>
 <li>
-<p>The usage if this feature is limited by its context, meaning that created variables of a scope, will live only in that scope. Also  a valid rust expression, so it will act like Rust.</p>
+<p>The usage if this feature is limited by its context, meaning that created variables of a scope, will live only in that scope. Also, a valid rust expression, so it will act like Rust.</p>
 </li>
 <li>
 <p>Resolve:</p>
