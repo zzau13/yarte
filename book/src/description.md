@@ -3,8 +3,8 @@
 Yarte stands for **Y**et **A**nother **R**ust **T**emplate **E**ngine, 
 is the fastest template engine. Uses a Handlebars-like syntax, 
 well known and intuitive for most developers. Yarte is an optimized, and easy-to-use 
-rust crate, with which developers can create logic around their 
-HTML templates using using conditionals, loops, rust code 
+rust crate, with which developers can create logic around them 
+HTML templates using conditionals, loops, rust code 
 and using templates composition with partials.
 
 Yarte is intended to be more than just a substitute for PHP, I want to encompass 
@@ -17,7 +17,7 @@ and will be subject to several refactors before first release.
 - `src`: template sources
 - `path`: path to sources relative to template directory
 - `print`: `all`, `ast` or `code` display debug info. Overridden by config file print option.
-- `recursion`: `default: 128` Set limit of partial deep, can produce stackoverflow at compile time
+- `recursion`: `default: 128` Set limits of partial deep, can produce stackoverflow at compile time
 
 ## Rules
 - Only use `}}` or `{{\` for expressions or blocks (If you want to use them in any place, you are free to implement a tokenizer that includes the syntax of yarte and rust and do PR)
