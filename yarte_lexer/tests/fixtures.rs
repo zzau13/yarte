@@ -1,25 +1,115 @@
 use std::fmt::{self, Debug, Display, Formatter};
 use std::fs::read_to_string;
+use std::result;
 
 use glob::glob;
 use serde::Deserialize;
 
 use std::error::Error;
-use yarte_lexer::error::{KiError, Result};
+use yarte_lexer::error::{ErrorMessage, KiError, Result};
 use yarte_lexer::pipes::{
     _false, _true, and_then, debug, important, is_empty, is_len, map, map_err, not, then,
 };
 use yarte_lexer::{
-    _while, alt, ascii, asciis, do_parse, is_ws, parse, path, pipes, tac, tag, ws, Ascii, Cursor,
-    Ki, Kinder, LexError, SToken, Span,
+    _while, alt, ascii, asciis, do_parse, is_ws, path, pipes, tac, tag, ws, Ascii, Cursor, Ki,
+    Kinder, LexError, LexResult, Lexer, SArm, SExpr, SLocal, SStr, SVExpr, Sink, Span, Ws, S,
 };
+
+// TODO: Visit trait
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub enum Token<'a, Kind>
+where
+    Kind: Kinder<'a>,
+{
+    Arm(Ws, SArm),
+    ArmKind(Ws, Kind, SArm),
+    Comment(#[serde(borrow)] &'a str),
+    Safe(Ws, SExpr),
+    Local(Ws, SLocal),
+    Expr(Ws, SVExpr),
+    ExprKind(Ws, Kind, SVExpr),
+    Lit(
+        #[serde(borrow)] &'a str,
+        #[serde(borrow)] SStr<'a>,
+        #[serde(borrow)] &'a str,
+    ),
+    Block(Ws, SVExpr),
+    BlockKind(Ws, Kind, SVExpr),
+    Error(SVExpr),
+}
+
+struct VecSink<'a, K: Ki<'a>>(Vec<S<Token<'a, K>>>);
+
+impl<'a, K: Ki<'a>> Sink<'a, K> for VecSink<'a, K> {
+    fn arm(&mut self, ws: Ws, arm: SArm, span: Span) -> LexResult<K::Error> {
+        self.0.push(S(Token::Arm(ws, arm), span));
+        Ok(())
+    }
+
+    fn arm_kind(&mut self, ws: Ws, kind: K, arm: SArm, span: Span) -> LexResult<K::Error> {
+        self.0.push(S(Token::ArmKind(ws, kind, arm), span));
+        Ok(())
+    }
+
+    fn block(&mut self, ws: Ws, expr: SVExpr, span: Span) -> LexResult<K::Error> {
+        self.0.push(S(Token::Block(ws, expr), span));
+        Ok(())
+    }
+
+    fn block_kind(&mut self, ws: Ws, kind: K, expr: SVExpr, span: Span) -> LexResult<K::Error> {
+        self.0.push(S(Token::BlockKind(ws, kind, expr), span));
+        Ok(())
+    }
+
+    fn comment(&mut self, src: &'a str, span: Span) -> LexResult<K::Error> {
+        self.0.push(S(Token::Comment(src), span));
+        Ok(())
+    }
+
+    fn error(&mut self, expr: SVExpr, span: Span) -> LexResult<K::Error> {
+        self.0.push(S(Token::Error(expr), span));
+        Ok(())
+    }
+
+    fn expr(&mut self, ws: Ws, expr: SVExpr, span: Span) -> LexResult<K::Error> {
+        self.0.push(S(Token::Expr(ws, expr), span));
+        Ok(())
+    }
+
+    fn expr_kind(&mut self, ws: Ws, kind: K, expr: SVExpr, span: Span) -> LexResult<K::Error> {
+        self.0.push(S(Token::ExprKind(ws, kind, expr), span));
+        Ok(())
+    }
+
+    fn lit(&mut self, left: &'a str, src: SStr<'a>, right: &'a str, span: Span) {
+        self.0.push(S(Token::Lit(left, src, right), span));
+    }
+
+    fn local(&mut self, ws: Ws, local: SLocal, span: Span) -> LexResult<K::Error> {
+        self.0.push(S(Token::Local(ws, local), span));
+        Ok(())
+    }
+
+    fn safe(&mut self, ws: Ws, expr: SExpr, span: Span) -> LexResult<K::Error> {
+        self.0.push(S(Token::Safe(ws, expr), span));
+        Ok(())
+    }
+
+    fn end(&mut self) {}
+}
+
+pub fn parse<'a, K: Ki<'a>>(
+    i: Cursor<'a>,
+) -> result::Result<Vec<S<Token<'a, K>>>, ErrorMessage<K::Error>> {
+    Ok(Lexer::<K, VecSink<'a, K>>::new(VecSink(vec![])).feed(i)?.0)
+}
 
 #[derive(Debug, Deserialize)]
 struct Fixture<'a, Kind: Ki<'a>> {
     #[serde(borrow)]
     src: &'a str,
     #[serde(borrow)]
-    exp: Vec<SToken<'a, Kind>>,
+    exp: Vec<S<Token<'a, Kind>>>,
 }
 
 #[derive(Debug, Deserialize)]

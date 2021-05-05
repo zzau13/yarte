@@ -239,7 +239,7 @@ impl fmt::Debug for Span {
 }
 
 #[derive(Clone, Debug, PartialEq, serde::Deserialize)]
-pub struct S<T: Debug + PartialEq + Clone>(pub(super) T, pub(super) Span);
+pub struct S<T: Debug + PartialEq + Clone>(pub T, pub Span);
 
 impl<T: Debug + PartialEq + Clone> S<T> {
     pub fn t(&self) -> &T {
