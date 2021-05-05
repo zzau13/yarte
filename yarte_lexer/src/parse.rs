@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::marker::PhantomData;
 
 use syn::parse_str;
 
@@ -10,145 +11,251 @@ use crate::expr_list::ExprList;
 use crate::source_map::{Span, S};
 use crate::strnom::pipes::{is_some, opt};
 use crate::strnom::{_while, get_chars, is_ws, tac, tag, ws, Cursor};
-use crate::{Ascii, Kinder, SToken, StmtLocal, Token};
+use crate::{Ascii, Kinder, SArm, SExpr, SLocal, SStr, SVExpr, StmtLocal, Ws};
 
 pub trait Ki<'a>: Kinder<'a> + Debug + PartialEq + Clone {}
 
 impl<'a, T: Kinder<'a> + Debug + PartialEq + Clone> Ki<'a> for T {}
 
-pub fn parse<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Vec<SToken<'a, K>>, ErrorMessage<K::Error>> {
-    let (c, res) = eat(i)?;
-    if c.is_empty() {
-        Ok(res)
-    } else {
-        Err(ErrorMessage {
-            message: K::Error::UNCOMPLETED,
-            span: Span::from_len(c, 1),
-        })
-    }
+pub struct Lexer<'a, K: Ki<'a>, S: Sink<'a, K>> {
+    sink: S,
+    _p: PhantomData<&'a K>,
+}
+
+pub type LexResult<E, O = ()> = Result<O, E>;
+
+///
+pub trait Sink<'a, K: Ki<'a>>: 'a {
+    fn arm(&mut self, ws: Ws, arm: SArm, span: Span) -> LexResult<K::Error>;
+    fn arm_kind(&mut self, ws: Ws, kind: K, arm: SArm, span: Span) -> LexResult<K::Error>;
+
+    fn block(&mut self, ws: Ws, expr: SVExpr, span: Span) -> LexResult<K::Error>;
+    fn block_kind(&mut self, ws: Ws, kind: K, expr: SVExpr, span: Span) -> LexResult<K::Error>;
+
+    fn comment(&mut self, src: &'a str, span: Span) -> LexResult<K::Error>;
+
+    fn error(&mut self, expr: SVExpr, span: Span) -> LexResult<K::Error>;
+
+    fn expr(&mut self, ws: Ws, expr: SVExpr, span: Span) -> LexResult<K::Error>;
+    fn expr_kind(&mut self, ws: Ws, kind: K, expr: SVExpr, span: Span) -> LexResult<K::Error>;
+
+    fn lit(&mut self, left: &'a str, src: SStr<'a>, right: &'a str, span: Span);
+
+    fn local(&mut self, ws: Ws, local: SLocal, span: Span) -> LexResult<K::Error>;
+
+    fn safe(&mut self, ws: Ws, expr: SExpr, span: Span) -> LexResult<K::Error>;
+
+    fn end(&mut self);
 }
 
 macro_rules! comment {
-    ($K:ty, $cur:expr, $i:ident, $at:ident, $j:ident, $nodes:ident) => {
+    ($_self:ident, $K:ty, $cur:expr, $i:ident, $at:ident, $j:ident) => {
         match <$K>::comment($cur) {
             Ok((c, s)) => {
-                eat_lit($i, $at + $j, &mut $nodes);
-                $nodes.push(S(Token::Comment(s), Span::from_cursor($i.adv($at + $j), c)));
+                $_self.eat_lit($i, $at + $j);
+                let span = Span::from_cursor($i.adv($at + $j), c);
+                $_self
+                    .sink
+                    .comment(s, span)
+                    .map_err(|e| LexError::Fail(e, span))?;
                 $i = c;
                 $at = 0;
                 continue;
             }
             Err(LexError::Next(..)) => (),
-            Err(e) => break Err(e),
+            Err(e) => break Err(e.into()),
         }
     };
 }
 
 macro_rules! safe {
-    ($K:ty, $cur:expr, $i:ident, $at:ident, $j:ident, $nodes:ident) => {
+    ($_self:ident, $K:ty, $cur:expr, $i:ident, $at:ident, $j:ident) => {
         match safe::<$K>($cur) {
-            Ok((c, token)) => {
-                eat_lit($i, $at + $j, &mut $nodes);
-                $nodes.push(S(token, Span::from_cursor($i.adv($at + $j), c)));
+            Ok((c, (ws, expr))) => {
+                $_self.eat_lit($i, $at + $j);
+                let span = Span::from_cursor($i.adv($at + $j), c);
+                $_self
+                    .sink
+                    .safe(ws, expr, span)
+                    .map_err(|e| LexError::Fail(e, span))?;
                 $i = c;
                 $at = 0;
                 continue;
             }
             Err(LexError::Next(..)) => (),
-            Err(e) => break Err(e),
+            Err(e) => break Err(e.into()),
         }
     };
 }
 
-fn eat<'a, K: Ki<'a>>(mut i: Cursor<'a>) -> PResult<Vec<SToken<'a, K>>, K::Error> {
-    let mut nodes = vec![];
-    let mut at = 0;
+impl<'a, K: Ki<'a>, Si: Sink<'a, K>> Lexer<'a, K, Si> {
+    pub fn new(sink: Si) -> Lexer<'a, K, Si> {
+        Lexer {
+            sink,
+            _p: PhantomData,
+        }
+    }
 
-    loop {
-        if let Some(j) = i.adv_find(at, K::OPEN) {
-            let n = i.rest[at + j + 1..].as_bytes();
-            if 3 < n.len() {
-                macro_rules! inner {
-                    ($f:expr, $next:ident, $is_expr:literal) => {
-                        if let Ok((c, inner)) = end::<K>($next, $is_expr) {
-                            eat_lit(i, at + j, &mut nodes);
-                            nodes.push($f(inner).map(|x| S(x, Span::new($next.off - 2, c.off)))?);
+    pub fn feed(mut self, mut i: Cursor<'a>) -> Result<Si, ErrorMessage<K::Error>> {
+        let mut at = 0;
+        loop {
+            if let Some(j) = i.adv_find(at, K::OPEN) {
+                let n = i.rest[at + j + 1..].as_bytes();
+                if 3 < n.len() {
+                    let next = n[0];
+
+                    if K::OPEN_BLOCK == K::OPEN_EXPR && next == K::OPEN_EXPR.g() {
+                        let next = i.adv(at + j + 2);
+                        comment!(self, K, next, i, at, j);
+                        safe!(self, K, next, i, at, j);
+                        if let Ok((c, inner)) = end::<K>(next, true) {
+                            self.eat_lit(i, at + j);
+                            let span = Span::new(next.off - 2, c.off);
+                            self.eat_expr(inner, span).or_else(|pe| {
+                                self.eat_block(inner, span).map_err(|e| match e {
+                                    LexError::Next(..) => pe,
+                                    e => e,
+                                })
+                            })?;
                             at = 0;
                             i = c;
                         } else {
                             at += j + 1;
                         }
-                    };
-                }
-                let next = n[0];
-                if K::OPEN_BLOCK == K::OPEN_EXPR && next == K::OPEN_EXPR.g() {
-                    let inner = |inner| {
-                        eat_expr::<K>(inner).or_else(|pe| {
-                            eat_block::<K>(inner).map_err(|e| match e {
-                                LexError::Next(..) => pe,
-                                e => e,
-                            })
-                        })
-                    };
-                    let next = i.adv(at + j + 2);
-                    comment!(K, next, i, at, j, nodes);
-                    safe!(K, next, i, at, j, nodes);
-                    inner!(inner, next, true);
-                } else if next == K::OPEN_EXPR.g() {
-                    let next = i.adv(at + j + 2);
-                    comment!(K, next, i, at, j, nodes);
-                    safe!(K, next, i, at, j, nodes);
-                    inner!(eat_expr::<K>, next, true);
-                } else if next == K::OPEN_BLOCK.g() {
-                    let next = i.adv(at + j + 2);
-                    comment!(K, next, i, at, j, nodes);
-                    inner!(eat_block::<K>, next, false);
+                    } else if next == K::OPEN_EXPR.g() {
+                        let next = i.adv(at + j + 2);
+                        comment!(self, K, next, i, at, j);
+                        safe!(self, K, next, i, at, j);
+                        if let Ok((c, inner)) = end::<K>(next, true) {
+                            self.eat_lit(i, at + j);
+                            let span = Span::new(next.off - 2, c.off);
+                            self.eat_expr(inner, span)?;
+                            at = 0;
+                            i = c;
+                        } else {
+                            at += j + 1;
+                        }
+                    } else if next == K::OPEN_BLOCK.g() {
+                        let next = i.adv(at + j + 2);
+                        comment!(self, K, next, i, at, j);
+                        if let Ok((c, inner)) = end::<K>(next, false) {
+                            self.eat_lit(i, at + j);
+                            let span = Span::new(next.off - 2, c.off);
+                            self.eat_block(inner, span)?;
+                            at = 0;
+                            i = c;
+                        } else {
+                            at += j + 1;
+                        }
+                    } else {
+                        at += j + 1;
+                    }
                 } else {
                     at += j + 1;
-                }
+                };
             } else {
-                at += j + 1;
-            };
-        } else {
-            eat_lit(i, i.len(), &mut nodes);
-            break Ok((i.adv(i.len()), nodes));
+                self.eat_lit(i, i.len());
+                self.sink.end();
+                break Ok(self.sink);
+            }
         }
     }
-}
 
-/// Push literal at cursor with length
-fn eat_lit<'a, K: Ki<'a>>(i: Cursor<'a>, len: usize, nodes: &mut Vec<SToken<'a, K>>) {
-    let lit = &i.rest[..len];
-    if !lit.is_empty() {
-        let (l, lit, r) = trim(lit);
-        let ins = Span {
-            lo: i.off + l.len() as u32,
-            hi: i.off + lit.len() as u32,
-        };
-        let out = Span {
-            lo: i.off,
-            hi: i.off + len as u32,
-        };
-        nodes.push(S(Token::Lit(l, S(lit, ins), r), out));
+    /// Push literal at cursor with length
+    fn eat_lit(&mut self, i: Cursor<'a>, len: usize) {
+        let lit = &i.rest[..len];
+        if !lit.is_empty() {
+            let (l, lit, r) = trim(lit);
+            let ins = Span {
+                lo: i.off + l.len() as u32,
+                hi: i.off + lit.len() as u32,
+            };
+            let out = Span {
+                lo: i.off,
+                hi: i.off + len as u32,
+            };
+            self.sink.lit(l, S(lit, ins), r, out)
+        }
     }
-}
 
-fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Error>> {
-    const LET: &[Ascii] = unsafe { unsafe_asciis!("let ") };
+    fn eat_expr(&mut self, i: Cursor<'a>, span: Span) -> Result<(), LexError<K::Error>> {
+        const LET: &[Ascii] = unsafe { unsafe_asciis!("let ") };
 
-    let (i, gws) = eat_ws::<K>(i)?;
-    if do_parse!(i, ws => tag::<K::Error>[LET] => ()).is_ok() {
-        let (l, s, _) = trim(i.rest);
-        let init = i.off + l.len() as u32;
-        eat_local(s)
-            .map(|e| Token::Local(gws, S(e, Span::new(init, init + s.len() as u32))))
-            .map_err(|e| {
-                LexError::Fail(
-                    K::Error::string(e.message),
-                    Span::new(init + e.span.0, init + e.span.1),
-                )
-            })
-    } else {
+        let (i, gws) = Self::eat_ws(i)?;
+        if do_parse!(i, ws => tag::<K::Error>[LET] => ()).is_ok() {
+            let (l, s, _) = trim(i.rest);
+            let init = i.off + l.len() as u32;
+            eat_local(s)
+                .map_err(|e| {
+                    LexError::Fail(
+                        K::Error::string(e.message),
+                        Span::new(init + e.span.0, init + e.span.1),
+                    )
+                })
+                .and_then(|e| {
+                    self.sink
+                        .local(gws, S(e, Span::new(init, init + s.len() as u32)), span)
+                        .map_err(|e| LexError::Fail(e, span))
+                })
+        } else {
+            let (i, kind) = match K::parse(i) {
+                Ok((c, kind)) => (c, Some(kind)),
+                Err(LexError::Next(..)) => (i, None),
+                Err(e @ LexError::Fail(..)) => return Err(e),
+            };
+            let (l, s, _) = trim(i.rest);
+            let init = i.off + l.len() as u32;
+            if let Ok(arm) = eat_arm(s) {
+                let arm = S(arm, Span::new(init, init + s.len() as u32));
+                return if let Some(kind) = kind {
+                    self.sink
+                        .arm_kind(gws, kind, arm, span)
+                        .map_err(|e| LexError::Fail(e, span))
+                } else {
+                    self.sink
+                        .arm(gws, arm, span)
+                        .map_err(|e| LexError::Fail(e, span))
+                };
+            }
+            let expr = eat_expr_list(s)
+                .map(|e| S(e, Span::new(init, init + s.len() as u32)))
+                .map_err(|e| {
+                    LexError::Fail(
+                        K::Error::string(e.message),
+                        Span::new(init + e.span.0, init + e.span.1),
+                    )
+                })?;
+
+            if let Some(kind) = kind {
+                self.sink
+                    .expr_kind(gws, kind, expr, span)
+                    .map_err(|e| LexError::Fail(e, span))
+            } else {
+                self.sink
+                    .expr(gws, expr, span)
+                    .map_err(|e| LexError::Fail(e, span))
+            }
+        }
+    }
+
+    fn eat_ws(i: Cursor) -> PResult<(bool, bool), K::Error> {
+        let (i, lws) = match tac::<K::Error>(i, K::WS) {
+            Ok((c, _)) => (c, true),
+            _ => (i, false),
+        };
+        if i.is_empty() {
+            return Err(LexError::Next(K::Error::WHITESPACE, Span::from(i)));
+        }
+        let (rest, rws) = match tac::<K::Error>(i.adv(i.len() - 1), K::WS) {
+            Ok(_) => (&i.rest[..i.len() - 1], true),
+            _ => (i.rest, false),
+        };
+
+        Ok((Cursor { rest, off: i.off }, (lws, rws)))
+    }
+
+    fn eat_block(&mut self, i: Cursor<'a>, span: Span) -> Result<(), LexError<K::Error>> {
+        let (i, gws) = Self::eat_ws(i)?;
         let (i, kind) = match K::parse(i) {
             Ok((c, kind)) => (c, Some(kind)),
             Err(LexError::Next(..)) => (i, None),
@@ -156,14 +263,6 @@ fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Er
         };
         let (l, s, _) = trim(i.rest);
         let init = i.off + l.len() as u32;
-        if let Ok(arm) = eat_arm(s) {
-            let arm = S(arm, Span::new(init, init + s.len() as u32));
-            return if let Some(kind) = kind {
-                Ok(Token::ArmKind(gws, kind, arm))
-            } else {
-                Ok(Token::Arm(gws, arm))
-            };
-        }
         let expr = eat_expr_list(s)
             .map(|e| S(e, Span::new(init, init + s.len() as u32)))
             .map_err(|e| {
@@ -174,51 +273,14 @@ fn eat_expr<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Er
             })?;
 
         if let Some(kind) = kind {
-            Ok(Token::ExprKind(gws, kind, expr))
+            self.sink
+                .block_kind(gws, kind, expr, span)
+                .map_err(|e| LexError::Fail(e, span))
         } else {
-            Ok(Token::Expr(gws, expr))
+            self.sink
+                .block(gws, expr, span)
+                .map_err(|e| LexError::Fail(e, span))
         }
-    }
-}
-
-fn eat_ws<'a, K: Ki<'a>>(i: Cursor) -> PResult<(bool, bool), K::Error> {
-    let (i, lws) = match tac::<K::Error>(i, K::WS) {
-        Ok((c, _)) => (c, true),
-        _ => (i, false),
-    };
-    if i.is_empty() {
-        return Err(LexError::Next(K::Error::WHITESPACE, Span::from(i)));
-    }
-    let (rest, rws) = match tac::<K::Error>(i.adv(i.len() - 1), K::WS) {
-        Ok(_) => (&i.rest[..i.len() - 1], true),
-        _ => (i.rest, false),
-    };
-
-    Ok((Cursor { rest, off: i.off }, (lws, rws)))
-}
-
-fn eat_block<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<Token<'a, K>, LexError<K::Error>> {
-    let (i, gws) = eat_ws::<K>(i)?;
-    let (i, kind) = match K::parse(i) {
-        Ok((c, kind)) => (c, Some(kind)),
-        Err(LexError::Next(..)) => (i, None),
-        Err(e @ LexError::Fail(..)) => return Err(e),
-    };
-    let (l, s, _) = trim(i.rest);
-    let init = i.off + l.len() as u32;
-    let expr = eat_expr_list(s)
-        .map(|e| S(e, Span::new(init, init + s.len() as u32)))
-        .map_err(|e| {
-            LexError::Fail(
-                K::Error::string(e.message),
-                Span::new(init + e.span.0, init + e.span.1),
-            )
-        })?;
-
-    if let Some(kind) = kind {
-        Ok(Token::BlockKind(gws, kind, expr))
-    } else {
-        Ok(Token::Block(gws, expr))
     }
 }
 
@@ -283,7 +345,7 @@ fn end_safe<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<(Cursor, bool), K::Error> {
 }
 
 #[inline]
-fn safe<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<Token<'a, K>, K::Error> {
+fn safe<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<(Ws, SExpr), K::Error> {
     let (c, (i, ws)) = if K::WS_AFTER {
         do_parse!(i,
             lws= tac[K::WS]:opt:is_some =>
@@ -312,7 +374,7 @@ fn safe<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<Token<'a, K>, K::Error> {
             )
         })?;
 
-    Ok((c, Token::Safe(ws, expr)))
+    Ok((c, (ws, expr)))
 }
 
 /// Intermediate error representation

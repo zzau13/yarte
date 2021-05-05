@@ -23,7 +23,7 @@ pub use gencode::asciis;
 
 pub use self::{
     error::LexError,
-    parse::{parse, path, Ki},
+    parse::{path, Ki, LexResult, Lexer, Sink},
     source_map::{clean, get_cursor, spanned, LineColumn, Span, S},
     stmt_local::StmtLocal,
     strnom::*,
@@ -125,7 +125,6 @@ impl Parse for Expr {
 pub type SArm = S<Box<Arm>>;
 pub type SExpr = S<Box<Expr>>;
 pub type SLocal = S<Box<Local>>;
-pub type SToken<'a, Kind> = S<Token<'a, Kind>>;
 pub type SStr<'a> = S<&'a str>;
 pub type SVExpr = S<Vec<Expr>>;
 
@@ -160,26 +159,3 @@ ki!(
         parse -> Self
         comment -> &'a str
 );
-
-// TODO: Visit trait
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-pub enum Token<'a, Kind>
-where
-    Kind: Kinder<'a>,
-{
-    Arm(Ws, SArm),
-    ArmKind(Ws, Kind, SArm),
-    Comment(#[serde(borrow)] &'a str),
-    Safe(Ws, SExpr),
-    Local(Ws, SLocal),
-    Expr(Ws, SVExpr),
-    ExprKind(Ws, Kind, SVExpr),
-    Lit(
-        #[serde(borrow)] &'a str,
-        #[serde(borrow)] SStr<'a>,
-        #[serde(borrow)] &'a str,
-    ),
-    Block(Ws, SVExpr),
-    BlockKind(Ws, Kind, SVExpr),
-    Error(SVExpr),
-}
