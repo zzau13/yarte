@@ -1,7 +1,7 @@
 //! Adapted from [`proc-macro2`](https://github.com/alexcrichton/proc-macro2).
 use std::cell::RefCell;
 use std::fmt::{self, Debug};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::error::{KiError, Result};
 use crate::strnom::Cursor;
@@ -13,7 +13,7 @@ thread_local! {
 /// Add file to source map and return lower bound
 ///
 /// Use in the same thread
-pub fn get_cursor<'a>(p: &PathBuf, rest: &'a str) -> Cursor<'a> {
+pub fn get_cursor<'a>(p: &Path, rest: &'a str) -> Cursor<'a> {
     SOURCE_MAP.with(|x| Cursor {
         rest,
         off: x.borrow_mut().add_file(p, rest).lo,
@@ -104,9 +104,9 @@ impl SourceMap {
         self.files.last().map(|f| f.span.hi + 1).unwrap_or(0)
     }
 
-    fn add_file(&mut self, name: &PathBuf, src: &str) -> Span {
+    fn add_file(&mut self, name: &Path, src: &str) -> Span {
         assert!(
-            self.files.iter().find(|x| &x.name == name).is_none(),
+            !self.files.iter().any(|x| x.name == name),
             "File is already registered"
         );
         let lines = lines_offsets(src);

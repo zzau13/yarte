@@ -81,13 +81,13 @@ impl ToTokens for StmtLocal {
 }
 
 // Use for no duplicate code in generator
-impl Into<Local> for StmtLocal {
-    fn into(self) -> Local {
+impl From<StmtLocal> for Local {
+    fn from(stmt: StmtLocal) -> Local {
         Local {
-            let_token: self.let_token,
+            let_token: stmt.let_token,
             attrs: Vec::new(),
-            pat: self.pat,
-            init: self.init,
+            pat: stmt.pat,
+            init: stmt.init,
             semi_token: Semi::default(),
         }
     }
@@ -103,8 +103,8 @@ impl From<Local> for StmtLocal {
     }
 }
 
-impl Into<crate::Local> for StmtLocal {
-    fn into(self) -> crate::Local {
-        crate::Local(self.into())
+impl From<StmtLocal> for crate::Local {
+    fn from(stmt: StmtLocal) -> crate::Local {
+        crate::Local(stmt.into())
     }
 }

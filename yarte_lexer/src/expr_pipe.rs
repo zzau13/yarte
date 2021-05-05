@@ -20,9 +20,9 @@ impl Parse for ExprPipe {
     }
 }
 
-impl Into<Vec<crate::Expr>> for ExprPipe {
-    fn into(self) -> Vec<crate::Expr> {
-        self.list
+impl From<ExprPipe> for Vec<crate::Expr> {
+    fn from(pipe: ExprPipe) -> Vec<crate::Expr> {
+        pipe.list
             .into_pairs()
             .map(|p| crate::Expr(p.into_value()))
             .collect()
