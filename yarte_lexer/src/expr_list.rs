@@ -14,9 +14,9 @@ impl Parse for ExprList {
     }
 }
 
-impl Into<Vec<crate::Expr>> for ExprList {
-    fn into(self) -> Vec<crate::Expr> {
-        self.list
+impl From<ExprList> for Vec<crate::Expr> {
+    fn from(list: ExprList) -> Vec<crate::Expr> {
+        list.list
             .into_pairs()
             .map(|p| crate::Expr(p.into_value()))
             .collect()

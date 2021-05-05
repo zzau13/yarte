@@ -144,7 +144,7 @@ pub struct Config<'a> {
 pub trait Emitter {
     fn callback();
     // TODO: Define better path type
-    fn get(&self, path: &PathBuf) -> Option<&str>;
+    fn get(&self, path: &Path) -> Option<&str>;
     fn config(&self) -> &Config;
 }
 
@@ -154,7 +154,7 @@ impl<'a> Emitter for EmitterConfig<'a> {
     }
 
     // TODO:
-    fn get(&self, path: &PathBuf) -> Option<&str> {
+    fn get(&self, path: &Path) -> Option<&str> {
         self.sources.get(path).map(|x| x.as_str())
     }
 

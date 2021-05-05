@@ -45,7 +45,7 @@ pub trait Sink<'a, K: Ki<'a>>: 'a {
 
     fn safe(&mut self, ws: Ws, expr: SExpr, span: Span) -> LexResult<K::Error>;
 
-    fn end(&mut self);
+    fn end(&mut self) -> LexResult<K::Error>;
 }
 
 macro_rules! comment {
@@ -155,7 +155,9 @@ impl<'a, K: Ki<'a>, Si: Sink<'a, K>> Lexer<'a, K, Si> {
                 };
             } else {
                 self.eat_lit(i, i.len());
-                self.sink.end();
+                self.sink
+                    .end()
+                    .map_err(|e| LexError::Fail(e, Span::from(i)))?;
                 break Ok(self.sink);
             }
         }

@@ -204,9 +204,9 @@ fn ascii_to_char(s: Ascii) -> char {
     s.g() as char
 }
 
-impl Into<char> for Ascii {
-    fn into(self) -> char {
-        ascii_to_char(self)
+impl From<Ascii> for char {
+    fn from(ascii: Ascii) -> char {
+        ascii_to_char(ascii)
     }
 }
 

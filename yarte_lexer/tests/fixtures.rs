@@ -95,7 +95,9 @@ impl<'a, K: Ki<'a>> Sink<'a, K> for VecSink<'a, K> {
         Ok(())
     }
 
-    fn end(&mut self) {}
+    fn end(&mut self) -> LexResult<K::Error> {
+        Ok(())
+    }
 }
 
 pub fn parse<'a, K: Ki<'a>>(
