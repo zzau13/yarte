@@ -1,5 +1,3 @@
-use serde::{Deserialize, Deserializer};
-
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::{Pat, PatOr, Token};
@@ -11,10 +9,11 @@ pub struct Arm {
     fat_arrow_token: syn::token::FatArrow,
 }
 
-impl<'de> Deserialize<'de> for Arm {
-    fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error>
+#[cfg(feature = "deser")]
+impl<'de> serde::Deserialize<'de> for Arm {
+    fn deserialize<D>(deserializer: D) -> Result<Self, <D as serde::Deserializer<'de>>::Error>
     where
-        D: Deserializer<'de>,
+        D: serde::Deserializer<'de>,
     {
         <&str>::deserialize(deserializer)
             .and_then(|x| syn::parse_str(x).map_err(|_| serde::de::Error::custom("Parse error")))

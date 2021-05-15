@@ -135,7 +135,8 @@ impl SourceMap {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, serde::Deserialize)]
+#[cfg_attr(feature = "deser", derive(serde::Deserialize))]
+#[derive(Clone, Copy, PartialEq)]
 pub struct Span {
     pub lo: u32,
     pub hi: u32,
@@ -238,7 +239,8 @@ impl fmt::Debug for Span {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, serde::Deserialize)]
+#[cfg_attr(feature = "deser", derive(serde::Deserialize))]
+#[derive(Clone, Debug, PartialEq)]
 pub struct S<T: Debug + PartialEq + Clone>(pub T, pub Span);
 
 impl<T: Debug + PartialEq + Clone> S<T> {

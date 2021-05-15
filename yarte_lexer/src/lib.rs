@@ -1,8 +1,6 @@
-use std::fmt::Debug;
-use std::ops::{Deref, DerefMut};
 use std::str;
 
-use serde::{Deserialize, Deserializer};
+#[cfg(feature = "deser")]
 use syn::parse::{Parse, ParseBuffer};
 
 #[macro_use]
@@ -11,7 +9,6 @@ mod strnom;
 pub mod error;
 mod arm;
 mod expr_list;
-mod expr_pipe;
 mod parse;
 mod source_map;
 mod stmt_local;
@@ -31,40 +28,20 @@ pub use self::{
 
 pub type Ws = (bool, bool);
 
-#[derive(Debug, PartialEq, Clone, Deserialize)]
+#[cfg(feature = "deser")]
+#[derive(std::fmt::Debug, PartialEq, Clone, serde::Deserialize)]
 #[serde(transparent)]
 pub struct Local(#[serde(deserialize_with = "de_local")] syn::Local);
 
-impl Deref for Local {
-    type Target = syn::Local;
+#[cfg(not(feature = "deser"))]
+pub use syn::Local;
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for Local {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl AsRef<syn::Local> for Local {
-    fn as_ref(&self) -> &syn::Local {
-        &self.0
-    }
-}
-
-impl AsMut<syn::Local> for Local {
-    fn as_mut(&mut self) -> &mut syn::Local {
-        &mut self.0
-    }
-}
-
+#[cfg(feature = "deser")]
 fn de_local<'de, D>(deserializer: D) -> Result<syn::Local, D::Error>
 where
-    D: Deserializer<'de>,
+    D: serde::Deserializer<'de>,
 {
+    use serde::Deserialize;
     <&str>::deserialize(deserializer).and_then(|x| {
         syn::parse_str::<StmtLocal>(x)
             .map(Into::into)
@@ -72,50 +49,32 @@ where
     })
 }
 
+#[cfg(feature = "deser")]
 impl Parse for Local {
     fn parse(input: &ParseBuffer<'_>) -> syn::Result<Self> {
         Ok(Local(input.parse::<StmtLocal>()?.into()))
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Deserialize)]
+#[cfg(feature = "deser")]
+#[derive(std::fmt::Debug, PartialEq, Clone, serde::Deserialize)]
 #[serde(transparent)]
 pub struct Expr(#[serde(deserialize_with = "de_expr")] syn::Expr);
 
-impl Deref for Expr {
-    type Target = syn::Expr;
+#[cfg(not(feature = "deser"))]
+pub type Expr = syn::Expr;
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for Expr {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl AsRef<syn::Expr> for Expr {
-    fn as_ref(&self) -> &syn::Expr {
-        &self.0
-    }
-}
-
-impl AsMut<syn::Expr> for Expr {
-    fn as_mut(&mut self) -> &mut syn::Expr {
-        &mut self.0
-    }
-}
-
+#[cfg(feature = "deser")]
 fn de_expr<'de, D>(deserializer: D) -> Result<syn::Expr, D::Error>
 where
-    D: Deserializer<'de>,
+    D: serde::Deserializer<'de>,
 {
+    use serde::Deserialize;
     <&str>::deserialize(deserializer)
         .and_then(|x| syn::parse_str(x).map_err(|_| serde::de::Error::custom("Parse error")))
 }
 
+#[cfg(feature = "deser")]
 impl Parse for Expr {
     fn parse(input: &ParseBuffer<'_>) -> syn::Result<Self> {
         Ok(Expr(input.parse()?))
