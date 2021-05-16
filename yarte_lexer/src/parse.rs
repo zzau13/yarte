@@ -17,6 +17,7 @@ pub trait Ki<'a>: Kinder<'a> + Debug + PartialEq + Clone {}
 
 impl<'a, T: Kinder<'a> + Debug + PartialEq + Clone> Ki<'a> for T {}
 
+/// Lexer for `K` tokens
 pub struct Lexer<'a, K: Ki<'a>, S: Sink<'a, K>> {
     sink: S,
     _p: PhantomData<&'a K>,
@@ -24,7 +25,7 @@ pub struct Lexer<'a, K: Ki<'a>, S: Sink<'a, K>> {
 
 pub type LexResult<E, O = ()> = Result<O, E>;
 
-///
+/// Consume tokens within a `K` lexer
 pub trait Sink<'a, K: Ki<'a>>: 'a {
     fn arm(&mut self, ws: Ws, arm: SArm, span: Span) -> LexResult<K::Error>;
     fn arm_kind(&mut self, ws: Ws, kind: K, arm: SArm, span: Span) -> LexResult<K::Error>;
@@ -33,8 +34,6 @@ pub trait Sink<'a, K: Ki<'a>>: 'a {
     fn block_kind(&mut self, ws: Ws, kind: K, expr: SVExpr, span: Span) -> LexResult<K::Error>;
 
     fn comment(&mut self, src: &'a str, span: Span) -> LexResult<K::Error>;
-
-    fn error(&mut self, expr: SVExpr, span: Span) -> LexResult<K::Error>;
 
     fn expr(&mut self, ws: Ws, expr: SVExpr, span: Span) -> LexResult<K::Error>;
     fn expr_kind(&mut self, ws: Ws, kind: K, expr: SVExpr, span: Span) -> LexResult<K::Error>;
@@ -89,6 +88,7 @@ macro_rules! safe {
 }
 
 impl<'a, K: Ki<'a>, Si: Sink<'a, K>> Lexer<'a, K, Si> {
+    /// Consume a sink in a new Lexer
     pub fn new(sink: Si) -> Lexer<'a, K, Si> {
         Lexer {
             sink,
@@ -96,6 +96,7 @@ impl<'a, K: Ki<'a>, Si: Sink<'a, K>> Lexer<'a, K, Si> {
         }
     }
 
+    /// Consume cursor and lexer returning `Sink` result
     pub fn feed(mut self, mut i: Cursor<'a>) -> Result<Si, ErrorMessage<K::Error>> {
         let mut at = 0;
         loop {

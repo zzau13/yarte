@@ -125,25 +125,23 @@ impl<E: Error> From<LexError<E>> for ErrorMessage<E> {
 }
 
 #[derive(Debug)]
-pub struct ErrorMessage<T: Error> {
-    pub message: T,
+pub struct ErrorMessage<E: Error> {
+    pub message: E,
     pub span: Span,
 }
 
-// TODO:
 pub struct EmitterConfig<'a> {
     pub sources: &'a BTreeMap<PathBuf, String>,
     pub config: Config<'a>,
 }
 
 pub struct Config<'a> {
-    color: bool,
-    prefix: Option<&'a Path>,
+    pub color: bool,
+    pub prefix: Option<&'a Path>,
 }
 
 pub trait Emitter {
-    fn callback();
-    // TODO: Define better path type
+    fn callback() {}
     fn get(&self, path: &Path) -> Option<&str>;
     fn config(&self) -> &Config;
 }
@@ -153,7 +151,6 @@ impl<'a> Emitter for EmitterConfig<'a> {
         clean();
     }
 
-    // TODO:
     fn get(&self, path: &Path) -> Option<&str> {
         self.sources.get(path).map(|x| x.as_str())
     }
@@ -163,8 +160,8 @@ impl<'a> Emitter for EmitterConfig<'a> {
     }
 }
 
-// TODO: Source map should be abstract
 // TODO: Warnings and another types
+// TODO: Check annotate snippets
 pub fn emitter<Who, E, M, I>(who: Who, errors: I) -> !
 where
     Who: Emitter,

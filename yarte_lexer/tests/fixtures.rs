@@ -16,7 +16,6 @@ use yarte_lexer::{
     Kinder, LexError, LexResult, Lexer, SArm, SExpr, SLocal, SStr, SVExpr, Sink, Span, Ws, S,
 };
 
-// TODO: Visit trait
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub enum Token<'a, Kind>
 where
@@ -36,7 +35,6 @@ where
     ),
     Block(Ws, SVExpr),
     BlockKind(Ws, Kind, SVExpr),
-    Error(SVExpr),
 }
 
 struct VecSink<'a, K: Ki<'a>>(Vec<S<Token<'a, K>>>);
@@ -64,11 +62,6 @@ impl<'a, K: Ki<'a>> Sink<'a, K> for VecSink<'a, K> {
 
     fn comment(&mut self, src: &'a str, span: Span) -> LexResult<K::Error> {
         self.0.push(S(Token::Comment(src), span));
-        Ok(())
-    }
-
-    fn error(&mut self, expr: SVExpr, span: Span) -> LexResult<K::Error> {
-        self.0.push(S(Token::Error(expr), span));
         Ok(())
     }
 
