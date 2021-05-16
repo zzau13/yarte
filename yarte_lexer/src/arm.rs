@@ -9,7 +9,7 @@ pub struct Arm {
     fat_arrow_token: syn::token::FatArrow,
 }
 
-#[cfg(feature = "deser")]
+#[cfg(feature = "test")]
 impl<'de> serde::Deserialize<'de> for Arm {
     fn deserialize<D>(deserializer: D) -> Result<Self, <D as serde::Deserializer<'de>>::Error>
     where

@@ -1,4 +1,4 @@
-#![cfg(feature = "deser")]
+#![cfg(feature = "test")]
 use std::fmt::{self, Debug, Display, Formatter};
 use std::fs::read_to_string;
 use std::result;

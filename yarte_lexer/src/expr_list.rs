@@ -19,12 +19,12 @@ impl From<ExprList> for Vec<crate::Expr> {
         list.list
             .into_pairs()
             .map(|p| {
-                #[cfg(feature = "deser")]
+                #[cfg(feature = "test")]
                 {
                     crate::Expr(p.into_value())
                 }
 
-                #[cfg(not(feature = "deser"))]
+                #[cfg(not(feature = "test"))]
                 {
                     p.into_value()
                 }

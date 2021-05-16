@@ -1,6 +1,6 @@
 use std::str;
 
-#[cfg(feature = "deser")]
+#[cfg(feature = "test")]
 use syn::parse::{Parse, ParseBuffer};
 
 #[macro_use]
@@ -28,15 +28,15 @@ pub use self::{
 
 pub type Ws = (bool, bool);
 
-#[cfg(feature = "deser")]
+#[cfg(feature = "test")]
 #[derive(std::fmt::Debug, PartialEq, Clone, serde::Deserialize)]
 #[serde(transparent)]
 pub struct Local(#[serde(deserialize_with = "de_local")] syn::Local);
 
-#[cfg(not(feature = "deser"))]
+#[cfg(not(feature = "test"))]
 pub use syn::Local;
 
-#[cfg(feature = "deser")]
+#[cfg(feature = "test")]
 fn de_local<'de, D>(deserializer: D) -> Result<syn::Local, D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -49,22 +49,22 @@ where
     })
 }
 
-#[cfg(feature = "deser")]
+#[cfg(feature = "test")]
 impl Parse for Local {
     fn parse(input: &ParseBuffer<'_>) -> syn::Result<Self> {
         Ok(Local(input.parse::<StmtLocal>()?.into()))
     }
 }
 
-#[cfg(feature = "deser")]
+#[cfg(feature = "test")]
 #[derive(std::fmt::Debug, PartialEq, Clone, serde::Deserialize)]
 #[serde(transparent)]
 pub struct Expr(#[serde(deserialize_with = "de_expr")] syn::Expr);
 
-#[cfg(not(feature = "deser"))]
+#[cfg(not(feature = "test"))]
 pub type Expr = syn::Expr;
 
-#[cfg(feature = "deser")]
+#[cfg(feature = "test")]
 fn de_expr<'de, D>(deserializer: D) -> Result<syn::Expr, D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -74,7 +74,7 @@ where
         .and_then(|x| syn::parse_str(x).map_err(|_| serde::de::Error::custom("Parse error")))
 }
 
-#[cfg(feature = "deser")]
+#[cfg(feature = "test")]
 impl Parse for Expr {
     fn parse(input: &ParseBuffer<'_>) -> syn::Result<Self> {
         Ok(Expr(input.parse()?))

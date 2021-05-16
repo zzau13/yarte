@@ -103,7 +103,7 @@ impl From<Local> for StmtLocal {
     }
 }
 
-#[cfg(feature = "deser")]
+#[cfg(feature = "test")]
 impl From<StmtLocal> for crate::Local {
     fn from(stmt: StmtLocal) -> crate::Local {
         crate::Local(stmt.into())
