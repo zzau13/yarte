@@ -139,7 +139,8 @@ where
             IfElse(a) => codegen.gen_if_else(*a),
         })
     }
-    tokens
+
+    quote!{{ #tokens }}
 }
 
 fn literal(a: String, buf: &TokenStream) -> TokenStream {

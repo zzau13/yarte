@@ -35,7 +35,7 @@ macro_rules! build {
         proc_macro2::fallback::force();
         let sources = &read(s.path.clone(), s.src.clone(), config);
 
-        sources_to_tokens(sources, config, s, $codegen(s), $opt).into()
+        sources_to_tokens(sources, config, s, $codegen(s), $opt)
     }};
 }
 
@@ -54,7 +54,7 @@ pub fn template(input: TokenStream) -> TokenStream {
             is_text: true,
             ..Default::default()
         }
-    )
+    ).into()
 }
 
 #[proc_macro_derive(Template, attributes(template))]
@@ -64,7 +64,7 @@ pub fn template_html(input: TokenStream) -> TokenStream {
         Box::new(FmtCodeGen::new(HTMLCodeGen, s, "yarte"))
     }
     let i = &syn::parse(input).unwrap();
-    build!(i, get_codegen, Default::default())
+    build!(i, get_codegen, Default::default()).into()
 }
 
 #[proc_macro_derive(TemplateFixedText, attributes(template))]
@@ -87,7 +87,7 @@ pub fn template_ptr(input: TokenStream) -> TokenStream {
             is_text: true,
             ..Default::default()
         }
-    )
+    ).into()
 }
 
 #[proc_macro_derive(TemplateFixed, attributes(template))]
@@ -103,7 +103,7 @@ pub fn template_html_ptr(input: TokenStream) -> TokenStream {
         ))
     }
     let i = &syn::parse(input).unwrap();
-    build!(i, get_codegen, Default::default())
+    build!(i, get_codegen, Default::default()).into()
 }
 
 #[proc_macro_derive(TemplateBytesText, attributes(template))]
@@ -131,7 +131,7 @@ pub fn template_bytes(input: TokenStream) -> TokenStream {
             is_text: true,
             ..Default::default()
         }
-    )
+    ).into()
 }
 
 #[proc_macro_derive(TemplateBytes, attributes(template))]
@@ -151,7 +151,7 @@ pub fn template_html_bytes(input: TokenStream) -> TokenStream {
         ))
     };
     let i = &syn::parse(input).unwrap();
-    build!(i, get_codegen, Default::default())
+    build!(i, get_codegen, Default::default()).into()
 }
 
 #[proc_macro_derive(TemplateFixedMin, attributes(template))]
@@ -168,7 +168,7 @@ pub fn template_html_min_ptr(input: TokenStream) -> TokenStream {
         ))
     }
     let i = &syn::parse(input).unwrap();
-    build!(i, get_codegen, Default::default())
+    build!(i, get_codegen, Default::default()).into()
 }
 
 #[proc_macro_derive(TemplateBytesMin, attributes(template))]
@@ -189,7 +189,7 @@ pub fn template_html_min_bytes(input: TokenStream) -> TokenStream {
         ))
     };
     let i = &syn::parse(input).unwrap();
-    build!(i, get_codegen, Default::default())
+    build!(i, get_codegen, Default::default()).into()
 }
 
 #[proc_macro_derive(TemplateMin, attributes(template))]
@@ -201,7 +201,7 @@ pub fn template_html_min(input: TokenStream) -> TokenStream {
         Box::new(FmtCodeGen::new(yarte_codegen::HTMLMinCodeGen, s, "yarte"))
     }
     let i = &syn::parse(input).unwrap();
-    build!(i, get_codegen, Default::default())
+    build!(i, get_codegen, Default::default()).into()
 }
 
 // TODO:
@@ -245,7 +245,7 @@ pub fn template_wasm_server(input: TokenStream) -> TokenStream {
         ))
     };
     let i = &syn::parse(input).unwrap();
-    build!(i, get_codegen, Default::default())
+    build!(i, get_codegen, Default::default()).into()
 }
 
 #[proc_macro_derive(Serialize)]
@@ -279,7 +279,7 @@ pub fn yformat_html(i: TokenStream) -> TokenStream {
             parent: PARENT,
             ..Default::default()
         }
-    )
+    ).into()
 }
 
 #[proc_macro]
@@ -305,7 +305,7 @@ pub fn yformat(i: TokenStream) -> TokenStream {
             is_text: true,
             parent: PARENT,
         }
-    )
+    ).into()
 }
 
 struct AutoArg {
@@ -401,7 +401,7 @@ pub fn ywrite(i: TokenStream) -> TokenStream {
             is_text: true,
             parent: PARENT,
         }
-    )
+    ).into()
 }
 
 #[proc_macro]
@@ -448,7 +448,7 @@ pub fn ywrite_html(i: TokenStream) -> TokenStream {
             parent: PARENT,
             ..Default::default()
         }
-    )
+    ).into()
 }
 
 #[proc_macro]
@@ -495,18 +495,24 @@ pub fn ywrite_min(i: TokenStream) -> TokenStream {
             parent: PARENT,
             ..Default::default()
         }
-    )
+    ).into()
 }
 
 // TODO: PoC
+// TODO: Simplify and infer type
 #[proc_macro_attribute]
 #[cfg(feature = "bytes-buf")]
 pub fn html(args: TokenStream, input: TokenStream) -> TokenStream {
     const PARENT: &str = "yarte";
 
-    let buf: syn::Expr = match syn::parse(args) {
-        Ok(i) => i,
-        Err(e) => return e.into_compile_error().into(),
+    let args_is_empty = args.is_empty();
+    let buf: syn::Expr = if args_is_empty {
+        syn::parse_str("__buf").unwrap()
+    } else {
+        match syn::parse(args) {
+            Ok(i) => i,
+            Err(e) => return e.into_compile_error().into(),
+        }
     };
     // Check correct syn::Expr
     {
@@ -536,7 +542,7 @@ pub fn html(args: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     let i = &syn::parse2(input).unwrap();
-    let code: TokenStream = build!(
+    let code = build!(
         i,
         get_codegen,
         HIROptions {
@@ -546,7 +552,27 @@ pub fn html(args: TokenStream, input: TokenStream) -> TokenStream {
         }
     );
 
-    code
+    if args_is_empty {
+        let code = quote! {{
+        thread_local! {
+            static SIZE: std::cell::Cell<usize> = std::cell::Cell::new(0);
+        }
+        let mut __buf: String = yarte::Buffer::with_capacity(SIZE.with(|v| v.get()));
+
+        #code
+
+        SIZE.with(|v| if v.get() < __buf.len() {
+            v.set(__buf.len())
+        });
+
+        __buf
+    }};
+        code.into()
+
+    } else {
+        eprintln!("{}", code.to_string());
+        code.into()
+    }
 }
 
 struct WriteArg {

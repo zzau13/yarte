@@ -11,13 +11,23 @@ struct Card<'a> {
 
 #[cfg(nightly)]
 fn nightly(my_card: &Card) {
-    let mut buffer= String::new();
-    // TODO: auto when no pass args
-    // TODO: bad statement when pass without let
+    let mut buffer = String::new();
+    // TODO: unexpected token `;`, bad statement when pass without let
     let _ = #[html(buffer)]
     "{{> hello my_card }}";
 
+    #[cfg(nightly)]
+    "Why this runs and not the above";
+
     println!("Proc macro attribute");
+    stdout().lock().write_all(buffer.as_bytes()).unwrap();
+    println!();
+
+    // TODO: why not infer type
+    let buffer: String = #[html]
+    "{{> hello my_card }}";
+
+    println!("Proc macro attribute auto");
     stdout().lock().write_all(buffer.as_bytes()).unwrap();
     println!();
 }
