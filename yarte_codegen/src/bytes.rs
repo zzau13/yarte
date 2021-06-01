@@ -140,7 +140,7 @@ where
         })
     }
 
-    quote!{{ #tokens }}
+    quote! {{ #tokens }}
 }
 
 fn literal(a: String, buf: &TokenStream) -> TokenStream {

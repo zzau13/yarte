@@ -54,7 +54,8 @@ pub fn template(input: TokenStream) -> TokenStream {
             is_text: true,
             ..Default::default()
         }
-    ).into()
+    )
+    .into()
 }
 
 #[proc_macro_derive(Template, attributes(template))]
@@ -87,7 +88,8 @@ pub fn template_ptr(input: TokenStream) -> TokenStream {
             is_text: true,
             ..Default::default()
         }
-    ).into()
+    )
+    .into()
 }
 
 #[proc_macro_derive(TemplateFixed, attributes(template))]
@@ -131,7 +133,8 @@ pub fn template_bytes(input: TokenStream) -> TokenStream {
             is_text: true,
             ..Default::default()
         }
-    ).into()
+    )
+    .into()
 }
 
 #[proc_macro_derive(TemplateBytes, attributes(template))]
@@ -279,7 +282,8 @@ pub fn yformat_html(i: TokenStream) -> TokenStream {
             parent: PARENT,
             ..Default::default()
         }
-    ).into()
+    )
+    .into()
 }
 
 #[proc_macro]
@@ -305,7 +309,8 @@ pub fn yformat(i: TokenStream) -> TokenStream {
             is_text: true,
             parent: PARENT,
         }
-    ).into()
+    )
+    .into()
 }
 
 struct AutoArg {
@@ -401,7 +406,8 @@ pub fn ywrite(i: TokenStream) -> TokenStream {
             is_text: true,
             parent: PARENT,
         }
-    ).into()
+    )
+    .into()
 }
 
 #[proc_macro]
@@ -448,7 +454,8 @@ pub fn ywrite_html(i: TokenStream) -> TokenStream {
             parent: PARENT,
             ..Default::default()
         }
-    ).into()
+    )
+    .into()
 }
 
 #[proc_macro]
@@ -495,7 +502,8 @@ pub fn ywrite_min(i: TokenStream) -> TokenStream {
             parent: PARENT,
             ..Default::default()
         }
-    ).into()
+    )
+    .into()
 }
 
 // TODO: PoC
@@ -554,21 +562,20 @@ pub fn html(args: TokenStream, input: TokenStream) -> TokenStream {
 
     if args_is_empty {
         let code = quote! {{
-        thread_local! {
-            static SIZE: std::cell::Cell<usize> = std::cell::Cell::new(0);
-        }
-        let mut __buf: String = yarte::Buffer::with_capacity(SIZE.with(|v| v.get()));
+            thread_local! {
+                static SIZE: std::cell::Cell<usize> = std::cell::Cell::new(0);
+            }
+            let mut __buf: String = yarte::Buffer::with_capacity(SIZE.with(|v| v.get()));
 
-        #code
+            #code
 
-        SIZE.with(|v| if v.get() < __buf.len() {
-            v.set(__buf.len())
-        });
+            SIZE.with(|v| if v.get() < __buf.len() {
+                v.set(__buf.len())
+            });
 
-        __buf
-    }};
+            __buf
+        }};
         code.into()
-
     } else {
         eprintln!("{}", code.to_string());
         code.into()
