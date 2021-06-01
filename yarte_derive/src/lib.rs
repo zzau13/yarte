@@ -498,6 +498,57 @@ pub fn ywrite_min(i: TokenStream) -> TokenStream {
     )
 }
 
+// TODO: PoC
+#[proc_macro_attribute]
+#[cfg(feature = "bytes-buf")]
+pub fn html(args: TokenStream, input: TokenStream) -> TokenStream {
+    const PARENT: &str = "yarte";
+
+    let buf: syn::Expr = match syn::parse(args) {
+        Ok(i) => i,
+        Err(e) => return e.into_compile_error().into(),
+    };
+    // Check correct syn::Expr
+    {
+        use syn::Expr::*;
+        match &buf {
+            Field(_) | Path(_) => (),
+            _ => {
+                return syn::Error::new(buf.span(), "first argument should be a ident or field")
+                    .to_compile_error()
+                    .into()
+            }
+        }
+    }
+    let get_codegen = |_| {
+        Box::new(yarte_codegen::WriteBCodeGen::new(
+            yarte_codegen::HTMLBytesCodeGen::new(&buf),
+            PARENT,
+        ))
+    };
+    let input: syn::LitStr = match syn::parse(input) {
+        Ok(i) => i,
+        Err(e) => return e.into_compile_error().into(),
+    };
+    let input = quote! {
+        #[template(src = #input)]
+        struct __Main__;
+    };
+
+    let i = &syn::parse2(input).unwrap();
+    let code: TokenStream = build!(
+        i,
+        get_codegen,
+        HIROptions {
+            resolve_to_self: false,
+            parent: PARENT,
+            ..Default::default()
+        }
+    );
+
+    code
+}
+
 struct WriteArg {
     buf: syn::Expr,
     _comma: syn::Token![,],

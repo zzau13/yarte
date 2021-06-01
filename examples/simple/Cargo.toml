@@ -12,3 +12,4 @@ yarte = { path = "../../yarte", version = "*", features = ["html-min", "bytes-bu
 
 [build-dependencies]
 yarte = { path = "../../yarte", version = "*" }
+yarte_helpers = { path = "../../yarte_helpers", version = "*" }
