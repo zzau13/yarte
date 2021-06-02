@@ -60,7 +60,7 @@ fn main() {
     };
 
     // Auto sized html
-    // let buf = auto!(ywrite_html!(String, "{{> hello my_card }}"));
+    let buf = auto!(ywrite_html!(String, "{{> hello my_card }}"));
     println!("Proc macro auto");
     stdout().lock().write_all(buf.as_bytes()).unwrap();
     println!();

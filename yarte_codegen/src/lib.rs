@@ -20,12 +20,13 @@ mod write_b;
 
 pub use self::{
     fmt::FmtCodeGen, fn_fmt::FnFmtCodeGen, html::HTMLCodeGen, text::TextCodeGen,
-    write_b::WriteBCodeGen,
 };
 
 #[cfg(any(feature = "wasm-app", feature = "wasm-server"))]
 pub use wasm::*;
 
+#[cfg(feature = "bytes-buf")]
+pub use self::write_b::WriteBCodeGen;
 #[cfg(feature = "bytes-buf")]
 pub use self::attr_b::AttrBCodeGen;
 #[cfg(all(feature = "bytes-buf", feature = "html-min"))]
