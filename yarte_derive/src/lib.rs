@@ -538,7 +538,7 @@ pub fn html(args: TokenStream, input: TokenStream) -> TokenStream {
         Box::new(yarte_codegen::AttrBCodeGen::new(
             yarte_codegen::HTMLBytesCodeGen::new(&buf),
             PARENT,
-            !args_is_empty
+            !args_is_empty,
         ))
     };
     let input: syn::LitStr = match syn::parse(input) {

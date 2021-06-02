@@ -67,7 +67,6 @@ impl<T: CodeGen> CodeGen for AttrBCodeGen<T> {
                     })
                 }
             }
-
         }
     }
 }
