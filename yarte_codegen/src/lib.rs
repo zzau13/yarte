@@ -13,7 +13,10 @@ mod fn_fmt;
 mod html;
 mod text;
 pub mod wasm;
+#[cfg(feature = "bytes-buf")]
 mod write_b;
+#[cfg(feature = "bytes-buf")]
+mod attr_b;
 
 pub use self::{
     fmt::FmtCodeGen, fn_fmt::FnFmtCodeGen, html::HTMLCodeGen, text::TextCodeGen,
@@ -27,6 +30,8 @@ pub use wasm::*;
 pub use self::bytes::html_min::HTMLMinBytesCodeGen;
 #[cfg(feature = "bytes-buf")]
 pub use self::bytes::{BytesCodeGen, HTMLBytesCodeGen, TextBytesCodeGen};
+#[cfg(feature = "bytes-buf")]
+pub use self::attr_b::AttrBCodeGen;
 #[cfg(all(feature = "fixed", feature = "html-min"))]
 pub use self::fixed::html_min::HTMLMinFixedCodeGen;
 #[cfg(feature = "fixed")]

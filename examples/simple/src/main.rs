@@ -23,12 +23,18 @@ fn nightly(my_card: &Card) {
     stdout().lock().write_all(buffer.as_bytes()).unwrap();
     println!();
 
-    // TODO: why not infer type
     let buffer: String = #[html]
     "{{> hello my_card }}";
 
     println!("Proc macro attribute auto");
     stdout().lock().write_all(buffer.as_bytes()).unwrap();
+    println!();
+
+    let buffer: Vec<u8> = #[html]
+    "{{> hello my_card }}";
+
+    println!("Proc macro attribute auto");
+    stdout().lock().write_all(&buffer).unwrap();
     println!();
 }
 
@@ -54,7 +60,7 @@ fn main() {
     };
 
     // Auto sized html
-    let buf = auto!(ywrite_html!(String, "{{> hello my_card }}"));
+    // let buf = auto!(ywrite_html!(String, "{{> hello my_card }}"));
     println!("Proc macro auto");
     stdout().lock().write_all(buf.as_bytes()).unwrap();
     println!();

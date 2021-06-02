@@ -155,16 +155,16 @@ fn literal(a: String, buf: &TokenStream) -> TokenStream {
             let range: TokenStream = write_bb(b, buf);
             quote! {{
                 #[doc = #a]
-                #buf._yarte_in_derive_reserve(#len);
+                yarte::Buffer::reserve(buf_ref!(#buf), #len);
                 unsafe {
                     #range
-                    #buf._yarte_in_derive_advance(#len);
+                    yarte::Buffer::advance(buf_ref!(#buf), #len);
                 }
             }}
         }
         _ => {
             quote! {
-                #buf._yarte_in_derive_extend(#a);
+                yarte::Buffer::extend(buf_ref!(#buf), #a);
             }
         }
     }
@@ -175,7 +175,7 @@ fn write_bb(b: &[u8], buf: &TokenStream) -> TokenStream {
         .enumerate()
         .map(|(i, b)| {
             quote! {
-                *#buf._yarte_in_derive_buf_ptr().add(#i) = #b;
+                *yarte::Buffer::buf_ptr(buf_ref!(#buf)).add(#i) = #b;
             }
         })
         .flatten()

@@ -535,9 +535,10 @@ pub fn html(args: TokenStream, input: TokenStream) -> TokenStream {
         }
     }
     let get_codegen = |_| {
-        Box::new(yarte_codegen::WriteBCodeGen::new(
+        Box::new(yarte_codegen::AttrBCodeGen::new(
             yarte_codegen::HTMLBytesCodeGen::new(&buf),
             PARENT,
+            !args_is_empty
         ))
     };
     let input: syn::LitStr = match syn::parse(input) {
@@ -560,26 +561,7 @@ pub fn html(args: TokenStream, input: TokenStream) -> TokenStream {
         }
     );
 
-    if args_is_empty {
-        let code = quote! {{
-            thread_local! {
-                static SIZE: std::cell::Cell<usize> = std::cell::Cell::new(0);
-            }
-            let mut __buf: String = yarte::Buffer::with_capacity(SIZE.with(|v| v.get()));
-
-            #code
-
-            SIZE.with(|v| if v.get() < __buf.len() {
-                v.set(__buf.len())
-            });
-
-            __buf
-        }};
-        code.into()
-    } else {
-        eprintln!("{}", code.to_string());
-        code.into()
-    }
+    code.into()
 }
 
 struct WriteArg {
