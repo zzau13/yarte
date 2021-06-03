@@ -42,6 +42,11 @@ In order to  fully understand Yarte's capabilities take a look at the following 
 - [Crate documentation](https://docs.rs/yarte/)
 - Minimum supported Rust version: 1.45 or later
 
+Or, in nightly, just:
+```rust
+#[html] "{{> my_template }}"
+```
+
 ## Acknowledgment
 Yarte is based on all previous templates engines, syntax as well as its documentation 
 is highly influenced by [Handlebars][handlebars]. 
