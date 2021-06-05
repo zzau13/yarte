@@ -46,24 +46,23 @@ impl<T: CodeGen> CodeGen for AttrBCodeGen<T> {
                     #[allow(unused_imports)]
                     use #parent::*;
                     macro_rules! buf_ref {
-                        ($b:expr) => { &mut $b };
+                        ($b:expr) => { $b };
                     }
                     #[inline]
-                    fn __yarte_context<F: yarte::Buffer, C: FnOnce(F) -> F>(f: C) -> F {
+                    fn __yarte_context<Output: yarte::Buffer, C: FnOnce(&mut Output)>(f: C) -> Output {
                         thread_local! {
                             static SIZE: std::cell::Cell<usize> = std::cell::Cell::new(0);
                         }
-                        let tmp: F = yarte::Buffer::with_capacity(SIZE.with(|v| v.get()));
-                        let tmp = f(tmp);
+                        let mut tmp = Output::with_capacity(SIZE.with(|v| v.get()));
+                        f(&mut tmp);
                         SIZE.with(|v| if v.get() < tmp.len() {
                             v.set(tmp.len())
                         });
                         tmp
                     }
 
-                    __yarte_context(|mut __buf| {
+                    __yarte_context(|__buf| {
                         #body
-                        __buf
                     })
                 }
             }

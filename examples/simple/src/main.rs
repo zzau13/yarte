@@ -10,6 +10,13 @@ struct Card<'a> {
 }
 
 #[cfg(nightly)]
+/// without comma or error
+/// `message: stable/nightly mismatch`
+fn _write_str(buffer: String) {
+    stdout().lock().write_all(buffer.as_bytes()).unwrap();
+}
+
+#[cfg(nightly)]
 fn nightly(my_card: &Card) {
     let mut buffer = String::new();
     // TODO: unexpected token `;`, bad statement when pass without let
@@ -23,11 +30,13 @@ fn nightly(my_card: &Card) {
     stdout().lock().write_all(buffer.as_bytes()).unwrap();
     println!();
 
-    let buffer: String = #[html]
-    "{{> hello my_card }}";
-
     println!("Proc macro attribute auto");
-    stdout().lock().write_all(buffer.as_bytes()).unwrap();
+
+    // without comma or error
+    // `message: stable/nightly mismatch`
+    #[rustfmt::skip]
+    _write_str(#[html] "{{> hello my_card }}");
+
     println!();
 
     let buffer: Vec<u8> = #[html]
