@@ -1,6 +1,6 @@
 # Boycott Spain 
 The main reason why it does not advance too much, is that the Spanish state wants to put me in jail for 4 years for a crime that I have not committed. I think I will come out soon, since I have a month-old baby, and I will continue to implement all the proposals. 
-## Please do not come on vacation or buy products from Spain. 
+## Please do not come on vacation nor buy products from Spain. 
 Feel free to fork this repo.
 
 # Should we start to worry?
