@@ -1,6 +1,6 @@
 [package]
 name = "yarte_codegen"
-version = "0.15.2"
+version = "0.15.3"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "Code generator for yarte"
 categories = ["template-engine", "web-programming", "gui"]
@@ -24,8 +24,8 @@ wasm-app = ["indexmap", "heck", "yarte_hir/wasm-app", "yarte_dom/wasm-app"]
 wasm-server = ["html-min", "bytes-buf"]
 
 [dependencies]
-yarte_helpers = { version = "~0.15.0", path = "../yarte_helpers" }
-yarte_hir = { version = "~0.15.2", path = "../yarte_hir" }
+yarte_helpers = { version = "~0.15.1", path = "../yarte_helpers" }
+yarte_hir = { version = "~0.15.3", path = "../yarte_hir" }
 
 proc-macro2 = "1.0"
 quote = "1.0"
