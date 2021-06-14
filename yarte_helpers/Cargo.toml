@@ -23,6 +23,8 @@ fixed = ["v_htmlescape", "itoa", "ryu-ad"]
 markup = ["v_htmlescape", "itoa", "dtoa"]
 bytes-buf = ["buf-min", "v_htmlescape", "itoa", "ryu-ad"]
 logger = ["bat", "tempfile", "toolchain_find"]
+extra-renders = ["render-uuid"]
+render-uuid = ["buf-min", "uuid"]
 
 [badges]
 travis-ci = { repository = "botika/yarte", branch = "master" }
@@ -45,6 +47,8 @@ buf-min = { version = "0.6.0", optional = true}
 bat = { version = "0.18", default-features = false, features = ["regex-fancy", "paging"], optional = true }
 tempfile = { version = "3.0", optional = true }
 toolchain_find = { version = "0.2", optional = true }
+
+uuid = { version = "0.8", optional = true }
 
 [dev-dependencies]
 serde_json = "1.0"
