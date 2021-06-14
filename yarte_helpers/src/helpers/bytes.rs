@@ -311,21 +311,21 @@ mod render_uuid {
     use crate::helpers::{RenderBytes, RenderBytesSafe};
     use buf_min::Buffer;
     use std::slice::from_raw_parts_mut;
-    use uuid::adapter::Hyphenated;
+    use uuid::adapter::HyphenatedRef;
     use uuid::Uuid;
 
     macro_rules! imp {
         ($($ty:ty)+) => {
-            $(impl $ty for Uuid {
+            $(impl $ty for &Uuid {
                 fn render<B: Buffer>(self, buf: &mut B) {
-                    let len = Hyphenated::LENGTH;
-                    buf.reserve(len);
+                    const LEN: usize = HyphenatedRef::LENGTH;
+                    buf.reserve(LEN);
                     // Safety: previous reserve length
-                    self.to_hyphenated().encode_lower(unsafe {
-                        from_raw_parts_mut(buf.buf_ptr(), len)
+                    self.to_hyphenated_ref().encode_lower(unsafe {
+                        from_raw_parts_mut(buf.buf_ptr(), LEN)
                     });
                     // Safety: previous write length
-                    unsafe { buf.advance(len); }
+                    unsafe { buf.advance(LEN); }
                 }
             })+
         };
@@ -342,8 +342,11 @@ mod render_uuid {
             let mut buf = String::new();
             let u = Uuid::from_u128(0x1a);
             let res = u.to_string();
-            RenderBytes::render(u, &mut buf);
+            RenderBytes::render(&u, &mut buf);
 
+            assert_eq!(res, buf);
+            buf.clear();
+            RenderBytesSafe::render(&u, &mut buf);
             assert_eq!(res, buf);
         }
     }
