@@ -53,6 +53,13 @@ jobs:
           command: test
           args: --all --all-features --no-fail-fast -- --nocapture
 
+      - name: Run tests in release
+        uses: actions-rs/cargo@v1
+        timeout-minutes: 40
+        with:
+          command: test
+          args:  -p yarte --all-features --release
+
       - name: Install cargo-cache
         continue-on-error: true
         run: |
