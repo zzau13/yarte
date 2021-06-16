@@ -28,6 +28,7 @@ script:
   - cargo test --all-features --all -- --nocapture
   - |
     cd yarte && cargo test -- --nocapture       \
+    && cargo test --release --all-features -- --nocapture       \
     && cargo test --features bytes-buf          \
     && cargo test --features bytes-buf-tokio2   \
     && cargo test --features fixed              \
