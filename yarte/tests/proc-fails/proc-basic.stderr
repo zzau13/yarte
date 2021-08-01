@@ -1,12 +1,13 @@
-error: proc-macro derive panicked
- --> $DIR/basic.rs:3:10
+error: proc macro panicked
+ --> $DIR/proc-basic.rs:4:13
   |
-3 | #[derive(Template)]
-  |          ^^^^^^^^
+4 |     let _ = auto!(ywrite_html!(String, "{{ @foo }}"));
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   |
   = help: message: error
-           --> $DIR/Test.hbs:1:5
+           --> $DIR/__Main__.hbs:1:5
             |
           1 | {{ @foo }}
             |     ^^^ Not exist @ helper
             |
+  = note: this error originates in a macro (in Nightly builds, run with -Z macro-backtrace for more info)
