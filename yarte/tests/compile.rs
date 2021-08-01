@@ -1,4 +1,4 @@
-#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"))]
+#[cfg(all(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"), not(nightly)))]
 #[test]
 fn ui() {
     let t = trybuild::TestCases::new();
