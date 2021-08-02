@@ -5,4 +5,3 @@ fn ui() {
     t.compile_fail("tests/fails/*.rs");
     t.compile_fail("tests/proc-fails/*.rs");
 }
-
