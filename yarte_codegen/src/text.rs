@@ -16,7 +16,7 @@ impl CodeGen for TextCodeGen {
             tokens.extend(match i {
                 Local(a) => quote!(#a),
                 Lit(a) => quote!(_fmt.write_str(#a)?;),
-                Safe(a) | Expr(a) => quote!(&(#a).fmt(_fmt)?;),
+                Safe(a) | Expr(a) => quote!((&(#a)).fmt(_fmt)?;),
                 Each(a) => self.gen_each(*a),
                 IfElse(a) => self.gen_if_else(*a),
             });
