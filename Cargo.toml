@@ -8,7 +8,5 @@ members = [
     "yarte_helpers",
     "yarte_hir",
     "yarte_html",
-    "yarte_lexer",
     "yarte_parser",
-    "yarte_lexer/gencode"
 ]
