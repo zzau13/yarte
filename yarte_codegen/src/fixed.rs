@@ -175,7 +175,7 @@ impl CodeGen for TextFixedCodeGen {
                 Local(a) => quote!(#a),
                 Lit(a) => literal(a, &parent),
                 Safe(a) | Expr(a) => {
-                    quote!(buf_cur += &(#a).__render_it_safe(&mut buf[buf_cur..])?;)
+                    quote!(buf_cur += (&(#a)).__render_it_safe(&mut buf[buf_cur..])?;)
                 }
                 Each(a) => self.gen_each(*a),
                 IfElse(a) => self.gen_if_else(*a),
@@ -196,8 +196,8 @@ where
         tokens.extend(match i {
             Local(a) => quote!(#a),
             Lit(a) => literal(a, &parent),
-            Safe(a) => quote!(buf_cur += &(#a).__render_it_safe(&mut buf[buf_cur..])?;),
-            Expr(a) => quote!(buf_cur += &(#a).__render_it(&mut buf[buf_cur..])?;),
+            Safe(a) => quote!(buf_cur += (&(#a)).__render_it_safe(&mut buf[buf_cur..])?;),
+            Expr(a) => quote!(buf_cur += (&(#a)).__render_it(&mut buf[buf_cur..])?;),
             Each(a) => codegen.gen_each(*a),
             IfElse(a) => codegen.gen_if_else(*a),
         })

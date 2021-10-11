@@ -13,8 +13,8 @@ where
         tokens.extend(match i {
             Local(a) => quote!(#a),
             Lit(a) => quote!(_fmt.write_str(#a)?;),
-            Safe(a) => quote!(&(#a).fmt(_fmt)?;),
-            Expr(a) => quote!(&(#a).__renders_it(_fmt)?;),
+            Safe(a) => quote!((&(#a)).fmt(_fmt)?;),
+            Expr(a) => quote!((&(#a)).__renders_it(_fmt)?;),
             Each(a) => codegen.gen_each(*a),
             IfElse(a) => codegen.gen_if_else(*a),
         })
