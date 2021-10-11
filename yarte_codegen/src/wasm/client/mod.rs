@@ -171,7 +171,7 @@ impl<'a> WASMCodeGen<'a> {
         self.s.fields.iter().filter(|x| is_state(x)).fold(
             <Punctuated<&Ident, Token![,]>>::new(),
             |mut acc, x| {
-                acc.push(&x.ident.as_ref().expect("Named fields"));
+                acc.push(x.ident.as_ref().expect("Named fields"));
                 acc
             },
         )

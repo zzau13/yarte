@@ -35,7 +35,7 @@ impl<'a> VisitMut for LoweringContext<'a> {
         match expr {
             Path(i) => {
                 debug_assert!(!self.scp.is_empty() && !self.scp[0].is_empty());
-                match self.resolve_path(&i) {
+                match self.resolve_path(i) {
                     Ok(e) => {
                         *expr = e;
                     }

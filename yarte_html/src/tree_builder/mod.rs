@@ -498,7 +498,7 @@ where
                 .open_elems
                 .iter()
                 .rev()
-                .any(|n| self.sink.same_node(&n, &node)),
+                .any(|n| self.sink.same_node(n, node)),
         }
     }
 

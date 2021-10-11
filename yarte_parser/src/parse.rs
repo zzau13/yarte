@@ -647,7 +647,7 @@ fn identifier(i: Cursor) -> PResult<&str> {
             if let Some(j) = chars.position(|c| !is_ident_continue(c)) {
                 Ok((i.adv(j + 2), &i.rest[..j + 2]))
             } else {
-                Ok((i.adv(i.len()), &i.rest))
+                Ok((i.adv(i.len()), i.rest))
             }
         } else {
             Ok((i.adv(1), &i.rest[..1]))

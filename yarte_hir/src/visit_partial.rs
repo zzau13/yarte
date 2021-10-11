@@ -53,7 +53,7 @@ impl<'a, 'b> PartialBuilder<'a, 'b> {
         debug_assert_ne!(e.len(), 0);
         use syn::Expr::*;
         match &e[0].as_ref() {
-            Assign(assign) => self.visit_expr_assign(&assign),
+            Assign(assign) => self.visit_expr_assign(assign),
             e @ Path(..) => self.scope = Some(e),
             _ => self.err.push(ErrorMessage {
                 message: GError::PartialArguments,
@@ -63,7 +63,7 @@ impl<'a, 'b> PartialBuilder<'a, 'b> {
 
         for i in (&e[1..]).iter() {
             match i.as_ref() {
-                Assign(assign) => self.visit_expr_assign(&assign),
+                Assign(assign) => self.visit_expr_assign(assign),
                 Path(..) => self.err.push(ErrorMessage {
                     message: GError::PartialArgumentsScopeFirst,
                     span: self.e.span(),

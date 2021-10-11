@@ -1,7 +1,7 @@
 //! Adapted from [`html5ever`](https://github.com/servo/html5ever)
 #![allow(
     clippy::match_single_binding,
-    clippy::unknown_clippy_lints,
+    unknown_lints,
     clippy::match_on_vec_items,
     clippy::match_like_matches_macro,
     clippy::collapsible_match,

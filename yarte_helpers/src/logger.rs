@@ -50,7 +50,7 @@ fn logger(s: &str, path: String, option: &PrintOption) {
     }));
 
     if let Some(theme) = option.theme {
-        if builder.themes().find(|x| *x == theme).is_none() {
+        if !builder.themes().any(|x| x == theme) {
             let msg: Vec<String> = builder.themes().map(|x| format!("{:?}", x)).collect();
             eprintln!("Themes: {}", msg.join(",\n        "));
         } else {

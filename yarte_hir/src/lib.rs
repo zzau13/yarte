@@ -1,8 +1,4 @@
-#![allow(
-    clippy::unknown_clippy_lints,
-    clippy::type_complexity,
-    clippy::match_on_vec_items
-)]
+#![allow(unknown_lints, clippy::type_complexity, clippy::match_on_vec_items)]
 use std::{collections::BTreeMap, mem, path::PathBuf, str};
 
 use quote::{format_ident, quote};
@@ -263,7 +259,7 @@ impl<'a> LoweringContext<'a> {
                 Node::Lit(l, lit, r) => self.visit_lit(l, lit.t(), r),
                 Node::Helper(h) => {
                     self.spans.push(n.span());
-                    self.visit_helper(buf, &h);
+                    self.visit_helper(buf, h);
                     self.spans.pop();
                 }
                 Node::Partial(Partial(ws, path, expr)) => {
@@ -287,14 +283,14 @@ impl<'a> LoweringContext<'a> {
                         old.next_ws = self.next_ws.take();
                         old.skip_ws = self.skip_ws;
                         old.scp.count = self.scp.count;
-                        old.buf_w.extend(self.buf_w.drain(..));
+                        old.buf_w.append(&mut self.buf_w);
 
                         old.handle_ws((ws.0, i_ws.0));
 
                         old.handle(block, buf);
 
-                        self.errors.extend(old.errors.drain(..));
-                        self.buf_w.extend(old.buf_w.drain(..));
+                        self.errors.append(&mut old.errors);
+                        self.buf_w.append(&mut old.buf_w);
 
                         self.scp.count = old.scp.count;
                         self.next_ws = old.next_ws.take();
@@ -1013,7 +1009,7 @@ impl<'a> LoweringContext<'a> {
         let mut buf_lit = String::new();
         for s in mem::take(&mut self.buf_w) {
             match s {
-                Writable::Lit(ref s) => buf_lit.push_str(s),
+                Writable::Lit(s) => buf_lit.push_str(s),
                 Writable::LitP(ref s) => buf_lit.push_str(s),
                 Writable::Expr(s, wrapped) => {
                     if !buf_lit.is_empty() {

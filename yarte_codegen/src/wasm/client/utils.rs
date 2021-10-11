@@ -23,7 +23,7 @@ pub fn get_self_id() -> u64 {
 
 #[inline]
 pub fn is_black_box(ty: &Type) -> bool {
-    BB_TYPE.with(|black| ty.eq(&black))
+    BB_TYPE.with(|black| ty.eq(black))
 }
 
 #[inline]
@@ -52,7 +52,7 @@ pub fn all_children_text<'a, I: Iterator<Item = &'a Node> + Clone>(mut doc: I) -
                 Expression::IfElse(_, block) => {
                     let IfElse { ifs, if_else, els } = &**block;
                     all_if_block_text(ifs)
-                        && if_else.iter().all(|x| all_if_block_text(x))
+                        && if_else.iter().all(all_if_block_text)
                         && els
                             .as_ref()
                             .map(|x| all_children_text(x.iter()))

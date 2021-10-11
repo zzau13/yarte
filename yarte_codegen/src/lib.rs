@@ -1,4 +1,4 @@
-#![allow(clippy::unknown_clippy_lints, clippy::match_on_vec_items)]
+#![allow(unknown_lints, clippy::match_on_vec_items)]
 use proc_macro2::TokenStream;
 use quote::quote;
 

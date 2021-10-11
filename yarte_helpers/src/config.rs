@@ -119,7 +119,7 @@ pub struct Config<'a> {
 impl<'a> Config<'a> {
     pub fn new(s: &str) -> Config {
         let raw: RawConfig =
-            toml::from_str(&s).unwrap_or_else(|_| panic!("invalid TOML in {}", CONFIG_FILE_NAME));
+            toml::from_str(s).unwrap_or_else(|_| panic!("invalid TOML in {}", CONFIG_FILE_NAME));
         let (dir, print) = raw.main.map(|x| (x.dir, x.debug)).unwrap_or((None, None));
 
         Config {
