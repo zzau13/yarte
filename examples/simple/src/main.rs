@@ -57,7 +57,7 @@ fn main() {
         .and_then(|name| query.get("lastname").map(|lastname| (*name, *lastname)));
 
     // Auto sized html minimal (Work in progress. Not use in production)
-    let buf = auto!(ywrite_min!(String, "{{> index }}"));
+    let buf = auto!(ywrite!(String, "{{> index }}"));
 
     println!("Proc macro minimal");
     stdout().lock().write_all(buf.as_bytes()).unwrap();
