@@ -1,0 +1,15 @@
+[package]
+name = "derive"
+version = "0.0.1"
+authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
+publish = false
+edition = "2018"
+
+workspace = "../.."
+
+[dependencies]
+yarte = { path = "../../yarte", version = "*"   }
+
+[build-dependencies]
+yarte = { path = "../../yarte", version = "*" }
+yarte_helpers = { path = "../../yarte_helpers", version = "*" }
