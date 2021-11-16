@@ -66,6 +66,7 @@ pub use yarte_derive::TemplateWasmServer;
 pub use TemplateBytesTrait as TemplateWasmServer;
 
 #[cfg(feature = "fixed")]
+#[deprecated(since = "16.0.0")]
 /// Template trait
 pub trait TemplateFixedTrait {
     /// Writes to buffer
@@ -93,17 +94,22 @@ pub trait TemplateFixedTrait {
 }
 
 #[cfg(feature = "fixed")]
+#[deprecated(since = "16.0.0")]
 pub use yarte_derive::{TemplateFixed, TemplateFixedText};
 #[cfg(feature = "fixed")]
+#[deprecated(since = "16.0.0")]
 pub use yarte_helpers::helpers::{RenderFixed, RenderFixedA, RenderSafe, RenderSafeA};
 #[cfg(feature = "fixed")]
+#[deprecated(since = "16.0.0")]
 pub use TemplateFixedTrait as TemplateFixed;
 #[cfg(feature = "fixed")]
 pub use TemplateFixedTrait as TemplateFixedText;
 
 #[cfg(all(feature = "fixed", feature = "html-min"))]
+#[deprecated(since = "16.0.0")]
 pub use yarte_derive::TemplateFixedMin;
 #[cfg(all(feature = "fixed", feature = "html-min"))]
+#[deprecated(since = "16.0.0")]
 pub use TemplateFixedTrait as TemplateFixedMin;
 
 #[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"))]

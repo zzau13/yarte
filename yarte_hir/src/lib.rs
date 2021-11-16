@@ -863,7 +863,7 @@ impl<'a> LoweringContext<'a> {
 
         macro_rules! writes {
         ($($t:tt)*) => {
-            return syn::parse2(quote!($($t)*)).map_err(|_| GError::Internal);
+            return syn::parse2(quote!($($t)*)).map_err(|_| GError::Internal)
         };
     }
 

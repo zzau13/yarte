@@ -113,7 +113,7 @@ impl<'a> CodeGen for TextBytesCodeGen<'a> {
                 }
                 Safe(a) | Expr(a) => {
                     let buf = &self.buf;
-                    quote!(&(#a).__render_itb_safe(buf_ref!(#buf));)
+                    quote!((&(#a)).__render_itb_safe(buf_ref!(#buf));)
                 }
                 Each(a) => self.gen_each(*a),
                 IfElse(a) => self.gen_if_else(*a),
@@ -133,8 +133,8 @@ where
         tokens.extend(match i {
             Local(a) => quote!(#a),
             Lit(a) => literal(a, &buf),
-            Safe(a) => quote!(&(#a).__render_itb_safe(buf_ref!(#buf));),
-            Expr(a) => quote!(&(#a).__render_itb(buf_ref!(#buf));),
+            Safe(a) => quote!((&(#a)).__render_itb_safe(buf_ref!(#buf));),
+            Expr(a) => quote!((&(#a)).__render_itb(buf_ref!(#buf));),
             Each(a) => codegen.gen_each(*a),
             IfElse(a) => codegen.gen_if_else(*a),
         })

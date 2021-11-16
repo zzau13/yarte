@@ -393,7 +393,7 @@ macro_rules! make_argument {
                                         PError::Argument(DOption::Some(e.message)),
                                         Span::from_range(skip_ws(i), e.span),
                                     )
-                                });
+                                })
                         };
                     }
                     if 0 < j && i.adv_starts_with(at + j - 1, "~}}") {

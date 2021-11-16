@@ -142,7 +142,7 @@ macro_rules! map_fail {
         ($($t)*).map_err(|e| match e {
             LexError::Next(m, s) => LexError::Fail(m, s),
             e => e,
-        });
+        })
     };
 }
 
