@@ -99,6 +99,7 @@ impl<'a> TextBytesCodeGen<'a> {
 impl<'a> EachCodeGen for TextBytesCodeGen<'a> {}
 impl<'a> IfElseCodeGen for TextBytesCodeGen<'a> {}
 
+// TODO: Create new trait for decouple concepts
 impl<'a> CodeGen for TextBytesCodeGen<'a> {
     fn gen(&mut self, v: Vec<HIR>) -> TokenStream {
         let mut tokens = TokenStream::new();

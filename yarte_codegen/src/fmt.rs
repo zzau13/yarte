@@ -53,6 +53,7 @@ impl<'a, T: CodeGen> FmtCodeGen<'a, T> {
     }
 }
 
+// TODO: Create new trait for decouple concepts
 impl<'a, T: CodeGen> CodeGen for FmtCodeGen<'a, T> {
     fn gen(&mut self, v: Vec<HIR>) -> TokenStream {
         let mut tokens = TokenStream::new();

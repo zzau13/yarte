@@ -100,16 +100,17 @@ pub use yarte_derive::{TemplateFixed, TemplateFixedText};
 #[deprecated(since = "16.0.0")]
 pub use yarte_helpers::helpers::{RenderFixed, RenderFixedA, RenderSafe, RenderSafeA};
 #[cfg(feature = "fixed")]
-#[deprecated(since = "16.0.0")]
+#[allow(deprecated)]
 pub use TemplateFixedTrait as TemplateFixed;
 #[cfg(feature = "fixed")]
+#[allow(deprecated)]
 pub use TemplateFixedTrait as TemplateFixedText;
 
 #[cfg(all(feature = "fixed", feature = "html-min"))]
 #[deprecated(since = "16.0.0")]
 pub use yarte_derive::TemplateFixedMin;
 #[cfg(all(feature = "fixed", feature = "html-min"))]
-#[deprecated(since = "16.0.0")]
+#[allow(deprecated)]
 pub use TemplateFixedTrait as TemplateFixedMin;
 
 #[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"))]
