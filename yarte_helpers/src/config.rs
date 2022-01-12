@@ -1,4 +1,3 @@
-//!
 //! Right now a Yarte configuration file can have the following:
 //!
 //! - **`main`** (general configuration - optional): with attribute
@@ -18,8 +17,10 @@
 //! in a debugging environment Yarte gives it a tabulated format, and the possibility
 //! to see the number line use a color theme. Options are the following:
 //!
+//! > Deprecated
 //!   - **`number_line`** (default:  `false`): Boolean, if set to `true` number lines will appear
 //! in debug-mode.
+//! > Deprecated
 //!   - **`theme`** (default: `zenburn`): String, color theme used in debugging environment.
 //! Possible values are:
 //!     - `DarkNeon`,
@@ -33,9 +34,13 @@
 //!     - `Sublime Snazzy`,
 //!     - `TwoDark`,
 //!     - `zenburn`
+//! > Deprecated
 //!   - **`grid`** (default:  `false`): Boolean
+//! > Deprecated
 //!   - **`header`** (default:  `false`): Boolean
+//! > Deprecated
 //!   - **`paging`** (default:  `false`): Boolean
+//! > Deprecated
 //!   - **`short`** (default:  `true`): Boolean, if set to `false` to verbose
 //!
 //! ### Example of a config file
@@ -46,14 +51,6 @@
 //!
 //! [partials]
 //! alias = "./deep/more/deep"
-//!
-//! [debug]
-//! theme = "zenburn"
-//! number_line = true
-//! grid = true
-//! header = true
-//! paging = false
-//! short = false
 //! ```
 //!
 //! With this configuration, the user can call `alias` in a partial instance with

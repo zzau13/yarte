@@ -618,11 +618,7 @@ fn sources_to_tokens<'a>(
         || s.print == Print::Code
         || s.print == Print::All
     {
-        log(
-            &tokens.to_string(),
-            s.path.to_str().unwrap().to_owned(),
-            &config.debug,
-        );
+        log(&tokens.to_string());
     }
 
     tokens

@@ -11,7 +11,6 @@ pub type Result<I> = ::std::result::Result<I, Error>;
 
 #[cfg(feature = "config")]
 pub mod config;
-#[cfg(feature = "config")]
 pub mod recompile;
 
 pub mod at_helpers;
