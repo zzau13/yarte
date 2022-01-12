@@ -1,3 +1,6 @@
 pub fn log(s: &str) {
-    println!("{}", prettyplease::unparse(&syn::parse_str(s).unwrap()));
+    match syn::parse_str(s) {
+        Ok(file) => println!("{}", prettyplease::unparse(&file)),
+        Err(_) => println!("{}", s),
+    }
 }
