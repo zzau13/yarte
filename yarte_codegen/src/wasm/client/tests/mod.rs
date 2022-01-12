@@ -35,7 +35,7 @@ fn tokens(i: TokenStream, wlog: bool) -> String {
 
     let res = WASMCodeGen::new(&s).gen(ir).to_string();
     if wlog {
-        log(&res, "Test".into(), &config.debug);
+        log(&res);
     }
     res
 }
