@@ -31,7 +31,7 @@ travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]
-v_htmlescape = { version = "~0.13.1", optional = true }
+v_htmlescape = { version = "~0.14.1", optional = true }
 v_jsonescape = { version = "~0.5.1", optional = true }
 itoa = { version = "0.4", features = ["i128"], optional = true }
 dtoa = { version = "0.4", optional = true }
