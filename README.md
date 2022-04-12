@@ -1,11 +1,9 @@
 # Should we start to worry?
 `bytes-buf` feature can produce **SIGILL**.
-
-`avx` and `sse` flags are in almost all cpus of `x86` and `x86_64` architectures. 
-
 More details in https://github.com/botika/v_escape/issues/54.
 
-Satan has been slaughtered and sent to heaven. Should we start to worry?
+# Do you like reallocating?
+Are you dumb or use a zero copy programming language and relocate by the architecture of your template engine
 
 # Disclaimer
 All structures and functions in this crate -- even those based on the real crates -- are entirely fictional. 
@@ -17,7 +15,7 @@ The following program contains coarse language and due to its content it should 
 </a>
 
 # Yarte [![Latest version](https://img.shields.io/crates/v/yarte.svg)](https://crates.io/crates/yarte) 
-Yarte stands for **Y**et **A**nother **R**ust **T**emplate **E**ngine. Uses a Handlebars-like syntax, 
+Yarte stands for **Y**et **A**nother **R**usty **T**emplate **E**ngine. Uses a Handlebars-like syntax, 
 well-known and intuitive for most developers. Yarte is an optimized, and easy-to-use 
 rust crate, with which developers can create logic around their 
 HTML templates using conditionals, loops, rust code and template composition. 
