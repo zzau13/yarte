@@ -3,7 +3,8 @@
 More details in https://github.com/botika/v_escape/issues/54.
 
 # Do you like reallocating?
-Are you dumb or use a zero copy programming language and relocate by the architecture of your template engine
+Are you dumb or use a zero copy programming language and relocate by the architecture of your template engine?
+#### enjoy spending electricity
 
 # Disclaimer
 All structures and functions in this crate -- even those based on the real crates -- are entirely fictional. 
