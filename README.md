@@ -1,5 +1,5 @@
 
-Spain is not a democracy, with your tourism or your purchases you are subsidizing this barbarism. They have also persecuted me and my family and put them in jail. Please don't participate.
+Spain is not a democracy, with your tourism or your purchases you are subsidizing this barbarism. They have also persecuted me and my family and put us in jail. Please don't participate.
 
 # Disclaimer
 All structures and functions in this crate -- even those based on the real crates -- are entirely fictional. 
