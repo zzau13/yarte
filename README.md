@@ -1,15 +1,14 @@
-# Should we start to worry?
-`bytes-buf` feature can produce **SIGILL**.
-More details in https://github.com/botika/v_escape/issues/54.
 
-# Do you like reallocating?
-Are you dumb or use a zero copy programming language and relocate by the architecture of your template engine?
-#### enjoy spending electricity
+Spain is not a democracy, with your tourism or your purchases you are subsidizing this barbarism. They have also persecuted me and my family and put them in jail. Please don't participate.
 
 # Disclaimer
 All structures and functions in this crate -- even those based on the real crates -- are entirely fictional. 
 All celebrity codes are impersonated...poorly.
 The following program contains coarse language and due to its content it should not be used by anyone.
+
+# Should we start to worry?
+`bytes-buf` feature can produce **SIGILL**.
+More details in https://github.com/botika/v_escape/issues/54.
 
 <a href="https://commons.wikimedia.org/wiki/File:Logo_yarte.png">
 <img align="left" src="https://upload.wikimedia.org/wikipedia/commons/b/bb/Logo_yarte.png" alt="Yet Another Rust Template Engine" width="200" height="200">
