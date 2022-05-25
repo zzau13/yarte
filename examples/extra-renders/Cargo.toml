@@ -10,7 +10,7 @@ workspace = "../.."
 [dependencies]
 yarte = { path = "../../yarte", version = "*", features = ["bytes-buf"]  }
 yarte_helpers = { path = "../../yarte_helpers", version = "^0.15.2", features = ["extra-renders"] }
-uuid = "0.8"
+uuid = "1.1"
 
 [build-dependencies]
 yarte = { path = "../../yarte", version = "*" }
