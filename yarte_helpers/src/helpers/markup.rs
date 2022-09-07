@@ -109,6 +109,7 @@ raw_display! {
 mod json {
     use super::*;
     use crate::at_helpers::{Json, JsonPretty};
+    use crate::helpers::io_fmt::IoFmt;
     use serde::Serialize;
     use serde_json::{to_writer, to_writer_pretty};
 
