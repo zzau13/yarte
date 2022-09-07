@@ -3,8 +3,6 @@ use std::fmt::{self, Display};
 
 use v_htmlescape::escape;
 
-use super::io_fmt::IoFmt;
-
 /// Render trait, used for wrap unsafe expressions `{{ ... }}` when it's in a html template
 pub trait Render {
     fn render(&self, f: &mut fmt::Formatter) -> fmt::Result;
