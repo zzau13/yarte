@@ -20,7 +20,7 @@ pub type PathNode = (Ident, Vec<Step>);
 
 // TODO: Expressions in path
 // TODO: use HTMLCollection
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Step {
     FirstChild,
     NextSibling,
@@ -45,7 +45,7 @@ impl<'a, I: Iterator<Item = &'a Step>> PathStep<'a, I> {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Parent {
     Head,
     Body,

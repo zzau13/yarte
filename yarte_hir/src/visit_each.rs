@@ -94,7 +94,7 @@ impl<'a> FindEach<'a> {
                 #[cfg(feature = "wasm-app")]
                 Node::RExpr(_, expr) => self.visit_expr(expr.t()),
                 Node::Helper(h) => {
-                    let h: &Helper = &*h;
+                    let h: &Helper = h;
                     match h {
                         Helper::If((_, first, block), else_if, els) => {
                             self.visit_expr(first.t());

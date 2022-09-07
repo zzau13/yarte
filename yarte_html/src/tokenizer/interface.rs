@@ -76,7 +76,7 @@ pub enum Token {
     ParseError(Cow<'static, str>),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 #[must_use]
 pub enum TokenSinkResult<Handle> {
     Continue,

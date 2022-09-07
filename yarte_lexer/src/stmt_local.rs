@@ -5,7 +5,7 @@ use syn::punctuated::Punctuated;
 use syn::token::Semi;
 use syn::{Expr, Local, Pat, PatOr, PatType, Result, Token, Type};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct StmtLocal {
     pub let_token: Token![let],
     pub pat: Pat,

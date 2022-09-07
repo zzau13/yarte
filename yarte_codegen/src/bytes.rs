@@ -174,12 +174,11 @@ fn literal(a: String, buf: &TokenStream) -> TokenStream {
 fn write_bb(b: &[u8], buf: &TokenStream) -> TokenStream {
     b.iter()
         .enumerate()
-        .map(|(i, b)| {
+        .flat_map(|(i, b)| {
             quote! {
                 *yarte::Buffer::buf_ptr(buf_ref!(#buf)).add(#i) = #b;
             }
         })
-        .flatten()
         .collect()
 }
 

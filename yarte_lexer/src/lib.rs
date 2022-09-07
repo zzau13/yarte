@@ -22,7 +22,7 @@ pub use self::{
 pub type Ws = (bool, bool);
 
 #[cfg(feature = "test")]
-#[derive(std::fmt::Debug, PartialEq, Clone, serde::Deserialize)]
+#[derive(std::fmt::Debug, PartialEq, Eq, Clone, serde::Deserialize)]
 #[serde(transparent)]
 pub struct Local(#[serde(deserialize_with = "de_local")] syn::Local);
 
@@ -50,7 +50,7 @@ impl Parse for Local {
 }
 
 #[cfg(feature = "test")]
-#[derive(std::fmt::Debug, PartialEq, Clone, serde::Deserialize)]
+#[derive(std::fmt::Debug, PartialEq, Eq, Clone, serde::Deserialize)]
 #[serde(transparent)]
 pub struct Expr(#[serde(deserialize_with = "de_expr")] syn::Expr);
 

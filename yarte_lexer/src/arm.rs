@@ -2,7 +2,7 @@ use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::{Pat, PatOr, Token};
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Arm {
     pat: syn::Pat,
     guard: Option<(syn::token::If, Box<syn::Expr>)>,

@@ -30,7 +30,7 @@ pub use self::{
 
 pub type Ws = (bool, bool);
 
-#[derive(Debug, PartialEq, Clone, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Deserialize)]
 pub struct Local(#[serde(deserialize_with = "de_local")] syn::Local);
 
 impl Deref for Local {
@@ -76,7 +76,7 @@ impl Parse for Local {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Deserialize)]
 pub struct Expr(#[serde(deserialize_with = "de_expr")] syn::Expr);
 
 impl Deref for Expr {
@@ -125,7 +125,7 @@ pub type SNode<'a> = S<Node<'a>>;
 pub type SStr<'a> = S<&'a str>;
 pub type SVExpr = S<Vec<Expr>>;
 
-#[derive(Debug, PartialEq, Clone, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Deserialize)]
 pub struct Partial<'a>(pub Ws, #[serde(borrow)] pub SStr<'a>, pub SVExpr);
 
 #[derive(Debug, PartialEq, Clone, Deserialize)]
@@ -165,7 +165,7 @@ pub enum Node<'a> {
 
 pub(crate) const JSON: &str = "json";
 pub(crate) const JSON_PRETTY: &str = "json_pretty";
-#[derive(Debug, PartialEq, Clone, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Deserialize)]
 pub enum AtHelperKind {
     Json,
     JsonPretty,

@@ -14,7 +14,7 @@ use yarte_helpers::config::Config;
 
 use crate::{source_map::Span, strnom::LexError};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DOption {
     Some(String),
     None,
@@ -34,7 +34,7 @@ impl Display for DOption {
 }
 
 // TODO: #39 improve error messages
-#[derive(Debug, Display, Clone, PartialEq)]
+#[derive(Debug, Display, Clone, PartialEq, Eq)]
 pub enum PError {
     #[display(fmt = "problems parsing template source")]
     Uncompleted,

@@ -23,7 +23,7 @@ pub trait KiError: Error + PartialEq + Clone {
     fn string(s: String) -> Self;
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Empty;
 
 impl fmt::Display for Empty {
@@ -55,7 +55,7 @@ impl KiError for Empty {
     }
 }
 
-#[derive(Display, Debug, PartialEq, Clone)]
+#[derive(Display, Debug, PartialEq, Eq, Clone)]
 pub enum Some {
     #[display(fmt = "Empty")]
     Empty,

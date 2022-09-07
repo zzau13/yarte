@@ -43,7 +43,7 @@ impl<'a> LeafTextBuilder<'a> {
             match child {
                 Node::Elem(Element::Text(t)) => self
                     .buff_expr
-                    .push_str(&t.replace("{", "{{").replace("}", "}}")),
+                    .push_str(&t.replace('{', "{{").replace('}', "}}")),
                 Node::Expr(e) => match e {
                     // TODO
                     Expression::Safe(id, e) | Expression::Unsafe(id, e) => {

@@ -17,8 +17,9 @@ impl ToTokens for StrT {
                     .as_bytes()
                     .iter()
                     .enumerate()
-                    .map(|(i, x)| quote!(unsafe { *buf._yarte_in_derive_buf_ptr().add(#i) = #x; }))
-                    .flatten()
+                    .flat_map(
+                        |(i, x)| quote!(unsafe { *buf._yarte_in_derive_buf_ptr().add(#i) = #x; }),
+                    )
                     .collect();
                 quote! {
                     buf._yarte_in_derive_reserve(#len);

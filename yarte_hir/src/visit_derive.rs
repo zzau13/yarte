@@ -232,7 +232,7 @@ impl<'a, 'b> Visit<'a> for StructBuilder<'b> {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum Print {
     All,
     Ast,

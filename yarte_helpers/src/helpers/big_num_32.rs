@@ -27,7 +27,7 @@ macro_rules! impl_ynumber {
 
 impl_ynumber!(u8 u16 u32);
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct U64([u32; 2]);
 
 impl YNumber for U64 {
@@ -64,7 +64,7 @@ impl BitOrAssign for U64 {
     }
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct U128([u32; 4]);
 
 impl YNumber for U128 {
@@ -111,7 +111,7 @@ impl BitOrAssign for U128 {
     }
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct U256([u32; 8]);
 
 impl YNumber for U256 {

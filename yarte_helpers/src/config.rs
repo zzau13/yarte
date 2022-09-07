@@ -86,7 +86,7 @@ impl From<Option<&str>> for Dir {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum PrintConfig {
     All,
     Ast,

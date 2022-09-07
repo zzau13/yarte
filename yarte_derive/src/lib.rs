@@ -322,7 +322,7 @@ struct AutoArg {
     lit: syn::LitStr,
 }
 
-#[allow(clippy::eval_order_dependence)]
+#[allow(clippy::mixed_read_write_in_expression)]
 impl syn::parse::Parse for AutoArg {
     fn parse(input: &ParseBuffer) -> syn::Result<Self> {
         let content;

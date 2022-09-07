@@ -60,7 +60,7 @@ where
     T: PartialEq + Debug + Serialize,
 {
     for &(ref value, out) in errors {
-        let out = String::from(out.to_string());
+        let out = out.to_string();
 
         let s = to_bytes::<String, _>(value, 0);
         assert_eq!(s, out);
