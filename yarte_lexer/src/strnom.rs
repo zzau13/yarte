@@ -73,11 +73,10 @@ impl<'a> Cursor<'a> {
         start_with(self.as_bytes(), s.as_bytes())
     }
 
-     #[inline]
+    #[inline]
     pub fn starts_with_bytes(&self, s: &'static [u8]) -> bool {
         start_with(self.as_bytes(), s)
     }
-
 
     #[inline]
     pub fn next_is(&self, c: u8) -> bool {
@@ -709,10 +708,7 @@ pub fn tag<'a, E: KiError>(i: Cursor<'a>, tag: &'static str) -> Result<'a, &'sta
     if i.starts_with(tag) {
         Ok((i.adv_str(tag), tag))
     } else {
-        Err(LexError::Next(
-            E::str(tag),
-            Span::from_len(i, tag.len()),
-        ))
+        Err(LexError::Next(E::str(tag), Span::from_len(i, tag.len())))
     }
 }
 
