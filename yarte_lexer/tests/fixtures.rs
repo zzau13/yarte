@@ -7,14 +7,15 @@ use glob::glob;
 use serde::Deserialize;
 
 use std::error::Error;
-use yarte_lexer::error::{ErrorMessage, KiError, Result};
-use yarte_lexer::pipes::{
+use yarte_lexer::{
+    path, Ki, Kinder, LexResult, Lexer, SArm, SExpr, SLocal, SStr, SVExpr, Sink, Ws,
+};
+use yarte_strnom::error::{ErrorMessage, KiError, Result};
+use yarte_strnom::pipes::{
     _false, _true, and_then, debug, important, is_empty, is_len, map, map_err, not, then,
 };
-use yarte_lexer::{
-    _while, alt, do_parse, is_ws, path, pipes, tac, tag, ws, Cursor, Ki, Kinder, LexError,
-    LexResult, Lexer, SArm, SExpr, SLocal, SStr, SVExpr, Sink, Span, Ws, S,
-};
+use yarte_strnom::source_map::S;
+use yarte_strnom::{_while, alt, do_parse, is_ws, pipes, tac, tag, ws, Cursor, LexError, Span};
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub enum Token<'a, Kind>

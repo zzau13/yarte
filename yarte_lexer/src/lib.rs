@@ -3,25 +3,20 @@ use std::str;
 #[cfg(feature = "test")]
 use syn::parse::{Parse, ParseBuffer};
 
-#[macro_use]
-mod strnom;
-#[macro_use]
-pub mod error;
+use yarte_strnom::error::{KiError, Result as PResult};
+use yarte_strnom::source_map::S;
+use yarte_strnom::{next, Cursor};
+
 mod arm;
 mod expr_list;
 mod parse;
-mod source_map;
 mod stmt_local;
 
 use self::arm::Arm;
-use self::error::{KiError, Result as PResult};
 
 pub use self::{
-    error::LexError,
     parse::{path, Ki, LexResult, Lexer, Sink},
-    source_map::{clean, get_cursor, spanned, LineColumn, Span, S},
     stmt_local::StmtLocal,
-    strnom::*,
 };
 
 pub type Ws = (bool, bool);

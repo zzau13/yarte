@@ -4,12 +4,13 @@ use std::marker::PhantomData;
 use syn::parse_str;
 
 use crate::arm::Arm;
-use crate::error::{ErrorMessage, KiError, LexError, Result as PResult};
 use crate::expr_list::ExprList;
-use crate::source_map::{Span, S};
-use crate::strnom::pipes::{is_some, opt};
-use crate::strnom::{_while, get_chars, is_ws, tac, tag, ws, Cursor};
 use crate::{Kinder, SArm, SExpr, SLocal, SStr, SVExpr, StmtLocal, Ws};
+
+use yarte_strnom::error::{ErrorMessage, KiError, LexError, Result as PResult};
+use yarte_strnom::pipes::{is_some, opt};
+use yarte_strnom::source_map::{Span, S};
+use yarte_strnom::{_while, do_parse, get_chars, is_ws, tac, tag, ws, Cursor};
 
 pub trait Ki<'a>: Kinder<'a> + Debug + PartialEq + Clone {}
 

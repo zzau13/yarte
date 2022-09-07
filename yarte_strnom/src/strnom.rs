@@ -9,7 +9,7 @@ use crate::source_map::Span;
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Cursor<'a> {
     pub rest: &'a str,
-    pub(crate) off: u32,
+    pub off: u32,
 }
 
 impl<'a> Cursor<'a> {
@@ -23,7 +23,7 @@ impl<'a> Cursor<'a> {
     }
 
     #[inline]
-    pub(crate) fn _new(rest: &str, off: u32) -> Cursor {
+    pub fn _new(rest: &str, off: u32) -> Cursor {
         unsafe { Self::new(rest, off) }
     }
 
@@ -196,9 +196,9 @@ macro_rules! call {
 ///
 /// # Syntax:
 /// ```rust
-/// # use yarte_lexer::{pipes, do_parse, ws, tac, Cursor, get_cursor};
-/// # use yarte_lexer::pipes::*;
-/// # use yarte_lexer::error::{Empty, Result, LexError};
+/// # use yarte_strnom::{pipes, do_parse, ws, tac, Cursor, get_cursor};
+/// # use yarte_strnom::pipes::*;
+/// # use yarte_strnom::error::{Empty, Result, LexError};
 /// # use std::path::PathBuf;
 /// # let path = PathBuf::from("FooFile");
 /// # let path2 = PathBuf::from("FooFile2");
@@ -290,9 +290,9 @@ macro_rules! alt {
 ///
 /// # Syntax
 /// ```rust
-/// # use yarte_lexer::{pipes, do_parse, ws, tac, Cursor, get_cursor};
-/// # use yarte_lexer::pipes::*;
-/// # use yarte_lexer::error::{Empty, Result};
+/// # use yarte_strnom::{pipes, do_parse, ws, tac, Cursor, get_cursor};
+/// # use yarte_strnom::pipes::*;
+/// # use yarte_strnom::error::{Empty, Result};
 /// # use std::path::PathBuf;
 /// # let path = PathBuf::from("FooFile");
 /// # const B: u8 = b'b';
