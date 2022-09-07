@@ -158,13 +158,8 @@ pub use TemplateBytesTrait as TemplateBytesMin;
 #[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"))]
 pub use yarte_helpers::helpers::{RenderBytes, RenderBytesA, RenderBytesSafe, RenderBytesSafeA};
 
-#[cfg(feature = "bytes-buf")]
-pub use buf_min::t3::{Bytes, BytesMut};
-#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2", feature = "json"))]
+#[cfg(any(feature = "bytes-buf"))]
 pub use buf_min::Buffer;
-
-#[cfg(all(feature = "bytes-buf-tokio2", not(feature = "bytes-buf")))]
-pub use buf_min::t2::{Bytes, BytesMut};
 
 #[cfg(feature = "json")]
 pub use yarte_derive::Serialize;

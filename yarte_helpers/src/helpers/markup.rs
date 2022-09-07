@@ -1,9 +1,7 @@
 // Based on https://github.com/utkarshkukreti/markup.rs/blob/master/markup/src/lib.rs
 use std::fmt::{self, Display};
 
-use dtoa::write;
-use itoa::fmt;
-use v_htmlescape::{escape, escape_char};
+use v_htmlescape::escape;
 
 use super::io_fmt::IoFmt;
 
@@ -48,7 +46,9 @@ macro_rules! itoa_display {
             impl Render for $ty {
                 #[inline(always)]
                 fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                    fmt(f, *self)
+                    f.write_str(itoa::Buffer::new().format(*self))
+                    .map(|_| ())
+                    .map_err(|_| fmt::Error)
                 }
             }
         )*
@@ -67,7 +67,7 @@ macro_rules! dtoa_display {
             impl Render for $ty {
                 #[inline(always)]
                 fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                    write(IoFmt::new(f), *self)
+                    f.write_str(dtoa::Buffer::new().format(*self))
                     .map(|_| ())
                     .map_err(|_| fmt::Error)
                 }
@@ -81,10 +81,11 @@ dtoa_display! {
     f32 f64
 }
 
+// TODO: in the future, your future.
 impl Render for char {
     #[inline(always)]
     fn render(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        escape_char(*self).fmt(f)
+        escape(&self.to_string()).fmt(f)
     }
 }
 

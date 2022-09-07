@@ -23,7 +23,6 @@ proc-macro = true
 wasm-app = ["yarte_hir/wasm-app", "yarte_codegen/wasm-app"]
 html-min = ["yarte_codegen/html-min"]
 wasm-server = ["yarte_codegen/wasm-server", "yarte_codegen/bytes-buf"]
-fixed = ["yarte_codegen/fixed", "yarte_helpers/fixed"]
 bytes-buf = ["yarte_codegen/bytes-buf"]
 json = ["v_jsonescape", "yarte_helpers/json"]
 
@@ -32,7 +31,7 @@ yarte_codegen = { version = "~0.15.3", path = "../yarte_codegen" }
 yarte_helpers = { version = "~0.15.1", path = "../yarte_helpers" }
 yarte_hir = { version = "~0.15.3", path = "../yarte_hir" }
 yarte_parser = { version = "~0.15.0", path = "../yarte_parser" }
-v_jsonescape = { version = "~0.6.1", optional = true }
+v_jsonescape = { version = "0.7", optional = true }
 
 proc-macro2 = "1.0"
 quote = "1.0"

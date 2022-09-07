@@ -1,5 +1,5 @@
 #![allow(clippy::uninit_assumed_init)]
-#![cfg(all(feature = "fixed", feature = "bytes-buf", feature = "html-min"))]
+#![cfg(all(feature = "fixed", feature = "buf-min", feature = "html-min"))]
 
 use std::collections::HashMap;
 use std::mem::MaybeUninit;

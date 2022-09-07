@@ -3,7 +3,7 @@
 //! Serialize a Rust data structure into JSON data.
 
 use buf_min::Buffer;
-use v_jsonescape::{b_escape, b_escape_char, fallback};
+use v_jsonescape::{b_escape, scalar};
 
 use crate::helpers::bytes::render_bool;
 use crate::helpers::ryu::{Sealed, MAX_SIZE_FLOAT};
@@ -72,7 +72,7 @@ impl Serialize for char {
     #[inline]
     fn to_bytes_mut<B: Buffer>(&self, buf: &mut B) {
         begin_string(buf);
-        b_escape_char(*self, buf);
+        b_escape(self.to_string().as_bytes(), buf);
         end_string(buf);
     }
 }
@@ -223,7 +223,7 @@ pub fn end_object_object<B: Buffer>(buf: &mut B) {
 #[inline]
 fn serialize_str_short<B: Buffer>(value: &str, buf: &mut B) {
     begin_string(buf);
-    fallback::b_escape(value.as_bytes(), buf);
+    scalar::b_escape(value.as_bytes(), buf);
     end_string(buf);
 }
 

@@ -101,7 +101,7 @@ deref_impl!(<'a, T: ?Sized> SerObjKey for std::borrow::Cow<'a, T> where T: SerOb
 impl SerObjKey for char {
     fn ser_obj_key<B: Buffer>(&self, buf: &mut B) {
         begin_string(buf);
-        b_escape_char(*self, buf);
+        b_escape(self.to_string().as_bytes(), buf);
         end_string(buf);
     }
 }

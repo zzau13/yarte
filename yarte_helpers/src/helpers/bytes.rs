@@ -4,7 +4,7 @@ use std::io;
 use std::slice::from_raw_parts_mut;
 
 use buf_min::Buffer;
-use v_htmlescape::{b_escape, b_escape_char};
+use v_htmlescape::b_escape;
 
 use super::ryu::{Sealed, MAX_SIZE_FLOAT};
 
@@ -97,7 +97,7 @@ macro_rules! itoa128_display {
                 #[inline(always)]
                  fn render<B: Buffer>(self, buf: &mut B)  {
                     // Safety: iota only write valid utf-8 bytes
-                    let _ = itoa::write(UnsafeWriter::new(buf), self);
+                    buf.extend(itoa::Buffer::new().format(self));
                 }
             }
         )*
@@ -111,7 +111,7 @@ itoa128_display! {
 
 impl RenderBytes for char {
     fn render<B: Buffer>(self, buf: &mut B) {
-        b_escape_char(self, buf)
+        b_escape(self.to_string().as_bytes(), buf);
     }
 }
 
@@ -180,7 +180,7 @@ macro_rules! itoa128_display {
                 #[inline(always)]
                  fn render<B: Buffer>(self, buf: &mut B)  {
                     // Safety: iota only write valid utf-8 bytes
-                    let _ = itoa::write(UnsafeWriter::new(buf), self);
+                    buf.extend(itoa::Buffer::new().format(self));
                 }
             }
         )*
@@ -239,13 +239,6 @@ impl RenderBytesSafe for bool {
 
 struct UnsafeWriter<'a, B> {
     buf: &'a mut B,
-}
-
-impl<'a, B: Buffer> UnsafeWriter<'a, B> {
-    #[inline]
-    fn new(buf: &mut B) -> UnsafeWriter<'_, B> {
-        UnsafeWriter { buf }
-    }
 }
 
 impl<'a, B: Buffer> io::Write for UnsafeWriter<'a, B> {
@@ -311,17 +304,17 @@ mod render_uuid {
     use crate::helpers::{RenderBytes, RenderBytesSafe};
     use buf_min::Buffer;
     use std::slice::from_raw_parts_mut;
-    use uuid::adapter::HyphenatedRef;
+    use uuid::fmt::Hyphenated;
     use uuid::Uuid;
 
     macro_rules! imp {
         ($($ty:ty)+) => {
             $(impl $ty for &Uuid {
                 fn render<B: Buffer>(self, buf: &mut B) {
-                    const LEN: usize = HyphenatedRef::LENGTH;
+                    const LEN: usize = Hyphenated::LENGTH;
                     buf.reserve(LEN);
                     // Safety: previous reserve length
-                    self.to_hyphenated_ref().encode_lower(unsafe {
+                    self.hyphenated().encode_lower(unsafe {
                         from_raw_parts_mut(buf.buf_ptr(), LEN)
                     });
                     // Safety: previous write length

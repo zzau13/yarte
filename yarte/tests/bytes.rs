@@ -1,17 +1,7 @@
 #![cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"))]
 #![allow(clippy::uninit_assumed_init)]
 
-use yarte::{Bytes, BytesMut, TemplateBytes};
-
-trait ToBytes {
-    fn byteb(self) -> Bytes;
-}
-
-impl ToBytes for &'static str {
-    fn byteb(self) -> Bytes {
-        Bytes::from(self)
-    }
-}
+use yarte::TemplateBytes;
 
 #[derive(TemplateBytes)]
 #[template(path = "simple", print = "code")]
@@ -29,18 +19,16 @@ fn test_variables() {
         i18n: "Iñtërnâtiônàlizætiøn".to_string(),
     };
     assert_eq!(
-        s.call::<BytesMut>(128),
+        s.call::<String>(128),
         "hello world, foo\nwith number: 42\nIñtërnâtiônàlizætiøn is important\nin vars too: \
          Iñtërnâtiônàlizætiøn"
-            .byteb()
     );
-    let mut b = BytesMut::with_capacity(128);
+    let mut b = String::with_capacity(128);
     s.write_call(&mut b);
     assert_eq!(
-        b.freeze(),
+        b,
         "hello world, foo\nwith number: 42\nIñtërnâtiônàlizætiøn is important\nin vars too: \
          Iñtërnâtiônàlizætiøn"
-            .byteb()
     )
 }
 
@@ -53,17 +41,15 @@ struct Loop;
 #[test]
 fn bytes3() {
     assert_eq!(
-        Loop.call::<BytesMut>(8),
+        Loop.call::<String>(8),
         "12010123121111231221212312313123124141231251512312616123127171231281812312919123121011012312111111231212112123987"
-            .byteb()
     );
 
-    let mut b = BytesMut::with_capacity(8);
+    let mut b = String::with_capacity(8);
     Loop.write_call(&mut b);
     assert_eq!(
-        b.freeze(),
+        b,
         "12010123121111231221212312313123124141231251512312616123127171231281812312919123121011012312111111231212112123987"
-            .byteb()
     )
 }
 
@@ -76,13 +62,10 @@ struct EscapeTemplate<'a> {
 #[test]
 fn test_escape() {
     let s = EscapeTemplate { name: "<>&\"" };
-    assert_eq!(
-        s.call::<BytesMut>(64),
-        "Hello, &lt;&gt;&amp;&quot;!".byteb()
-    );
-    let mut b = BytesMut::with_capacity(64);
+    assert_eq!(s.call::<String>(64), "Hello, &lt;&gt;&amp;&quot;!");
+    let mut b = String::with_capacity(64);
     s.write_call(&mut b);
-    assert_eq!(b.freeze(), "Hello, &lt;&gt;&amp;&quot;!".byteb())
+    assert_eq!(b, "Hello, &lt;&gt;&amp;&quot;!")
 }
 
 #[derive(TemplateBytes)]
@@ -96,11 +79,11 @@ fn test_for() {
     let s = ForTemplate {
         strings: vec!["foo", "bar", "baz"],
     };
-    assert_eq!(s.call::<BytesMut>(64), "0. foo(first)1. bar2. baz".byteb());
+    assert_eq!(s.call::<String>(64), "0. foo(first)1. bar2. baz");
 
-    let mut b = BytesMut::with_capacity(64);
+    let mut b = String::with_capacity(64);
     s.write_call(&mut b);
-    assert_eq!(b.freeze(), "0. foo(first)1. bar2. baz".byteb())
+    assert_eq!(b, "0. foo(first)1. bar2. baz")
 }
 
 #[derive(TemplateBytes)]
@@ -115,12 +98,9 @@ fn test_nested_for() {
     let numbers: &[&str] = &["bar", "baz"];
     let seqs: &[&[&str]] = &[alpha, numbers];
     let s = NestedForTemplate { seqs };
-    assert_eq!(
-        s.call::<BytesMut>(64),
-        "1\n  0foo1bar2baz2\n  0bar1baz".byteb()
-    );
+    assert_eq!(s.call::<String>(64), "1\n  0foo1bar2baz2\n  0bar1baz");
 
-    let mut b = BytesMut::with_capacity(64);
+    let mut b = String::with_capacity(64);
     s.write_call(&mut b);
-    assert_eq!(b.freeze(), "1\n  0foo1bar2baz2\n  0bar1baz".byteb())
+    assert_eq!(b, "1\n  0foo1bar2baz2\n  0bar1baz")
 }

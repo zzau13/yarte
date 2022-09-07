@@ -16,8 +16,6 @@ pub mod display_fn;
 
 #[cfg(any(feature = "bytes-buf", feature = "json"))]
 mod bytes;
-#[cfg(feature = "fixed")]
-mod fixed;
 #[cfg(feature = "markup")]
 mod markup;
 #[cfg(feature = "json")]
