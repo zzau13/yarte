@@ -273,7 +273,7 @@ mod test {
     // TODO: check annotate-snipped multiline should fail not displaying message
     #[test]
     #[should_panic(
-        expected = "error\n --> foo.hbs:1:5\n  |\n1 |   foó bañ \n  |  _____^\n2 | | tuú\n3 | |  foú\n  | |____^ bar\n  |"
+        expected = "error\n --> foo.hbs:1:5\n  |\n1 |   foó bañ \n  |  _____^\n2 | | tuú\n3 | |  foú\n  | |___^ bar\n  |"
     )]
     fn test_chars_multiline() {
         let path = PathBuf::from("foo.hbs");

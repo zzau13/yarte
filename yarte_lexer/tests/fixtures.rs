@@ -12,8 +12,8 @@ use yarte_lexer::pipes::{
     _false, _true, and_then, debug, important, is_empty, is_len, map, map_err, not, then,
 };
 use yarte_lexer::{
-    _while, alt, ascii, asciis, do_parse, is_ws, path, pipes, tac, tag, ws, Ascii, Cursor, Ki,
-    Kinder, LexError, LexResult, Lexer, SArm, SExpr, SLocal, SStr, SVExpr, Sink, Span, Ws, S,
+    _while, alt, do_parse, is_ws, path, pipes, tac, tag, ws, Cursor, Ki, Kinder, LexError,
+    LexResult, Lexer, SArm, SExpr, SLocal, SStr, SVExpr, Sink, Span, Ws, S,
 };
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -112,14 +112,14 @@ struct Fixture<'a, Kind: Ki<'a>> {
 struct FixturePanic<'a>(#[serde(borrow)] &'a str);
 
 fn comment<'a, K: Ki<'a>>(i: Cursor<'a>) -> Result<&'a str, K::Error> {
-    const E: Ascii = ascii!('!');
-    const B: &[Ascii] = asciis!("--");
-    const END_B: &[Ascii] = asciis!("--}}");
-    const END_A: &[Ascii] = asciis!("}}");
+    const E: u8 = b'!';
+    const B: &str = "--";
+    const END_B: &str = "--}}";
+    const END_A: &str = "}}";
 
     let (c, _) = tac(i, E)?;
     let (c, expected) = if c.starts_with(B) {
-        (c.adv_ascii(B), END_B)
+        (c.adv_str(B), END_B)
     } else {
         (c, END_A)
     };
@@ -149,17 +149,17 @@ enum MyKindAfter<'a> {
 
 impl<'a> Kinder<'a> for MyKindAfter<'a> {
     type Error = MyError;
-    const OPEN: Ascii = ascii!('{');
-    const CLOSE: Ascii = ascii!('}');
-    const OPEN_EXPR: Ascii = ascii!('{');
-    const CLOSE_EXPR: Ascii = ascii!('}');
-    const OPEN_BLOCK: Ascii = ascii!('{');
-    const CLOSE_BLOCK: Ascii = ascii!('}');
-    const WS: Ascii = ascii!('~');
+    const OPEN: u8 = b'{';
+    const CLOSE: u8 = b'}';
+    const OPEN_EXPR: u8 = b'{';
+    const CLOSE_EXPR: u8 = b'}';
+    const OPEN_BLOCK: u8 = b'{';
+    const CLOSE_BLOCK: u8 = b'}';
+    const WS: u8 = b'~';
     const WS_AFTER: bool = true;
 
     fn parse(i: Cursor<'a>) -> Result<Self, Self::Error> {
-        const PARTIAL: Ascii = ascii!('>');
+        const PARTIAL: u8 = b'>';
 
         let ws = |i| pipes!(i, ws: is_empty: _false);
 
@@ -186,13 +186,13 @@ enum MyKind<'a> {
 
 impl<'a> Kinder<'a> for MyKind<'a> {
     type Error = MyError;
-    const OPEN: Ascii = ascii!('{');
-    const CLOSE: Ascii = ascii!('}');
-    const OPEN_EXPR: Ascii = ascii!('{');
-    const CLOSE_EXPR: Ascii = ascii!('}');
-    const OPEN_BLOCK: Ascii = ascii!('{');
-    const CLOSE_BLOCK: Ascii = ascii!('}');
-    const WS: Ascii = ascii!('~');
+    const OPEN: u8 = b'{';
+    const CLOSE: u8 = b'}';
+    const OPEN_EXPR: u8 = b'{';
+    const CLOSE_EXPR: u8 = b'}';
+    const OPEN_BLOCK: u8 = b'{';
+    const CLOSE_BLOCK: u8 = b'}';
+    const WS: u8 = b'~';
     const WS_AFTER: bool = false;
 
     fn parse(i: Cursor<'a>) -> Result<Self, Self::Error> {
@@ -205,7 +205,7 @@ impl<'a> Kinder<'a> for MyKind<'a> {
 }
 
 fn partial(i: Cursor) -> Result<MyKind, MyError> {
-    const PARTIAL: Ascii = ascii!('>');
+    const PARTIAL: u8 = b'>';
 
     let ws = |i| pipes!(i, ws: _true);
 
@@ -219,7 +219,7 @@ fn partial(i: Cursor) -> Result<MyKind, MyError> {
 }
 
 fn some(i: Cursor) -> Result<MyKind, MyError> {
-    const SOME: &[Ascii] = asciis!("some");
+    const SOME: &str = "some";
 
     let tag = |i| {
         pipes!(i,
@@ -243,17 +243,17 @@ enum MyKindBlock<'a> {
 
 impl<'a> Kinder<'a> for MyKindBlock<'a> {
     type Error = MyError;
-    const OPEN: Ascii = ascii!('{');
-    const CLOSE: Ascii = ascii!('}');
-    const OPEN_EXPR: Ascii = ascii!('{');
-    const CLOSE_EXPR: Ascii = ascii!('}');
-    const OPEN_BLOCK: Ascii = ascii!('%');
-    const CLOSE_BLOCK: Ascii = ascii!('%');
-    const WS: Ascii = ascii!('~');
+    const OPEN: u8 = b'{';
+    const CLOSE: u8 = b'}';
+    const OPEN_EXPR: u8 = b'{';
+    const CLOSE_EXPR: u8 = b'}';
+    const OPEN_BLOCK: u8 = b'%';
+    const CLOSE_BLOCK: u8 = b'%';
+    const WS: u8 = b'~';
     const WS_AFTER: bool = true;
 
     fn parse(i: Cursor<'a>) -> Result<Self, Self::Error> {
-        const PARTIAL: Ascii = ascii!('>');
+        const PARTIAL: u8 = b'>';
 
         let ws_not_empty = |i| pipes!(i, ws: is_empty: _false);
         let ws_0 =

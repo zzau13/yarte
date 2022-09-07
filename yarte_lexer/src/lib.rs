@@ -16,8 +16,6 @@ mod stmt_local;
 use self::arm::Arm;
 use self::error::{KiError, Result as PResult};
 
-pub use gencode::asciis;
-
 pub use self::{
     error::LexError,
     parse::{path, Ki, LexResult, Lexer, Sink},
@@ -106,13 +104,13 @@ macro_rules! ki {
 
 ki!(
     Kinder:
-        OPEN: Ascii
-        CLOSE: Ascii
-        OPEN_EXPR: Ascii
-        CLOSE_EXPR: Ascii
-        OPEN_BLOCK: Ascii
-        CLOSE_BLOCK: Ascii
-        WS: Ascii
+        OPEN: u8
+        CLOSE: u8
+        OPEN_EXPR: u8
+        CLOSE_EXPR: u8
+        OPEN_BLOCK: u8
+        CLOSE_BLOCK: u8
+        WS: u8
         WS_AFTER: bool
     ;
         parse -> Self

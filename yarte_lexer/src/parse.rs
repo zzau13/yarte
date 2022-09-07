@@ -3,15 +3,13 @@ use std::marker::PhantomData;
 
 use syn::parse_str;
 
-use gencode::unsafe_asciis;
-
 use crate::arm::Arm;
 use crate::error::{ErrorMessage, KiError, LexError, Result as PResult};
 use crate::expr_list::ExprList;
 use crate::source_map::{Span, S};
 use crate::strnom::pipes::{is_some, opt};
 use crate::strnom::{_while, get_chars, is_ws, tac, tag, ws, Cursor};
-use crate::{Ascii, Kinder, SArm, SExpr, SLocal, SStr, SVExpr, StmtLocal, Ws};
+use crate::{Kinder, SArm, SExpr, SLocal, SStr, SVExpr, StmtLocal, Ws};
 
 pub trait Ki<'a>: Kinder<'a> + Debug + PartialEq + Clone {}
 
@@ -105,7 +103,7 @@ impl<'a, K: Ki<'a>, Si: Sink<'a, K>> Lexer<'a, K, Si> {
                 if 3 < n.len() {
                     let next = n[0];
 
-                    if K::OPEN_BLOCK == K::OPEN_EXPR && next == K::OPEN_EXPR.g() {
+                    if K::OPEN_BLOCK == K::OPEN_EXPR && next == K::OPEN_EXPR {
                         let next = i.adv(at + j + 2);
                         comment!(self, K, next, i, at, j);
                         safe!(self, K, next, i, at, j);
@@ -123,7 +121,7 @@ impl<'a, K: Ki<'a>, Si: Sink<'a, K>> Lexer<'a, K, Si> {
                         } else {
                             at += j + 1;
                         }
-                    } else if next == K::OPEN_EXPR.g() {
+                    } else if next == K::OPEN_EXPR {
                         let next = i.adv(at + j + 2);
                         comment!(self, K, next, i, at, j);
                         safe!(self, K, next, i, at, j);
@@ -136,7 +134,7 @@ impl<'a, K: Ki<'a>, Si: Sink<'a, K>> Lexer<'a, K, Si> {
                         } else {
                             at += j + 1;
                         }
-                    } else if next == K::OPEN_BLOCK.g() {
+                    } else if next == K::OPEN_BLOCK {
                         let next = i.adv(at + j + 2);
                         comment!(self, K, next, i, at, j);
                         if let Ok((c, inner)) = end::<K>(next, false) {
@@ -182,7 +180,7 @@ impl<'a, K: Ki<'a>, Si: Sink<'a, K>> Lexer<'a, K, Si> {
     }
 
     fn eat_expr(&mut self, i: Cursor<'a>, span: Span) -> Result<(), LexError<K::Error>> {
-        const LET: &[Ascii] = unsafe { unsafe_asciis!("let ") };
+        const LET: &str = "let ";
 
         let (i, gws) = Self::eat_ws(i)?;
         if do_parse!(i, ws => tag::<K::Error>[LET] => ()).is_ok() {
@@ -297,11 +295,11 @@ fn end_safe_after<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<(Cursor, bool), K::Er
 
     loop {
         if let Some(j) = i.adv_find(at, K::CLOSE_EXPR) {
-            if 0 < at + j && i.adv_starts_with(at + j - 1, ws_end) {
+            if 0 < at + j && i.adv_starts_with_bytes(at + j - 1, ws_end) {
                 let next = i.adv(at + j - 1 + ws_end.len());
                 let cur = Cursor::_new(&i.rest[..at + j - 2], i.off);
                 break Ok((next, (cur, true)));
-            } else if i.adv_starts_with(at + j, end) {
+            } else if i.adv_starts_with_bytes(at + j, end) {
                 let next = i.adv(at + j + 1 + end.len());
                 let cur = Cursor::_new(&i.rest[..at + j], i.off);
                 break Ok((next, (cur, false)));
@@ -327,11 +325,11 @@ fn end_safe<'a, K: Ki<'a>>(i: Cursor<'a>) -> PResult<(Cursor, bool), K::Error> {
 
     loop {
         if let Some(j) = i.adv_find(at, K::CLOSE_EXPR) {
-            if 0 < at + j && i.adv_starts_with(at + j - 1, ws_end) {
+            if 0 < at + j && i.adv_starts_with_bytes(at + j - 1, ws_end) {
                 let next = i.adv(at + j - 1 + ws_end.len());
                 let cur = Cursor::_new(&i.rest[..at + j - 1], i.off);
                 break Ok((next, (cur, true)));
-            } else if i.adv_starts_with(at + j, end) {
+            } else if i.adv_starts_with_bytes(at + j, end) {
                 let next = i.adv(at + j + end.len());
                 let cur = Cursor::_new(&i.rest[..at + j], i.off);
                 break Ok((next, (cur, false)));

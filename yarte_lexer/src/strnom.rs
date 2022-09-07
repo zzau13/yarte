@@ -41,7 +41,7 @@ impl<'a> Cursor<'a> {
     }
 
     #[inline]
-    pub fn adv_ascii(&self, s: &[Ascii]) -> Cursor<'a> {
+    pub fn adv_str(&self, s: &str) -> Cursor<'a> {
         Cursor {
             rest: &self.rest[s.len()..],
             off: self.off + s.len() as u32,
@@ -49,33 +49,44 @@ impl<'a> Cursor<'a> {
     }
 
     #[inline]
-    pub fn find(&self, p: Ascii) -> Option<usize> {
-        find_ascii(self.as_bytes(), p)
+    pub fn find(&self, p: u8) -> Option<usize> {
+        find(self.as_bytes(), p)
     }
 
     #[inline]
-    pub fn adv_find(&self, amt: usize, p: Ascii) -> Option<usize> {
-        find_ascii(&self.as_bytes()[amt..], p)
+    pub fn adv_find(&self, amt: usize, p: u8) -> Option<usize> {
+        find(&self.as_bytes()[amt..], p)
     }
 
     #[inline]
-    pub fn adv_starts_with(&self, amt: usize, s: &'static [Ascii]) -> bool {
-        start_with_ascii(&self.as_bytes()[amt..], s)
+    pub fn adv_starts_with(&self, amt: usize, s: &'static str) -> bool {
+        start_with(&self.as_bytes()[amt..], s.as_bytes())
     }
 
     #[inline]
-    pub fn starts_with(&self, s: &'static [Ascii]) -> bool {
-        start_with_ascii(self.as_bytes(), s)
+    pub fn adv_starts_with_bytes(&self, amt: usize, s: &'static [u8]) -> bool {
+        start_with(&self.as_bytes()[amt..], s)
     }
 
     #[inline]
-    pub fn next_is(&self, c: Ascii) -> bool {
-        next_is_ascii(self.as_bytes(), c)
+    pub fn starts_with(&self, s: &'static str) -> bool {
+        start_with(self.as_bytes(), s.as_bytes())
+    }
+
+     #[inline]
+    pub fn starts_with_bytes(&self, s: &'static [u8]) -> bool {
+        start_with(self.as_bytes(), s)
+    }
+
+
+    #[inline]
+    pub fn next_is(&self, c: u8) -> bool {
+        next_is(self.as_bytes(), c)
     }
 
     #[inline]
-    pub fn adv_next_is(&self, amt: usize, c: Ascii) -> bool {
-        next_is_ascii(&self.as_bytes()[amt..], c)
+    pub fn adv_next_is(&self, amt: usize, c: u8) -> bool {
+        next_is(&self.as_bytes()[amt..], c)
     }
 
     #[inline]
@@ -105,119 +116,23 @@ impl<'a> Cursor<'a> {
 }
 
 #[inline]
-fn find_ascii(rest: &[u8], p: Ascii) -> Option<usize> {
-    memchr::memchr(p.g(), rest)
+fn find(rest: &[u8], p: u8) -> Option<usize> {
+    memchr::memchr(p, rest)
 }
 
 #[inline]
-fn next_is_ascii(rest: &[u8], c: Ascii) -> bool {
-    rest.first().copied().map_or(false, |x| x == c.g())
+fn next_is(rest: &[u8], c: u8) -> bool {
+    rest.first().copied().map_or(false, |x| x == c)
 }
 
 #[inline]
-fn start_with_ascii(rest: &[u8], s: &[Ascii]) -> bool {
+fn start_with(rest: &[u8], s: &[u8]) -> bool {
     rest.len() >= s.len()
         && rest
             .iter()
             .copied()
-            .zip(s.iter().map(|x| x.g()))
+            .zip(s.iter().copied())
             .all(|(a, b)| a == b)
-}
-
-/// Bound byte to few ascii character
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-#[repr(transparent)]
-pub struct Ascii(u8);
-macro_rules! ascii_builder {
-    ($($n:literal)+) => {
-        /// New ascii
-        /// ```rust
-        /// # use yarte_lexer::{Ascii, ascii};
-        /// // valid syntax `b'[char]'`
-        /// const BAR: Ascii = ascii!('f');
-        /// ```
-        ///
-        /// ```compile_fail
-        /// # use yarte_lexer::{Ascii, ascii};
-        /// const BAR: Ascii = ascii!(' ');
-        /// ```
-        ///
-        /// ```compile_fail
-        /// # use yarte_lexer::{Ascii, ascii};
-        /// const BAR: Ascii = ascii!(1);
-        /// ```
-        ///
-        /// ```compile_fail
-        /// # use yarte_lexer::{Ascii, ascii};
-        /// const BAR: Ascii = ascii!(0x01);
-        /// ```
-        #[macro_export]
-        macro_rules! ascii {
-            $(($n) => { unsafe { $crate::Ascii::new($n as u8) } };)+
-            ($t:tt) => {
-                compile_error!(
-                    concat!("No valid ascii token select another or report: ", stringify!($t))
-                );
-            };
-        }
-    };
-}
-
-#[rustfmt::skip]
-ascii_builder!(
-    '!' '"' '#' '$' '%' '&' '\'' '(' ')' '*' '+' ',' '-' '.' '/' '\\'
-    '0' '1' '2' '3' '4' '5' '6' '7' '8' '9' ':' ';' '<' '=' '>' '?'
-    '@' 'A' 'B' 'C' 'D' 'E' 'F' 'G' 'H' 'I' 'J' 'K' 'L' 'M' 'N' 'O'
-    'P' 'Q' 'R' 'S' 'T' 'U' 'V' 'W' 'X' 'Y' 'Z' '[' ']' '^' '_' '`'
-    'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j' 'k' 'l' 'm' 'n' 'o' 'p'
-    'q' 'r' 's' 't' 'u' 'v' 'w' 'x' 'y' 'z' '{' '|' '}' '~'
-);
-
-impl Ascii {
-    /// Unchecked new ascii
-    ///
-    /// # Safety
-    /// Use `ascii!(b'[char]')` macro instead
-    pub const unsafe fn new(n: u8) -> Self {
-        Self(n)
-    }
-
-    pub const fn g(self) -> u8 {
-        self.0
-    }
-}
-
-#[inline]
-fn ascii_to_str(s: &[Ascii]) -> &str {
-    // SAFETY: the caller must guarantee that the bytes `s`
-    // are valid UTF-8, thus the cast to `*mut str` is safe.
-    // Also, the pointer dereference is safe because that pointer
-    // comes from a reference which is guaranteed to be valid for writes.
-    // And Ascii have transparent representation
-    unsafe { &mut *(s as *const [Ascii] as *mut [u8] as *mut str) }
-}
-
-#[inline]
-fn ascii_to_char(s: Ascii) -> char {
-    // SAFETY: the caller must guarantee that the byte `s`
-    // is valid UTF-8, thus the cast to `char` is safe.
-    s.g() as char
-}
-
-impl From<Ascii> for char {
-    fn from(ascii: Ascii) -> char {
-        ascii_to_char(ascii)
-    }
-}
-
-pub trait AsStr {
-    fn as_str(&self) -> &str;
-}
-
-impl AsStr for [Ascii] {
-    fn as_str(&self) -> &str {
-        ascii_to_str(self)
-    }
 }
 
 // Char converters
@@ -282,16 +197,15 @@ macro_rules! call {
 ///
 /// # Syntax:
 /// ```rust
-/// # use yarte_lexer::{pipes, do_parse, ws, tac, ascii, Ascii, Cursor, get_cursor};
+/// # use yarte_lexer::{pipes, do_parse, ws, tac, Cursor, get_cursor};
 /// # use yarte_lexer::pipes::*;
 /// # use yarte_lexer::error::{Empty, Result, LexError};
 /// # use std::path::PathBuf;
 /// # let path = PathBuf::from("FooFile");
 /// # let path2 = PathBuf::from("FooFile2");
-/// # const B: Ascii = ascii!('b');
 ///
 /// let stmt = |i| pipes!(i, ws:is_empty:_false);
-/// let parser = |i| do_parse!(i, ws= stmt:important => tac[B] => (ws));
+/// let parser = |i| do_parse!(i, ws= stmt:important => tac[b'b'] => (ws));
 /// let result: Result<bool, Empty> = parser(get_cursor(&path, " b"));
 /// let (c, result) = result.unwrap();
 ///
@@ -377,12 +291,12 @@ macro_rules! alt {
 ///
 /// # Syntax
 /// ```rust
-/// # use yarte_lexer::{pipes, do_parse, ws, tac, ascii, Ascii, Cursor, get_cursor};
+/// # use yarte_lexer::{pipes, do_parse, ws, tac, Cursor, get_cursor};
 /// # use yarte_lexer::pipes::*;
 /// # use yarte_lexer::error::{Empty, Result};
 /// # use std::path::PathBuf;
 /// # let path = PathBuf::from("FooFile");
-/// # const B: Ascii = ascii!('b');
+/// # const B: u8 = b'b';
 ///
 /// let stmt = |i| pipes!(i, ws:is_empty:map[|x| !x]);
 /// let parser = |i| do_parse!(i, ws= stmt => tac[B] => (ws));
@@ -789,14 +703,14 @@ pub fn _while<E>(i: Cursor, f: fn(u8) -> bool) -> Result<&str, E> {
 
 /// Take ascii characters or next error
 #[inline]
-pub fn tag<'a, E: KiError>(i: Cursor<'a>, tag: &'static [Ascii]) -> Result<'a, &'static str, E> {
+pub fn tag<'a, E: KiError>(i: Cursor<'a>, tag: &'static str) -> Result<'a, &'static str, E> {
     debug_assert!(!tag.is_empty());
 
     if i.starts_with(tag) {
-        Ok((i.adv_ascii(tag), tag.as_str()))
+        Ok((i.adv_str(tag), tag))
     } else {
         Err(LexError::Next(
-            E::str(tag.as_str()),
+            E::str(tag),
             Span::from_len(i, tag.len()),
         ))
     }
@@ -804,7 +718,7 @@ pub fn tag<'a, E: KiError>(i: Cursor<'a>, tag: &'static [Ascii]) -> Result<'a, &
 
 /// Take an ascii character or next error
 #[inline]
-pub fn tac<E: KiError>(i: Cursor, tag: Ascii) -> Result<char, E> {
+pub fn tac<E: KiError>(i: Cursor, tag: u8) -> Result<char, E> {
     if i.next_is(tag) {
         Ok((i.adv(1), tag.into()))
     } else {
@@ -859,7 +773,7 @@ mod test {
         let len = rest.chars().count();
         assert_eq!("", get_chars(rest, len, len));
         assert_eq!("", get_chars(rest, 0, 0));
-        assert_eq!(rest, get_chars(rest, 0, std::usize::MAX - 1));
+        assert_eq!(rest, get_chars(rest, 0, usize::MAX - 1));
         assert_eq!(rest, get_chars(rest, 0, len));
         assert_eq!(&rest[1..], get_chars(rest, 1, len));
         assert_eq!(&rest[4..], get_chars(rest, 3, len));
