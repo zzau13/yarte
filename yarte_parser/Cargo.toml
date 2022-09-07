@@ -1,6 +1,6 @@
 [package]
 name = "yarte_parser"
-version = "0.15.1"
+version = "0.15.2"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 description = "Ast, lexer and parser for yarte"
 categories = ["template-engine", "web-programming", "gui"]
