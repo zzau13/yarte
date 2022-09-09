@@ -17,7 +17,7 @@ use yarte_strnom::pipes::{
 use yarte_strnom::source_map::S;
 use yarte_strnom::{_while, alt, do_parse, is_ws, pipes, tac, tag, ws, Cursor, LexError, Span};
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub enum Token<'a, Kind>
 where
     Kind: Kinder<'a>,

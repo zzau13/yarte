@@ -1,30 +1,23 @@
 //! Adapted from [`proc-macro2`](https://github.com/alexcrichton/proc-macro2).
-use std::cell::RefCell;
+use std::borrow::{Borrow, BorrowMut};
 use std::fmt::{self, Debug};
 use std::path::{Path, PathBuf};
 
+use parking_lot::RwLock;
+
 use crate::error::{KiError, Result};
 use crate::strnom::Cursor;
-
-thread_local! {
-    static SOURCE_MAP: RefCell<SourceMap> = RefCell::new(Default::default());
-}
+static SOURCE_MAP: RwLock<SourceMap> = RwLock::new(new_sm());
 
 /// Add file to source map and return lower bound
 ///
 /// Use in the same thread
 pub fn get_cursor<'a>(p: &Path, rest: &'a str) -> Cursor<'a> {
-    SOURCE_MAP.with(|x| Cursor {
+    let mut x = SOURCE_MAP.write();
+    Cursor {
         rest,
         off: x.borrow_mut().add_file(p, rest).lo,
-    })
-}
-
-/// Reinitialize source map instance when run multiple times in the same thread
-///
-/// Use in the same thread
-pub fn clean() {
-    SOURCE_MAP.with(|x| *x.borrow_mut() = Default::default());
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -33,6 +26,7 @@ pub struct LineColumn {
     pub column: usize,
 }
 
+#[derive(Debug)]
 struct FileInfo {
     name: PathBuf,
     span: Span,
@@ -72,7 +66,7 @@ impl FileInfo {
                 .lines
                 .get(idx)
                 .copied()
-                .unwrap_or(self.span.hi as usize),
+                .unwrap_or((self.span.hi - self.span.lo) as usize),
         };
         ((lo_line, hi_line), (lo - lo_line, hi - lo_line))
     }
@@ -93,9 +87,12 @@ fn lines_offsets(s: &str) -> Vec<usize> {
     lines
 }
 
-#[derive(Default)]
 struct SourceMap {
     files: Vec<FileInfo>,
+}
+
+const fn new_sm() -> SourceMap {
+    SourceMap { files: vec![] }
 }
 
 impl SourceMap {
@@ -181,20 +178,18 @@ impl Span {
         let lo = if p_start.line == 1 {
             self.lo + p_start.column as u32
         } else {
-            SOURCE_MAP.with(|cm| {
-                let cm = cm.borrow();
-                let fi = cm.file_info(self);
-                fi.lines[start.line + p_start.line - 2] as u32 + p_start.column as u32
-            })
+            let cm = SOURCE_MAP.read();
+            let cm = cm.borrow();
+            let fi = cm.file_info(self);
+            fi.lines[start.line + p_start.line - 2] as u32 + p_start.column as u32
         };
         let hi = if p_end.line == 1 {
             self.lo + p_end.column as u32
         } else {
-            SOURCE_MAP.with(|cm| {
-                let cm = cm.borrow();
-                let fi = cm.file_info(self);
-                fi.lines[start.line + p_end.line - 2] as u32 + p_end.column as u32
-            })
+            let cm = SOURCE_MAP.read();
+            let cm = cm.borrow();
+            let fi = cm.file_info(self);
+            fi.lines[start.line + p_end.line - 2] as u32 + p_end.column as u32
         };
 
         Self { lo, hi }
@@ -202,27 +197,24 @@ impl Span {
 
     /// Returns line bounds and range in bounds
     pub fn range_in_file(self) -> ((usize, usize), (usize, usize)) {
-        SOURCE_MAP.with(|cm| {
-            let cm = cm.borrow();
-            let fi = cm.file_info(self);
-            fi.get_ranges(self)
-        })
+        let cm = SOURCE_MAP.read();
+        let cm = cm.borrow();
+        let fi = cm.file_info(self);
+        fi.get_ranges(self)
     }
 
     pub fn file_path(self) -> PathBuf {
-        SOURCE_MAP.with(|cm| {
-            let cm = cm.borrow();
-            let fi = cm.file_info(self);
-            fi.name.clone()
-        })
+        let cm = SOURCE_MAP.read();
+        let cm = cm.borrow();
+        let fi = cm.file_info(self);
+        fi.name.clone()
     }
 
     pub fn start(self) -> LineColumn {
-        SOURCE_MAP.with(|cm| {
-            let cm = cm.borrow();
-            let fi = cm.file_info(self);
-            fi.offset_line_column(self.lo as usize)
-        })
+        let cm = SOURCE_MAP.read();
+        let cm = cm.borrow();
+        let fi = cm.file_info(self);
+        fi.offset_line_column(self.lo as usize)
     }
 }
 

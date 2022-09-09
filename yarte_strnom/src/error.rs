@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt;
+use std::fmt::{Debug, Formatter};
 use std::path::{Path, PathBuf};
 
 use annotate_snippets::display_list::{DisplayList, FormatOptions};
@@ -8,7 +9,6 @@ use annotate_snippets::snippet::{Annotation, AnnotationType, Slice, Snippet, Sou
 
 use derive_more::Display;
 
-use crate::source_map::clean;
 use crate::{get_bytes_to_chars, source_map::Span, Cursor};
 
 #[allow(clippy::declare_interior_mutable_const)]
@@ -135,22 +135,24 @@ pub struct EmitterConfig<'a> {
     pub config: Config<'a>,
 }
 
+impl<'a> std::fmt::Debug for EmitterConfig<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_str("Emmiter")?;
+        Debug::fmt(self.sources, f)
+    }
+}
+
 pub struct Config<'a> {
     pub color: bool,
     pub prefix: Option<&'a Path>,
 }
 
-pub trait Emitter {
-    fn callback() {}
+pub trait Emitter: Debug {
     fn get(&self, path: &Path) -> Option<&str>;
     fn config(&self) -> &Config;
 }
 
 impl<'a> Emitter for EmitterConfig<'a> {
-    fn callback() {
-        clean();
-    }
-
     fn get(&self, path: &Path) -> Option<&str> {
         self.sources.get(path).map(|x| x.as_str())
     }
@@ -162,7 +164,7 @@ impl<'a> Emitter for EmitterConfig<'a> {
 
 // TODO: Warnings and another types
 // TODO: Check annotate snippets
-pub fn emitter<Who, E, M, I>(who: Who, errors: I) -> !
+pub fn emitter<Who, E, M, I>(who: Who, errors: I) -> String
 where
     Who: Emitter,
     E: Into<ErrorMessage<M>>,
@@ -221,14 +223,14 @@ where
         },
     };
 
-    EmitterConfig::callback();
-    panic!("{}", DisplayList::from(s))
+    format!("{}", DisplayList::from(s))
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
 
+    use std::fmt::Display;
     use std::iter::once;
 
     use crate::source_map::get_cursor;
@@ -238,63 +240,67 @@ mod test {
     impl Error for Errr {}
     impl fmt::Display for Errr {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            self.0.fmt(f)
+            Display::fmt(self.0, f)
         }
     }
 
     // TODO: check annotate-snipped
     #[test]
-    #[should_panic(
-        expected = "error\n --> foo.hbs:1:9\n  |\n1 | foó bañ tuú foú\n  |         ^^^ bar\n  |"
-    )]
     fn test_chars() {
         let path = PathBuf::from("foo.hbs");
 
         let src = "foó bañ tuú foú";
+        let l = src.len() as u32;
         let mut sources = BTreeMap::new();
         let _ = get_cursor(&path, src);
-        sources.insert(path, src.to_owned());
+        sources.insert(path.clone(), src.to_owned());
 
-        emitter(
-            EmitterConfig {
-                sources: &sources,
-                config: Config {
-                    color: false,
-                    prefix: None,
-                },
+        let expected =
+            "error\n --> foo.hbs:1:9\n  |\n1 | foó bañ tuú foú\n  |         ^^^ bar\n  |";
+        let who = EmitterConfig {
+            sources: &sources,
+            config: Config {
+                color: false,
+                prefix: None,
             },
+        };
+
+        let result = emitter(
+            who,
             once(ErrorMessage {
                 message: Errr("bar"),
                 span: Span { lo: 10, hi: 14 },
             }),
-        )
-    }
+        );
 
-    // TODO: check annotate-snipped multiline should fail not displaying message
-    #[test]
-    #[should_panic(
-        expected = "error\n --> foo.hbs:1:5\n  |\n1 |   foó bañ \n  |  _____^\n2 | | tuú\n3 | |  foú\n  | |___^ bar\n  |"
-    )]
-    fn test_chars_multiline() {
-        let path = PathBuf::from("foo.hbs");
+        assert_eq!(result, expected);
+
+        let path = PathBuf::from("bars.hbs");
 
         let src = "foó bañ \ntuú\n foú";
         let mut sources = BTreeMap::new();
         let _ = get_cursor(&path, src);
-        sources.insert(path, src.to_owned());
-
-        emitter(
-            EmitterConfig {
-                sources: &sources,
-                config: Config {
-                    color: false,
-                    prefix: None,
-                },
+        sources.insert(path.clone(), src.to_owned());
+        // TODO: check annotated-snipped
+        let expected = "error\n --> bars.hbs:1:5\n  |\n1 |   foó bañ \n  |  _____^\n2 | | tuú\n3 | |  foú\n  | |___^ bar\n  |";
+        let who = EmitterConfig {
+            sources: &sources,
+            config: Config {
+                color: false,
+                prefix: None,
             },
+        };
+
+        let result = emitter(
+            who,
             once(ErrorMessage {
                 message: Errr("bar"),
-                span: Span { lo: 5, hi: 19 },
+                span: Span {
+                    lo: l + 5 + 1,
+                    hi: l + 19 + 1,
+                },
             }),
-        )
+        );
+        assert_eq!(result, expected);
     }
 }
