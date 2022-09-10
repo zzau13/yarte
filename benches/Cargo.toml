@@ -15,7 +15,7 @@ v_htmlescape = "0.15"
 yarte = { path = "../yarte", version = "*" }
 
 [dev-dependencies]
-criterion = "0.3"
+criterion = "0.4"
 
 [[bench]]
 name = "yarte"
