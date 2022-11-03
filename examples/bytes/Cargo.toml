@@ -1,14 +1,17 @@
 [package]
-name = "derive"
+name = "bytes"
 version = "0.0.1"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
 publish = false
-edition = "2018"
+edition = "2021"
 
 workspace = "../.."
 
 [dependencies]
-yarte = { path = "../../yarte", version = "*"   }
+yarte = { path = "../../yarte", version = "*", features = ["bytes-buf"]  }
+
+bytes = "1.2.1"
+buf-min = { version = "0.7.0", features = ["bytes"] }
 
 [build-dependencies]
 yarte_helpers = { path = "../../yarte_helpers", version = "*" }
