@@ -20,7 +20,7 @@ fn skip_whitespaces(mut s: Cursor) -> Cursor {
 }
 
 pub fn token_stream<'a, S: Sink<'a>>(mut input: Cursor<'a>, sink: &mut S) -> CResult<'a> {
-    while input.rest.len() > 0 {
+    while !input.rest.is_empty() {
         input = skip_whitespaces(input);
 
         let first = match input.bytes().next() {
@@ -145,6 +145,6 @@ fn ident(mut input: Cursor) -> Result<Ident> {
             inner: &input.rest[..cont],
         };
         input = input.adv(cont); // Corresponds to end of string check if cont+1 makes sense
-        return Ok((input, i));
+        Ok((input, i))
     }
 }

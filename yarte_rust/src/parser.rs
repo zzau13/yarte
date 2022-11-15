@@ -1,9 +1,9 @@
 use serde::Deserialize;
-use yarte_strnom::Cursor;
+
 
 use crate::token_types::*;
 
-#[derive(Deserialize, Clone, PartialEq, Debug)]
+#[derive(Deserialize, Clone, PartialEq, Eq, Debug)]
 pub enum Token<'a> {
     OpenGroup(Delimiter),
     CloseGroup(Delimiter),
