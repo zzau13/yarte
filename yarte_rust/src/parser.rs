@@ -1,6 +1,5 @@
 use serde::Deserialize;
 
-
 use crate::token_types::*;
 
 #[derive(Deserialize, Clone, PartialEq, Eq, Debug)]
