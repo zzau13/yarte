@@ -229,7 +229,7 @@ fn byte(input: Cursor) -> CResult {
     }
     let (offset, _) = bytes
         .next()
-        .ok_or(LexError::Next(Error::Literal, Span::from(input)))?;
+        .ok_or_else(|| LexError::Next(Error::Literal, Span::from(input)))?;
     if !input.chars().as_str().is_char_boundary(offset) {
         return Err(LexError::Next(Error::Literal, Span::from(input)));
     }
@@ -256,7 +256,7 @@ fn character(input: Cursor) -> CResult {
     }
     let (idx, _) = chars
         .next()
-        .ok_or(LexError::Next(Error::Literal, Span::from(input)))?;
+        .ok_or_else(|| LexError::Next(Error::Literal, Span::from(input)))?;
     let input = do_parse!(input.adv(idx), tac[b'\''] => ())?.0;
     Ok(literal_suffix(input))
 }
