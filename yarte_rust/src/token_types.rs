@@ -9,16 +9,19 @@ pub enum Delimiter {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize)]
+#[serde(transparent)]
 pub struct Ident<'a> {
     pub inner: &'a str,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize)]
+#[serde(transparent)]
 pub struct Punct {
     pub ch: char,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize)]
+#[serde(transparent)]
 pub struct Literal<'a> {
     pub inner: &'a str,
 }
