@@ -8,7 +8,7 @@ use yarte_rust::sink::{SResult, Sink, State};
 use yarte_rust::token_types::{Delimiter, Ident, Literal, Punct};
 use yarte_strnom::Cursor;
 
-#[derive(Deserialize, Clone, PartialEq, Debug)]
+#[derive(Deserialize, Clone, PartialEq, Eq, Debug)]
 pub enum Token<'a> {
     OpenGroup(Delimiter),
     CloseGroup(Delimiter),
