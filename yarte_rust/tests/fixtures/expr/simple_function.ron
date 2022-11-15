@@ -1,0 +1,10 @@
+[
+    (src: " hello(a,b)", exp: [
+        Ident(Ident ( inner: "hello" )),
+        OpenGroup(Parenthesis),
+        Ident(Ident ( inner: "a" )),
+        Punct(Punct ( ch: ',' )),
+        Ident(Ident ( inner: "b" )),
+        CloseGroup(Parenthesis),
+    ])
+]

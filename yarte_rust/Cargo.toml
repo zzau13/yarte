@@ -3,7 +3,7 @@ name = "yarte_rust"
 version = "0.1.0"
 edition = "2021"
 authors = ["Juan Aguilar Santillana <mhpoin@gmail.com>"]
-description = "Strnom for yarte"
+description = "Rust expressions parser for yarter"
 categories = ["template-engine", "web-programming", "gui"]
 documentation = "https://docs.rs/yarte_lexer"
 keywords = ["markup", "template", "html"]
@@ -15,8 +15,7 @@ workspace = ".."
 [dependencies]
 unicode-ident = "1.0.2"
 serde = { version = "1.0", features = ["derive"] }
-derive_more = "0.99"
-thiserror = { version = "1.0", default-features = false }
+thiserror = "1.0"
 
 yarte_strnom = { path = "../yarte_strnom", version = "0.0.1" }
 
