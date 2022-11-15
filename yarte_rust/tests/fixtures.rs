@@ -77,87 +77,14 @@ macro_rules! features {
             }
         }
     };
-    ($name:ident: $path:literal $kind:ty, $($t:tt)*) => {
-        features!($name: $path $kind);
+    ($name:ident: $path:literal, $($t:tt)*) => {
+        features!($name: $path);
         features!($($t)*);
     };
     () => {}
 }
 
 features!(
-    test_simple_literals: "./tests/fixtures/literals/**/*.ron"
+    test_literals: "./tests/fixtures/literals/**/*.ron",
+    test_expr: "./tests/fixtures/expr/**/*.ron"
 );
-
-#[test]
-fn lexer_simple_function() {
-    let mut vs = VecSink(Vec::new());
-    let cur = Cursor {
-        rest: " hello(a,b)",
-        off: 0,
-    };
-
-    let _ = token_stream(cur, &mut vs).unwrap();
-    let tks = vec![
-        Token::Ident(Ident { inner: "hello" }),
-        Token::OpenGroup(Delimiter::Parenthesis),
-        Token::Ident(Ident { inner: "a" }),
-        Token::Punct(Punct { ch: ',' }),
-        Token::Ident(Ident { inner: "b" }),
-        Token::CloseGroup(Delimiter::Parenthesis),
-    ];
-    assert_eq!(vs.0, tks);
-}
-
-#[test]
-fn lexer_punctuation() {
-    let mut vs = VecSink(Vec::new());
-    let cur = Cursor {
-        rest: " ~!@# $%^& *-=+ |;:, <.>/ ?' ",
-        off: 0,
-    };
-
-    let _ = token_stream(cur, &mut vs).unwrap();
-    let tks = vec![
-        Token::Punct(Punct { ch: '~' }),
-        Token::Punct(Punct { ch: '!' }),
-        Token::Punct(Punct { ch: '@' }),
-        Token::Punct(Punct { ch: '#' }),
-        Token::Punct(Punct { ch: '$' }),
-        Token::Punct(Punct { ch: '%' }),
-        Token::Punct(Punct { ch: '^' }),
-        Token::Punct(Punct { ch: '&' }),
-        Token::Punct(Punct { ch: '*' }),
-        Token::Punct(Punct { ch: '-' }),
-        Token::Punct(Punct { ch: '=' }),
-        Token::Punct(Punct { ch: '+' }),
-        Token::Punct(Punct { ch: '|' }),
-        Token::Punct(Punct { ch: ';' }),
-        Token::Punct(Punct { ch: ':' }),
-        Token::Punct(Punct { ch: ',' }),
-        Token::Punct(Punct { ch: '<' }),
-        Token::Punct(Punct { ch: '.' }),
-        Token::Punct(Punct { ch: '>' }),
-        Token::Punct(Punct { ch: '/' }),
-        Token::Punct(Punct { ch: '?' }),
-        Token::Punct(Punct { ch: '\'' }),
-    ];
-    assert_eq!(vs.0, tks);
-}
-
-#[test]
-fn lexer_literals() {
-    let mut vs = VecSink(Vec::new());
-    let cur = Cursor {
-        rest: "'a' b'a' 1 1_000 ",
-        off: 0,
-    };
-
-    let _ = token_stream(cur, &mut vs).unwrap();
-    let tks = vec![
-        Token::Literal(Literal { inner: "'a'" }),
-        Token::Literal(Literal { inner: "b'a'" }),
-        Token::Literal(Literal { inner: "1" }),
-        Token::Literal(Literal { inner: "1_000" }),
-    ];
-    assert_eq!(vs.0, tks);
-}
