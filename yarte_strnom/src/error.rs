@@ -111,6 +111,7 @@ macro_rules! next {
 }
 
 pub type Result<'a, O, E> = std::result::Result<(Cursor<'a>, O), LexError<E>>;
+pub type CResult<'a, E> = std::result::Result<Cursor<'a>, LexError<E>>;
 
 impl<E: Error> From<LexError<E>> for ErrorMessage<E> {
     fn from(e: LexError<E>) -> Self {

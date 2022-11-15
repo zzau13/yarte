@@ -1,0 +1,26 @@
+[
+    (src: " ~!@# $%^& *-=+ |;:, <.>/ ?' ", exp: [
+      Punct(Punct( ch: '~' )),
+      Punct(Punct( ch: '!' )),
+      Punct(Punct( ch: '@' )),
+      Punct(Punct( ch: '#' )),
+      Punct(Punct( ch: '$' )),
+      Punct(Punct( ch: '%' )),
+      Punct(Punct( ch: '^' )),
+      Punct(Punct( ch: '&' )),
+      Punct(Punct( ch: '*' )),
+      Punct(Punct( ch: '-' )),
+      Punct(Punct( ch: '=' )),
+      Punct(Punct( ch: '+' )),
+      Punct(Punct( ch: '|' )),
+      Punct(Punct( ch: ';' )),
+      Punct(Punct( ch: ':' )),
+      Punct(Punct( ch: ',' )),
+      Punct(Punct( ch: '<' )),
+      Punct(Punct( ch: '.' )),
+      Punct(Punct( ch: '>' )),
+      Punct(Punct( ch: '/' )),
+      Punct(Punct( ch: '?' )),
+      Punct(Punct( ch: '\'' )),
+    ])
+]
