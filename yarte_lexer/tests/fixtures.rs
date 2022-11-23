@@ -225,9 +225,9 @@ fn some(i: Cursor) -> Result<MyKind, MyError> {
     let tag = |i| {
         pipes!(i,
             tag[SOME]:
-            map_err::<_, MyError, _>[|_| MyError::Some]:
-            then::<_, _, MyKind, _>[|_| Err(MyError::Some)]:
-            and_then[|_| Ok(MyKind::Some)]
+            map_err[|_: MyError| MyError::Some]:
+            then[|_| Err(MyError::Some)]:
+            and_then[|_: MyKind| Ok(MyKind::Some)]
         )
     };
     let ws = |i| pipes!(i, ws:is_empty:_false:map[|_| MyKind::Some]);

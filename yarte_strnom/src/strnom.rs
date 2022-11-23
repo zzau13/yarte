@@ -370,11 +370,14 @@ pub mod pipes {
     // TODO: is it really usable?
     /// Result Pipe then
     #[inline]
-    pub fn then<'a, O, E, N, F>(
+    pub fn then<'a, O, E, N, F, Callback>(
         i: Cursor<'a>,
         next: Result<'a, O, E>,
-        callback: fn(result::Result<O, E>) -> result::Result<N, F>,
-    ) -> Result<'a, N, F> {
+        mut callback: Callback,
+    ) -> Result<'a, N, F>
+    where
+        Callback: FnMut(result::Result<O, E>) -> result::Result<N, F>,
+    {
         match next {
             Ok((c, o)) => callback(Ok(o))
                 .map(|n| (c, n))
@@ -390,11 +393,14 @@ pub mod pipes {
 
     /// Result Pipe then
     #[inline]
-    pub fn and_then<'a, O, E, N>(
+    pub fn and_then<'a, O, E, N, Callback>(
         i: Cursor<'a>,
         next: Result<'a, O, E>,
-        callback: fn(O) -> result::Result<N, E>,
-    ) -> Result<'a, N, E> {
+        mut callback: Callback,
+    ) -> Result<'a, N, E>
+    where
+        Callback: FnMut(O) -> result::Result<N, E>,
+    {
         match next {
             Ok((c, o)) => callback(o)
                 .map(|n| (c, n))
@@ -405,21 +411,27 @@ pub mod pipes {
 
     /// Result Pipe map
     #[inline]
-    pub fn map<'a, O, E, N>(
+    pub fn map<'a, O, E, N, Callback>(
         _: Cursor<'a>,
         next: Result<'a, O, E>,
-        callback: fn(O) -> N,
-    ) -> Result<'a, N, E> {
+        mut callback: Callback,
+    ) -> Result<'a, N, E>
+    where
+        Callback: FnMut(O) -> N,
+    {
         next.map(|(i, x)| (i, callback(x)))
     }
 
     /// Result Pipe map_err
     #[inline]
-    pub fn map_err<'a, O, E, F>(
+    pub fn map_err<'a, O, E, F, Callback>(
         _: Cursor<'a>,
         next: Result<'a, O, E>,
-        c: fn(E) -> F,
-    ) -> Result<'a, O, F> {
+        mut c: Callback,
+    ) -> Result<'a, O, F>
+    where
+        Callback: FnMut(E) -> F,
+    {
         next.map_err(|x| match x {
             LexError::Next(e, s) => LexError::Next(c(e), s),
             LexError::Fail(e, s) => LexError::Fail(c(e), s),
@@ -689,7 +701,7 @@ pub mod pipes {
 // TODO: Should be return a Cursor
 /// Take while function is true or empty Ok if is empty
 #[inline]
-pub fn _while<E>(i: Cursor, f: fn(u8) -> bool) -> Result<&str, E> {
+pub fn _while<E, Callback: FnMut(u8) -> bool>(i: Cursor, mut f: Callback) -> Result<&str, E> {
     if i.is_empty() {
         Ok((i, ""))
     } else {
