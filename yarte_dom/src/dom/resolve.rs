@@ -63,7 +63,7 @@ impl<'a> Visit<'a> for ResolveExpr<'a> {
             ..
         }: &'a ExprField,
     ) {
-        let ident = quote!(#base#dot_token#member).to_string();
+        let ident = quote!(#base #dot_token #member).to_string();
         let base = calculate_hash(&quote!(#base).to_string());
         let var_id = calculate_hash(&ident);
         self.add(var_id, ident, base);

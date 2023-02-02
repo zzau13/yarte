@@ -39,7 +39,7 @@ impl<'a> Struct<'a> {
         } = *self;
         let (impl_generics, orig_ty_generics, where_clause) = generics.split_for_impl();
 
-        quote!(impl#impl_generics #t for #ident #orig_ty_generics #where_clause { #body })
+        quote!(impl #impl_generics #t for #ident #orig_ty_generics #where_clause { #body })
     }
 }
 
