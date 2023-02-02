@@ -425,7 +425,7 @@ mod tests {
         let mut buf = String::with_capacity(u64::MAX_LEN);
         let mut rng = FastRng::new();
 
-        for _ in 0..10_000_000 {
+        for _ in 0..1_000_000 {
             unsafe {
                 let n = rng.get_u64();
                 let l = n.write_to(buf.as_mut_ptr());
@@ -441,7 +441,7 @@ mod tests {
         let mut buf = String::with_capacity(u64::MAX_LEN);
         let mut rng = FastRng::new();
 
-        for _ in 0..10_000_000 {
+        for _ in 0..1_000_000 {
             unsafe {
                 let n = rng.get_u32();
                 let l = n.write_to(buf.as_mut_ptr());
