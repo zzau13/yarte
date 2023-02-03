@@ -197,8 +197,7 @@ struct Main<'a> {
     debug: Option<&'a str>,
 }
 
-#[derive(Debug, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Deserialize, Default)]
 pub struct PrintOption<'a> {
     #[serde(borrow)]
     pub theme: Option<&'a str>,
@@ -211,7 +210,6 @@ pub struct PrintOption<'a> {
 }
 
 #[allow(deprecated)]
-
 
 pub fn read_config_file() -> String {
     let filename = config_file_path();

@@ -258,8 +258,7 @@ where
             tokenizer::DoctypeToken(dt) => {
                 if self.mode == Initial {
                     if data::doctype_error(&dt) {
-                        self.sink
-                            .parse_error(Owned(format!("Bad DOCTYPE: {dt:?}")));
+                        self.sink.parse_error(Owned(format!("Bad DOCTYPE: {dt:?}")));
                     }
                     let Doctype {
                         name,
