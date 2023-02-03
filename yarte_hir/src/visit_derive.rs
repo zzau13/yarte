@@ -247,7 +247,7 @@ impl TryFrom<String> for Print {
             "all" => Ok(Print::All),
             "ast" => Ok(Print::Ast),
             "code" => Ok(Print::Code),
-            v => Err(format!("invalid value for print attribute: {}", v)),
+            v => Err(format!("invalid value for print attribute: {v}")),
         }
     }
 }

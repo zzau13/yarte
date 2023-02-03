@@ -184,7 +184,7 @@ unsafe fn write_u8(value: u8, buf: *mut u8) -> usize {
         2
     } else {
         let d2 = value.ren(100).m2();
-        *buf = sum_0(value.dib(100) as u8);
+        *buf = sum_0(value.dib(100));
         *buf.add(1) = dig(d2);
         *buf.add(2) = dig(d2.wrapping_add(1));
         3

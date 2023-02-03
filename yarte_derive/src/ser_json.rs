@@ -97,9 +97,9 @@ pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
                 .unzip();
 
             if let Some((first, rest)) = keys.split_first_mut() {
-                *first = format!("{{{}", first);
+                *first = format!("{{{first}");
                 for r in rest {
-                    *r = format!(",{}", r);
+                    *r = format!(",{r}");
                 }
             };
 
@@ -194,7 +194,7 @@ pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
                         (
                             &v.ident,
                             (0..v.fields.len())
-                                .map(|i| Ident::new(&format!("v{}", i), Span::call_site()))
+                                .map(|i| Ident::new(&format!("v{i}"), Span::call_site()))
                                 .collect::<Vec<_>>(),
                         ),
                         StrT(format!("{{\"{}\":[", escape(&v.ident.to_string()))),

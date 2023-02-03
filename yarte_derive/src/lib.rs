@@ -603,7 +603,7 @@ fn sources_to_tokens<'a>(
         || s.print == Print::Ast
         || s.print == Print::All
     {
-        eprintln!("{:?}\n", parsed);
+        eprintln!("{parsed:?}\n");
     }
 
     let hir = generate(config, s, &parsed, opt)

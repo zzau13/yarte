@@ -61,7 +61,7 @@ impl<'a, 'b> PartialBuilder<'a, 'b> {
             }),
         }
 
-        for i in (&e[1..]).iter() {
+        for i in e[1..].iter() {
             match i.as_ref() {
                 Assign(assign) => self.visit_expr_assign(assign),
                 Path(..) => self.err.push(ErrorMessage {

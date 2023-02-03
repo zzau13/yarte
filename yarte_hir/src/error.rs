@@ -20,13 +20,13 @@ impl MiddleError {
     }
 }
 
-impl Into<ErrorMessage<GError>> for MiddleError {
-    fn into(self) -> ErrorMessage<GError> {
+impl From<MiddleError> for ErrorMessage<GError> {
+    fn from(val: MiddleError) -> Self {
         let MiddleError {
             message,
             in_span,
             span,
-        } = self;
+        } = val;
         ErrorMessage {
             message,
             span: span.join_proc(in_span),
@@ -69,7 +69,7 @@ pub enum GError {
     NotExist,
     #[display(fmt = "Unimplemented")]
     Unimplemented,
-    #[display(fmt = "Compile error: {}", _0)]
+    #[display(fmt = "Compile error: {_0}")]
     UserCompileError(String),
     #[display(fmt = "Internal")]
     Internal,

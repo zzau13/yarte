@@ -259,7 +259,7 @@ where
                 if self.mode == Initial {
                     if data::doctype_error(&dt) {
                         self.sink
-                            .parse_error(Owned(format!("Bad DOCTYPE: {:?}", dt)));
+                            .parse_error(Owned(format!("Bad DOCTYPE: {dt:?}")));
                     }
                     let Doctype {
                         name,
@@ -317,10 +317,7 @@ pub struct ActiveFormattingIter<'a, Handle: 'a> {
 impl<'a, Handle> Iterator for ActiveFormattingIter<'a, Handle> {
     type Item = (usize, &'a Handle, &'a Tag);
     fn next(&mut self) -> Option<(usize, &'a Handle, &'a Tag)> {
-        match self.iter.next() {
-            None => None,
-            Some((i, &Element(ref h, ref t))) => Some((i, h, t)),
-        }
+        self.iter.next().map(|(i, Element(h, t))| (i, h, t))
     }
 }
 
@@ -555,7 +552,7 @@ where
                 if body_end_ok(name) {
                     continue;
                 }
-                error = Owned(format!("Unexpected open tag {:?} at end of body", name));
+                error = Owned(format!("Unexpected open tag {name:?} at end of body"));
             }
             self.sink.parse_error(error);
             // FIXME: Do we keep checking after finding one bad tag?
@@ -664,8 +661,7 @@ where
     fn expect_to_close(&mut self, name: YName) {
         if self.pop_until_named(name.clone()) != 1 {
             self.sink.parse_error(Owned(format!(
-                "Unexpected open element while closing {:?}",
-                name
+                "Unexpected open element while closing {name:?}"
             )));
         }
     }

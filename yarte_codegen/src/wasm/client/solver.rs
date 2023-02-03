@@ -50,19 +50,19 @@ impl Solver {
     pub fn expr_inner_var(&self, id: &ExprId) -> &BTreeSet<VarId> {
         self.tree_map
             .get(id)
-            .unwrap_or_else(|| panic!("unregistered expression: {}", id))
+            .unwrap_or_else(|| panic!("unregistered expression: {id}"))
     }
 
     pub fn group(&self, id: &VarId) -> &BTreeSet<VarId> {
         self.grouped_map
             .get(id)
-            .unwrap_or_else(|| panic!("unregistered group: {}", id))
+            .unwrap_or_else(|| panic!("unregistered group: {id}"))
     }
 
     pub fn var_inner(&self, id: &VarId) -> &VarInner {
         self.var_map
             .get(id)
-            .unwrap_or_else(|| panic!("unregistered variable: {}", id))
+            .unwrap_or_else(|| panic!("unregistered variable: {id}"))
     }
 
     pub fn var_base(&self, id: &VarId) -> VarId {
