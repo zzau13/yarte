@@ -74,7 +74,7 @@ impl Dir {
         if template.exists() {
             template
         } else {
-            panic!("template not found in directory {:?}", template)
+            panic!("template not found in directory {template:?}")
         }
     }
 }
@@ -116,7 +116,7 @@ pub struct Config<'a> {
 impl<'a> Config<'a> {
     pub fn new(s: &str) -> Config {
         let raw: RawConfig =
-            toml::from_str(s).unwrap_or_else(|_| panic!("invalid TOML in {}", CONFIG_FILE_NAME));
+            toml::from_str(s).unwrap_or_else(|_| panic!("invalid TOML in {CONFIG_FILE_NAME}"));
         let (dir, print) = raw.main.map(|x| (x.dir, x.debug)).unwrap_or((None, None));
 
         Config {
@@ -198,6 +198,7 @@ struct Main<'a> {
 }
 
 #[derive(Debug, Deserialize)]
+#[derive(Default)]
 pub struct PrintOption<'a> {
     #[serde(borrow)]
     pub theme: Option<&'a str>,
@@ -210,18 +211,7 @@ pub struct PrintOption<'a> {
 }
 
 #[allow(deprecated)]
-impl<'a> Default for PrintOption<'a> {
-    fn default() -> Self {
-        Self {
-            theme: None,
-            number_line: None,
-            grid: None,
-            paging: None,
-            header: None,
-            short: None,
-        }
-    }
-}
+
 
 pub fn read_config_file() -> String {
     let filename = config_file_path();
@@ -251,7 +241,7 @@ pub fn get_source(path: &Path) -> String {
             }
             None => source,
         },
-        _ => panic!("unable to open template file '{:?}'", path),
+        _ => panic!("unable to open template file '{path:?}'"),
     }
 }
 

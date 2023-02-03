@@ -42,7 +42,7 @@ impl Deref for YName {
 
     fn deref(&self) -> &Self::Target {
         match self {
-            YName::Local(l) => &**l,
+            YName::Local(l) => l,
             YName::Expr(l) => l,
         }
     }

@@ -58,7 +58,7 @@ pub enum BinOp {
 
 /// A slice literal expression: `[a, b, c, d]`.
 pub struct ExprArray {
-    pub elems: Vec<Box<Expr>>,
+    pub elems: Vec<Expr>,
 }
 
 /// An assignment expression: `a = compute()`.
@@ -85,7 +85,7 @@ pub struct ExprBinary {
 
 /// A blocked scope: `{ ... }`.
 pub struct ExprBlock {
-    pub block: Vec<Box<Expr>>,
+    pub block: Vec<Expr>,
 }
 
 /// A `break`, with an optional label to break and an optional
@@ -137,7 +137,7 @@ pub struct ExprTry {
 
 /// A tuple expression: `(a, b, c, d)`.
 pub struct ExprTuple {
-    pub elems: Vec<Box<Expr>>,
+    pub elems: Vec<Expr>,
 }
 
 pub enum UnOp {

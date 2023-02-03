@@ -76,8 +76,7 @@ fn add_scripts(s: &Struct, sink: &mut Sink, ir: &mut Vec<HIR>) {
 
     let mut last = *sink.nodes.keys().last().unwrap() + 1;
     let get_state = format!(
-        "function get_state(){{return JSON.stringify({}{});}}",
-        MARK, HASH
+        "function get_state(){{return JSON.stringify({MARK}{HASH});}}"
     );
 
     ir.push(HIR::Safe(Box::new(

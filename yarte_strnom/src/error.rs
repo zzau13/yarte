@@ -65,11 +65,11 @@ pub enum Some {
     Path,
     #[display(fmt = "Whitespace")]
     Whitespace,
-    #[display(fmt = "{}", _0)]
+    #[display(fmt = "{_0}")]
     Str(&'static str),
-    #[display(fmt = "{}", _0)]
+    #[display(fmt = "{_0}")]
     Char(char),
-    #[display(fmt = "{}", _0)]
+    #[display(fmt = "{_0}")]
     String(String),
 }
 
@@ -254,7 +254,7 @@ mod test {
         let l = src.len() as u32;
         let mut sources = BTreeMap::new();
         let _ = get_cursor(&path, src);
-        sources.insert(path.clone(), src.to_owned());
+        sources.insert(path, src.to_owned());
 
         let expected =
             "error\n --> foo.hbs:1:9\n  |\n1 | foó bañ tuú foú\n  |         ^^^ bar\n  |";
@@ -281,7 +281,7 @@ mod test {
         let src = "foó bañ \ntuú\n foú";
         let mut sources = BTreeMap::new();
         let _ = get_cursor(&path, src);
-        sources.insert(path.clone(), src.to_owned());
+        sources.insert(path, src.to_owned());
         // TODO: check annotated-snipped
         let expected = "error\n --> bars.hbs:1:5\n  |\n1 |   foó bañ \n  |  _____^\n2 | | tuú\n3 | |  foú\n  | |___^ bar\n  |";
         let who = EmitterConfig {

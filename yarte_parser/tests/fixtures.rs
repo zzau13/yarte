@@ -29,7 +29,7 @@ fn test_fixtures() {
         let name = entry.expect("File name");
         let src = read_file(name).expect("Valid file");
         let fixtures: Vec<Fixture> = ron::from_str(&src)
-            .map_err(|e| eprintln!("{:?}", e))
+            .map_err(|e| eprintln!("{e:?}"))
             .expect("Valid Fixtures");
 
         for Fixture { src, exp } in fixtures {
@@ -45,7 +45,7 @@ fn test_fixtures_panic() {
         let name = entry.expect("File name");
         let src = read_file(name).expect("Valid file");
         let fixtures: Vec<FixturePanic> = ron::from_str(&src)
-            .map_err(|e| eprintln!("{:?}", e))
+            .map_err(|e| eprintln!("{e:?}"))
             .expect("Valid Fixtures");
 
         for FixturePanic(src) in fixtures {

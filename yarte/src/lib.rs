@@ -43,7 +43,7 @@ pub trait TemplateTrait: fmt::Display {
     /// which will write this template
     fn call(&self) -> Result<String> {
         let mut buf = String::with_capacity(Self::size_hint());
-        write!(buf, "{}", self).map(|_| buf)
+        write!(buf, "{self}").map(|_| buf)
     }
 
     /// Approximation of output size used in method `call`.

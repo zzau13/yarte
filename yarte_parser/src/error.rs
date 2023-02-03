@@ -44,11 +44,11 @@ pub enum PError {
     Tag,
     #[display(fmt = "comment")]
     Comment,
-    #[display(fmt = "expression{}", _0)]
+    #[display(fmt = "expression{_0}")]
     Expr(DOption),
-    #[display(fmt = "safe{}", _0)]
+    #[display(fmt = "safe{_0}")]
     Safe(DOption),
-    #[display(fmt = "local{}", _0)]
+    #[display(fmt = "local{_0}")]
     Local(DOption),
     #[display(fmt = "if else")]
     IfElse,
@@ -64,11 +64,11 @@ pub enum PError {
     Ident,
     #[display(fmt = "end expression")]
     EndExpression,
-    #[display(fmt = "argument{}", _0)]
+    #[display(fmt = "argument{_0}")]
     Argument(DOption),
     #[display(fmt = "Not exist @ helper")]
     AtHelperNotExist,
-    #[display(fmt = "@ helper need only {} argument", _0)]
+    #[display(fmt = "@ helper need only {_0} argument")]
     AtHelperArgsLen(usize),
 }
 

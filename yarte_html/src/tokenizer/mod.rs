@@ -298,7 +298,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
         self.finish_attribute();
 
         let name = mem::take(&mut self.current_tag_name);
-        let name = if is_mark(&*name) {
+        let name = if is_mark(&name) {
             YName::Expr(name)
         } else {
             YName::Local(LocalName::from(&*name))
@@ -404,7 +404,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
             self.current_attr_value.clear();
         } else {
             let name = mem::take(&mut self.current_attr_name);
-            let name = if is_mark(&*name) {
+            let name = if is_mark(&name) {
                 YName::Expr(name)
             } else {
                 YName::Local(LocalName::from(&*name))

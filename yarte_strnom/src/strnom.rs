@@ -603,7 +603,7 @@ pub mod pipes {
         message: &'static str,
     ) -> Result<'a, O, E> {
         // TODO: use log!
-        eprintln!("{}:\n\tCursor: {:?}\n\tnext: {:?}\n", message, i, next);
+        eprintln!("{message}:\n\tCursor: {i:?}\n\tnext: {next:?}\n");
         next
     }
 
