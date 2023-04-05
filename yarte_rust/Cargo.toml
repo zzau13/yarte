@@ -20,5 +20,5 @@ thiserror = "1.0"
 yarte_strnom = { path = "../yarte_strnom", version = "0.0.1" }
 
 [dev-dependencies]
-ron = "0.6"
+ron = "0.8"
 glob = "0.3"
