@@ -11,7 +11,6 @@ pub struct Aligned256<T>(pub T);
 
 #[cfg(feature = "big-num-32")]
 pub mod big_num_32;
-#[cfg(feature = "display-fn")]
 pub mod display_fn;
 
 #[cfg(any(feature = "bytes-buf", feature = "json"))]

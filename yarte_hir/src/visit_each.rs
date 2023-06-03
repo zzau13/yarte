@@ -22,7 +22,7 @@ pub(super) fn find_loop_var(g: &LoweringContext, nodes: &[SNode]) -> GResult<boo
 pub struct FindEach<'a> {
     loop_var: bool,
     s: &'a Struct<'a>,
-    c: &'a Config<'a>,
+    c: &'a Config,
     ctx: Context<'a>,
     on_path: PathBuf,
     block: Vec<(&'a [SNode<'a>], FindEach<'a>)>,

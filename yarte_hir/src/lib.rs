@@ -90,7 +90,7 @@ struct LoweringContext<'a> {
     // as state
     pub(self) opt: HIROptions,
     // Copiable
-    pub(self) c: &'a Config<'a>,
+    pub(self) c: &'a Config,
     /// ast of DeriveInput
     // Copiable
     pub(self) s: &'a Struct<'a>,
@@ -158,7 +158,7 @@ impl<'a> Clone for LoweringContext<'a> {
 
 impl<'a> LoweringContext<'a> {
     fn new<'n>(
-        c: &'n Config<'n>,
+        c: &'n Config,
         s: &'n Struct<'n>,
         ctx: Context<'n>,
         opt: HIROptions,

@@ -9,7 +9,6 @@ use std::{
 
 pub type Result<I> = ::std::result::Result<I, Error>;
 
-#[cfg(feature = "config")]
 pub mod config;
 pub mod recompile;
 

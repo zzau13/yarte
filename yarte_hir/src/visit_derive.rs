@@ -14,7 +14,7 @@ const RECURSION_LIMIT: usize = 128;
 
 pub fn visit_derive<'a, 'b>(
     i: &'a syn::DeriveInput,
-    config: &'b Config<'b>,
+    config: &'b Config,
 ) -> Result<Struct<'a>, TokenStream> {
     StructBuilder::new(config).build(i)
 }
@@ -52,11 +52,11 @@ struct StructBuilder<'a> {
     src: Option<String>,
     err: Vec<Error>,
     ident: String,
-    config: &'a Config<'a>,
+    config: &'a Config,
 }
 
 impl<'a> StructBuilder<'a> {
-    fn new<'n>(config: &'n Config) -> StructBuilder<'n> {
+    fn new(config: &Config) -> StructBuilder {
         StructBuilder {
             config,
             ident: String::new(),

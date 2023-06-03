@@ -13,36 +13,6 @@
 //! must exist, or error will be prompt. If the tag `partials` doesn't exist no aliasing
 //! will be possible.
 //!
-//! - **`debug`** (debugging configuration - optional): in order to visualize clearly generated code
-//! in a debugging environment Yarte gives it a tabulated format, and the possibility
-//! to see the number line use a color theme. Options are the following:
-//!
-//! > Deprecated
-//!   - **`number_line`** (default:  `false`): Boolean, if set to `true` number lines will appear
-//! in debug-mode.
-//! > Deprecated
-//!   - **`theme`** (default: `zenburn`): String, color theme used in debugging environment.
-//! Possible values are:
-//!     - `DarkNeon`,
-//!     - `GitHub`,
-//!     - `Monokai Extended`,
-//!     - `Monokai Extended Bright`,
-//!     - `Monokai Extended Light`,
-//!     - `Monokai Extended Origin`,
-//!     - `OneHalfDark`,
-//!     - `OneHalfLight`,
-//!     - `Sublime Snazzy`,
-//!     - `TwoDark`,
-//!     - `zenburn`
-//! > Deprecated
-//!   - **`grid`** (default:  `false`): Boolean
-//! > Deprecated
-//!   - **`header`** (default:  `false`): Boolean
-//! > Deprecated
-//!   - **`paging`** (default:  `false`): Boolean
-//! > Deprecated
-//!   - **`short`** (default:  `true`): Boolean, if set to `false` to verbose
-//!
 //! ### Example of a config file
 //! ```toml
 //! [main]
@@ -79,8 +49,8 @@ impl Dir {
     }
 }
 
-impl From<Option<&str>> for Dir {
-    fn from(p: Option<&str>) -> Self {
+impl From<Option<String>> for Dir {
+    fn from(p: Option<String>) -> Self {
         let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
         Dir(p.map_or_else(|| root.join(DEFAULT_DIR), |v| root.join(v)))
     }
@@ -94,9 +64,9 @@ pub enum PrintConfig {
     None,
 }
 
-impl From<Option<&str>> for PrintConfig {
-    fn from(s: Option<&str>) -> Self {
-        match s {
+impl From<Option<String>> for PrintConfig {
+    fn from(s: Option<String>) -> Self {
+        match s.as_ref().map(|x| x.as_str()) {
             Some("all") => PrintConfig::All,
             Some("ast") => PrintConfig::Ast,
             Some("code") => PrintConfig::Code,
@@ -106,14 +76,14 @@ impl From<Option<&str>> for PrintConfig {
 }
 
 #[derive(Debug)]
-pub struct Config<'a> {
+pub struct Config {
     dir: Dir,
-    alias: BTreeMap<&'a str, &'a str>,
+    alias: BTreeMap<String, String>,
     pub print_override: PrintConfig,
-    pub debug: PrintOption<'a>,
+    pub debug: PrintOption,
 }
 
-impl<'a> Config<'a> {
+impl Config {
     pub fn new(s: &str) -> Config {
         let raw: RawConfig =
             toml::from_str(s).unwrap_or_else(|_| panic!("invalid TOML in {CONFIG_FILE_NAME}"));
@@ -180,27 +150,21 @@ fn normalize(p: PathBuf) -> PathBuf {
 }
 
 #[derive(Deserialize)]
-struct RawConfig<'a> {
-    #[serde(borrow)]
-    main: Option<Main<'a>>,
-    #[serde(borrow)]
-    debug: Option<PrintOption<'a>>,
-    #[serde(borrow)]
-    partials: Option<BTreeMap<&'a str, &'a str>>,
+struct RawConfig {
+    main: Option<Main>,
+    debug: Option<PrintOption>,
+    partials: Option<BTreeMap<String, String>>,
 }
 
 #[derive(Deserialize)]
-struct Main<'a> {
-    #[serde(borrow)]
-    dir: Option<&'a str>,
-    #[serde(borrow)]
-    debug: Option<&'a str>,
+struct Main {
+    dir: Option<String>,
+    debug: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default)]
-pub struct PrintOption<'a> {
-    #[serde(borrow)]
-    pub theme: Option<&'a str>,
+pub struct PrintOption {
+    pub theme: Option<String>,
     pub number_line: Option<bool>,
     pub grid: Option<bool>,
     pub paging: Option<bool>,

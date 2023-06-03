@@ -20,9 +20,6 @@ maintenance = { status = "actively-developed" }
 proc-macro = true
 
 [features]
-wasm-app = ["yarte_hir/wasm-app", "yarte_codegen/wasm-app"]
-html-min = ["yarte_codegen/html-min"]
-wasm-server = ["yarte_codegen/wasm-server", "yarte_codegen/bytes-buf"]
 bytes-buf = ["yarte_codegen/bytes-buf"]
 json = ["v_jsonescape", "yarte_helpers/json"]
 

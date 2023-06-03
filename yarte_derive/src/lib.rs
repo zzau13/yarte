@@ -68,46 +68,6 @@ pub fn template_html(input: TokenStream) -> TokenStream {
     build!(i, get_codegen, Default::default()).into()
 }
 
-#[proc_macro_derive(TemplateFixedText, attributes(template))]
-#[cfg(feature = "fixed")]
-/// Implements TemplateTrait without html escape functionality
-pub fn template_ptr(input: TokenStream) -> TokenStream {
-    fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
-        Box::new(yarte_codegen::FixedCodeGen::new(
-            yarte_codegen::TextFixedCodeGen("yarte"),
-            s,
-            "yarte",
-        ))
-    }
-
-    let i = &syn::parse(input).unwrap();
-    build!(
-        i,
-        get_codegen,
-        HIROptions {
-            is_text: true,
-            ..Default::default()
-        }
-    )
-    .into()
-}
-
-#[proc_macro_derive(TemplateFixed, attributes(template))]
-#[cfg(feature = "fixed")]
-/// Implements TemplateFixedTrait with html escape functionality
-pub fn template_html_ptr(input: TokenStream) -> TokenStream {
-    const PARENT: &str = "yarte";
-    fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
-        Box::new(yarte_codegen::FixedCodeGen::new(
-            yarte_codegen::HTMLFixedCodeGen(PARENT),
-            s,
-            PARENT,
-        ))
-    }
-    let i = &syn::parse(input).unwrap();
-    build!(i, get_codegen, Default::default()).into()
-}
-
 #[proc_macro_derive(TemplateBytesText, attributes(template))]
 #[cfg(feature = "bytes-buf")]
 /// Implements TemplateBytesTrait without html escape functionality
@@ -170,83 +130,6 @@ pub fn template_html_min_ptr(input: TokenStream) -> TokenStream {
             PARENT,
         ))
     }
-    let i = &syn::parse(input).unwrap();
-    build!(i, get_codegen, Default::default()).into()
-}
-
-#[proc_macro_derive(TemplateBytesMin, attributes(template))]
-#[cfg(all(feature = "html-min", feature = "bytes-buf"))]
-/// # Work in Progress
-/// Implements TemplateTrait with html minifier
-pub fn template_html_min_bytes(input: TokenStream) -> TokenStream {
-    const PARENT: &str = "yarte";
-
-    let buf_i = format_ident!("bytes_mut");
-    let buf: syn::Expr = syn::parse2(quote!(#buf_i)).unwrap();
-    let get_codegen = |s| {
-        Box::new(yarte_codegen::BytesCodeGen::new(
-            yarte_codegen::HTMLMinBytesCodeGen::new(&buf),
-            s,
-            buf_i,
-            PARENT,
-        ))
-    };
-    let i = &syn::parse(input).unwrap();
-    build!(i, get_codegen, Default::default()).into()
-}
-
-#[proc_macro_derive(TemplateMin, attributes(template))]
-#[cfg(feature = "html-min")]
-/// # Work in Progress
-/// Implements TemplateTrait with html minifier
-pub fn template_html_min(input: TokenStream) -> TokenStream {
-    fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
-        Box::new(FmtCodeGen::new(yarte_codegen::HTMLMinCodeGen, s, "yarte"))
-    }
-    let i = &syn::parse(input).unwrap();
-    build!(i, get_codegen, Default::default()).into()
-}
-
-// TODO:
-#[proc_macro_derive(App, attributes(template, msg, inner))]
-#[cfg(feature = "wasm-app")]
-pub fn app(input: TokenStream) -> TokenStream {
-    fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
-        Box::new(yarte_codegen::client::WASMCodeGen::new(s))
-    }
-    let i = &syn::parse(input).unwrap();
-    let config_toml: &str = &read_config_file();
-    let config = &Config::new(config_toml);
-    let s = &match visit_derive(i, config) {
-        Ok(s) => s,
-        Err(tt) => return tt.into(),
-    };
-    // TODO: proc_macro2::fallback::force cause mismatch()
-    let sources = &read(s.path.clone(), s.src.clone(), config);
-
-    sources_to_tokens(sources, config, s, get_codegen(s), Default::default()).into()
-}
-
-// TODO:
-#[proc_macro_derive(TemplateWasmServer, attributes(template))]
-#[cfg(feature = "wasm-server")]
-/// # Work in Progress
-/// Implements TemplateTrait with wasm server behavior
-///
-/// Need additional `scrip` path argument attribute
-pub fn template_wasm_server(input: TokenStream) -> TokenStream {
-    const PARENT: &str = "yarte";
-    let buf_i = format_ident!("bytes_mut");
-    let buf: syn::Expr = syn::parse2(quote!(#buf_i)).unwrap();
-
-    let get_codegen = |s| {
-        Box::new(yarte_codegen::BytesCodeGen::new(
-            yarte_codegen::server::WASMCodeGen::new(s, &buf),
-            s,
-            buf_i,
-            PARENT,
-        ))
-    };
     let i = &syn::parse(input).unwrap();
     build!(i, get_codegen, Default::default()).into()
 }

@@ -19,9 +19,7 @@ maintenance = { status = "actively-developed" }
 
 [features]
 default = []
-wasm = ["yarte_derive/wasm-server", "json", "bytes-buf"]
 json = ["yarte_helpers/json", "yarte_derive/json", "bytes-buf"]
-html-min = ["yarte_derive/html-min"]
 bytes-buf = ["buf-min", "yarte_helpers/bytes-buf", "yarte_derive/bytes-buf"]
 
 [dependencies]

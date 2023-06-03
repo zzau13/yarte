@@ -14,10 +14,8 @@ workspace = ".."
 
 [features]
 big-num-32 = []
-config = ["serde", "toml"]
-default = ["markup", "config", "logger", "display-fn"]
-display-fn = []
-json = ["buf-min", "chrono", "serde", "serde_json", "v_jsonescape/bytes-buf", "ryu-ad"]
+default = ["markup",  "logger"]
+json = ["buf-min", "chrono", "serde_json", "v_jsonescape/bytes-buf", "ryu-ad"]
 ryu-ad = ["ryu"]
 markup = ["v_htmlescape", "itoa", "dtoa"]
 bytes-buf = ["buf-min", "v_htmlescape/bytes-buf", "itoa", "ryu-ad"]
@@ -37,11 +35,11 @@ dtoa = { version = "1.0", optional = true }
 ryu = { version = "1.0", optional = true }
 chrono = { version = "0.4", optional = true }
 
-prettyplease = { version = "0.1", optional = true }
-syn = {version = "1.0", optional = true}
+prettyplease = { version = "0.2", optional = true }
+syn = {version = "2.0", optional = true}
 
-serde = { version = "1.0", features = ["derive"], optional = true }
-toml = { version = "0.5", optional = true }
+serde = { version = "1.0", features = ["derive"] }
+toml = { version = "0.7" }
 serde_json = { version = "1.0", optional = true }
 
 buf-min = { version = "0.7", optional = true}

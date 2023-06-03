@@ -1,1 +1,0 @@
-Adapted from [`html5ever`](https://github.com/servo/html5ever) for use inside yarte language
