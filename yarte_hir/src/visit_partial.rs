@@ -6,10 +6,10 @@ use yarte_parser::{ErrorMessage, SVExpr};
 
 use crate::{error::GError, is_tuple_index, validator};
 
-pub fn visit_partial<'a, 'b>(
+pub fn visit_partial<'a>(
     e: &'a SVExpr,
     // TODO: #39
-    err: &'b mut Vec<ErrorMessage<GError>>,
+    err: &mut Vec<ErrorMessage<GError>>,
 ) -> (BTreeMap<String, &'a syn::Expr>, Option<&'a syn::Expr>) {
     PartialBuilder::new(e, err).build()
 }

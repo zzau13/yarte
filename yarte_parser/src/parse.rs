@@ -625,17 +625,17 @@ fn end_expr(i: Cursor) -> PResult<bool> {
 }
 
 fn is_ident_start(c: char) -> bool {
-    ('a'..='z').contains(&c)
-        || ('A'..='Z').contains(&c)
+    c.is_ascii_lowercase()
+        || c.is_ascii_uppercase()
         || c == '_'
         || (c > '\x7f' && UnicodeXID::is_xid_start(c))
 }
 
 fn is_ident_continue(c: char) -> bool {
-    ('a'..='z').contains(&c)
-        || ('A'..='Z').contains(&c)
+    c.is_ascii_lowercase()
+        || c.is_ascii_uppercase()
         || c == '_'
-        || ('0'..='9').contains(&c)
+        || c.is_ascii_digit()
         || (c > '\x7f' && UnicodeXID::is_xid_continue(c))
 }
 

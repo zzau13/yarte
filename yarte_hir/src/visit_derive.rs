@@ -12,9 +12,9 @@ use yarte_helpers::config::Config;
 // TODO:
 const RECURSION_LIMIT: usize = 128;
 
-pub fn visit_derive<'a, 'b>(
+pub fn visit_derive<'a>(
     i: &'a syn::DeriveInput,
-    config: &'b Config,
+    config: &Config,
 ) -> Result<Struct<'a>, TokenStream> {
     StructBuilder::new(config).build(i)
 }

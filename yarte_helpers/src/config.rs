@@ -66,7 +66,7 @@ pub enum PrintConfig {
 
 impl From<Option<String>> for PrintConfig {
     fn from(s: Option<String>) -> Self {
-        match s.as_ref().map(|x| x.as_str()) {
+        match s.as_deref() {
             Some("all") => PrintConfig::All,
             Some("ast") => PrintConfig::Ast,
             Some("code") => PrintConfig::Code,

@@ -337,7 +337,7 @@ fn float(input: Cursor) -> CResult {
 fn float_digits(input: Cursor) -> CResult {
     let mut chars = input.chars().peekable();
     match chars.next() {
-        Some(ch) if ('0'..='9').contains(&ch) => {}
+        Some(ch) if ch.is_ascii_digit() => {}
         _ => return Err(LexError::Next(Error::Literal, Span::from(input))),
     }
 
