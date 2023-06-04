@@ -6,6 +6,7 @@ use serde::Deserialize;
 use yarte_rust::lexer::token_stream;
 use yarte_rust::sink::{SResult, Sink, State};
 use yarte_rust::token_types::{Delimiter, Ident, Literal, Punct};
+use yarte_strnom::source_map::S;
 use yarte_strnom::Cursor;
 
 #[derive(Deserialize, Clone, PartialEq, Eq, Debug)]
@@ -23,24 +24,24 @@ pub enum Token<'a> {
 struct VecSink<'a>(Vec<Token<'a>>);
 
 impl<'a> Sink<'a> for VecSink<'a> {
-    fn open_group(&mut self, del: Delimiter) -> SResult {
-        self.0.push(Token::OpenGroup(del));
+    fn open_group(&mut self, del: S<Delimiter>) -> SResult {
+        self.0.push(Token::OpenGroup(del.0));
         Ok(State::Continue)
     }
-    fn close_group(&mut self, del: Delimiter) -> SResult {
-        self.0.push(Token::CloseGroup(del));
+    fn close_group(&mut self, del: S<Delimiter>) -> SResult {
+        self.0.push(Token::CloseGroup(del.0));
         Ok(State::Continue)
     }
-    fn ident(&mut self, ident: Ident<'a>) -> SResult {
-        self.0.push(Token::Ident(ident));
+    fn ident(&mut self, ident: S<Ident<'a>>) -> SResult {
+        self.0.push(Token::Ident(ident.0));
         Ok(State::Continue)
     }
-    fn punct(&mut self, punct: Punct) -> SResult {
-        self.0.push(Token::Punct(punct));
+    fn punct(&mut self, punct: S<Punct>) -> SResult {
+        self.0.push(Token::Punct(punct.0));
         Ok(State::Continue)
     }
-    fn literal(&mut self, literal: Literal<'a>) -> SResult {
-        self.0.push(Token::Literal(literal));
+    fn literal(&mut self, literal: S<Literal<'a>>) -> SResult {
+        self.0.push(Token::Literal(literal.0));
         Ok(State::Continue)
     }
     fn end(&mut self) -> SResult {

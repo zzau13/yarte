@@ -1,5 +1,6 @@
 // Adapted from: https://github.com/dtolnay/proc-macro2/blob/master/src/parse.rs
 
+use yarte_strnom::source_map::{spanned, S};
 use yarte_strnom::{Cursor, LexError, Span};
 
 use crate::error::{CResult, Error, Result};
@@ -19,7 +20,7 @@ fn skip_whitespaces(mut s: Cursor) -> Cursor {
     s
 }
 
-pub fn token_stream<'a, S: Sink<'a>>(mut input: Cursor<'a>, sink: &mut S) -> CResult<'a> {
+pub fn token_stream<'a, O: Sink<'a>>(mut input: Cursor<'a>, sink: &mut O) -> CResult<'a> {
     while !input.rest.is_empty() {
         input = skip_whitespaces(input);
 
@@ -39,8 +40,9 @@ pub fn token_stream<'a, S: Sink<'a>>(mut input: Cursor<'a>, sink: &mut S) -> CRe
             b'{' => Some(Delimiter::Brace),
             _ => None,
         } {
+            let span = Span::from(input);
             input = input.adv(1);
-            match sink.open_group(open_delimiter)? {
+            match sink.open_group(S(open_delimiter, span))? {
                 State::Continue => (),
                 State::Stop => return Ok(input),
             }
@@ -50,8 +52,9 @@ pub fn token_stream<'a, S: Sink<'a>>(mut input: Cursor<'a>, sink: &mut S) -> CRe
             b'}' => Some(Delimiter::Brace),
             _ => None,
         } {
+            let span = Span::from(input);
             input = input.adv(1);
-            match sink.close_group(close_delimiter)? {
+            match sink.close_group(S(close_delimiter, span))? {
                 State::Continue => (),
                 State::Stop => return Ok(input),
             }
@@ -65,20 +68,20 @@ pub fn token_stream<'a, S: Sink<'a>>(mut input: Cursor<'a>, sink: &mut S) -> CRe
     }
 }
 
-fn leaf_token<'a, S: Sink<'a>>(input: Cursor<'a>, sink: &mut S) -> CResult<'a> {
-    if let Ok((input, l)) = literal(input) {
+fn leaf_token<'a, O: Sink<'a>>(input: Cursor<'a>, sink: &mut O) -> CResult<'a> {
+    if let Ok((input, l)) = spanned(input, literal) {
         match sink.literal(l)? {
             State::Continue => (),
             State::Stop => return Ok(input),
         }
         Ok(input)
-    } else if let Ok((input, p)) = punct(input) {
+    } else if let Ok((input, p)) = spanned(input, punct) {
         match sink.punct(p)? {
             State::Continue => (),
             State::Stop => return Ok(input),
         }
         Ok(input)
-    } else if let Ok((input, i)) = ident(input) {
+    } else if let Ok((input, i)) = spanned(input, ident) {
         match sink.ident(i)? {
             State::Continue => (),
             State::Stop => return Ok(input),

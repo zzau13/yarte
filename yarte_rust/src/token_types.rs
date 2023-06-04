@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-#[derive(Clone, PartialEq, Eq, Debug, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Deserialize)]
 pub enum Delimiter {
     Parenthesis, // ()
     Brace,       // {}
@@ -8,19 +8,19 @@ pub enum Delimiter {
     None,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Deserialize)]
 #[serde(transparent)]
 pub struct Ident<'a> {
     pub inner: &'a str,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Deserialize)]
 #[serde(transparent)]
 pub struct Punct {
     pub ch: char,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Deserialize)]
 #[serde(transparent)]
 pub struct Literal<'a> {
     pub inner: &'a str,

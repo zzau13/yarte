@@ -1,11 +1,13 @@
 #![allow(dead_code, unused_variables)]
 use serde::Deserialize;
 use std::marker::PhantomData;
+use yarte_strnom::source_map::S;
 use yarte_strnom::{Cursor, LexError, Span};
 
 use crate::error;
+use crate::error::Error;
 use crate::lexer::token_stream;
-use crate::sink::{SResult, Sink};
+use crate::sink::{SResult, Sink, State};
 use crate::token_types::*;
 
 pub enum Expr {
@@ -170,6 +172,7 @@ pub enum Token<'a> {
 
 struct ExprSink<'a> {
     expr: Option<Expr>,
+    groups: Vec<Delimiter>,
     _w: PhantomData<&'a ()>,
 }
 
@@ -177,29 +180,45 @@ impl<'a> Default for ExprSink<'a> {
     fn default() -> Self {
         Self {
             expr: None,
+            groups: Vec::with_capacity(32),
             _w: PhantomData,
         }
     }
 }
 
+// TODO: add terminate expression
 impl<'a> Sink<'a> for ExprSink<'a> {
-    fn open_group(&mut self, del: Delimiter) -> SResult {
+    fn open_group(&mut self, del: S<Delimiter>) -> SResult {
+        self.groups.push(del.0);
+        Ok(State::Continue)
+    }
+
+    fn close_group(&mut self, del: S<Delimiter>) -> SResult {
+        if self
+            .groups
+            .last()
+            .copied()
+            .map(|x| x == del.0)
+            .unwrap_or(false)
+        {
+            self.groups.pop();
+            todo!();
+            Ok(State::Continue)
+        } else {
+            // TODO: correct error
+            Err(LexError::Fail(Error::Empty, del.span()))
+        }
+    }
+
+    fn ident(&mut self, ident: S<Ident<'a>>) -> SResult {
         todo!()
     }
 
-    fn close_group(&mut self, del: Delimiter) -> SResult {
+    fn punct(&mut self, punct: S<Punct>) -> SResult {
         todo!()
     }
 
-    fn ident(&mut self, ident: Ident<'a>) -> SResult {
-        todo!()
-    }
-
-    fn punct(&mut self, punct: Punct) -> SResult {
-        todo!()
-    }
-
-    fn literal(&mut self, literal: Literal<'a>) -> SResult {
+    fn literal(&mut self, literal: S<Literal<'a>>) -> SResult {
         todo!()
     }
 
