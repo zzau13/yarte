@@ -5,7 +5,7 @@ use serde::Deserialize;
 
 use yarte_rust::lexer::token_stream;
 use yarte_rust::sink::{SResult, Sink, State};
-use yarte_rust::token_types::{Delimiter, Ident, Literal, Punct};
+use yarte_rust::tokens::{Delimiter, Ident, Literal, Punct};
 use yarte_strnom::source_map::S;
 use yarte_strnom::Cursor;
 

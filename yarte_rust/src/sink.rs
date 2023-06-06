@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::token_types::{Delimiter, Ident, Literal, Punct};
+use crate::tokens::{Delimiter, Ident, Literal, Punct};
 use yarte_strnom::error::LexError;
 use yarte_strnom::source_map::S;
 

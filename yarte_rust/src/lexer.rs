@@ -6,7 +6,7 @@ use yarte_strnom::{Cursor, LexError, Span};
 use crate::error::{CResult, Error, Result};
 use crate::literals::literal;
 use crate::sink::{Sink, State};
-use crate::token_types::{Delimiter, Ident, Punct};
+use crate::tokens::{Delimiter, Ident, Punct};
 
 fn skip_whitespaces(mut s: Cursor) -> Cursor {
     while !s.is_empty() {

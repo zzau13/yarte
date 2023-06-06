@@ -8,7 +8,7 @@ use crate::error;
 use crate::error::Error;
 use crate::lexer::token_stream;
 use crate::sink::{SResult, Sink, State};
-use crate::token_types::*;
+use crate::tokens::*;
 
 pub enum Expr {
     Array(ExprArray),

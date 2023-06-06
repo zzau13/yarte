@@ -1,5 +1,6 @@
-use serde::{Deserialize, Deserializer};
 use std::mem::transmute;
+
+use serde::{Deserialize, Deserializer};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Deserialize)]
 pub enum Delimiter {
@@ -8,79 +9,41 @@ pub enum Delimiter {
     Bracket,     // []
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Deserialize)]
-#[serde(transparent)]
-pub struct Ident<'a> {
-    pub inner: &'a str,
-}
-
-static RECOGNIZED: &str = "!#$%&'*+,-./:;<=>?@[]^_`{|}~";
-// Symbol	Decimal
-//   !	    33
-//   #	    35
-//   $	    36
-//   %	    37
-//   &	    38
-//   '	    39
-//   *	    42
-//   +	    43
-//   ,	    44
-//   -	    45
-//   .	    46
-//   /	    47
-//   :	    58
-//   ;	    59
-//   <	    60
-//   =	    61
-//   >	    62
-//   ?	    63
-//   @	    64
-//   [	    91
-//   ]	    93
-//   ^	    94
-//   _	    95
-//   `	    96
-//   {	    123
-//   |	    124
-//   }	    125
-//   ~	    126
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Punct {
-    _33 = 33,
-    _35 = 35,
-    _36 = 36,
-    _37 = 37,
-    _38 = 38,
-    _39 = 39,
-    _42 = 42,
-    _43 = 43,
-    _44 = 44,
-    _45 = 45,
-    _46 = 46,
-    _47 = 47,
-    _58 = 58,
-    _59 = 59,
-    _60 = 60,
-    _61 = 61,
-    _62 = 62,
-    _63 = 63,
-    _64 = 64,
-    _91 = 91,
-    _93 = 93,
-    _94 = 94,
-    _95 = 95,
-    _96 = 96,
-    _123 = 123,
-    _124 = 124,
-    _125 = 125,
-    _126 = 126,
+    Exclamation = 33, // !
+    Hash = 35,        // #
+    Dollar = 36,      // $
+    Percent = 37,     // %
+    And = 38,         // &
+    Apostrophe = 39,  // '
+    Asterisk = 42,    // *
+    Plus = 43,        // +
+    Comma = 44,       // ,
+    Hyphen = 45,      // -
+    Dot = 46,         // .
+    Slash = 47,       // /
+    Colon = 58,       // :
+    SemiColon = 59,   // ;
+    GreaterThan = 60, // <
+    Equal = 61,       // =
+    LessThan = 62,    // >
+    Question = 63,    // ?
+    At = 64,          // @
+    Circumflex = 94,  // ^
+    Underscore = 95,  // _
+    Backtick = 96,    // `
+    Bar = 124,        // |
+    Tilde = 126,      // ~
 }
 
 impl TryFrom<char> for Punct {
     type Error = ();
 
     fn try_from(value: char) -> Result<Self, Self::Error> {
+        static RECOGNIZED: &str = "!#$%&'*+,-./:;<=>?@^_`|~";
+
         if RECOGNIZED.contains(value) {
             // Safety: RECOGNIZED contains value is safe convert because have the same representation
             Ok(unsafe { transmute(value as u8) })
@@ -100,6 +63,14 @@ impl<'de> Deserialize<'de> for Punct {
         })
     }
 }
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Deserialize)]
+#[serde(transparent)]
+pub struct Ident<'a> {
+    pub inner: &'a str,
+}
+
+// TODO:
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Deserialize)]
 #[serde(transparent)]
 pub struct Literal<'a> {

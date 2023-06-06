@@ -1,6 +1,6 @@
 // Adapted from: https://github.com/dtolnay/proc-macro2/blob/master/src/parse.rs
 use crate::error::{CResult, Error, Result};
-use crate::token_types::Literal;
+use crate::tokens::Literal;
 use yarte_strnom::{do_parse, tac, tag, Cursor, LexError, Span};
 
 pub(crate) fn literal(input: Cursor) -> Result<Literal> {
