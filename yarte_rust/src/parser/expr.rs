@@ -170,15 +170,24 @@ pub enum Token<'a> {
     Literal(Literal<'a>),
 }
 
-struct ExprSink<'a> {
+#[derive(Eq, PartialEq)]
+enum Ends {
+    None,
+    First,
+}
+
+struct ExprSink<'a, const END0: u8, const END1: u8> {
+    ends: Ends,
     expr: Option<Expr>,
     groups: Vec<Delimiter>,
     _w: PhantomData<&'a ()>,
 }
 
-impl<'a> Default for ExprSink<'a> {
+impl<'a, const END0: u8, const END1: u8> Default for ExprSink<'a, END0, END1> {
+    #[inline]
     fn default() -> Self {
         Self {
+            ends: Ends::None,
             expr: None,
             groups: Vec::with_capacity(32),
             _w: PhantomData,
@@ -187,12 +196,14 @@ impl<'a> Default for ExprSink<'a> {
 }
 
 // TODO: add terminate expression
-impl<'a> Sink<'a> for ExprSink<'a> {
+impl<'a, const END0: u8, const END1: u8> Sink<'a> for ExprSink<'a, END0, END1> {
+    #[inline]
     fn open_group(&mut self, del: S<Delimiter>) -> SResult {
         self.groups.push(del.0);
         Ok(State::Continue)
     }
 
+    #[inline]
     fn close_group(&mut self, del: S<Delimiter>) -> SResult {
         if self
             .groups
@@ -203,32 +214,40 @@ impl<'a> Sink<'a> for ExprSink<'a> {
         {
             self.groups.pop();
             todo!();
-            Ok(State::Continue)
         } else {
+            // TODO: check end
             // TODO: correct error
             Err(LexError::Fail(Error::Empty, del.span()))
         }
     }
 
+    #[inline]
     fn ident(&mut self, ident: S<Ident<'a>>) -> SResult {
         todo!()
     }
 
+    #[inline]
     fn punct(&mut self, punct: S<Punct>) -> SResult {
+        // TODO: check end
+        // TODO: punct is ASCII, add enum repr u8
         todo!()
     }
 
+    #[inline]
     fn literal(&mut self, literal: S<Literal<'a>>) -> SResult {
+        // TODO: select between literal in
         todo!()
     }
 
+    #[inline]
     fn end(&mut self) -> SResult {
         todo!()
     }
 }
 
-pub fn expr(c: Cursor) -> error::Result<Expr> {
-    let mut sink = ExprSink::default();
+// TODO: end: use adt experimental or use tuple or
+pub fn expr<const END0: u8, const END1: u8>(c: Cursor) -> error::Result<Expr> {
+    let mut sink = ExprSink::<END0, END1>::default();
     let c = token_stream(c, &mut sink)?;
 
     Ok((

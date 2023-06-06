@@ -1,12 +1,13 @@
 // Adapted from: https://github.com/dtolnay/proc-macro2/blob/master/src/parse.rs
 
+use std::mem::transmute;
 use yarte_strnom::source_map::{spanned, S};
 use yarte_strnom::{Cursor, LexError, Span};
 
 use crate::error::{CResult, Error, Result};
 use crate::literals::literal;
 use crate::sink::{Sink, State};
-use crate::token_types::{Delimiter, Ident, Punct};
+use crate::token_types::{Delimiter, Ident, Punct, RECOGNIZED};
 
 fn skip_whitespaces(mut s: Cursor) -> Cursor {
     while !s.is_empty() {
@@ -20,6 +21,7 @@ fn skip_whitespaces(mut s: Cursor) -> Cursor {
     s
 }
 
+#[inline]
 pub fn token_stream<'a, O: Sink<'a>>(mut input: Cursor<'a>, sink: &mut O) -> CResult<'a> {
     while !input.rest.is_empty() {
         input = skip_whitespaces(input);
@@ -106,9 +108,10 @@ fn punct(input: Cursor) -> Result<Punct> {
             return Err(LexError::Next(Error::Punct, Span::from(input)));
         }
     };
-    let recognized = "~!@#$%^&*-=+|;:,<.>/?'";
-    if recognized.contains(first) {
-        Ok((input.adv(first.len_utf8()), Punct { ch: first }))
+    // TODO: move to Punct
+    if RECOGNIZED.contains(first) {
+        // Safety: It's Recognized contains first is safe convert because have the same representation
+        Ok((input.adv(1), unsafe { transmute(first as u8) }))
     } else {
         Err(LexError::Next(Error::Punct, Span::from(input)))
     }
