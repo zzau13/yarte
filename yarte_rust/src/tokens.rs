@@ -38,15 +38,15 @@ pub enum Punct {
     Tilde = 126,      // ~
 }
 
-impl TryFrom<char> for Punct {
+impl TryFrom<u8> for Punct {
     type Error = ();
 
-    fn try_from(value: char) -> Result<Self, Self::Error> {
-        static RECOGNIZED: &str = "!#$%&'*+,-./:;<=>?@^_`|~";
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        static RECOGNIZED: &[u8] = b"!#$%&'*+,-./:;<=>?@^_`|~";
 
-        if RECOGNIZED.contains(value) {
+        if RECOGNIZED.contains(&value) {
             // Safety: RECOGNIZED contains value is safe convert because have the same representation
-            Ok(unsafe { transmute(value as u8) })
+            Ok(unsafe { transmute(value) })
         } else {
             Err(())
         }
@@ -59,7 +59,10 @@ impl<'de> Deserialize<'de> for Punct {
         D: Deserializer<'de>,
     {
         <char>::deserialize(deserializer).and_then(|x| {
-            Punct::try_from(x).map_err(|_| serde::de::Error::custom("No valid Punct"))
+            u8::try_from(x)
+                .map_err(|_| ())
+                .and_then(Punct::try_from)
+                .map_err(|_| serde::de::Error::custom("No valid Punct"))
         })
     }
 }

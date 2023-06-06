@@ -102,7 +102,7 @@ fn punct(input: Cursor) -> Result<Punct> {
 
     Ok((
         input.adv(1),
-        match input.chars().next() {
+        match input.bytes().next() {
             Some(ch) => ch,
             None => {
                 return Err(LexError::Next(Error::Punct, Span::from(input)));
