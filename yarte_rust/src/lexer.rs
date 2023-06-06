@@ -1,13 +1,12 @@
 // Adapted from: https://github.com/dtolnay/proc-macro2/blob/master/src/parse.rs
 
-use std::mem::transmute;
 use yarte_strnom::source_map::{spanned, S};
 use yarte_strnom::{Cursor, LexError, Span};
 
 use crate::error::{CResult, Error, Result};
 use crate::literals::literal;
 use crate::sink::{Sink, State};
-use crate::token_types::{Delimiter, Ident, Punct, RECOGNIZED};
+use crate::token_types::{Delimiter, Ident, Punct};
 
 fn skip_whitespaces(mut s: Cursor) -> Cursor {
     while !s.is_empty() {
@@ -101,20 +100,17 @@ fn punct(input: Cursor) -> Result<Punct> {
         return Err(LexError::Next(Error::Punct, Span::from(input)));
     }
 
-    let mut chars = input.chars();
-    let first = match chars.next() {
-        Some(ch) => ch,
-        None => {
-            return Err(LexError::Next(Error::Punct, Span::from(input)));
+    Ok((
+        input.adv(1),
+        match input.chars().next() {
+            Some(ch) => ch,
+            None => {
+                return Err(LexError::Next(Error::Punct, Span::from(input)));
+            }
         }
-    };
-    // TODO: move to Punct
-    if RECOGNIZED.contains(first) {
-        // Safety: It's Recognized contains first is safe convert because have the same representation
-        Ok((input.adv(1), unsafe { transmute(first as u8) }))
-    } else {
-        Err(LexError::Next(Error::Punct, Span::from(input)))
-    }
+        .try_into()
+        .map_err(|_| LexError::Next(Error::Punct, Span::from(input)))?,
+    ))
 }
 
 fn ident(mut input: Cursor) -> Result<Ident> {

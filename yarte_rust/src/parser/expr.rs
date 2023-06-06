@@ -170,7 +170,6 @@ pub enum Token<'a> {
     Literal(Literal<'a>),
 }
 
-#[derive(Eq, PartialEq)]
 enum Ends {
     None,
     First,
