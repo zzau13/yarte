@@ -12,30 +12,30 @@ pub enum Delimiter {
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Punct {
-    Exclamation = 33, // !
-    Hash = 35,        // #
-    Dollar = 36,      // $
-    Percent = 37,     // %
-    And = 38,         // &
-    Apostrophe = 39,  // '
-    Asterisk = 42,    // *
-    Plus = 43,        // +
-    Comma = 44,       // ,
-    Hyphen = 45,      // -
-    Dot = 46,         // .
-    Slash = 47,       // /
-    Colon = 58,       // :
-    SemiColon = 59,   // ;
-    GreaterThan = 60, // <
-    Equal = 61,       // =
-    LessThan = 62,    // >
-    Question = 63,    // ?
-    At = 64,          // @
-    Circumflex = 94,  // ^
-    Underscore = 95,  // _
-    Backtick = 96,    // `
-    Bar = 124,        // |
-    Tilde = 126,      // ~
+    Exclamation = b'!',
+    Hash = b'#',
+    Dollar = b'$',
+    Percent = b'%',
+    And = b'&',
+    Apostrophe = b'\'',
+    Asterisk = b'*',
+    Plus = b'+',
+    Comma = b',',
+    Hyphen = b'-',
+    Dot = b'.',
+    Slash = b'/',
+    Colon = b':',
+    SemiColon = b';',
+    GreaterThan = b'<',
+    Equal = b'=',
+    LessThan = b'>',
+    Question = b'?',
+    At = b'@',
+    Circumflex = b'^',
+    Underscore = b'_',
+    Backtick = b'`',
+    Bar = b'|',
+    Tilde = b'~',
 }
 
 impl TryFrom<u8> for Punct {
