@@ -73,9 +73,19 @@ pub struct Ident<'a> {
     pub inner: &'a str,
 }
 
-// TODO:
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Deserialize)]
-#[serde(transparent)]
+pub enum LiteralKind {
+    String,
+    ByteString,
+    Byte,
+    Character,
+    Float,
+    Int,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Deserialize)]
 pub struct Literal<'a> {
-    pub inner: &'a str,
+    #[serde(borrow)]
+    pub i: &'a str,
+    pub k: LiteralKind,
 }

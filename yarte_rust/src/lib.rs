@@ -1,7 +1,7 @@
 mod error;
-mod expr;
-pub mod lexer;
 mod literals;
 mod parser;
+
+pub mod lexer;
 pub mod sink;
 pub mod tokens;

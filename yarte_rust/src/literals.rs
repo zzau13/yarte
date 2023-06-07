@@ -1,32 +1,34 @@
 // Adapted from: https://github.com/dtolnay/proc-macro2/blob/master/src/parse.rs
-use crate::error::{CResult, Error, Result};
-use crate::tokens::Literal;
 use yarte_strnom::{do_parse, tac, tag, Cursor, LexError, Span};
 
-pub(crate) fn literal(input: Cursor) -> Result<Literal> {
-    let rest = literal_nocapture(input)?;
-    let end = input.len() - rest.len();
-    Ok((
-        rest,
-        Literal {
-            inner: &input.rest[..end],
-        },
-    ))
-}
+use crate::error::{CResult, Error, Result};
+use crate::tokens::{Literal, LiteralKind};
 
-fn literal_nocapture(input: Cursor) -> CResult {
+pub(crate) fn literal(input: Cursor) -> Result<Literal> {
+    use LiteralKind::*;
+    macro_rules! ok {
+        ($e:ident - $kind:path) => {
+            Ok((
+                $e,
+                Literal {
+                    i: &input.rest[..(input.len() - $e.len())],
+                    k: $kind,
+                },
+            ))
+        };
+    }
     if let Ok(ok) = string(input) {
-        Ok(ok)
+        ok!(ok - String)
     } else if let Ok(ok) = byte_string(input) {
-        Ok(ok)
+        ok!(ok - ByteString)
     } else if let Ok(ok) = byte(input) {
-        Ok(ok)
+        ok!(ok - Byte)
     } else if let Ok(ok) = character(input) {
-        Ok(ok)
+        ok!(ok - Character)
     } else if let Ok(ok) = float(input) {
-        Ok(ok)
+        ok!(ok - Float)
     } else if let Ok(ok) = int(input) {
-        Ok(ok)
+        ok!(ok - Int)
     } else {
         Err(LexError::Next(Error::Literal, Span::from(input)))
     }
