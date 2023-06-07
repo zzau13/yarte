@@ -20,6 +20,14 @@ pub fn get_cursor<'a>(p: &Path, rest: &'a str) -> Cursor<'a> {
     }
 }
 
+/// Clear sourcemap and all existing Cursor and Span will be invalidate
+/// Use carefully
+pub fn clear() {
+    // Safety: set len to 0 is always safe because ondrop dealloc use capacity
+    //  and not is sensible data
+    unsafe { SOURCE_MAP.write().files.set_len(0) };
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct LineColumn {
     pub line: usize,
