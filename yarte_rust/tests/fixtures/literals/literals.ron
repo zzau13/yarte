@@ -23,7 +23,7 @@
     Punct('?'),
     Punct('\''),
   ]),
-  (src: r#"'a' b'a' 1 1_000 "hello world!" 123.000 12.12e10 "#, exp: [
+  (src: r#"'a' b'a' 1 1_000 "hello world!" 123.000 12.12e10 b"hello world!""#, exp: [
     Literal((i: "'a'", k: Character)),
     Literal((i: "b'a'", k: Byte)),
     Literal((i: "1", k: Int)),
@@ -31,5 +31,6 @@
     Literal((i: r#""hello world!""#, k: String)),
     Literal((i: "123.000", k: Float)),
     Literal((i: "12.12e10", k: Float)),
+    Literal((i: r#"b"hello world!""#, k: ByteString)),
   ])
 ]

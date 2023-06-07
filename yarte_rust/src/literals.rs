@@ -128,9 +128,9 @@ fn cooked_string(input: Cursor) -> CResult {
 }
 
 fn byte_string(input: Cursor) -> CResult {
-    if let Ok((input, _)) = tac::<Error>(input, b'"') {
+    if let Ok((input, _)) = tag::<Error>(input, r#"b""#) {
         cooked_byte_string(input)
-    } else if let Ok((input, _)) = tag::<Error>(input, "br") {
+    } else if let Ok((input, _)) = tag::<Error>(input, r#"br""#) {
         raw_string(input)
     } else {
         Err(LexError::Next(Error::Literal, Span::from(input)))
