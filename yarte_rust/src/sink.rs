@@ -5,7 +5,10 @@ use yarte_strnom::source_map::S;
 
 pub type SResult = std::result::Result<State, LexError<Error>>;
 
+// TODO: can trigger end when Stop and Back
 pub enum State {
+    /// Stop and return cursor to previous token position
+    Back,
     Continue,
     Stop,
 }

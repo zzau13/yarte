@@ -72,7 +72,8 @@ impl<'a, const END0: u8, const END1: u8> Sink<'a> for ExprSink<'a, END0, END1> {
 
     #[inline]
     fn punct(&mut self, punct: S<Punct>) -> SResult {
-        expr_punct(punct, self.into())
+        let _ = expr_punct(punct, self.into())?;
+        todo!("end before check")
     }
 
     #[inline]

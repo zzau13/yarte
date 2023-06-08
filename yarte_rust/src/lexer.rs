@@ -1,5 +1,4 @@
 // Adapted from: https://github.com/dtolnay/proc-macro2/blob/master/src/parse.rs
-
 use yarte_strnom::source_map::{spanned, S};
 use yarte_strnom::{Cursor, LexError, Span};
 
@@ -8,18 +7,6 @@ use crate::literals::literal;
 use crate::sink::{Sink, State};
 use crate::tokens::{Delimiter, Ident, Punct};
 
-fn skip_whitespaces(mut s: Cursor) -> Cursor {
-    while !s.is_empty() {
-        let ch = s.chars().next().unwrap();
-        if ch.is_whitespace() || ch == '\u{200e}' || ch == '\u{200f}' {
-            s = s.adv(ch.len_utf8());
-            continue;
-        }
-        return s;
-    }
-    s
-}
-
 #[inline]
 pub fn token_stream<'a, O: Sink<'a>>(mut input: Cursor<'a>, sink: &mut O) -> CResult<'a> {
     while !input.rest.is_empty() {
@@ -27,12 +14,7 @@ pub fn token_stream<'a, O: Sink<'a>>(mut input: Cursor<'a>, sink: &mut O) -> CRe
 
         let first = match input.bytes().next() {
             Some(first) => first,
-            None => {
-                return match sink.end() {
-                    Ok(_) => Ok(input),
-                    Err(_) => Err(LexError::Next(Error::StartToken, Span::from(input))),
-                }
-            }
+            None => break,
         };
 
         if let Some(open_delimiter) = match first {
@@ -42,11 +24,12 @@ pub fn token_stream<'a, O: Sink<'a>>(mut input: Cursor<'a>, sink: &mut O) -> CRe
             _ => None,
         } {
             let span = Span::from(input);
-            input = input.adv(1);
             match sink.open_group(S(open_delimiter, span))? {
                 State::Continue => (),
-                State::Stop => return Ok(input),
+                State::Stop => return Ok(input.adv(1)),
+                State::Back => return Ok(input),
             }
+            input = input.adv(1);
         } else if let Some(close_delimiter) = match first {
             b')' => Some(Delimiter::Parenthesis),
             b']' => Some(Delimiter::Bracket),
@@ -54,13 +37,38 @@ pub fn token_stream<'a, O: Sink<'a>>(mut input: Cursor<'a>, sink: &mut O) -> CRe
             _ => None,
         } {
             let span = Span::from(input);
-            input = input.adv(1);
             match sink.close_group(S(close_delimiter, span))? {
                 State::Continue => (),
-                State::Stop => return Ok(input),
+                State::Stop => return Ok(input.adv(1)),
+                State::Back => return Ok(input),
+            }
+            input = input.adv(1);
+        } else if let Ok((next, l)) = spanned(input, literal) {
+            match sink.literal(l)? {
+                State::Continue => input = next,
+                State::Stop => return Ok(next),
+                State::Back => return Ok(input),
+            };
+        } else if let Ok((next, p)) = spanned(input, punct) {
+            match sink.punct(p)? {
+                State::Continue => input = next,
+                State::Stop => return Ok(next),
+                State::Back => return Ok(input),
+            };
+        } else if let Ok((next, p)) = spanned(input, punct) {
+            match sink.punct(p)? {
+                State::Continue => input = next,
+                State::Stop => return Ok(next),
+                State::Back => return Ok(input),
+            };
+        } else if let Ok((next, i)) = spanned(input, ident) {
+            match sink.ident(i)? {
+                State::Continue => input = next,
+                State::Stop => return Ok(next),
+                State::Back => return Ok(input),
             }
         } else {
-            input = leaf_token(input, sink)?;
+            return Err(LexError::Next(Error::UnmatchedToken, Span::from(input)));
         }
     }
     match sink.end() {
@@ -69,30 +77,7 @@ pub fn token_stream<'a, O: Sink<'a>>(mut input: Cursor<'a>, sink: &mut O) -> CRe
     }
 }
 
-fn leaf_token<'a, O: Sink<'a>>(input: Cursor<'a>, sink: &mut O) -> CResult<'a> {
-    if let Ok((input, l)) = spanned(input, literal) {
-        match sink.literal(l)? {
-            State::Continue => (),
-            State::Stop => return Ok(input),
-        }
-        Ok(input)
-    } else if let Ok((input, p)) = spanned(input, punct) {
-        match sink.punct(p)? {
-            State::Continue => (),
-            State::Stop => return Ok(input),
-        }
-        Ok(input)
-    } else if let Ok((input, i)) = spanned(input, ident) {
-        match sink.ident(i)? {
-            State::Continue => (),
-            State::Stop => return Ok(input),
-        }
-        Ok(input)
-    } else {
-        Err(LexError::Next(Error::UnmatchedToken, Span::from(input)))
-    }
-}
-
+#[inline]
 fn punct(input: Cursor) -> Result<Punct> {
     /* this can by one of these symbols: ~!@#$%^&*-=+|;:,<.>/?'  */
     if input.starts_with("//") || input.starts_with("/*") {
@@ -113,6 +98,7 @@ fn punct(input: Cursor) -> Result<Punct> {
     ))
 }
 
+#[inline]
 fn ident(mut input: Cursor) -> Result<Ident> {
     /* This is a name: true/false, function, reserved word, variable, struct, trait, enum, etc*/
     if ["r\"", "r#\"", "r##", "b\"", "b\'", "br\"", "br#"]
@@ -149,4 +135,17 @@ fn ident(mut input: Cursor) -> Result<Ident> {
         input = input.adv(cont); // Corresponds to end of string check if cont+1 makes sense
         Ok((input, i))
     }
+}
+
+#[inline]
+fn skip_whitespaces(mut s: Cursor) -> Cursor {
+    while !s.is_empty() {
+        let ch = s.chars().next().unwrap();
+        if ch.is_whitespace() || ch == '\u{200e}' || ch == '\u{200f}' {
+            s = s.adv(ch.len_utf8());
+            continue;
+        }
+        return s;
+    }
+    s
 }

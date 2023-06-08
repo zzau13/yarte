@@ -250,6 +250,7 @@ impl<T: Debug + PartialEq + Clone> S<T> {
     }
 }
 
+#[inline]
 pub fn spanned<'a, T: Debug + PartialEq + Clone, E: KiError>(
     input: Cursor<'a>,
     f: fn(Cursor<'a>) -> Result<'a, T, E>,
