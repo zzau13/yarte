@@ -9,7 +9,17 @@ use crate::tokens::{Delimiter, Ident, Punct};
 
 #[inline]
 pub fn token_stream<'a, O: Sink<'a>>(mut input: Cursor<'a>, sink: &mut O) -> CResult<'a> {
-    while !input.rest.is_empty() {
+    macro_rules! go {
+        ($sink:expr => $next:expr) => {
+            match $sink {
+                State::Continue => input = $next,
+                State::Stop => return Ok($next),
+                State::Back => return Ok(input),
+            };
+        };
+    }
+
+    loop {
         input = skip_whitespaces(input);
 
         let first = match input.bytes().next() {
@@ -24,12 +34,7 @@ pub fn token_stream<'a, O: Sink<'a>>(mut input: Cursor<'a>, sink: &mut O) -> CRe
             _ => None,
         } {
             let span = Span::from(input);
-            match sink.open_group(S(open_delimiter, span))? {
-                State::Continue => (),
-                State::Stop => return Ok(input.adv(1)),
-                State::Back => return Ok(input),
-            }
-            input = input.adv(1);
+            go!(sink.open_group(S(open_delimiter, span))? => input.adv(1));
         } else if let Some(close_delimiter) = match first {
             b')' => Some(Delimiter::Parenthesis),
             b']' => Some(Delimiter::Bracket),
@@ -37,42 +42,20 @@ pub fn token_stream<'a, O: Sink<'a>>(mut input: Cursor<'a>, sink: &mut O) -> CRe
             _ => None,
         } {
             let span = Span::from(input);
-            match sink.close_group(S(close_delimiter, span))? {
-                State::Continue => (),
-                State::Stop => return Ok(input.adv(1)),
-                State::Back => return Ok(input),
-            }
-            input = input.adv(1);
+            go!(sink.close_group(S(close_delimiter, span))? => input.adv(1));
         } else if let Ok((next, l)) = spanned(input, literal) {
-            match sink.literal(l)? {
-                State::Continue => input = next,
-                State::Stop => return Ok(next),
-                State::Back => return Ok(input),
-            };
+            go!(sink.literal(l)? => next);
         } else if let Ok((next, p)) = spanned(input, punct) {
-            match sink.punct(p)? {
-                State::Continue => input = next,
-                State::Stop => return Ok(next),
-                State::Back => return Ok(input),
-            };
-        } else if let Ok((next, p)) = spanned(input, punct) {
-            match sink.punct(p)? {
-                State::Continue => input = next,
-                State::Stop => return Ok(next),
-                State::Back => return Ok(input),
-            };
+            go!(sink.punct(p)? => next);
         } else if let Ok((next, i)) = spanned(input, ident) {
-            match sink.ident(i)? {
-                State::Continue => input = next,
-                State::Stop => return Ok(next),
-                State::Back => return Ok(input),
-            }
+            go!(sink.ident(i)? => next);
         } else {
             return Err(LexError::Next(Error::UnmatchedToken, Span::from(input)));
         }
     }
     match sink.end() {
         Ok(_) => Ok(input),
+        // TODO:
         Err(_) => Err(LexError::Fail(Error::SinkEnd, Span::from(input))),
     }
 }
