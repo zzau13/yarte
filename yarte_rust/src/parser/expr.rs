@@ -7,6 +7,7 @@ use yarte_strnom::{Cursor, LexError, Span};
 use crate::error;
 use crate::error::Error;
 use crate::lexer::token_stream;
+use crate::parser::visits::punct::{expr_punct, ExprPunct};
 use crate::sink::{SResult, Sink, State};
 use crate::tokens::*;
 
@@ -175,7 +176,7 @@ enum Ends {
     First,
 }
 
-struct ExprSink<'a, const END0: u8, const END1: u8> {
+pub struct ExprSink<'a, const END0: u8, const END1: u8> {
     ends: Ends,
     expr: Option<Expr>,
     groups: Vec<Delimiter>,
@@ -194,6 +195,16 @@ impl<'a, const END0: u8, const END1: u8> Default for ExprSink<'a, END0, END1> {
     }
 }
 
+impl<'a, 'b, const END0: u8, const END1: u8> From<&'b mut ExprSink<'a, END0, END1>>
+    for ExprPunct<'b>
+{
+    fn from(value: &'b mut ExprSink<'a, END0, END1>) -> Self {
+        ExprPunct {
+            expr: &mut value.expr,
+        }
+    }
+}
+
 // TODO: add terminate expression
 impl<'a, const END0: u8, const END1: u8> Sink<'a> for ExprSink<'a, END0, END1> {
     #[inline]
@@ -204,14 +215,7 @@ impl<'a, const END0: u8, const END1: u8> Sink<'a> for ExprSink<'a, END0, END1> {
 
     #[inline]
     fn close_group(&mut self, del: S<Delimiter>) -> SResult {
-        if self
-            .groups
-            .last()
-            .copied()
-            .map(|x| x == del.0)
-            .unwrap_or(false)
-        {
-            self.groups.pop();
+        if self.groups.pop().map(|x| x == del.0).unwrap_or(false) {
             todo!();
         } else {
             // TODO: check end
@@ -227,9 +231,7 @@ impl<'a, const END0: u8, const END1: u8> Sink<'a> for ExprSink<'a, END0, END1> {
 
     #[inline]
     fn punct(&mut self, punct: S<Punct>) -> SResult {
-        // TODO: check end
-        // TODO: punct is ASCII, add enum repr u8
-        todo!()
+        expr_punct(punct, self.into())
     }
 
     #[inline]
