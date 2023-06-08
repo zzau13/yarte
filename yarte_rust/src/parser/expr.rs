@@ -56,7 +56,7 @@ impl<'a, const END0: u8, const END1: u8> Sink<'a> for ExprSink<'a, END0, END1> {
 
     #[inline]
     fn close_group(&mut self, del: S<Delimiter>) -> SResult {
-        if self.groups.pop().map(|x| x == del.0).unwrap_or(false) {
+        if self.groups.pop().map_or(false, |x| x == del.0) {
             todo!();
         } else {
             // TODO: check end
