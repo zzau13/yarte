@@ -1,6 +1,6 @@
-use crate::parser::expr::Expr;
 use yarte_strnom::source_map::S;
 
+use crate::parser::ast::expr::Expr;
 use crate::sink::SResult;
 use crate::tokens::Punct;
 
