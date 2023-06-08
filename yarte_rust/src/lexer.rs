@@ -70,14 +70,11 @@ fn punct(input: Cursor) -> Result<Punct> {
 
     Ok((
         input.adv(1),
-        match input.bytes().next() {
-            Some(ch) => ch,
-            None => {
-                return Err(LexError::Next(Error::Punct, Span::from(input)));
-            }
-        }
-        .try_into()
-        .map_err(|_| LexError::Next(Error::Punct, Span::from(input)))?,
+        input
+            .bytes()
+            .next()
+            .and_then(|x| x.try_into().ok())
+            .ok_or(LexError::Next(Error::Punct, Span::from(input)))?,
     ))
 }
 
