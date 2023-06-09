@@ -1,4 +1,5 @@
 use std::mem::transmute;
+use std::simd::{u8x32, SimdPartialEq};
 
 use serde::{Deserialize, Deserializer};
 
@@ -42,9 +43,11 @@ impl TryFrom<u8> for Punct {
     type Error = ();
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
-        static RECOGNIZED: &[u8] = b"!#$%&'*+,-./:;<=>?@^_`|~";
+        static RECOGNIZED: &[u8; 32] = b"!#$%&'*+,-./:;<=>?@^_`|~!#$%&'*+";
+        let r = u8x32::from_slice(RECOGNIZED);
+        let v = u8x32::from_array([value; 32]);
 
-        if RECOGNIZED.contains(&value) {
+        if r.simd_eq(v).any() {
             // Safety: RECOGNIZED contains value is safe convert because have the same representation
             Ok(unsafe { transmute(value) })
         } else {

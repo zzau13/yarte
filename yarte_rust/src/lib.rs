@@ -1,3 +1,4 @@
+#![feature(portable_simd)]
 mod error;
 mod literals;
 mod parser;
