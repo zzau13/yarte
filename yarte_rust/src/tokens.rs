@@ -92,3 +92,14 @@ pub struct Literal<'a> {
     pub i: &'a str,
     pub k: LiteralKind,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn punct() {
+        assert_eq!(Punct::try_from(b'!').unwrap(), Punct::Exclamation);
+        assert_eq!(Punct::try_from(b'/').unwrap(), Punct::Slash);
+    }
+}
