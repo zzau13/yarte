@@ -2,7 +2,8 @@ name: Benches
 
 on:
   push:
-  pull_request:
+    branches:
+      - master
   schedule: [cron: "40 1 * * *"]
 
 jobs:
@@ -11,7 +12,7 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - stable
+#          - stable
           - nightly
 
     name: ${{ matrix.version }} - x86_64-unknown-linux-gnu

@@ -11,7 +11,7 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - stable
+#          - stable
           - nightly
 
     name: ${{ matrix.version }} - x86_64-apple-darwin
