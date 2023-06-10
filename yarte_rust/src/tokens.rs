@@ -43,8 +43,8 @@ impl TryFrom<u8> for Punct {
     type Error = ();
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
-        static RECOGNIZED: &[u8; 32] = b"!#$%&'*+,-./:;<=>?@^_`|~!#$%&'*+";
-        let r = u8x32::from_slice(RECOGNIZED);
+        const RECOGNIZED: [u8; 32] = *b"!#$%&'*+,-./:;<=>?@^_`|~!#$%&'*+";
+        let r = u8x32::from_array(RECOGNIZED);
         let v = u8x32::from_array([value; 32]);
 
         if r.simd_eq(v).any() {
