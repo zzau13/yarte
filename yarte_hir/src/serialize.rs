@@ -196,7 +196,7 @@ impl VisitMut for Serialize {
                                 }
                             };
                             *expr = syn::Expr::Path(ExprPath {
-                                attrs: attrs.drain(..).collect(),
+                                attrs: std::mem::take(attrs),
                                 qself: None,
                                 path,
                             });

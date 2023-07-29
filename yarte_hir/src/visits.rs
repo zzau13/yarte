@@ -89,7 +89,7 @@ impl<'a> VisitMut for LoweringContext<'a> {
             ..
         }: &mut syn::ExprClosure,
     ) {
-        if let Some(..) = asyncness {
+        if asyncness.is_some() {
             self.buf_err.push((GError::NotAvailable, asyncness.span()));
         };
 
