@@ -20,8 +20,8 @@ maintenance = { status = "actively-developed" }
 wasm-app = ["yarte_hir/wasm-app"]
 
 [dependencies]
-yarte_hir = { version = "0.15.0", path = "../yarte_hir" }
-yarte_helpers = { version = "0.15.0", path = "../yarte_helpers" }
+yarte_hir = { workspace = true }
+yarte_helpers = { workspac = true }
 
 markup5ever = "0.11"
 

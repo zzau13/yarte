@@ -21,7 +21,7 @@ travis-ci = { repository = "botika/yarte", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]
-yarte_strnom = { version = "0.0", path = '../yarte_strnom' }
+yarte_strnom = { workspace = true }
 
 # TODO: remove syn libraries
 quote = "1.0"

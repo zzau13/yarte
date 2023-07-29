@@ -21,8 +21,8 @@ wasm-app = []
 deser = ["serde"]
 
 [dependencies]
-yarte_helpers = { version = "~0.15.1", path = "../yarte_helpers" }
-yarte_parser = { version = "~0.15.0", path = "../yarte_parser" }
+yarte_helpers = { workspace = true }
+yarte_parser = { workspace = true }
 
 v_eval = "0.6"
 v_htmlescape = "0.15"

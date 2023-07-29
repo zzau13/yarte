@@ -20,8 +20,8 @@ maintenance = { status = "actively-developed" }
 bytes-buf = []
 
 [dependencies]
-yarte_helpers = { version = "~0.15.1", path = "../yarte_helpers" }
-yarte_hir = { version = "~0.15.3", path = "../yarte_hir" }
+yarte_helpers = { workspace = true }
+yarte_hir = { workspace = true }
 
 proc-macro2 = "1.0"
 quote = "1.0"

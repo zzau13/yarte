@@ -23,8 +23,8 @@ json = ["yarte_helpers/json", "yarte_derive/json", "bytes-buf"]
 bytes-buf = ["buf-min", "yarte_helpers/bytes-buf", "yarte_derive/bytes-buf"]
 
 [dependencies]
-yarte_derive = { version = "~0.15.4", path = "../yarte_derive" }
-yarte_helpers = { version = "~0.15.1", path = "../yarte_helpers" }
+yarte_derive = { workspace = true }
+yarte_helpers = { workspace = true }
 buf-min = { version = "0.7", optional = true }
 
 [dev-dependencies]
