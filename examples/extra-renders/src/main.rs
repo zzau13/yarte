@@ -5,11 +5,11 @@ compile_error!("not compile without nightly");
 use std::io::{stdout, Write};
 
 use uuid::Uuid;
-use yarte::{yarte, RenderBytes, Buffer};
+use yarte::{yarte, Buffer, RenderBytes};
 
 #[derive(Clone, Copy)]
 struct SomeWithRender {
-    foo: usize
+    foo: usize,
 }
 
 impl RenderBytes for SomeWithRender {
