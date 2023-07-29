@@ -2,7 +2,7 @@
 use std::io::{stdout, Write};
 
 use uuid::Uuid;
-use yarte::*;
+use yarte::yarte;
 
 /// without comma or error
 /// `message: stable/nightly mismatch`
@@ -15,7 +15,7 @@ fn nightly(uuid: &Uuid) {
     // without comma or error
     // `message: stable/nightly mismatch`
     #[rustfmt::skip]
-    write_str(#[html] "{{> hello }}");
+    write_str(#[yarte] "{{> hello }}");
 }
 
 fn main() {

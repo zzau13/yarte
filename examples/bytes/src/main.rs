@@ -2,7 +2,7 @@
 
 use std::io::{stdout, Write};
 
-use yarte::*;
+use yarte::yarte;
 
 struct Card<'a> {
     title: &'a str,
@@ -19,7 +19,7 @@ fn main() {
         body: "My Body",
     };
     let mut buffer = Vec::with_capacity(2048);
-    #[html(buffer)]
+    #[yarte(buffer)]
     "{{> hello my_card }}";
 
     println!("Proc macro attribute");
@@ -29,13 +29,13 @@ fn main() {
     println!("Proc macro attribute auto");
 
     _write_str(
-        #[html]
+        #[yarte]
         "{{> hello my_card }}",
     );
 
     println!();
 
-    let buffer: String = #[html]
+    let buffer: String = #[yarte]
     "{{> hello my_card }}";
 
     println!("Proc macro attribute auto");

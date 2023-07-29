@@ -390,7 +390,7 @@ impl syn::parse::Parse for TemplateArg {
 
 #[proc_macro_attribute]
 #[cfg(feature = "bytes-buf")]
-pub fn html(args: TokenStream, input: TokenStream) -> TokenStream {
+pub fn yarte(args: TokenStream, input: TokenStream) -> TokenStream {
     const PARENT: &str = "yarte";
 
     let args_is_empty = args.is_empty();

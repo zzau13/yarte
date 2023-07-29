@@ -28,7 +28,7 @@ pub use yarte_derive::auto;
 ))]
 pub use yarte_derive::ywrite_min;
 #[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"))]
-pub use yarte_derive::{html, ywrite, ywrite_html};
+pub use yarte_derive::{yarte, ywrite, ywrite_html};
 pub use yarte_derive::{yformat, yformat_html};
 pub use yarte_helpers::at_helpers::*;
 pub use yarte_helpers::{
