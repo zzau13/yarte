@@ -1,4 +1,6 @@
 #![cfg_attr(nightly, feature(proc_macro_hygiene, stmt_expr_attributes))]
+#[cfg(not(nightly))]
+compile_error!("not compile without nightly");
 
 use std::io::{stdout, Write};
 
