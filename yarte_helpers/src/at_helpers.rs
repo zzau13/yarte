@@ -11,7 +11,7 @@ pub mod json {
 
     impl<'a, T> Clone for Json<'a, T> {
         fn clone(&self) -> Self {
-            Json(self.0)
+            *self
         }
     }
 
@@ -36,7 +36,7 @@ pub mod json {
 
     impl<'a, T> Clone for JsonPretty<'a, T> {
         fn clone(&self) -> Self {
-            JsonPretty(self.0)
+            *self
         }
     }
 
