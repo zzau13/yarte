@@ -8,11 +8,9 @@ edition = "2021"
 workspace = "../.."
 
 [dependencies]
-yarte = { path = "../../yarte", version = "*", features = ["bytes-buf"]  }
+yarte = { workspace = true, features = ["bytes-buf"] }
 
-bytes = "1.2.1"
-buf-min = { version = "0.7.0", features = ["bytes"] }
+buf-min = { workspace = true }
 
 [build-dependencies]
-yarte_helpers = { path = "../../yarte_helpers", version = "*" }
-
+yarte_helpers = { workspace = true }

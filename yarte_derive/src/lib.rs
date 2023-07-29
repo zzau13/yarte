@@ -375,7 +375,7 @@ pub fn ywrite_min(i: TokenStream) -> TokenStream {
 struct TemplateArg {
     pub s: syn::LitStr,
     _d: Option<syn::Token![;]>,
-    _c: Option<syn::Token![,]>
+    _c: Option<syn::Token![,]>,
 }
 
 impl syn::parse::Parse for TemplateArg {
@@ -383,7 +383,7 @@ impl syn::parse::Parse for TemplateArg {
         Ok(TemplateArg {
             s: input.parse()?,
             _d: input.parse()?,
-            _c: input.parse()?
+            _c: input.parse()?,
         })
     }
 }

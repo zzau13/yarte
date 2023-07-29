@@ -25,7 +25,7 @@ bytes-buf = ["buf-min", "yarte_helpers/bytes-buf", "yarte_derive/bytes-buf"]
 [dependencies]
 yarte_derive = { workspace = true }
 yarte_helpers = { workspace = true }
-buf-min = { version = "0.7", optional = true }
+buf-min = { workspace = true, optional = true }
 
 [dev-dependencies]
 trybuild = { version = "1.0", features = ["diff"] }

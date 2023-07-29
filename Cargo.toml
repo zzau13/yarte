@@ -1,3 +1,18 @@
+[workspace.dependencies]
+yarte = { path = "yarte", version = "~0.15.7" }
+yarte_codegen = { path = "yarte_codegen", version = "~0.15.7" }
+yarte_derive = { path = "yarte_derive", version = "~0.15.6" }
+yarte_helpers = { path = "yarte_helpers", version = "~0.15.8" }
+yarte_hir = { path = "yarte_hir", version = "~0.15.6" }
+yarte_parser = { path = "yarte_parser", version = "~0.15.2" }
+yarte_lexer = { path = "yarte_lexer", version = "~0.0.1" }
+yarte_rust = { path = "yarte_rust", version = "~0.0.1" }
+yarte_strnom = { path = "yarte_strnom", version = "~0.0.1" }
+
+buf-min = "~0.7.1"
+
+proc-macro2 = { version = "~1.0.66" }
+
 [workspace]
 resolver = "2"
 members = [
@@ -12,14 +27,3 @@ members = [
     "yarte_rust",
     "yarte_strnom",
 ]
-[workspace.dependencies]
-yarte_codegen = { path = "yarte_codegen", version = "0.15.7" }
-yarte_derive = { path = "yarte_derive", version = "0.15.6" }
-yarte_helpers = { path = "yarte_helpers", version = "0.15.8" }
-yarte_hir = { path = "yarte_hir", version = "0.15.6" }
-yarte_parser = { path = "yarte_parser", version = "0.15.2" }
-yarte_lexer = { path = "yarte_lexer", version = "0.0.1" }
-yarte_rust = { path = "yarte_rust", version = "0.0.1" }
-yarte_strnom = { path = "yarte_strnom", version = "0.0.1" }
-
-proc-macro2 = { version = "~1.0.66" }
