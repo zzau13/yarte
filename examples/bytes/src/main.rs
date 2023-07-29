@@ -21,12 +21,8 @@ fn _write_str(buffer: BytesMut) {
 #[cfg(nightly)]
 fn nightly(my_card: &Card) {
     let mut buffer = BytesMut::new();
-    // TODO: unexpected token `;`, bad statement when pass without let
-    let _ = #[html(buffer)]
+    #[html(buffer)]
     "{{> hello my_card }}";
-
-    #[cfg(nightly)]
-    "Why this runs and not the above";
 
     println!("Proc macro attribute");
     stdout().lock().write_all(&buffer).unwrap();
@@ -34,10 +30,10 @@ fn nightly(my_card: &Card) {
 
     println!("Proc macro attribute auto");
 
-    // without comma or error
-    // `message: stable/nightly mismatch`
-    #[rustfmt::skip]
-    _write_str(#[html] "{{> hello my_card }}");
+    _write_str(
+        #[html]
+        "{{> hello my_card }}",
+    );
 
     println!();
 

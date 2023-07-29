@@ -8,7 +8,7 @@ use std::{
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 
-use syn::parse::ParseBuffer;
+use syn::parse::{ParseBuffer, ParseStream};
 use syn::spanned::Spanned;
 
 use yarte_codegen::{CodeGen, FmtCodeGen, HTMLCodeGen, TextCodeGen};
@@ -113,23 +113,6 @@ pub fn template_html_bytes(input: TokenStream) -> TokenStream {
             PARENT,
         ))
     };
-    let i = &syn::parse(input).unwrap();
-    build!(i, get_codegen, Default::default()).into()
-}
-
-#[proc_macro_derive(TemplateFixedMin, attributes(template))]
-#[cfg(all(feature = "html-min", feature = "fixed"))]
-/// # Work in Progress
-/// Implements TemplateTrait with html minifier
-pub fn template_html_min_ptr(input: TokenStream) -> TokenStream {
-    const PARENT: &str = "yarte";
-    fn get_codegen<'a>(s: &'a Struct) -> Box<dyn CodeGen + 'a> {
-        Box::new(yarte_codegen::FixedCodeGen::new(
-            yarte_codegen::HTMLMinFixedCodeGen(PARENT),
-            s,
-            PARENT,
-        ))
-    }
     let i = &syn::parse(input).unwrap();
     build!(i, get_codegen, Default::default()).into()
 }
@@ -389,8 +372,22 @@ pub fn ywrite_min(i: TokenStream) -> TokenStream {
     .into()
 }
 
-// TODO: PoC
-// TODO: Simplify and infer type
+struct TemplateArg {
+    pub s: syn::LitStr,
+    _d: Option<syn::Token![;]>,
+    _c: Option<syn::Token![,]>
+}
+
+impl syn::parse::Parse for TemplateArg {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        Ok(TemplateArg {
+            s: input.parse()?,
+            _d: input.parse()?,
+            _c: input.parse()?
+        })
+    }
+}
+
 #[proc_macro_attribute]
 #[cfg(feature = "bytes-buf")]
 pub fn html(args: TokenStream, input: TokenStream) -> TokenStream {
@@ -424,8 +421,8 @@ pub fn html(args: TokenStream, input: TokenStream) -> TokenStream {
             !args_is_empty,
         ))
     };
-    let input: syn::LitStr = match syn::parse(input) {
-        Ok(i) => i,
+    let input = match syn::parse::<TemplateArg>(input) {
+        Ok(i) => i.s,
         Err(e) => return e.into_compile_error().into(),
     };
     let input = quote! {
