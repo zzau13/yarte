@@ -7,6 +7,13 @@ use std::io::{stdout, Write};
 use uuid::Uuid;
 use yarte::{yarte, Buffer, RenderBytes};
 
+/// TL;DR: not use `not Copiable` (String, Vec, HashMap, ...) use their borrow alternative (&str, &[], &HashMap, ...)
+///
+/// It has to implement `Copy` because it forces consume so that references are used and types
+/// that implement `Copy` are not borrowed, since the unnecessary references are removed in
+/// compilation with the use of methods, so that the user does not have to use '&' in the
+/// template and maximize efficiency.
+///
 #[derive(Clone, Copy)]
 struct SomeWithRender {
     foo: usize,
