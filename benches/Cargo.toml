@@ -4,15 +4,14 @@ version = "0.0.1"
 publish = false
 edition = "2021"
 
-[workspace]
-members = ["."]
+workspace = ".."
 
 [dependencies]
-yarte = { path = "../yarte", version = "*", features = ["bytes-buf"] }
+yarte = { workspace = true, features = ["bytes-buf"] }
 v_htmlescape = "0.15"
 
 [build-dependencies]
-yarte = { path = "../yarte", version = "*" }
+yarte_helpers = { workspace = true }
 
 [dev-dependencies]
 criterion = "0.5"

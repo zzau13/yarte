@@ -16,6 +16,7 @@ proc-macro2 = { version = "~1.0.66" }
 [workspace]
 resolver = "2"
 members = [
+    "benches",
     "examples/*",
     "yarte",
     "yarte_codegen",
