@@ -17,7 +17,7 @@ In order to  fully understand Yarte's capabilities take a look at the following 
 
 Or, in nightly, just:
 ```rust
-#[html] "{{> my_template }}"
+#[yarte] "{{> my_template }}"
 ```
 `bytes-buf` feature can produce **SIGILL**.
 More details in https://github.com/botika/v_escape/issues/54.
@@ -25,7 +25,15 @@ More details in https://github.com/botika/v_escape/issues/54.
 Yarte is under development.
 
 ### Is it really fast?
-See it for yourself in the [TechEmpower benchmarks][bench] with [`actix`][actix] and [`ntex`][ntex] 
+Run `cargo bench` with rust nightly.
+
+Results in my `AMD Ryzen 9 5900HX`
+```
+Teams                   time:   [62.335 ns 62.704 ns 63.138 ns]
+Big table               time:   [28.546 µs 28.690 µs 28.873 µs]
+```
+
+See it for yourself in the [TechEmpower benchmarks][bench] with [`actix`][actix] and [`ntex`][ntex]
 
 ## Acknowledgment
 Yarte is based on all previous templates engines, syntax as well as its documentation 
