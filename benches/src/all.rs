@@ -61,13 +61,15 @@ fn teams(b: &mut criterion::Bencher) {
     let teams = build_teams();
 
     b.iter(|| {
-        let _: String = #[yarte] "{{> teams }}";
+        let _: String = #[yarte]
+        "{{> teams }}";
     });
 }
 
 fn big_table(b: &mut criterion::Bencher, size: usize) {
     let table = build_big_table(size);
     b.iter(|| {
-        let _: String = #[yarte] "{{> big-table }}";
+        let _: String = #[yarte]
+        "{{> big-table }}";
     });
 }
