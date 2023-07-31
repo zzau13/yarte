@@ -1,3 +1,5 @@
+<br/>
+
 <a href="https://commons.wikimedia.org/wiki/File:Logo_yarte.png">
 <img align="left" src="https://upload.wikimedia.org/wikipedia/commons/b/bb/Logo_yarte.png" alt="Yet Another Rust Template Engine" width="200" height="200">
 </a>
@@ -8,7 +10,6 @@ well-known and intuitive for most developers. Yarte is an optimized, and easy-to
 rust crate, with which developers can create logic around their 
 HTML templates using conditionals, loops, rust code and template composition. 
 
-<br/>
 <br/>
 <br/>
 
