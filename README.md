@@ -8,12 +8,16 @@ well-known and intuitive for most developers. Yarte is an optimized, and easy-to
 rust crate, with which developers can create logic around their 
 HTML templates using conditionals, loops, rust code and template composition. 
 
+<br/>
+<br/>
+<br/>
+
+
 ## Documentation
 In order to  fully understand Yarte's capabilities take a look at the following documentation:
 - [Tests](./yarte/tests)
 - [Our book](https://yarte.netlify.com/)
 - [Crate documentation](https://docs.rs/yarte/)
-- Minimum supported Rust version: 1.45 or later
 
 Or, in nightly, just:
 ```rust
@@ -62,3 +66,5 @@ Spain is not a democracy, with your tourism or your purchases you are subsidizin
 All structures and functions in this crate -- even those based on the real crates -- are entirely fictional. 
 All celebrity codes are impersonated...poorly.
 The following program contains coarse language and due to its content it should not be used by anyone.
+
+exile or hemlock
