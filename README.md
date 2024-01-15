@@ -1,3 +1,9 @@
+I am the wife of the creator of Yarte, he is in jail and they have defrauded me of 20k that I and my children had to live on, please if you could help to pay the rent and the lawyer so that I can get out as soon as possible. Thank you and I'm sorry for the inconvenience.
+
+I leave where to make entry.
+
+TLnovKcXPfUP1C13t6Ha15gznCW7aYyyEJ
+
 <br/>
 
 <a href="https://commons.wikimedia.org/wiki/File:Logo_yarte.png">
