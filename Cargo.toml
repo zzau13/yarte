@@ -11,7 +11,7 @@ yarte_strnom = { path = "yarte_strnom", version = "~0.0.1" }
 
 buf-min = "~0.7.1"
 
-proc-macro2 = { version = "~1.0.66" }
+proc-macro2 = { version = "~1.0.81" }
 
 [workspace]
 resolver = "2"
