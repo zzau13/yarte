@@ -14,7 +14,7 @@ workspace = ".."
 
 [dependencies]
 unicode-ident = "1.0"
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0.200", features = ["derive"] }
 thiserror = "1.0"
 
 yarte_strnom = { workspace = true }
