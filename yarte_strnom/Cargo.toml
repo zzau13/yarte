@@ -26,7 +26,7 @@ proc-macro2 = { workspace = true, features = ["span-locations"] }
 
 annotate-snippets = { version = "0.9", features = ["color"] }
 derive_more = "0.99"
-memchr = "2.5"
+memchr = "2.7.2"
 parking_lot = "0.12"
 
 serde = { version = "1.0" }
