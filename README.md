@@ -60,12 +60,3 @@ This Code of Conduct is adapted from the [Contributor Covenant][homepage], versi
 ### License
 This project is distributed under the terms of both the Apache License (Version 2.0) and the MIT license, specified in 
 [LICENSE-APACHE](LICENSE-APACHE) and [LICENSE-MIT](LICENSE-MIT) respectively.
-
-# Disclaimer
-Spain is not a democracy, with your tourism or your purchases you are subsidizing this barbarism. 
-
-All structures and functions in this crate -- even those based on the real crates -- are entirely fictional. 
-All celebrity codes are impersonated...poorly.
-The following program contains coarse language and due to its content it should not be used by anyone.
-
-exile or hemlock
