@@ -23,7 +23,7 @@ wasm-app = ["yarte_hir/wasm-app"]
 yarte_hir = { workspace = true }
 yarte_helpers = { workspac = true }
 
-markup5ever = "0.11"
+markup5ever = "0.12"
 
 quote = "1.0"
 syn = { version= "1.0", features = ["full", "visit", "extra-traits"] }
