@@ -1,9 +1,0 @@
-[
-    (src: "{{ var => }}", exp: [(Arm((false, false), ("var =>", (lo:3, hi:9))), (lo:0, hi:12))]),
-    (src: "{{ A | B => }}", exp: [(Arm((false, false), ("A | B =>", (lo:3, hi:11))), (lo:0, hi:14))]),
-    (src: "{{ A | B if foo => }}", exp: [(Arm((false, false), ("A | B if foo =>", (lo:3, hi:18))), (lo:0, hi:21))]),
-    (src: "{{ a @ A | a @ B if foo => }}", exp: [(Arm((false, false), ("a @ A | a @ B if foo =>", (lo:3, hi:26))), (lo:0, hi:29))]),
-    (src: "{{~ var => }}", exp: [(Arm((true, false), ("var =>", (lo:4, hi:10))), (lo:0, hi:13))]),
-    (src: "{{~ var => ~}}", exp: [(Arm((true, true), ("var =>", (lo:4, hi:10))), (lo:0, hi:14))]),
-    (src: "{{ var => ~}}", exp: [(Arm((false, true), ("var =>", (lo:3, hi:9))), (lo:0, hi:13))]),
-]
