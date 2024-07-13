@@ -1,6 +1,0 @@
-[
-    (src: "{% var %}", exp: [(Block((false, false), (["var"], (lo:3, hi:6))), (lo:0, hi:9))]),
-    (src: "{% fun() %}", exp: [(Block((false, false), (["fun()"], (lo:3, hi:8))), (lo:0, hi:11))]),
-    (src: "{% fun(|a| a) %}", exp: [(Block((false, false), (["fun(|a| a)"], (lo:3, hi:13))), (lo:0, hi:16))]),
-    (src: "{% fun(|a| {{a}}) %}", exp: [(Block((false, false), (["fun(|a| {{a}})"], (lo:3, hi:17))), (lo:0, hi:20))])
-]
