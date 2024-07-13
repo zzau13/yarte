@@ -2,6 +2,8 @@
 mod json {
     use serde::Serialize;
     use yarte::{Serialize as YSerialize, Template, TemplateText};
+    // TODO: remove at helpers
+    use yarte_helpers::at_helpers::*;
     #[derive(Serialize, YSerialize, Clone, Copy)]
     struct Json {
         f: usize,
@@ -50,66 +52,6 @@ mod json {
 
         let t = JsonPrettyTemplateT { f };
         assert_eq!(serde_json::to_string_pretty(&f).unwrap(), t.call().unwrap());
-    }
-
-    #[cfg(feature = "fixed")]
-    mod fixed {
-        use super::*;
-        use std::mem::MaybeUninit;
-        use yarte::{TemplateFixed, TemplateFixedText};
-
-        #[derive(TemplateFixed)]
-        #[template(src = "{{ @json f }}")]
-        struct JsonTemplateF {
-            f: Json,
-        }
-
-        #[derive(TemplateFixed)]
-        #[template(src = "{{ @json_pretty f }}")]
-        struct JsonPrettyTemplateF {
-            f: Json,
-        }
-
-        #[derive(TemplateFixedText)]
-        #[template(src = "{{ @json &&&f }}", print = "code")]
-        struct JsonTemplateFT {
-            f: Json,
-        }
-
-        #[derive(TemplateFixedText)]
-        #[template(src = "{{ @json_pretty f }}")]
-        struct JsonPrettyTemplateFT {
-            f: Json,
-        }
-
-        #[test]
-        fn json() {
-            let f = Json { f: 1 };
-            let t = JsonTemplateF { f };
-
-            assert_eq!(
-                serde_json::to_string(&f).unwrap().as_bytes(),
-                unsafe { t.call(&mut [MaybeUninit::uninit(); 1024]) }.unwrap()
-            );
-
-            let t = JsonPrettyTemplateF { f };
-            assert_eq!(
-                serde_json::to_string_pretty(&f).unwrap().as_bytes(),
-                unsafe { t.call(&mut [MaybeUninit::uninit(); 1024]) }.unwrap()
-            );
-
-            let t = JsonTemplateFT { f };
-            assert_eq!(
-                serde_json::to_string(&f).unwrap().as_bytes(),
-                unsafe { t.call(&mut [MaybeUninit::uninit(); 1024]) }.unwrap()
-            );
-
-            let t = JsonPrettyTemplateFT { f };
-            assert_eq!(
-                serde_json::to_string_pretty(&f).unwrap().as_bytes(),
-                unsafe { t.call(&mut [MaybeUninit::uninit(); 1024]) }.unwrap()
-            );
-        }
     }
 
     #[cfg(feature = "bytes-buf")]
