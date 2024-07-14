@@ -4,10 +4,7 @@ use std::{
     path::PathBuf,
 };
 
-use annotate_snippets::{
-    display_list::{DisplayList, FormatOptions},
-    snippet::{Annotation, AnnotationType, Slice, Snippet, SourceAnnotation},
-};
+use annotate_snippets::{Level, Renderer, Snippet};
 use derive_more::Display;
 
 use yarte_helpers::config::Config;
@@ -102,50 +99,28 @@ where
     let mut errors: Vec<ErrorMessage<T>> = errors.collect();
 
     errors.sort_unstable_by(|a, b| a.span.lo.cmp(&b.span.lo));
-    let slices: Vec<(String, PathBuf, Span)> = errors
+
+    let data = errors
         .into_iter()
         .map(|err| (err.message.to_string(), err.span.file_path(), err.span))
-        .collect();
-    let slices = slices
-        .iter()
-        .map(|(label, origin, span)| {
-            let ((lo_line, hi_line), (lo, hi)) = span.range_in_file();
-            let start = span.start();
-            let source = sources
-                .get(origin)
-                .unwrap()
-                .get(lo_line..hi_line)
-                .unwrap()
-                .trim_end();
-            let origin = origin.strip_prefix(&prefix).unwrap().to_str().unwrap();
+        .collect::<Vec<_>>();
+    let snippets = data.iter().map(|(label, origin, span)| {
+        let ((lo_line, hi_line), (lo, hi)) = span.range_in_file();
+        let start = span.start();
+        let source = sources
+            .get(origin)
+            .unwrap()
+            .get(lo_line..hi_line)
+            .unwrap()
+            .trim_end();
 
-            Slice {
-                source,
-                line_start: start.line,
-                origin: Some(origin),
-                annotations: vec![SourceAnnotation {
-                    label,
-                    range: (lo, hi),
-                    annotation_type: AnnotationType::Error,
-                }],
-                fold: false,
-            }
-        })
-        .collect();
+        let origin = origin.strip_prefix(&prefix).unwrap().to_str().unwrap();
+        Snippet::source(source)
+            .line_start(start.line)
+            .origin(origin)
+            .annotation(Level::Error.span(lo..hi).label(label))
+    });
+    let message = Level::Error.title("").snippets(snippets);
 
-    let s = Snippet {
-        title: Some(Annotation {
-            id: None,
-            label: None,
-            annotation_type: AnnotationType::Error,
-        }),
-        footer: vec![],
-        slices,
-        opt: FormatOptions {
-            color: true,
-            ..Default::default()
-        },
-    };
-
-    panic!("{}", DisplayList::from(s))
+    panic!("{}", Renderer::styled().render(message))
 }
