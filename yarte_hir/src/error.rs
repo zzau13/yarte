@@ -1,4 +1,6 @@
 use derive_more::Display;
+use std::path::Path;
+use std::rc::Rc;
 
 use yarte_parser::{source_map::Span, ErrorMessage};
 
@@ -35,7 +37,7 @@ impl From<MiddleError> for ErrorMessage<GError> {
 }
 
 // TODO: #39 improve error messages
-#[derive(Display, Clone)]
+#[derive(Debug, Display, Clone)]
 pub enum GError {
     #[display(fmt = "Recursion limit")]
     RecursionLimit,
@@ -75,4 +77,7 @@ pub enum GError {
     Internal,
     #[display(fmt = "use super without any parent")]
     SuperWithoutParent,
+    // TODO: implement display
+    #[display(fmt = "Can't open file")]
+    FileNotOpen(Rc<Path>),
 }

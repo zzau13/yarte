@@ -157,7 +157,7 @@ pub use TemplateBytesTrait as TemplateBytesMin;
 #[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"))]
 pub use yarte_helpers::helpers::{RenderBytes, RenderBytesA, RenderBytesSafe, RenderBytesSafeA};
 
-#[cfg(any(feature = "bytes-buf"))]
+#[cfg(feature = "bytes-buf")]
 pub use buf_min::Buffer;
 
 #[cfg(feature = "json")]

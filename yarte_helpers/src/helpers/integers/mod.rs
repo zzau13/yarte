@@ -1,4 +1,5 @@
 // based on https://github.com/miloyip/itoa-benchmark
+use std::ptr::addr_of;
 
 #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 mod v_integer;
@@ -303,12 +304,12 @@ macro_rules! detect_fn {
                     fallback::$name as usize
                 };
 
-                let slot = unsafe { &*(&FN as *const _ as *const AtomicUsize) };
+                let slot = unsafe { &*(addr_of!(FN) as *const _ as *const AtomicUsize) };
                 slot.store(fun as usize, Ordering::Relaxed);
                 unsafe { mem::transmute::<usize, fn($t, *mut u8) -> usize>(fun)(value, buf) }
             }
 
-            let slot = &*(&FN as *const _ as *const AtomicUsize);
+            let slot = &*(addr_of!(FN) as *const _ as *const AtomicUsize);
             let fun = slot.load(Ordering::Relaxed);
             mem::transmute::<usize, fn($t, *mut u8) -> usize>(fun)(value, buf)
         }

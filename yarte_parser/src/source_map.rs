@@ -2,7 +2,8 @@
 use std::{
     cell::RefCell,
     fmt::{self, Debug},
-    path::PathBuf,
+    path::Path,
+    rc::Rc,
 };
 
 use crate::strnom::{skip_ws, Cursor, PResult};
@@ -14,7 +15,7 @@ thread_local! {
 /// Add file to source map and return lower bound
 ///
 /// Use in the same thread
-pub fn get_cursor<'a>(p: &PathBuf, rest: &'a str) -> Cursor<'a> {
+pub fn get_cursor(p: Rc<Path>, rest: &str) -> Cursor {
     SOURCE_MAP.with(|x| Cursor {
         rest,
         off: x.borrow_mut().add_file(p, rest).lo,
@@ -35,7 +36,7 @@ pub struct LineColumn {
 }
 
 struct FileInfo {
-    name: PathBuf,
+    name: Rc<Path>,
     span: Span,
     lines: Vec<usize>,
 }
@@ -105,7 +106,7 @@ impl SourceMap {
         self.files.last().map(|f| f.span.hi + 1).unwrap_or(0)
     }
 
-    fn add_file(&mut self, name: &PathBuf, src: &str) -> Span {
+    fn add_file(&mut self, name: Rc<Path>, src: &str) -> Span {
         let lines = lines_offsets(src);
         let lo = self.next_start_pos();
         let span = Span {
@@ -114,7 +115,7 @@ impl SourceMap {
         };
 
         self.files.push(FileInfo {
-            name: name.to_owned(),
+            name: Rc::clone(&name),
             span,
             lines,
         });
@@ -202,11 +203,11 @@ impl Span {
         })
     }
 
-    pub fn file_path(self) -> PathBuf {
+    pub fn file_path(self) -> Rc<Path> {
         SOURCE_MAP.with(|cm| {
             let cm = cm.borrow();
             let fi = cm.fileinfo(self);
-            fi.name.clone()
+            Rc::clone(&fi.name)
         })
     }
 

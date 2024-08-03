@@ -1,8 +1,9 @@
 #![allow(unused_imports, dead_code)]
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, HashMap},
     iter,
     path::PathBuf,
+    rc::Rc,
 };
 
 use proc_macro::TokenStream;
@@ -16,26 +17,23 @@ use yarte_helpers::{
     config::{get_source, read_config_file, Config, PrintConfig},
     logger::log,
 };
-use yarte_hir::{generate, visit_derive, HIROptions, Print, Struct};
-use yarte_parser::{emitter, parse, parse_partials, source_map, Partial};
+use yarte_hir::{generate, resolve_imports, visit_derive, HIROptions, Print, Struct};
+use yarte_parser::{emitter, parse, source_map, OwnParsed, Partial};
 
 #[cfg(feature = "json")]
 mod ser_json;
-
-type Sources<'a> = &'a BTreeMap<PathBuf, String>;
 
 macro_rules! build {
     ($i:ident, $codegen:ident, $opt:expr) => {{
         let config_toml: &str = &read_config_file();
         let config = &Config::new(config_toml);
-        let s = &match visit_derive($i, config) {
+        let (struct_, source) = match visit_derive($i, config) {
             Ok(s) => s,
             Err(ts) => return ts.into(),
         };
+        // TODO: remove
         proc_macro2::fallback::force();
-        let sources = &read(s.path.clone(), s.src.clone(), config);
-
-        sources_to_tokens(sources, config, s, $codegen(s), $opt)
+        sources_to_tokens(source, config, &struct_, $codegen(&struct_), $opt)
     }};
 }
 
@@ -463,20 +461,15 @@ impl syn::parse::Parse for WriteArg {
 }
 
 fn sources_to_tokens<'a>(
-    sources: Sources,
+    src: String,
     config: &Config,
     s: &'a Struct<'a>,
     mut codegen: Box<dyn CodeGen + 'a>,
     opt: HIROptions,
 ) -> proc_macro2::TokenStream {
-    let mut parsed = BTreeMap::new();
-    for (p, src) in sources {
-        let nodes = match parse(source_map::get_cursor(p, src)) {
-            Ok(n) => n,
-            Err(e) => emitter(sources, config, iter::once(e)),
-        };
-        parsed.insert(p, nodes);
-    }
+    let mut parsed: OwnParsed = HashMap::new();
+    resolve_imports(src, Rc::clone(&s.path), config, &mut parsed)
+        .unwrap_or_else(|e| emitter(&parsed, config, e));
 
     if cfg!(debug_assertions) && config.print_override == PrintConfig::Ast
         || config.print_override == PrintConfig::All
@@ -486,8 +479,7 @@ fn sources_to_tokens<'a>(
         eprintln!("{parsed:?}\n");
     }
 
-    let hir = generate(config, s, &parsed, opt)
-        .unwrap_or_else(|e| emitter(sources, config, e.into_iter()));
+    let hir = generate(config, s, &parsed, opt).unwrap_or_else(|e| emitter(&parsed, config, e));
     // when multiple templates
     source_map::clean();
 
@@ -502,34 +494,4 @@ fn sources_to_tokens<'a>(
     }
 
     tokens
-}
-
-fn read(path: PathBuf, src: String, config: &Config) -> BTreeMap<PathBuf, String> {
-    let mut stack = vec![(path, src)];
-    let mut visited = BTreeMap::new();
-
-    while let Some((path, src)) = stack.pop() {
-        let partials = parse_partials(&src);
-
-        let partials = match partials {
-            Ok(n) => n
-                .iter()
-                .map(|Partial(_, partial, _)| config.resolve_partial(&path, partial.t()))
-                .collect::<BTreeSet<_>>(),
-            Err(e) => {
-                visited.insert(path, src);
-                emitter(&visited, config, iter::once(e))
-            }
-        };
-        visited.insert(path, src);
-
-        for partial in partials {
-            if !visited.contains_key(&partial) {
-                let src = get_source(partial.as_path());
-                stack.push((partial, src));
-            }
-        }
-    }
-
-    visited
 }

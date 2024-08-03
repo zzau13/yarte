@@ -1,3 +1,6 @@
+use std::fmt::Debug;
+use std::{path::Path, rc::Rc};
+
 use syn::parse_str;
 use unicode_xid::UnicodeXID;
 
@@ -6,12 +9,13 @@ use crate::expr_list::ExprList;
 use crate::source_map::{spanned, Span, S};
 use crate::strnom::{is_ws, skip_ws, ws, LexError, PResult};
 use crate::{
-    AtHelperKind, Cursor, ErrorMessage, Expr, Helper, Node, Partial, PartialBlock, SExpr, SNode,
-    SVExpr, StmtLocal, Ws, JSON, JSON_PRETTY,
+    source_map::get_cursor, AtHelperKind, Cursor, ErrorMessage, Expr, Helper, Node, Partial,
+    PartialBlock, SExpr, SNode, SVExpr, StmtLocal, Ws, JSON, JSON_PRETTY,
 };
 
-pub fn parse(i: Cursor) -> Result<Vec<SNode>, ErrorMessage<PError>> {
-    let (c, res) = eat(i)?;
+pub fn parse(path: Rc<Path>, src: &str) -> Result<Vec<SNode>, ErrorMessage<PError>> {
+    let c = get_cursor(path, src);
+    let (c, res) = eat(c)?;
     if c.is_empty() {
         Ok(res)
     } else {

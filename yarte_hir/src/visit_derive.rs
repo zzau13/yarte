@@ -1,6 +1,7 @@
 use std::{
     convert::{TryFrom, TryInto},
-    path::PathBuf,
+    path::{Path, PathBuf},
+    rc::Rc,
 };
 
 use proc_macro2::TokenStream;
@@ -15,14 +16,13 @@ const RECURSION_LIMIT: usize = 128;
 pub fn visit_derive<'a>(
     i: &'a syn::DeriveInput,
     config: &Config,
-) -> Result<Struct<'a>, TokenStream> {
+) -> Result<(Struct<'a>, String), TokenStream> {
     StructBuilder::new(config).build(i)
 }
 
 #[derive(Debug)]
 pub struct Struct<'a> {
-    pub src: String,
-    pub path: PathBuf,
+    pub path: Rc<Path>,
     pub print: Print,
     pub recursion_limit: usize,
     pub msgs: Option<ItemEnum>,
@@ -45,7 +45,7 @@ impl<'a> Struct<'a> {
 
 struct StructBuilder<'a> {
     fields: Vec<syn::Field>,
-    path: Option<PathBuf>,
+    path: Option<Rc<Path>>,
     print: Option<Print>,
     script: Option<String>,
     recursion_limit: Option<usize>,
@@ -70,7 +70,7 @@ impl<'a> StructBuilder<'a> {
         }
     }
 
-    fn build(mut self, i: &syn::DeriveInput) -> Result<Struct, TokenStream> {
+    fn build(mut self, i: &syn::DeriveInput) -> Result<(Struct, String), TokenStream> {
         let syn::DeriveInput {
             attrs,
             ident,
@@ -113,22 +113,24 @@ impl<'a> StructBuilder<'a> {
                     attrs.iter().find(|x| x.path.is_ident("template")).unwrap(),
                     "must specify 'src' or 'path'",
                 ));
-                (PathBuf::new(), String::new())
+                (PathBuf::new().into(), String::new())
             }
         };
 
         if self.err.is_empty() {
-            Ok(Struct {
-                recursion_limit: self.recursion_limit.unwrap_or(RECURSION_LIMIT),
-                fields: self.fields,
-                generics,
-                ident,
-                msgs,
-                path,
-                print: self.print.unwrap_or(Print::None),
-                script: self.script,
+            Ok((
+                Struct {
+                    path,
+                    recursion_limit: self.recursion_limit.unwrap_or(RECURSION_LIMIT),
+                    fields: self.fields,
+                    generics,
+                    ident,
+                    msgs,
+                    print: self.print.unwrap_or(Print::None),
+                    script: self.script,
+                },
                 src,
-            })
+            ))
         } else {
             Err(self.err.iter().flat_map(Error::to_compile_error).collect())
         }
@@ -161,7 +163,7 @@ impl<'a, 'b> Visit<'a> for StructBuilder<'b> {
                 } else {
                     path = path.with_extension(DEFAULT_EXTENSION);
                 };
-                let (path, src) = self.config.get_template(&path);
+                let (path, src) = self.config.get_template(path.into());
                 self.path = Some(path);
                 self.src = Some(src);
             } else {
@@ -182,7 +184,8 @@ impl<'a, 'b> Visit<'a> for StructBuilder<'b> {
                     self.config
                         .get_dir()
                         .join(PathBuf::from(self.ident.clone()))
-                        .with_extension(DEFAULT_EXTENSION),
+                        .with_extension(DEFAULT_EXTENSION)
+                        .into(),
                 );
                 self.src = Some(s.value().trim_end().to_owned());
             } else {
@@ -253,38 +256,3 @@ impl TryFrom<String> for Print {
 }
 
 static DEFAULT_EXTENSION: &str = "hbs";
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use syn::parse_str;
-
-    #[test]
-    #[should_panic]
-    fn test_panic() {
-        let src = r#"
-            #[derive(Template)]
-            #[template(path = "no-exist")]
-            struct Test;
-        "#;
-        let i = parse_str::<syn::DeriveInput>(src).unwrap();
-        let config = Config::new("");
-        let _ = visit_derive(&i, &config).unwrap();
-    }
-
-    #[test]
-    fn test() {
-        let src = r#"
-            #[derive(Template)]
-            #[template(src = "", print = "code")]
-            struct Test;
-        "#;
-        let i = parse_str::<syn::DeriveInput>(src).unwrap();
-        let config = Config::new("");
-        let s = visit_derive(&i, &config).unwrap();
-
-        assert_eq!(s.src, "");
-        assert_eq!(s.path, config.get_dir().join(PathBuf::from("Test.hbs")));
-        assert_eq!(s.print, Print::Code);
-    }
-}

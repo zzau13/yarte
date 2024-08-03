@@ -30,6 +30,7 @@ use std::{
     collections::BTreeMap,
     env, fs,
     path::{Path, PathBuf},
+    rc::Rc,
 };
 
 use serde::Deserialize;
@@ -38,12 +39,13 @@ use serde::Deserialize;
 pub struct Dir(PathBuf);
 
 impl Dir {
-    pub fn get_template(&self, path: &Path) -> PathBuf {
+    pub fn get_template(&self, path: Rc<Path>) -> Rc<Path> {
         let template = self.0.join(path);
 
         if template.exists() {
-            template
+            template.into()
         } else {
+            // TODO: error
             panic!("template not found in directory {template:?}")
         }
     }
@@ -101,13 +103,13 @@ impl Config {
         &self.dir.0
     }
 
-    pub fn get_template(&self, path: &Path) -> (PathBuf, String) {
-        let path = self.dir.get_template(path);
-        let src = get_source(path.as_path());
+    pub fn get_template(&self, path: Rc<Path>) -> (Rc<Path>, String) {
+        let path = self.dir.get_template(Rc::clone(&path));
+        let src = get_source(Rc::clone(&path));
         (path, src)
     }
 
-    pub fn resolve_partial(&self, parent: &Path, ident: &str) -> PathBuf {
+    pub fn resolve_partial<P: AsRef<Path>>(&self, parent: P, ident: &str) -> Rc<Path> {
         let (mut buf, is_alias) = self
             .alias
             .iter()
@@ -115,6 +117,7 @@ impl Config {
                 if let Some(stripped) = ident.strip_prefix(k) {
                     let mut path = (*v).to_string();
                     path.push_str(stripped);
+                    // TODO
                     Some(PathBuf::from(path))
                 } else {
                     None
@@ -123,29 +126,31 @@ impl Config {
             .map_or((PathBuf::from(ident), false), |s| (s, true));
 
         if buf.extension().is_none() {
-            if let Some(ext) = parent.extension() {
+            if let Some(ext) = parent.as_ref().extension() {
                 buf = buf.with_extension(ext);
             }
         };
 
         if is_alias {
-            normalize(self.dir.get_template(&buf))
+            normalize(self.dir.get_template(buf.into()))
         } else {
-            let mut parent = parent.to_owned();
+            let mut parent = parent.as_ref().to_owned();
             parent.pop();
             parent.push(buf);
-            normalize(parent)
+            normalize(parent.into())
         }
     }
 }
 
 #[cfg(not(target_os = "windows"))]
-fn normalize(p: PathBuf) -> PathBuf {
-    p.canonicalize().expect("Correct template path")
+fn normalize(p: Rc<Path>) -> Rc<Path> {
+    // TODO: error
+    p.canonicalize().expect("Correct template path").into()
 }
 
 #[cfg(target_os = "windows")]
-fn normalize(p: PathBuf) -> PathBuf {
+fn normalize(p: Rc<Path>) -> Rc<Path> {
+    // TODO check canonicalize in windows
     p
 }
 
@@ -187,11 +192,12 @@ pub fn read_config_file() -> String {
 
 #[inline]
 pub fn config_file_path() -> PathBuf {
+    // TODO: error
     PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).join(CONFIG_FILE_NAME)
 }
 
-pub fn get_source(path: &Path) -> String {
-    match fs::read_to_string(path) {
+pub fn get_source(path: Rc<Path>) -> String {
+    match fs::read_to_string(Rc::clone(&path)) {
         Ok(mut source) => match source
             .as_bytes()
             .iter()
@@ -203,6 +209,7 @@ pub fn get_source(path: &Path) -> String {
             }
             None => source,
         },
+        // TODO: error
         _ => panic!("unable to open template file '{path:?}'"),
     }
 }

@@ -1,5 +1,5 @@
 #![allow(unknown_lints, clippy::type_complexity, clippy::match_on_vec_items)]
-use std::{collections::BTreeMap, mem, path::PathBuf, str};
+use std::{collections::BTreeMap, mem, path::Path, rc::Rc, str};
 
 use quote::{format_ident, quote};
 use syn::{
@@ -14,30 +14,30 @@ use v_htmlescape::escape;
 
 use yarte_helpers::config::Config;
 use yarte_parser::{
-    source_map::Span, AtHelperKind, ErrorMessage, Helper, Node, Partial, PartialBlock, SExpr,
-    SNode, SVExpr, Ws,
+    source_map::Span, AtHelperKind, ErrorMessage, Helper, Node, Parsed, Partial, PartialBlock,
+    SExpr, SNode, SVExpr, Ws,
 };
 
 #[macro_use]
 mod macros;
 mod error;
 mod hir;
+mod imports;
 mod scope;
 mod serialize;
 mod validator;
 mod visit_derive;
-mod visit_each;
 mod visit_partial;
 mod visits;
 
 use self::{
     error::{GError, GResult, MiddleError},
     scope::Scope,
-    visit_each::find_loop_var,
     visit_partial::visit_partial,
 };
 pub use self::{
     hir::*,
+    imports::resolve_imports,
     serialize::{serialize, serialize_resolved},
     visit_derive::{visit_derive, Print, Struct},
 };
@@ -62,13 +62,11 @@ impl Default for HIROptions {
 pub fn generate(
     c: &Config,
     s: &Struct,
-    ctx: Context,
+    parsed: Parsed,
     opt: HIROptions,
 ) -> Result<Vec<HIR>, Vec<ErrorMessage<GError>>> {
-    LoweringContext::new(c, s, ctx, opt).build()
+    LoweringContext::new(c, s, parsed, opt).build()
 }
-
-pub type Context<'a> = &'a BTreeMap<&'a PathBuf, Vec<SNode<'a>>>;
 
 #[derive(Clone, Debug, PartialEq)]
 enum On {
@@ -106,8 +104,7 @@ struct LoweringContext<'a> {
     // TODO: remove LoweringContext in favor of reference to state
     block: Vec<(Ws, &'a [SNode<'a>], LoweringContext<'a>)>,
     /// current file path
-    // TODO:
-    on_path: PathBuf,
+    on_path: Rc<Path>,
     /// buffer for writable
     // UnAlloc init
     buf_w: Vec<Writable<'a>>,
@@ -119,7 +116,7 @@ struct LoweringContext<'a> {
     errors: Vec<ErrorMessage<GError>>,
     /// path - nodes
     // Copiable
-    ctx: Context<'a>,
+    ctx: Parsed<'a>,
     /// Last parent conditional
     spans: Vec<Span>,
     /// whitespace buffer adapted from [`askama`](https://github.com/djc/askama)
@@ -132,7 +129,7 @@ struct LoweringContext<'a> {
     recursion: usize,
 }
 
-// TODO: remove in favor of mut reference
+// TODO: remove
 impl<'a> Clone for LoweringContext<'a> {
     fn clone(&self) -> Self {
         Self {
@@ -160,7 +157,7 @@ impl<'a> LoweringContext<'a> {
     fn new<'n>(
         c: &'n Config,
         s: &'n Struct<'n>,
-        ctx: Context<'n>,
+        ctx: Parsed<'n>,
         opt: HIROptions,
     ) -> LoweringContext<'n> {
         LoweringContext {
@@ -168,15 +165,16 @@ impl<'a> LoweringContext<'a> {
             c,
             s,
             ctx,
+            // TODO:
+            block: vec![],
             buf_w: vec![],
             next_ws: None,
             on: vec![],
-            on_path: s.path.clone(),
+            on_path: Rc::clone(&s.path),
             partial: None,
-            scp: Scope::new(parse_str("self").unwrap(), 0),
+            scp: Scope::new(parse_str("self").expect("parse scope self"), 0),
             skip_ws: false,
             errors: vec![],
-            block: vec![],
             recursion: 0,
             buf_err: vec![],
             spans: vec![],
@@ -186,7 +184,7 @@ impl<'a> LoweringContext<'a> {
     fn build(mut self) -> Result<Vec<HIR>, Vec<ErrorMessage<GError>>> {
         let mut buf = vec![];
 
-        let nodes: &[SNode] = self.ctx.get(&self.on_path).unwrap();
+        let nodes: &[SNode] = &self.ctx.get(&self.on_path).expect("No nodes parsed").1;
 
         self.handle(nodes, &mut buf);
         self.write_buf_writable(&mut buf);
@@ -194,8 +192,7 @@ impl<'a> LoweringContext<'a> {
         debug_assert_eq!(self.scp.root(), &parse_str::<syn::Expr>("self").unwrap());
         debug_assert!(self.on.is_empty());
         debug_assert!(self.buf_w.is_empty());
-        debug_assert_eq!(self.on_path, self.s.path);
-        debug_assert_eq!(self.next_ws, None);
+        debug_assert_eq!(self.next_ws, None, "whitespace control");
         // Extreme case
         if buf.is_empty() {
             buf.push(HIR::Lit("".into()));
@@ -245,16 +242,6 @@ impl<'a> LoweringContext<'a> {
                         validator::expression(sexpr, &mut self.errors);
                         self.buf_w.push(Writable::Expr(Box::new(expr), false));
                     }
-                }
-                #[cfg(feature = "wasm-app")]
-                Node::RExpr(ws, sexpr) => {
-                    let mut expr = (***sexpr.t()).clone();
-
-                    self.handle_ws(*ws);
-                    self.visit_expr_mut(&mut expr);
-                    self.write_errors(sexpr.span());
-
-                    self.buf_w.push(Writable::LitP(quote!(#expr).to_string()));
                 }
                 Node::Lit(l, lit, r) => self.visit_lit(l, lit.t(), r),
                 Node::Helper(h) => {
@@ -477,14 +464,8 @@ impl<'a> LoweringContext<'a> {
         nodes: &'a [SNode<'a>],
     ) {
         self.spans.push(sargs.span());
-        let loop_var = find_loop_var(self, nodes).unwrap_or_else(|message| {
-            self.errors.push(ErrorMessage {
-                message,
-                span: sargs.span(),
-            });
-            false
-        });
-
+        // TODO
+        let loop_var = true;
         let mut args = (***sargs.t()).clone();
         self.visit_expr_mut(&mut args);
         self.write_errors(sargs.span());
@@ -669,13 +650,14 @@ impl<'a> LoweringContext<'a> {
 
         // TODO: identifiers
         let p = self.c.resolve_partial(&self.on_path, path);
-        let nodes = self.ctx.get(&p).unwrap();
+        let nodes = self.ctx.get(&p).expect("partial parsed").1.as_slice();
 
         // TODO: to on path stack without duplicates
         let p = mem::replace(&mut self.on_path, p);
 
         let block = if let Some((ws, block)) = block {
             self.flush_ws((a_ws.0, false));
+            // TODO: heritage
             self.block.push(((a_ws.1, ws.0), block, self.clone()));
             Some(ws.1)
         } else {
@@ -880,7 +862,7 @@ impl<'a> LoweringContext<'a> {
 
         macro_rules! each_var {
             ($ident:expr, $j:expr) => {{
-                debug_assert!(self.scp.get($j).is_some(), "{} {:?}", $j, self.scp);
+                debug_assert!(self.scp.get($j).is_some(), "each var {} {:?}", $j, self.scp);
                 debug_assert!(!self.scp[$j].is_empty());
                 match $ident {
                     "index0" => return Ok(self.scp[$j][1].clone()),

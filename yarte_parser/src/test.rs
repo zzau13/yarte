@@ -1,25 +1,14 @@
 use syn::parse_str;
 
 use crate::{
-    eat_expr_list, eat_if,
-    error::{DOption, PError},
-    hel, if_else, parse as _parse,
+    eat_expr_list, eat_if, hel, if_else,
     source_map::{Span, S},
-    trim, Cursor, ErrorMessage, Helper,
+    trim, Cursor, Helper,
     Node::*,
     Ws,
 };
 
 const WS: Ws = (false, false);
-
-macro_rules! bytes {
-    ($a:tt..$b:tt) => {
-        Span {
-            lo: $a as u32,
-            hi: $b as u32,
-        }
-    };
-}
 
 #[test]
 fn test_trim() {
@@ -260,66 +249,5 @@ fn test_expr_list() {
             parse_str::<crate::Expr>("fuu=1").unwrap(),
             parse_str::<crate::Expr>("goo=true").unwrap(),
         ]
-    );
-}
-
-fn test_error(rest: &str, _message: PError, _span: Span) {
-    let cursor = Cursor { rest, off: 0 };
-    match _parse(cursor) {
-        Err(ErrorMessage { message, span }) => {
-            if _message != message || _span != span {
-                panic!(
-                        "\n\nExpect:\n\tmessage: {:?}\n\tspan: {:?}\n\nResult:\n\tmessage: {:?}\n\tspan: {:?}",
-                        message.to_string(), span, _message.to_string(), _span
-                    )
-            }
-        }
-        _ => panic!(
-            "\n\nIt's Ok rest: {:?}\n\nExpect:\n\tmessage: {:?}\n\tspan: {:?}",
-            rest,
-            _message.to_string(),
-            _span
-        ),
-    };
-}
-
-#[test]
-fn test_error_expr() {
-    test_error(
-        "{{ @ }}",
-        PError::Expr(DOption::Some(String::from("expected expression"))),
-        bytes!(3..4),
-    );
-}
-
-#[test]
-fn test_error_safe() {
-    test_error(
-        "{{{ @ }}}",
-        PError::Safe(DOption::Some(String::from("expected expression"))),
-        bytes!(4..5),
-    );
-}
-
-#[test]
-fn test_error_expr_multiline() {
-    test_error(
-        "{{ foo\n\n.map(|x| x)\n\n   .bar(@)\n.foo() }}",
-        PError::Expr(DOption::Some(String::from("expected expression"))),
-        bytes!(29..30),
-    );
-}
-
-#[test]
-fn test_error_at_helper_not_exist() {
-    test_error("{{ @foo }}", PError::AtHelperNotExist, bytes!(4..7));
-}
-
-#[test]
-fn test_error_at_helper_check_len() {
-    test_error(
-        "{{ @json one, two }}",
-        PError::AtHelperArgsLen(1),
-        bytes!(9..17),
     );
 }

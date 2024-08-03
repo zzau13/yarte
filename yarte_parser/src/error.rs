@@ -1,15 +1,11 @@
-use std::{
-    collections::BTreeMap,
-    fmt::{self, Display, Write},
-    path::PathBuf,
-};
+use std::fmt::{self, Debug, Display, Write};
 
 use annotate_snippets::{Level, Renderer, Snippet};
 use derive_more::Display;
 
 use yarte_helpers::config::Config;
 
-use crate::{source_map::Span, strnom::LexError};
+use crate::{source_map::Span, strnom::LexError, Parsed};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DOption {
@@ -83,20 +79,22 @@ impl From<LexError> for ErrorMessage<PError> {
 
 // TODO: T: Priority trait
 #[derive(Debug)]
-pub struct ErrorMessage<T: Display> {
+pub struct ErrorMessage<T: Display + Debug> {
     pub message: T,
     pub span: Span,
 }
 
+pub type MResult<T, E> = Result<T, ErrorMessage<E>>;
+
 // TODO: Accumulate by priority
-pub fn emitter<I, T>(sources: &BTreeMap<PathBuf, String>, config: &Config, errors: I) -> !
+pub fn emitter<I, T>(sources: Parsed, config: &Config, errors: I) -> !
 where
-    I: Iterator<Item = ErrorMessage<T>>,
-    T: Display,
+    I: IntoIterator<Item = ErrorMessage<T>>,
+    T: Display + Debug,
 {
     let mut prefix = config.get_dir().clone();
     prefix.pop();
-    let mut errors: Vec<ErrorMessage<T>> = errors.collect();
+    let mut errors: Vec<ErrorMessage<T>> = errors.into_iter().collect();
 
     errors.sort_unstable_by(|a, b| a.span.lo.cmp(&b.span.lo));
 
@@ -109,7 +107,9 @@ where
         let start = span.start();
         let source = sources
             .get(origin)
-            .unwrap()
+            .expect("exists sources")
+            .0
+            .as_str()
             .get(lo_line..hi_line)
             .unwrap()
             .trim_end();

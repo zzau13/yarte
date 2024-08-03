@@ -1,5 +1,8 @@
 #![allow(clippy::many_single_char_names, clippy::cognitive_complexity)]
+use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
+use std::path::Path;
+use std::rc::Rc;
 use std::str;
 
 use serde::{Deserialize, Deserializer};
@@ -14,19 +17,20 @@ mod test;
 mod error;
 mod expr_list;
 mod parse;
-mod pre_partials;
 pub mod source_map;
 mod stmt_local;
 
 use crate::source_map::S;
 
 pub use self::{
-    error::{emitter, ErrorMessage},
+    error::{emitter, ErrorMessage, MResult, PError},
     parse::*,
-    pre_partials::parse_partials,
     stmt_local::StmtLocal,
     strnom::Cursor,
 };
+
+pub type OwnParsed = HashMap<Rc<Path>, (String, Vec<SNode<'static>>)>;
+pub type Parsed<'a> = &'a OwnParsed;
 
 pub type Ws = (bool, bool);
 

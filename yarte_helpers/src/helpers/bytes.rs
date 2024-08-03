@@ -237,6 +237,8 @@ impl RenderBytesSafe for bool {
     }
 }
 
+// TODO dead code
+#[allow(dead_code)]
 struct UnsafeWriter<'a, B> {
     buf: &'a mut B,
 }
