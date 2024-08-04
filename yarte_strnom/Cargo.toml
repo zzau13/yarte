@@ -21,7 +21,7 @@ maintenance = { status = "actively-developed" }
 
 [dependencies]
 quote = "1.0"
-syn = { version = "1.0", features = ["full", "extra-traits"] }
+syn = { version = "2.0", features = ["full", "extra-traits"] }
 proc-macro2 = { workspace = true, features = ["span-locations"] }
 
 annotate-snippets = { version = "0.9", features = ["color"] }
