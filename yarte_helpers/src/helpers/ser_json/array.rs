@@ -3,7 +3,7 @@ use super::*;
 
 impl<T> Serialize for [T; 0] {
     #[inline]
-    fn to_bytes_mut<B: Buffer>(&self, buf: &mut B) {
+    fn to_mut_bytes<B: Buffer>(&self, buf: &mut B) {
         empty_array(buf)
     }
 }
@@ -16,14 +16,14 @@ macro_rules! array_impls {
                 T: Serialize,
             {
                 #[inline]
-                fn to_bytes_mut<B: Buffer>(&self, buf: &mut B) {
+                fn to_mut_bytes<B: Buffer>(&self, buf: &mut B) {
                     let mut i = self.iter();
                     if let Some(first) = i.next() {
                         begin_array(buf);
-                        first.to_bytes_mut(buf);
+                        first.to_mut_bytes(buf);
                         for e in i {
                             write_comma(buf);
-                            e.to_bytes_mut(buf);
+                            e.to_mut_bytes(buf);
                         }
                         end_array(buf);
                     } else {

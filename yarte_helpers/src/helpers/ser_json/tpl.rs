@@ -2,7 +2,7 @@ use super::*;
 
 impl Serialize for () {
     #[inline]
-    fn to_bytes_mut<B: Buffer>(&self, buf: &mut B) {
+    fn to_mut_bytes<B: Buffer>(&self, buf: &mut B) {
         render_null(buf)
     }
 }
@@ -17,13 +17,13 @@ macro_rules! tuple_impls {
                 $($name: Serialize,)+
             {
                 #[inline]
-                fn to_bytes_mut<B: Buffer>(&self, buf: &mut B) {
+                fn to_mut_bytes<B: Buffer>(&self, buf: &mut B) {
                     begin_array(buf);
                     $(
                         if $n != 0 {
                             write_comma(buf);
                         }
-                        self.$n.to_bytes_mut(buf);
+                        self.$n.to_mut_bytes(buf);
                     )+
                     end_array(buf);
                 }

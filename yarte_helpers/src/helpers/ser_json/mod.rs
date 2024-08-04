@@ -15,11 +15,11 @@ mod deref;
 mod tpl;
 
 pub trait Serialize {
-    fn to_bytes_mut<B: Buffer>(&self, buf: &mut B);
+    fn to_mut_bytes<B: Buffer>(&self, buf: &mut B);
 
     fn to_bytes<B: Buffer + Sized>(&self, capacity: usize) -> B::Freeze {
         let mut buf: B = Buffer::with_capacity(capacity);
-        self.to_bytes_mut(&mut buf);
+        self.to_mut_bytes(&mut buf);
         Buffer::freeze(buf)
     }
 }
@@ -29,7 +29,7 @@ macro_rules! str_display {
         $(
             impl Serialize for $ty {
                 #[inline]
-                 fn to_bytes_mut<B: Buffer>(&self, buf: &mut B)  {
+                 fn to_mut_bytes<B: Buffer>(&self, buf: &mut B)  {
                     begin_string(buf);
                     b_escape(self.as_bytes(), buf);
                     end_string(buf);
@@ -49,7 +49,7 @@ macro_rules! itoa_display {
         $(
             impl Serialize for $ty {
                 #[inline(always)]
-                 fn to_bytes_mut<B: Buffer>(&self, buf: &mut B)  {
+                 fn to_mut_bytes<B: Buffer>(&self, buf: &mut B)  {
                     use super::integers::Integer;
                     buf.reserve(Self::MAX_LEN);
                     // Safety: Previous reserve MAX length
@@ -70,7 +70,7 @@ itoa_display! {
 
 impl Serialize for char {
     #[inline]
-    fn to_bytes_mut<B: Buffer>(&self, buf: &mut B) {
+    fn to_mut_bytes<B: Buffer>(&self, buf: &mut B) {
         begin_string(buf);
         b_escape(self.to_string().as_bytes(), buf);
         end_string(buf);
@@ -79,7 +79,7 @@ impl Serialize for char {
 
 impl Serialize for bool {
     #[inline(always)]
-    fn to_bytes_mut<B: Buffer>(&self, buf: &mut B) {
+    fn to_mut_bytes<B: Buffer>(&self, buf: &mut B) {
         render_bool(*self, buf)
     }
 }
@@ -89,7 +89,7 @@ macro_rules! ryu_display {
     $(
         impl Serialize for $t {
             #[inline(always)]
-            fn to_bytes_mut<B: Buffer>(&self, buf: &mut B)  {
+            fn to_mut_bytes<B: Buffer>(&self, buf: &mut B)  {
                 if self.is_nonfinite() {
                     render_null(buf);
                 } else {
@@ -228,12 +228,12 @@ fn serialize_str_short<B: Buffer>(value: &str, buf: &mut B) {
 }
 
 #[inline]
-pub fn to_bytes_mut<B, T>(value: &T, buf: &mut B)
+pub fn to_mut_bytes<B, T>(value: &T, buf: &mut B)
 where
     B: Buffer,
     T: ?Sized + Serialize,
 {
-    value.to_bytes_mut(buf)
+    value.to_mut_bytes(buf)
 }
 
 pub fn to_bytes<B, T>(value: &T, capacity: usize) -> B::Freeze

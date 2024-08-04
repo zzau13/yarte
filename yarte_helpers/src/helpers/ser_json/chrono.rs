@@ -11,7 +11,7 @@ impl<Tz: TimeZone> Serialize for DateTime<Tz> {
     ///
     /// See [the `serde` module](./serde/index.html) for alternate
     /// serializations.
-    fn to_bytes_mut<B: Buffer>(&self, buf: &mut B) {
+    fn to_mut_bytes<B: Buffer>(&self, buf: &mut B) {
         struct FormatWrapped<'a, D: 'a> {
             inner: &'a D,
         }
@@ -24,7 +24,7 @@ impl<Tz: TimeZone> Serialize for DateTime<Tz> {
 
         begin_string(buf);
         // Debug formatting is correct RFC3339, and it allows Zulu.
-        Serialize::to_bytes_mut(&format!("{}", FormatWrapped { inner: &self }), buf);
+        Serialize::to_mut_bytes(&format!("{}", FormatWrapped { inner: &self }), buf);
         end_string(buf);
     }
 }

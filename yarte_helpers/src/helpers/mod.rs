@@ -33,7 +33,7 @@ pub mod ryu;
 pub mod json {
     pub use super::ser_json::{
         begin_array, end_array, end_array_object, end_object, end_object_object, to_bytes,
-        to_bytes_mut, write_comma, Serialize,
+        to_mut_bytes, write_comma, Serialize,
     };
 }
 

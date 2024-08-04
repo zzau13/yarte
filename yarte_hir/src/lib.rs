@@ -24,7 +24,6 @@ mod error;
 mod hir;
 mod imports;
 mod scope;
-mod serialize;
 mod validator;
 mod visit_derive;
 mod visit_partial;
@@ -38,7 +37,6 @@ use self::{
 pub use self::{
     hir::*,
     imports::resolve_imports,
-    serialize::{serialize, serialize_resolved},
     visit_derive::{visit_derive, Print, Struct},
 };
 

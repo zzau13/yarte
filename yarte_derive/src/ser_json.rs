@@ -49,8 +49,8 @@ pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
             if unnamed.len() == 1 {
                 quote! {
                     impl #generics yarte::Serialize for #ident #generics {
-                        fn to_bytes_mut<B: yarte::Buffer>(&self, buf: &mut B) {
-                            self.0.to_bytes_mut(buf)
+                        fn to_mut_bytes<B: yarte::Buffer>(&self, buf: &mut B) {
+                            self.0.to_mut_bytes(buf)
                         }
                     }
                 }
@@ -63,13 +63,13 @@ pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
                     .collect();
                 quote! {
                     impl #generics yarte::Serialize for #ident #generics {
-                        fn to_bytes_mut<B: yarte::Buffer>(&self, buf: &mut B) {
+                        fn to_mut_bytes<B: yarte::Buffer>(&self, buf: &mut B) {
                             use yarte::*;
                             yarte::begin_array(buf);
-                            self.0.to_bytes_mut(buf);
+                            self.0.to_mut_bytes(buf);
                             #(
                                 yarte::write_comma(buf);
-                                self.#keys.to_bytes_mut(buf);
+                                self.#keys.to_mut_bytes(buf);
                             )*
                             yarte::end_array(buf);
                         }
@@ -107,11 +107,11 @@ pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
             quote! {
                 impl #generics yarte::Serialize for #ident #generics {
                     #[inline]
-                    fn to_bytes_mut<B: yarte::Buffer>(&self, buf: &mut B) {
+                    fn to_mut_bytes<B: yarte::Buffer>(&self, buf: &mut B) {
                         use yarte::*;
                         #(
                             #keys
-                            self.#values.to_bytes_mut(buf);
+                            self.#values.to_mut_bytes(buf);
                         )*
                         yarte::end_object(buf);
                     }
@@ -176,7 +176,7 @@ pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
                 #(
                     #ident::#unnamed1_idents(v) => {
                         #unnamed1_keys
-                        v.to_bytes_mut(buf);
+                        v.to_mut_bytes(buf);
                         yarte::end_object(buf);
                     }
                 ),*
@@ -208,10 +208,10 @@ pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
             let unnamed_vecs = unnamed_var_names.iter().map(|vs| {
                 let (first, rest) = vs.split_first().unwrap();
                 quote! {
-                    #first.to_bytes_mut(buf);
+                    #first.to_mut_bytes(buf);
                     #(
                         yarte::write_comma(buf);
-                        #rest.to_bytes_mut(buf);
+                        #rest.to_mut_bytes(buf);
                     )*
                 }
             });
@@ -253,10 +253,10 @@ pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
                 named_bodies.push(quote! {
                     #ident::#named_ident{#(#fields),*} => {
                         #start
-                        #first.to_bytes_mut(buf);
+                        #first.to_mut_bytes(buf);
                         #(
                             #rest_keys
-                            #rest.to_bytes_mut(buf);
+                            #rest.to_mut_bytes(buf);
                         )*
                         yarte::end_object_object(buf);
                     }
@@ -275,7 +275,7 @@ pub(crate) fn serialize_json(i: syn::DeriveInput) -> TokenStream {
             quote! {
                 impl #generics yarte::Serialize for #ident #generics {
                     #[inline]
-                    fn to_bytes_mut<B: yarte::Buffer>(&self, buf: &mut B) {
+                    fn to_mut_bytes<B: yarte::Buffer>(&self, buf: &mut B) {
                         use yarte::*;
                         match self {
                             #match_body

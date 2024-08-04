@@ -59,8 +59,7 @@ pub fn resolve_imports(
     let mut errors = vec![];
 
     while let Some((on_path, src, nodes)) = stack.pop() {
-        let mut stack_nodes = vec![];
-        stack_nodes.push(&nodes);
+        let mut stack_nodes = vec![&nodes];
         while let Some(nodes) = stack_nodes.pop() {
             for node in nodes {
                 match node.t() {

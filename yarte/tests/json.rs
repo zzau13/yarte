@@ -39,18 +39,6 @@ enum Animal {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
-struct Inner {
-    a: (),
-    b: usize,
-    c: Vec<String>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-struct Outer {
-    inner: Vec<Inner>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
 struct Tuple {
     tuple: (u8, u8, u8, u8),
 }

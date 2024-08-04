@@ -14,22 +14,16 @@ use std::fmt::{self, Write};
 /// # use yarte::*;
 ///
 /// let world = "World";
-/// ##[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"))]
+/// ##[cfg(feature = "bytes-buf")]
 /// let buf = auto!(ywrite!(String, "Hello, {{ world }}!"));
 ///
-/// ##[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"))]
+/// ##[cfg(feature = "bytes-buf")]
 /// assert_eq!(buf, "Hello, World!");
 /// ```
 pub use yarte_derive::auto;
 
-#[cfg(all(
-    any(feature = "bytes-buf", feature = "bytes-buf-tokio2"),
-    feature = "html-min"
-))]
-pub use yarte_derive::ywrite_min;
-#[cfg(any(feature = "bytes-buf", feature = "bytes-buf-tokio2"))]
-pub use yarte_derive::{yarte, ywrite, ywrite_html};
-pub use yarte_derive::{yformat, yformat_html};
+#[cfg(feature = "bytes-buf")]
+pub use yarte_derive::ywrite;
 pub use yarte_helpers::{
     helpers::{
         display_fn::DisplayFn, io_fmt::IoFmt, Aligned256, IntoCopyIterator, Render, RenderA,

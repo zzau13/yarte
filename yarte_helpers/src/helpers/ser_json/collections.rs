@@ -10,14 +10,14 @@ macro_rules! vec_like {
             T: Serialize,
         {
             #[inline]
-            fn to_bytes_mut<B: Buffer>(&self, buf: &mut B) {
+            fn to_mut_bytes<B: Buffer>(&self, buf: &mut B) {
                 let mut i = self.iter();
                 if let Some(first) = i.next() {
                     begin_array(buf);
-                    first.to_bytes_mut(buf);
+                    first.to_mut_bytes(buf);
                     for e in i {
                         write_comma(buf);
-                        e.to_bytes_mut(buf);
+                        e.to_mut_bytes(buf);
                     }
                     end_array(buf);
                 } else {
@@ -40,14 +40,14 @@ where
     H: std::hash::BuildHasher,
 {
     #[inline]
-    fn to_bytes_mut<B: Buffer>(&self, buf: &mut B) {
+    fn to_mut_bytes<B: Buffer>(&self, buf: &mut B) {
         let mut i = self.iter();
         if let Some(first) = i.next() {
             begin_array(buf);
-            first.to_bytes_mut(buf);
+            first.to_mut_bytes(buf);
             for e in i {
                 write_comma(buf);
-                e.to_bytes_mut(buf);
+                e.to_mut_bytes(buf);
             }
             end_array(buf);
         } else {
@@ -115,18 +115,18 @@ where
     H: std::hash::BuildHasher,
 {
     #[inline]
-    fn to_bytes_mut<B: Buffer>(&self, buf: &mut B) {
+    fn to_mut_bytes<B: Buffer>(&self, buf: &mut B) {
         let mut i = self.iter();
         if let Some((k, v)) = i.next() {
             begin_object(buf);
             k.ser_obj_key(buf);
             write_colon(buf);
-            v.to_bytes_mut(buf);
+            v.to_mut_bytes(buf);
             for (k, v) in i {
                 write_comma(buf);
                 k.ser_obj_key(buf);
                 write_colon(buf);
-                v.to_bytes_mut(buf);
+                v.to_mut_bytes(buf);
             }
             end_object(buf);
         } else {
@@ -141,18 +141,18 @@ where
     V: Serialize,
 {
     #[inline]
-    fn to_bytes_mut<B: Buffer>(&self, buf: &mut B) {
+    fn to_mut_bytes<B: Buffer>(&self, buf: &mut B) {
         let mut i = self.iter();
         if let Some((k, v)) = i.next() {
             begin_object(buf);
             k.ser_obj_key(buf);
             write_colon(buf);
-            v.to_bytes_mut(buf);
+            v.to_mut_bytes(buf);
             for (k, v) in i {
                 write_comma(buf);
                 k.ser_obj_key(buf);
                 write_colon(buf);
-                v.to_bytes_mut(buf);
+                v.to_mut_bytes(buf);
             }
             end_object(buf);
         } else {

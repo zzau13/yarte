@@ -260,19 +260,19 @@ impl<'a, B: Buffer> io::Write for UnsafeWriter<'a, B> {
 mod json {
     use super::*;
     use crate::at_helpers::Json;
-    use crate::helpers::json::{self, to_bytes_mut};
+    use crate::helpers::json::{self, to_mut_bytes};
 
     impl<'a, S: json::Serialize> RenderBytes for Json<'a, S> {
         #[inline(always)]
         fn render<B: Buffer>(self, buf: &mut B) {
-            to_bytes_mut(self.0, buf)
+            to_mut_bytes(self.0, buf)
         }
     }
 
     impl<'a, S: json::Serialize> RenderBytesSafe for Json<'a, S> {
         #[inline(always)]
         fn render<B: Buffer>(self, buf: &mut B) {
-            to_bytes_mut(self.0, buf)
+            to_mut_bytes(self.0, buf)
         }
     }
 }
