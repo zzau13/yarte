@@ -25,7 +25,7 @@ syn = { version = "1.0", features = ["full", "extra-traits"] }
 proc-macro2 = { workspace = true, features = ["span-locations"] }
 
 annotate-snippets = { version = "0.9", features = ["color"] }
-derive_more = "0.99"
+derive_more = "1.0"
 memchr = "2.5"
 parking_lot = "0.12"
 
