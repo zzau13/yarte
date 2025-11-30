@@ -14,7 +14,7 @@ v_htmlescape = "0.15"
 yarte_helpers = { workspace = true }
 
 [dev-dependencies]
-criterion = "0.5"
+criterion = "0.8"
 
 [[bench]]
 name = "yarte"
