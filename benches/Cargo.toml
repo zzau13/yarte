@@ -8,7 +8,7 @@ workspace = ".."
 
 [dependencies]
 yarte = { workspace = true, features = ["bytes-buf"] }
-v_htmlescape = "0.15"
+v_htmlescape = "0.17"
 
 [build-dependencies]
 yarte_helpers = { workspace = true }

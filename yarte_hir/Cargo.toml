@@ -25,7 +25,7 @@ yarte_helpers = { workspace = true }
 yarte_parser = { workspace = true }
 
 v_eval = "0.6"
-v_htmlescape = "0.15"
+v_htmlescape = "0.17"
 
 proc-macro2 = { workspace = true, features = ["span-locations"] }
 quote = "1.0"
